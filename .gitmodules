@@ -1,3 +1,6 @@
 [submodule "hunter"]
 	path = hunter
 	url = https://github.com/ruslo/hunter.git
+[submodule "libs/jsoncpp"]
+	path = libs/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
