@@ -53,11 +53,19 @@ find_package(OpenSSL REQUIRED)
 ###### END Add from Hunter ######
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
 
 include_directories(${JSONCPP_INCLUDE_DIRS})
+include_directories(${INTEL_SGX_INCLUDE_DIRS})
 
 ### END Add Sub-modules ###
 
 add_executable(foo ${CMAKE_CURRENT_LIST_DIR}/sources/foo.cpp)
 
-target_link_libraries(foo OpenSSL::SSL OpenSSL::Crypto jsoncpp_lib_static)
+target_link_libraries(foo 
+					OpenSSL::SSL 
+					OpenSSL::Crypto 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_LIB}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_LIB}>" 
+					jsoncpp_lib_static
+					)
