@@ -40,6 +40,8 @@ else()
 	message("Using shared openssl lib!!!")
 endif()
 
+set(CMAKE_CONFIGURATION_TYPES Release Debug)
+
 ### END Setup options ###
 
 ### Add Sub-modules ###
