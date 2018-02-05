@@ -21,12 +21,12 @@ HunterGate(URL "x" SHA1 "xxxxxxxx" ${TESTING_CONFIG_OPT})
 ### END Setup Hunter ###
 
 
-project(download-openssl)
+project(decent)
 
 ### Setup options ###
 
-OPTION(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-OPTION(BUILD_STATIC_LIBS "Build static libraries" ON)
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(BUILD_STATIC_LIBS "Build static libraries" ON)
 option(USE_MSVC_RUNTIME_LIBRARY_DLL OFF)
 option(JSONCPP_WITH_TESTS OFF)
 option(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
@@ -40,7 +40,43 @@ else()
 	message("Using shared openssl lib!!!")
 endif()
 
-set(CMAKE_CONFIGURATION_TYPES Release Debug)
+if(MSVC)
+	set(COMMON_OPTIONS /W3 /wd4996 /we4239 /we4002 /we4700 /we4305 /EHsc /MP)
+	set(ENCLAVE_OPTIONS /NODEFAULTLIB /NOENTRY)
+	set(DEBUG_OPTIONS /MTd /Od /Zi)
+	set(RELEASE_OPTIONS /MT /Ox /fp:fast /GL /GR-)
+elseif(APPLE)
+	set(COMMON_OPTIONS )
+	set(DEBUG_OPTIONS -g)
+	set(RELEASE_OPTIONS -Os)
+else()
+	set(COMMON_OPTIONS )
+	set(DEBUG_OPTIONS -g)
+	set(RELEASE_OPTIONS -Os)
+endif()
+
+set(DEBUG_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
+set(DEBUGSIM_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
+set(RELEASE_OPTIONS ${COMMON_OPTIONS} ${RELEASE_OPTIONS})
+
+add_compile_options(
+	"$<$<CONFIG:Debug>:${DEBUG_OPTIONS}>"
+	"$<$<CONFIG:DebugSimulation>:${DEBUGSIM_OPTIONS}>"
+	"$<$<CONFIG:Release>:${RELEASE_OPTIONS}>"
+)
+if(MSVC)
+	set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
+	set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /LTCG /INCREMENTAL:NO")
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUGSIMULATION ${CMAKE_CXX_FLAGS_DEBUG} /Od)
+set(CMAKE_C_FLAGS_DEBUGSIMULATION ${CMAKE_C_FLAGS_DEBUG} /Od)
+set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_EXE_LINKER_FLAGS_DEBUG})
+set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
+
+set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
+
 
 ### END Setup options ###
 
@@ -60,12 +96,13 @@ include_directories(${INTEL_SGX_INCLUDE_DIRS})
 
 ### END Add Sub-modules ###
 
-add_executable(foo ${CMAKE_CURRENT_LIST_DIR}/sources/foo.cpp)
+add_executable(LibTestApp ${CMAKE_CURRENT_LIST_DIR}/sources/LibTestApp.cpp)
 
-target_link_libraries(foo 
+target_link_libraries(LibTestApp 
 					OpenSSL::SSL 
 					OpenSSL::Crypto 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_LIB}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_LIB}>" 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
 					jsoncpp_lib_static
 					)

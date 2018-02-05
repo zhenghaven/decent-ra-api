@@ -16,16 +16,74 @@ if(WIN32)
 		
 		#add_library(Intel_SGX_SDK STATIC ${INTEL_SGX_SDK_SRC})
 		if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-			file(GLOB INTEL_SGX_RELEASE_LIB ${INTEL_SGX_SDK_PATH}/bin/win32/Release/*.lib)
-			file(GLOB INTEL_SGX_DEBUG_LIB ${INTEL_SGX_SDK_PATH}/bin/win32/Debug/*.lib)
+			#set(INTEL_SGX_RELEASE_LIB_DIRS "${INTEL_SGX_SDK_PATH}/bin/win32/Release" PARENT_SCOPE)
+			#set(INTEL_SGX_DEBUG_LIB_DIRS "${INTEL_SGX_SDK_PATH}/bin/x64/Debug" PARENT_SCOPE)
+			file(GLOB INTEL_SGX_RELEASE_TRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_trts.lib 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tservice.lib 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tstdc.lib 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tlibcxx.lib 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tcrypto.lib)
+			file(GLOB INTEL_SGX_RELEASE_UNTRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_uae_service.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_urts.lib)
+			file(GLOB INTEL_SGX_DEBUG_TRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_trts.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tservice.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tstdc.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tcrypto.lib)
+			file(GLOB INTEL_SGX_DEBUG_UNTRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_uae_service.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_urts.lib)
+			file(GLOB INTEL_SGX_DEBUGSIM_TRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_trts_sim.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tservice_sim.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tstdc.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tcrypto.lib)
+			file(GLOB INTEL_SGX_DEBUGSIM_UNTRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_uae_service_sim.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_urts_sim.lib)
 			#target_link_libraries(Intel_SGX_SDK $<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_LIB}> $<$<CONFIG:Release>:${INTEL_SGX_RELEASE_LIB}>)
 		else()
-			file(GLOB INTEL_SGX_RELEASE_LIB ${INTEL_SGX_SDK_PATH}/bin/x64/Release/*.lib)
-			file(GLOB INTEL_SGX_DEBUG_LIB ${INTEL_SGX_SDK_PATH}/bin/x64/Debug/*.lib)
+			#set(INTEL_SGX_RELEASE_LIB_DIRS "${INTEL_SGX_SDK_PATH}/bin/x64/Release" PARENT_SCOPE)
+			#set(INTEL_SGX_DEBUG_LIB_DIRS "${INTEL_SGX_SDK_PATH}/bin/x64/Debug" PARENT_SCOPE)
+			file(GLOB INTEL_SGX_RELEASE_TRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_trts.lib 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tservice.lib 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tstdc.lib 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tlibcxx.lib 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tcrypto.lib)
+			file(GLOB INTEL_SGX_RELEASE_UNTRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_uae_service.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_urts.lib)
+			file(GLOB INTEL_SGX_DEBUG_TRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_trts.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tservice.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tstdc.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tcrypto.lib)
+			file(GLOB INTEL_SGX_DEBUG_UNTRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_uae_service.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_urts.lib)
+			file(GLOB INTEL_SGX_DEBUGSIM_TRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_trts_sim.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tservice_sim.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tstdc.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tcrypto.lib)
+			file(GLOB INTEL_SGX_DEBUGSIM_UNTRUST_LIB 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_uae_service_sim.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_urts_sim.lib)
 			#target_link_libraries(Intel_SGX_SDK $<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_LIB}> $<$<CONFIG:Release>:${INTEL_SGX_RELEASE_LIB}>)
 		endif()
-		set(INTEL_SGX_RELEASE_LIB "${INTEL_SGX_RELEASE_LIB}" PARENT_SCOPE)
-		set(INTEL_SGX_DEBUG_LIB "${INTEL_SGX_DEBUG_LIB}" PARENT_SCOPE)
+		set(INTEL_SGX_RELEASE_TRUST_LIB "${INTEL_SGX_RELEASE_TRUST_LIB}" PARENT_SCOPE)
+		set(INTEL_SGX_RELEASE_UNTRUST_LIB "${INTEL_SGX_RELEASE_UNTRUST_LIB}" PARENT_SCOPE)
+		set(INTEL_SGX_DEBUG_TRUST_LIB "${INTEL_SGX_DEBUG_TRUST_LIB}" PARENT_SCOPE)
+		set(INTEL_SGX_DEBUG_UNTRUST_LIB "${INTEL_SGX_DEBUG_UNTRUST_LIB}" PARENT_SCOPE)
+		set(INTEL_SGX_DEBUGSIM_TRUST_LIB "${INTEL_SGX_DEBUGSIM_TRUST_LIB}" PARENT_SCOPE)
+		set(INTEL_SGX_DEBUGSIM_UNTRUST_LIB "${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}" PARENT_SCOPE)
 	endif()
 elseif(UNIX)
 	if(APPLE)
