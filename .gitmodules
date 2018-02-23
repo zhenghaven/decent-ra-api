@@ -4,3 +4,9 @@
 [submodule "libs/jsoncpp"]
 	path = libs/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "libs/Intel_SGX/linux-sgx-driver"]
+	path = libs/Intel_SGX/linux-sgx-driver
+	url = https://github.com/intel/linux-sgx-driver.git
+[submodule "libs/Intel_SGX/linux-sgx"]
+	path = libs/Intel_SGX/linux-sgx
+	url = https://github.com/intel/linux-sgx.git
