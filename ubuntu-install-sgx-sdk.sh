@@ -14,13 +14,26 @@ exit () {
 	command exit "$@"
 }
 
-set_sgx_env_var () {
+set_sgx_env_var_init () {
+	if [ -z "$SGX_SDK" ]; then
+		export SGX_SDK_TEMP=/opt/intel/sgxsdk
+	else
+		export SGX_SDK_TEMP="$SGX_SDK"
+	fi
+}
+
+set_sgx_env_var_final () {
 	if [ -z "$SGX_SDK" ]; then
 		echo "Setting environment variable..."
-		echo "export SGX_SDK=/opt/intel/sgxsdk">>~/.bashrc
-		echo "export SGX_SDK=/opt/intel/sgxsdk">>~/.profile
-		export SGX_SDK=/opt/intel/sgxsdk
+		echo "source $SGX_SDK_TEMP/environment">>~/.bashrc
+		echo "source $SGX_SDK_TEMP/environment">>~/.profile
+		source $SGX_SDK_TEMP/environment
 	fi
+}
+
+unset_sgx_env_var () {
+	sed -i "/^source ..*sgxsdk\/environment$/d" ~/.bashrc
+	sed -i "/^source ..*sgxsdk\/environment$/d" ~/.profile
 }
 
 build_sdk () {
@@ -31,7 +44,7 @@ build_sdk () {
 
 	pushd sdk
 
-	make USE_OPT_LIBS=0 DEBUG=1
+	make DEBUG=1 #USE_OPT_LIBS=0
 
 	popd
 
@@ -63,15 +76,16 @@ do
 	fi
 done
 
-set_sgx_env_var
+set_sgx_env_var_init
 
 is_sgx_sdk_installed=false
 is_sgx_sdk_built=false
 
-if [ -d "$SGX_SDK" ] && [ "$(ls -A $SGX_SDK)" ]; then
-	if [ -f "$SGX_SDK/uninstall.sh" ]; then
+if [ -d "$SGX_SDK_TEMP" ] && [ "$(ls -A $SGX_SDK_TEMP)" ]; then
+	if [ -f "$SGX_SDK_TEMP/uninstall.sh" ]; then
 		is_sgx_sdk_installed=true
 		if [ "$is_uninstall" = false ]; then
+			set_sgx_env_var_final
 			echo "SGX SDK is already installed!"
 			exit 0
 		fi
@@ -84,7 +98,8 @@ fi
 if [ "$is_uninstall" = true ]; then
 	if [ "$is_sgx_sdk_installed" = true ]; then
 		echo "Uninstall SGX SDK..."
-		sudo $SGX_SDK/uninstall.sh
+		sudo $SGX_SDK_TEMP/uninstall.sh
+		unset_sgx_env_var
 		echo "SGX SDK Un-installation finished!"
 		exit 0
 	else
@@ -119,6 +134,8 @@ if [ "$is_sgx_sdk_built" = false ]; then
 fi
 
 install_sdk "$bin_file_path"
+
+set_sgx_env_var_final
 
 echo "SGX SDK Installation finished!"
 
