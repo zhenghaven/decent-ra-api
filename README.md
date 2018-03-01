@@ -4,7 +4,9 @@ Enclave Key Management System
 ## Requirements
 * Check compatibility of computer's hardware.
 * Install [Intel SGX SDK](https://software.intel.com/en-us/sgx-sdk/download)
-* Install Perl compiler ([ActivePerl](https://www.activestate.com/activeperl/downloads))
+  * For **Windows**, go to [Intel SGX SDK](https://software.intel.com/en-us/sgx-sdk/download).
+  * For **Ubuntu**, run the bash script in the order of: Driver, SDK, and PSW (required for hardware mode).
+* Install Perl compiler ([ActivePerl](https://www.activestate.com/activeperl/downloads)) (For OpenSSL)
 * Install [CMake](https://cmake.org/download/)
 * For Windows OS, Install Visual Studio (Note: currently the Intel SGX only supports VS 2015)
 * For Linux, use gcc, g++, and/or CLion.
