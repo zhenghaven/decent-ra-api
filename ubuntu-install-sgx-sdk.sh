@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DEBUG_OPT=false
+
 pushd () {
 	command pushd "$@" > /dev/null
 }
@@ -23,12 +25,14 @@ set_sgx_env_var_init () {
 }
 
 set_sgx_env_var_final () {
-	if [ -z "$SGX_SDK" ]; then
-		echo "Setting environment variable..."
+	echo "Setting environment variable..."
+	if ! grep -q '^source ..*sgxsdk\/environment$' "$HOME/.bashrc"; then
 		echo "source $SGX_SDK_TEMP/environment">>~/.bashrc
-		echo "source $SGX_SDK_TEMP/environment">>~/.profile
-		source $SGX_SDK_TEMP/environment
 	fi
+	if ! grep -q '^source ..*sgxsdk\/environment$' "$HOME/.profile"; then
+		echo "source $SGX_SDK_TEMP/environment">>~/.profile
+	fi
+	source $SGX_SDK_TEMP/environment
 }
 
 unset_sgx_env_var () {
@@ -43,12 +47,20 @@ build_sdk () {
 	./download_prebuilt.sh
 
 	pushd sdk
-
-	make DEBUG=1 #USE_OPT_LIBS=0
+	
+	if [ "$DEBUG_OPT" = true ]; then
+		make DEBUG=1 #USE_OPT_LIBS=0
+	else
+		make
+	fi
 
 	popd
 
-	make sdk_install_pkg DEBUG=1
+	if [ "$DEBUG_OPT" = true ]; then
+		make sdk_install_pkg DEBUG=1
+	else
+		make sdk_install_pkg
+	fi
 	
 	popd
 }
@@ -73,6 +85,8 @@ for in_option in "$@"
 do
 	if [ "$in_option" == "--uninstall" ] || [ "$in_option" == "-u" ]; then
 		is_uninstall=true
+	elif [ "$in_option" == "--debug" ] || [ "$in_option" == "-d" ]; then
+		DEBUG_OPT=true
 	fi
 done
 

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DEBUG_OPT=false
+
 pushd () {
 	command pushd "$@" > /dev/null
 }
@@ -21,11 +23,19 @@ build_psw () {
 
 	pushd psw
 
-	make DEBUG=1
+	if [ "$DEBUG_OPT" = true ]; then
+		make DEBUG=1 #USE_OPT_LIBS=0
+	else
+		make
+	fi
 
 	popd
 
-	make psw_install_pkg DEBUG=1
+	if [ "$DEBUG_OPT" = true ]; then
+		make psw_install_pkg DEBUG=1
+	else
+		make psw_install_pkg
+	fi
 	
 	popd
 }
@@ -57,6 +67,8 @@ for in_option in "$@"
 do
 	if [ "$in_option" == "--uninstall" ] || [ "$in_option" == "-u" ]; then
 		is_uninstall=true
+	elif [ "$in_option" == "--debug" ] || [ "$in_option" == "-d" ]; then
+		DEBUG_OPT=true
 	fi
 done
 
