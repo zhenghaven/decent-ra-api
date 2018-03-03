@@ -22,7 +22,7 @@ if(WIN32)
 						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_trts.lib 
 						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tservice.lib 
 						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tstdc.lib 
-						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tlibcxx.lib 
+						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tcxx.lib 
 						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_tcrypto.lib)
 			file(GLOB INTEL_SGX_RELEASE_UNTRUST_LIB 
 						${INTEL_SGX_SDK_PATH}/bin/win32/Release/sgx_uae_service.lib
@@ -31,7 +31,7 @@ if(WIN32)
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_trts.lib
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tservice.lib
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tstdc.lib
-						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tcxx.lib
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tcrypto.lib)
 			file(GLOB INTEL_SGX_DEBUG_UNTRUST_LIB 
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_uae_service.lib
@@ -40,7 +40,7 @@ if(WIN32)
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_trts_sim.lib
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tservice_sim.lib
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tstdc.lib
-						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tcxx.lib
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_tcrypto.lib)
 			file(GLOB INTEL_SGX_DEBUGSIM_UNTRUST_LIB 
 						${INTEL_SGX_SDK_PATH}/bin/win32/Debug/sgx_uae_service_sim.lib
@@ -53,7 +53,7 @@ if(WIN32)
 						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_trts.lib 
 						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tservice.lib 
 						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tstdc.lib 
-						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tlibcxx.lib 
+						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tcxx.lib 
 						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_tcrypto.lib)
 			file(GLOB INTEL_SGX_RELEASE_UNTRUST_LIB 
 						${INTEL_SGX_SDK_PATH}/bin/x64/Release/sgx_uae_service.lib
@@ -62,7 +62,7 @@ if(WIN32)
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_trts.lib
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tservice.lib
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tstdc.lib
-						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tcxx.lib
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tcrypto.lib)
 			file(GLOB INTEL_SGX_DEBUG_UNTRUST_LIB 
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_uae_service.lib
@@ -71,7 +71,7 @@ if(WIN32)
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_trts_sim.lib
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tservice_sim.lib
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tstdc.lib
-						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tlibcxx.lib
+						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tcxx.lib
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_tcrypto.lib)
 			file(GLOB INTEL_SGX_DEBUGSIM_UNTRUST_LIB 
 						${INTEL_SGX_SDK_PATH}/bin/x64/Debug/sgx_uae_service_sim.lib
