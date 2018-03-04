@@ -66,11 +66,31 @@ add_compile_options(
 	"$<$<CONFIG:Release>:${RELEASE_OPTIONS}>"
 )
 
+
+message(STATUS "==================================================")
+message(STATUS "CMake Standard Libraries:")
+message(STATUS "${CMAKE_CXX_STANDARD_LIBRARIES_INIT}")
+message(STATUS "CMake CXX Flags (Debug):")
+message(STATUS "${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "CMake CXX Flags (Release):")
+message(STATUS "${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "==================================================")
+
+#Remove all standard libraries dependency here so that enclave DLL can be 
+# compiled properly. And it will be added back later for non-enclave apps.
+set(COMMON_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES_INIT}")
+separate_arguments(COMMON_STANDARD_LIBRARIES)
+set(CMAKE_CXX_STANDARD_LIBRARIES "")
+set(CMAKE_C_STANDARD_LIBRARIES "")
+
 if(MSVC) 
 	#Removed Basic Runtime Checks in MSVC
 	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUGSIMULATION "${CMAKE_CXX_FLAGS_DEBUG}")
 	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG}")
+	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUGSIMULATION "${CMAKE_CXX_FLAGS_DEBUG}")
+	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG}")
 endif()
 
 if(MSVC)
@@ -149,6 +169,8 @@ file(GLOB_RECURSE Example_Enclave_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/exam
 ### End Filters ###
 
 ###########################################################
+### LibTest_App
+###########################################################
 add_executable(LibTest_App ${LibTest_App_SOURCES}  ${COMMON_SOURCES})
 target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
 
@@ -159,8 +181,11 @@ target_link_libraries(LibTest_App
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
 					jsoncpp_lib_static
+					"${COMMON_STANDARD_LIBRARIES}"
 					)
 
+###########################################################
+### Example_App
 ###########################################################
 add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
 target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
@@ -184,8 +209,11 @@ target_link_libraries(Example_App
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
 					jsoncpp_lib_static
+					"${COMMON_STANDARD_LIBRARIES}"
 					)
 
+###########################################################
+### Example_Enclave
 ###########################################################
 add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES})
 target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_INCLUDE_DIRS} PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/tlibc" PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/libc++")
