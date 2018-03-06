@@ -6,6 +6,10 @@ enclave {
 	trusted 
 	{
 		public void ecall_initializer_list_demo(void);
+
+		public void ecall_square_array([in, out, size=len_in_byte] int* arr, size_t len_in_byte);
+
+		public int ecall_add_two_int(int a, int b);
 	};
 	
 	untrusted {

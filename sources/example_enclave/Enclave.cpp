@@ -48,3 +48,21 @@ void ecall_initializer_list_demo()
 
 	enclave_printf("\n"); //end of demo
 }
+
+int ecall_add_two_int(int a, int b)
+{
+	int res = a + b;
+
+	enclave_printf("Added %d, %d inside enclave as result of %d\n", a, b, res);
+
+	return res;
+}
+
+void ecall_square_array(int* arr, const size_t len_in_byte)
+{
+	size_t len = len_in_byte / sizeof(int);
+	for (int i = 0; i < len; ++i)
+	{
+		arr[i] *= arr[i];
+	}
+}

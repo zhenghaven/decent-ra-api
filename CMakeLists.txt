@@ -160,9 +160,9 @@ file(GLOB_RECURSE COMMON_ENCLAVE_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/commo
 
 file(GLOB_RECURSE LibTest_App_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.hh)
 
-file(GLOB_RECURSE Example_App_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hh)
+file(GLOB_RECURSE Example_App_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hh ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.edl)
 
-file(GLOB_RECURSE Example_Enclave_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hh)
+file(GLOB_RECURSE Example_Enclave_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hh ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.edl)
 
 ### Filters ###
 
@@ -175,34 +175,6 @@ add_executable(LibTest_App ${LibTest_App_SOURCES}  ${COMMON_SOURCES})
 target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
 
 target_link_libraries(LibTest_App 
-					OpenSSL::SSL 
-					OpenSSL::Crypto 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
-					jsoncpp_lib_static
-					"${COMMON_STANDARD_LIBRARIES}"
-					)
-
-###########################################################
-### Example_App
-###########################################################
-add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
-target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
-
-if(MSVC)
-	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="Example_Enclave.signed.dll" TOKEN_FILENAME="Example_Enclave.token")
-else()
-	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="Example_Enclave.signed.so" TOKEN_FILENAME="Example_Enclave.token")
-endif()
-
-add_custom_command(TARGET Example_App
-	PRE_BUILD
-	COMMAND "${SGX_EDGER_PATH}"  --untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" --search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" --search-path "${INTEL_SGX_INCLUDE_DIRS}"
-	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_app"
-)
-
-target_link_libraries(Example_App 
 					OpenSSL::SSL 
 					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
@@ -235,4 +207,32 @@ target_link_libraries(Example_Enclave
 					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_TRUST_LIB}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_TRUST_LIB}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_TRUST_LIB}>" 
+					)
+
+###########################################################
+### Example_App
+###########################################################
+add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
+target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
+
+if(MSVC)
+	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="Example_Enclave.signed.dll" TOKEN_FILENAME="Example_Enclave.token")
+else()
+	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="Example_Enclave.signed.so" TOKEN_FILENAME="Example_Enclave.token")
+endif()
+
+add_custom_command(TARGET Example_App
+	PRE_BUILD
+	COMMAND "${SGX_EDGER_PATH}"  --untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" --search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" --search-path "${INTEL_SGX_INCLUDE_DIRS}"
+	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_app"
+)
+
+target_link_libraries(Example_App 
+					OpenSSL::SSL 
+					OpenSSL::Crypto 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
+					jsoncpp_lib_static
+					"${COMMON_STANDARD_LIBRARIES}"
 					)

@@ -15,6 +15,8 @@ extern "C" {
 
 
 void ecall_initializer_list_demo();
+void ecall_square_array(int* arr, size_t len_in_byte);
+int ecall_add_two_int(int a, int b);
 
 sgx_status_t SGX_CDECL ocall_print_string(const char* str);
 
