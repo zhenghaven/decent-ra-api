@@ -106,29 +106,27 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}
 
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	set(WIN_ARCHI_STR "x64")
+	set(LINUX_ARCHI_STR "x64")
+else()
+	set(WIN_ARCHI_STR "win32")
+	set(LINUX_ARCHI_STR "x86")
+endif()
+
 if(MSVC)
 	set(SGX_SDK_PATH "$ENV{SGXSDKInstallPath}")
 	set(SGX_EDGER_PATH "$ENV{SGXSDKInstallPath}/bin/win32/Release/sgx_edger8r.exe")
 	set(SGX_SIGN_PATH "$ENV{SGXSDKInstallPath}/bin/win32/Release/sgx_sign.exe")
 elseif(APPLE)
 	set(SGX_SDK_PATH "$ENV{SGX_SDK}")
-	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/x64/sgx_edger8r")
-		set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/x64/sgx_sign")
-	else()
-		set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/x86/sgx_edger8r")
-		set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/x86/sgx_sign")
-	endif()
+	set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_edger8r")
+	set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_sign")
 	
 else()
 	set(SGX_SDK_PATH "$ENV{SGX_SDK}")
-	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/x64/sgx_edger8r")
-		set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/x64/sgx_sign")
-	else()
-		set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/x86/sgx_edger8r")
-		set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/x86/sgx_sign")
-	endif()
+	set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_edger8r")
+	set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_sign")
 endif()
 
 get_filename_component(SGX_SDK_PATH "${SGX_SDK_PATH}" ABSOLUTE)
@@ -187,6 +185,15 @@ target_link_libraries(LibTest_App
 ###########################################################
 ### Example_Enclave
 ###########################################################
+
+if(MSVC)
+	set(Enclave_Filename "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.dll")
+	set(Enclave_Libname "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.dll")
+else()
+	set(Enclave_Filename "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.so")
+	set(Enclave_Libname "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.so")
+endif()
+
 add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES})
 target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_INCLUDE_DIRS} PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/tlibc" PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/libc++")
 
@@ -194,13 +201,20 @@ set_target_properties(Example_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}"
 
 add_custom_command(TARGET Example_Enclave
 	PRE_BUILD
-	COMMAND "${SGX_EDGER_PATH}"  --trusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" --search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" --search-path "${INTEL_SGX_INCLUDE_DIRS}"
+	COMMAND "${SGX_EDGER_PATH}"  
+	--trusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
+	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
+	--search-path "${INTEL_SGX_INCLUDE_DIRS}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave"
 )
 
 add_custom_command(TARGET Example_Enclave
 	POST_BUILD
-	COMMAND "${SGX_SIGN_PATH}" sign -key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" -enclave "${CMAKE_BINARY_DIR}/$<CONFIG>/Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.dll" -out "${CMAKE_BINARY_DIR}/Example_Enclave.signed.dll" -config "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.config.xml"
+	COMMAND "${SGX_SIGN_PATH}" sign 
+	-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
+	-enclave "${CMAKE_BINARY_DIR}/$<CONFIG>/${Enclave_Libname}" 
+	-out "${CMAKE_BINARY_DIR}/${Enclave_Filename}" 
+	-config "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.config.xml"
 )
 
 target_link_libraries(Example_Enclave 
@@ -216,14 +230,17 @@ add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
 target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
 
 if(MSVC)
-	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="Example_Enclave.signed.dll" TOKEN_FILENAME="Example_Enclave.token")
+	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="Example_Enclave.token")
 else()
-	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="Example_Enclave.signed.so" TOKEN_FILENAME="Example_Enclave.token")
+	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="Example_Enclave.token")
 endif()
 
 add_custom_command(TARGET Example_App
 	PRE_BUILD
-	COMMAND "${SGX_EDGER_PATH}"  --untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" --search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" --search-path "${INTEL_SGX_INCLUDE_DIRS}"
+	COMMAND "${SGX_EDGER_PATH}"  
+	--untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
+	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
+	--search-path "${INTEL_SGX_INCLUDE_DIRS}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_app"
 )
 
