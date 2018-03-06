@@ -1,5 +1,5 @@
-# KeyManage
-Enclave Key Management System
+# Decent
+
 
 ## Requirements
 * Check compatibility of computer's hardware.
