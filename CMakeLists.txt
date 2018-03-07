@@ -46,14 +46,14 @@ if(MSVC)
 	set(RELEASE_OPTIONS /MT /Ox /fp:fast /GL /GR-)
 	
 	set(ENCLAVE_OPTIONS "/NODEFAULTLIB /NOENTRY")
-elseif(APPLE)
-	set(COMMON_OPTIONS )
-	set(DEBUG_OPTIONS -O0 -g)
-	set(RELEASE_OPTIONS -O2)
+#elseif(APPLE)
+#	set(COMMON_OPTIONS )
+#	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
+#	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
 else()
 	set(COMMON_OPTIONS )
-	set(DEBUG_OPTIONS -O0 -g)
-	set(RELEASE_OPTIONS -O2)
+	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
+	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
 endif()
 
 set(DEBUG_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
@@ -74,6 +74,10 @@ message(STATUS "CMake CXX Flags (Debug):")
 message(STATUS "${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMake CXX Flags (Release):")
 message(STATUS "${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "CMake CXX Link Flags (Debug):")
+message(STATUS "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+message(STATUS "CMake CXX Link Flags (Release):")
+message(STATUS "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 message(STATUS "==================================================")
 
 #Remove all standard libraries dependency here so that enclave DLL can be 
@@ -189,13 +193,16 @@ target_link_libraries(LibTest_App
 if(MSVC)
 	set(Enclave_Filename "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.dll")
 	set(Enclave_Libname "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.dll")
+	set(Enclave_Bin_Path "${CMAKE_BINARY_DIR}/$<CONFIG>")
 else()
-	set(Enclave_Filename "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.so")
-	set(Enclave_Libname "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.so")
+	set(Enclave_Filename "${CMAKE_SHARED_LIBRARY_PREFIX}Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.so")
+	set(Enclave_Libname "${CMAKE_SHARED_LIBRARY_PREFIX}Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.so")
+	set(Enclave_Bin_Path "${CMAKE_BINARY_DIR}")
 endif()
 
 add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES})
-target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_INCLUDE_DIRS} PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/tlibc" PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/libc++")
+
+target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_INCLUDE_DIRS} PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/tlibc" PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/${INTEL_SGX_CXXLIB_NAME}")
 
 set_target_properties(Example_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}")
 
@@ -212,7 +219,7 @@ add_custom_command(TARGET Example_Enclave
 	POST_BUILD
 	COMMAND "${SGX_SIGN_PATH}" sign 
 	-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
-	-enclave "${CMAKE_BINARY_DIR}/$<CONFIG>/${Enclave_Libname}" 
+	-enclave "${Enclave_Bin_Path}/${Enclave_Libname}" 
 	-out "${CMAKE_BINARY_DIR}/${Enclave_Filename}" 
 	-config "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.config.xml"
 )
@@ -252,4 +259,30 @@ target_link_libraries(Example_App
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
 					jsoncpp_lib_static
 					"${COMMON_STANDARD_LIBRARIES}"
+				)
+
+### Config Flags for Linux OS ###
+
+if(NOT MSVC)
+target_compile_options(Example_Enclave
+					PRIVATE ${INTEL_SGX_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_CXX_FLAGS}>
 					)
+
+set_target_properties(Example_Enclave 
+					PROPERTIES 
+					LINK_FLAGS_DEBUG "${INTEL_SGX_T_LINKER_FLAGS}"
+					LINK_FLAGS_DEBUGSIMULATION "${INTEL_SGX_T_SIM_LINKER_FLAGS}"
+					LINK_FLAGS_RELEASE "${INTEL_SGX_T_LINKER_FLAGS}"
+					)
+
+set_target_properties(Example_App 
+					PROPERTIES 
+					LINK_FLAGS_DEBUG "${INTEL_SGX_U_LINKER_FLAGS}"
+					LINK_FLAGS_DEBUGSIMULATION "${INTEL_SGX_U_SIM_LINKER_FLAGS}"
+					LINK_FLAGS_RELEASE "${INTEL_SGX_U_LINKER_FLAGS}"
+					)
+
+endif()
+
+### End Config Flags for Linux OS ###
+

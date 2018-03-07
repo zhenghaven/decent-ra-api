@@ -1,8 +1,8 @@
 #include <tlibc/stdarg.h>
 #include <tlibc/stdio.h>      /* vsnprintf */
 
-#include <libc++/initializer_list>
-#include <libc++/vector>
+#include <initializer_list>
+#include <vector>
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */

@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <cstring>
+
 #include <string>
 
 #include <sgx_urts.h>
@@ -10,6 +12,7 @@
 # include <unistd.h>
 # include <pwd.h>
 # define MAX_PATH FILENAME_MAX
+# define FALSE 0
 #endif
 
 #include "LibExample.h"

@@ -9,6 +9,8 @@
 #include <json/json.h>
 #include <sgx_uae_service.h>
 
+#ifdef _MSC_VER
+
 std::string GetSGXDeviceStatusStr(const sgx_device_status_t& sgx_device_status)
 {
 	switch (sgx_device_status) {
@@ -33,6 +35,8 @@ std::string GetSGXDeviceStatusStr(const sgx_device_status_t& sgx_device_status)
 	}
 }
 
+#endif
+
 int main() {
 	std::cout << "JsonCPP test:" << std::endl;
 	std::cout << "================================" << std::endl;
@@ -43,6 +47,8 @@ int main() {
 	obj["D"] = 4;
 	std::cout << obj.toStyledString() << std::endl;
 	std::cout << "================================" << std::endl << std::endl << std::endl;
+
+#ifdef _MSC_VER
 
 	std::cout << "Intel SGX test:" << std::endl;
 	std::cout << "================================" << std::endl;
@@ -57,6 +63,8 @@ int main() {
 		std::cout << GetSGXDeviceStatusStr(sgx_device_status) << std::endl;
 	}
 	std::cout << "================================" << std::endl;
+
+#endif
 	
 
 	std::cout << "Done! Enter anything to exit..." << std::endl;
