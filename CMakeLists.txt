@@ -238,7 +238,8 @@ target_link_libraries(LibTest_App
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
 					jsoncpp_lib_static
-					"${COMMON_STANDARD_LIBRARIES}"
+					${COMMON_STANDARD_LIBRARIES}
+					${Boost_LIBRARIES}
 					)
 
 ###########################################################
@@ -313,7 +314,8 @@ target_link_libraries(Example_App
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
 					jsoncpp_lib_static
-					"${COMMON_STANDARD_LIBRARIES}"
+					${COMMON_STANDARD_LIBRARIES}
+					${Boost_LIBRARIES}
 				)
 
 ### Config Flags for Linux OS ###
