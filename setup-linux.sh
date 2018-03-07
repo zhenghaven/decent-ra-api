@@ -9,7 +9,7 @@ BUILD_TYPE=DEBUG
 for in_option in "$@"
 do
 	if [ "$in_option" == "--sim" ] || [ "$in_option" == "-s" ]; then
-		BUILD_TYPE=DEBUGSIM
+		BUILD_TYPE=DebugSimulation
 	elif [ "$in_option" == "--release" ] || [ "$in_option" == "-r" ]; then
 		BUILD_TYPE=RELEASE
 	fi

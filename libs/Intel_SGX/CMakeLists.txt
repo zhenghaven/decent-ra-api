@@ -88,9 +88,9 @@ elseif(UNIX)
 	set(INTEL_SGX_DEBUG_UNTRUST_LIB ${INTEL_SGX_RELEASE_UNTRUST_LIB})
 	file(GLOB INTEL_SGX_DEBUGSIM_TRUST_LIB 
 				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_tservice_sim.a
-				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_tstdc_sim.a
-				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_tcxx_sim.a
-				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_tcrypto_sim.a)
+				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_tstdc.a
+				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_tcxx.a
+				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_tcrypto.a)
 	file(GLOB INTEL_SGX_DEBUGSIM_TRTS_LIB 
 				${INTEL_SGX_SDK_PATH}/${LINUX_ARCHI_STR}/libsgx_trts_sim.a)
 	file(GLOB INTEL_SGX_DEBUGSIM_UNTRUST_LIB 
