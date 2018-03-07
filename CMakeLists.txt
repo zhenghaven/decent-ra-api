@@ -20,8 +20,63 @@ HunterGate(URL "x" SHA1 "xxxxxxxx" ${TESTING_CONFIG_OPT})
 
 ### END Setup Hunter ###
 
-
 project(decent)
+
+#Add any required boost libraries here:
+set(BOOST_Req_Libs filesystem date_time)
+
+### Setup and find boost ###
+
+set(BOOST_ROOT "${CMAKE_CURRENT_LIST_DIR}/libs/boost")
+#set(Boost_DEBUG ON)
+#set(Boost_DETAILED_FAILURE_MSG ON)
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_COMPILER -vc141)
+
+find_package(Boost COMPONENTS ${BOOST_Req_Libs})
+
+if(NOT Boost_FOUND)
+	if(MSVC)
+		foreach(lib_name IN LISTS BOOST_Req_Libs)
+			set(BOOST_BUILD_LIB_LIST ${BOOST_BUILD_LIB_LIST} --with-${lib_name})
+		endforeach()
+		set(BOOST_UPDATE_COMMAND "")
+		set(BOOST_CONFIGURE_COMMAND bootstrap.bat)
+		set(BOOST_BUILD_COMMAND b2 install --prefix=${BOOST_ROOT} ${BOOST_BUILD_LIB_LIST})
+		set(BOOST_INSTALL_COMMAND "")
+	else()
+		foreach(lib_name IN LISTS BOOST_Req_Libs)
+			if(DEFINED BOOST_BUILD_LIB_LIST)
+				set(BOOST_BUILD_LIB_LIST ${lib_name})
+			else()
+				set(BOOST_BUILD_LIB_LIST ${BOOST_BUILD_LIB_LIST},${lib_name})
+			endif()
+		endforeach()
+		set(BOOST_UPDATE_COMMAND "")
+		set(BOOST_CONFIGURE_COMMAND ./bootstrap.sh --prefix=${BOOST_ROOT} --with-libraries=${BOOST_BUILD_LIB_LIST})
+		set(BOOST_BUILD_COMMAND ./bjam install)
+		set(BOOST_INSTALL_COMMAND "")
+	endif()
+
+	execute_process(COMMAND ${BOOST_CONFIGURE_COMMAND}
+					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
+					)
+
+	execute_process(COMMAND ${BOOST_BUILD_COMMAND}
+					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
+					)
+endif()
+
+message(STATUS "==================================================")
+message(STATUS "Looking for Boost library in ${BOOST_ROOT}...")
+find_package(Boost COMPONENTS ${BOOST_Req_Libs} REQUIRED)
+message(STATUS "Boost found?: ${Boost_FOUND}")
+message(STATUS "Boost Include Dir: ${Boost_INCLUDE_DIRS}")
+message(STATUS "Boost Library Dir: ${Boost_LIBRARY_DIRS}")
+message(STATUS "Boost Libraries: ${Boost_LIBRARIES}")
+message(STATUS "==================================================")
+
+### End Setup and find boost ###
 
 ### Setup options ###
 
