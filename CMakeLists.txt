@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 3.0)
 
 ### Setup Hunter ###
-set(gate_dir "${CMAKE_CURRENT_LIST_DIR}/hunter/gate")
-set(gate_module "${gate_dir}/cmake/HunterGate.cmake")
+#set(gate_dir "${CMAKE_CURRENT_LIST_DIR}/hunter/gate")
+#set(gate_module "${gate_dir}/cmake/HunterGate.cmake")
 
-get_filename_component(gate_module "${gate_module}" ABSOLUTE)
-if(NOT EXISTS "${gate_module}")
-	message(
-		FATAL_ERROR
-		"${gate_module} module not found!"
-	)
-endif()
+#get_filename_component(gate_module "${gate_module}" ABSOLUTE)
+#if(NOT EXISTS "${gate_module}")
+#	message(
+#		FATAL_ERROR
+#		"${gate_module} module not found!"
+#	)
+#endif()
 
-message("Including HunterGate: ${gate_module}")
-include("${gate_module}")
+#message("Including HunterGate: ${gate_module}")
+#include("${gate_module}")
 
-get_filename_component(HUNTER_ROOT "${CMAKE_CURRENT_LIST_DIR}/hunter" ABSOLUTE)
-HunterGate(URL "x" SHA1 "xxxxxxxx" ${TESTING_CONFIG_OPT})
+#get_filename_component(HUNTER_ROOT "${CMAKE_CURRENT_LIST_DIR}/hunter" ABSOLUTE)
+#HunterGate(URL "x" SHA1 "xxxxxxxx" ${TESTING_CONFIG_OPT})
 
 ### END Setup Hunter ###
 
@@ -28,12 +28,20 @@ set(BOOST_Req_Libs filesystem date_time)
 ### Setup and find boost ###
 
 set(BOOST_ROOT "${CMAKE_CURRENT_LIST_DIR}/libs/boost")
+set(BOOST_LIBRARYDIR "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
+
+set(Boost_LIBRARY_DIR_RELEASE "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
+set(Boost_LIBRARY_DIR_DEBUG "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
+set(Boost_LIBRARY_DIR "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
 #set(Boost_DEBUG ON)
 #set(Boost_DETAILED_FAILURE_MSG ON)
 set(Boost_USE_STATIC_LIBS ON)
-set(Boost_COMPILER -vc141)
+set(Boost_NO_SYSTEM_PATHS ON)
+if(MSVC)
+	set(Boost_COMPILER -vc141)
+endif()
 
-find_package(Boost COMPONENTS ${BOOST_Req_Libs})
+find_package(Boost 1.65.1 COMPONENTS ${BOOST_Req_Libs})
 
 if(NOT Boost_FOUND)
 	if(MSVC)
@@ -46,7 +54,7 @@ if(NOT Boost_FOUND)
 		set(BOOST_INSTALL_COMMAND "")
 	else()
 		foreach(lib_name IN LISTS BOOST_Req_Libs)
-			if(DEFINED BOOST_BUILD_LIB_LIST)
+			if(NOT DEFINED BOOST_BUILD_LIB_LIST)
 				set(BOOST_BUILD_LIB_LIST ${lib_name})
 			else()
 				set(BOOST_BUILD_LIB_LIST ${BOOST_BUILD_LIB_LIST},${lib_name})
@@ -69,7 +77,7 @@ endif()
 
 message(STATUS "==================================================")
 message(STATUS "Looking for Boost library in ${BOOST_ROOT}...")
-find_package(Boost COMPONENTS ${BOOST_Req_Libs} REQUIRED)
+find_package(Boost 1.65.1 COMPONENTS ${BOOST_Req_Libs} REQUIRED)
 message(STATUS "Boost found?: ${Boost_FOUND}")
 message(STATUS "Boost Include Dir: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost Library Dir: ${Boost_LIBRARY_DIRS}")
@@ -201,8 +209,8 @@ endif()
 ### Add Sub-modules ###
 
 ###### Add from Hunter ######
-hunter_add_package(OpenSSL)
-find_package(OpenSSL REQUIRED)
+#hunter_add_package(OpenSSL)
+#find_package(OpenSSL REQUIRED)
 
 ###### END Add from Hunter ######
 
@@ -232,8 +240,8 @@ add_executable(LibTest_App ${LibTest_App_SOURCES}  ${COMMON_SOURCES})
 target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
 
 target_link_libraries(LibTest_App 
-					OpenSSL::SSL 
-					OpenSSL::Crypto 
+#					OpenSSL::SSL 
+#					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
@@ -308,8 +316,8 @@ add_custom_command(TARGET Example_App
 )
 
 target_link_libraries(Example_App 
-					OpenSSL::SSL 
-					OpenSSL::Crypto 
+#					OpenSSL::SSL 
+#					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
