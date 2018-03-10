@@ -5,7 +5,7 @@
 
 #include <cstdio>
 
-#include <openssl/crypto.h>
+//#include <openssl/crypto.h>
 #include <json/json.h>
 #include <sgx_uae_service.h>
 
