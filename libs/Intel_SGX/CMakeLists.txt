@@ -10,6 +10,8 @@ else()
 	set(LINUX_ARCHI_STR "lib64")
 endif()
 
+include(sgxssl.cmake)
+
 if(WIN32)
 	if((NOT DEFINED ENV{SGXSDKInstallPath}) OR (NOT EXISTS "$ENV{SGXSDKInstallPath}"))
 		message(FATAL_ERROR "Intel SGX SDK is not installed properly!")
