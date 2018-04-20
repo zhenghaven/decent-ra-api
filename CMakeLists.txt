@@ -173,37 +173,6 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}
 
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(WIN_ARCHI_STR "x64")
-	set(LINUX_ARCHI_STR "x64")
-else()
-	set(WIN_ARCHI_STR "win32")
-	set(LINUX_ARCHI_STR "x86")
-endif()
-
-if(MSVC)
-	set(SGX_SDK_PATH "$ENV{SGXSDKInstallPath}")
-	set(SGX_EDGER_PATH "$ENV{SGXSDKInstallPath}/bin/win32/Release/sgx_edger8r.exe")
-	set(SGX_SIGN_PATH "$ENV{SGXSDKInstallPath}/bin/win32/Release/sgx_sign.exe")
-elseif(APPLE)
-	set(SGX_SDK_PATH "$ENV{SGX_SDK}")
-	set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_edger8r")
-	set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_sign")
-	
-else()
-	set(SGX_SDK_PATH "$ENV{SGX_SDK}")
-	set(SGX_EDGER_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_edger8r")
-	set(SGX_SIGN_PATH "$ENV{SGX_SDK}/bin/${LINUX_ARCHI_STR}/sgx_sign")
-endif()
-
-get_filename_component(SGX_SDK_PATH "${SGX_SDK_PATH}" ABSOLUTE)
-if(NOT EXISTS "${SGX_SDK_PATH}")
-	message(FATAL_ERROR "${SGX_SDK_PATH} SGX SDK installation not found!")
-else()
-	get_filename_component(SGX_EDGER_PATH "${SGX_EDGER_PATH}" ABSOLUTE)
-	get_filename_component(SGX_SIGN_PATH "${SGX_SIGN_PATH}" ABSOLUTE)
-endif()
-
 ### END Setup options ###
 
 ### Add Sub-modules ###
@@ -233,18 +202,31 @@ file(GLOB_RECURSE Example_Enclave_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/exam
 
 ### End Filters ###
 
+### Library link flags ###
+if(MSVC)
+	set(WHOLE_ARCHIVE_FLAG_BEGIN "")
+	set(WHOLE_ARCHIVE_FLAG_END "")
+	set(GROUP_FLAG_BEGIN "")
+	set(GROUP_FLAG_END "")
+else()
+	set(WHOLE_ARCHIVE_FLAG_BEGIN -Wl,--whole-archive)
+	set(WHOLE_ARCHIVE_FLAG_END -Wl,--no-whole-archive)
+	set(GROUP_FLAG_BEGIN -Wl,--start-group)
+	set(GROUP_FLAG_END -Wl,--end-group)
+endif()
+
 ###########################################################
 ### LibTest_App
 ###########################################################
 add_executable(LibTest_App ${LibTest_App_SOURCES}  ${COMMON_SOURCES})
-target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
+target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH})
 
 target_link_libraries(LibTest_App 
 #					OpenSSL::SSL 
 #					OpenSSL::Crypto 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
 					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
 					${Boost_LIBRARIES}
@@ -266,22 +248,22 @@ endif()
 
 add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES})
 
-target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_INCLUDE_DIRS} PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/tlibc" PRIVATE "${INTEL_SGX_INCLUDE_DIRS}/${INTEL_SGX_CXXLIB_NAME}")
+target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc" PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME}")
 
 set_target_properties(Example_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}")
 
 add_custom_command(TARGET Example_Enclave
 	PRE_BUILD
-	COMMAND "${SGX_EDGER_PATH}"  
+	COMMAND "${INTEL_SGX_EDGER_PATH}"  
 	--trusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
-	--search-path "${INTEL_SGX_INCLUDE_DIRS}"
+	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave"
 )
 
 add_custom_command(TARGET Example_Enclave
 	POST_BUILD
-	COMMAND "${SGX_SIGN_PATH}" sign 
+	COMMAND "${INTEL_SGX_SIGNER_PATH}" sign 
 	-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
 	-enclave "${Enclave_Bin_Path}/${Enclave_Libname}" 
 	-out "${CMAKE_BINARY_DIR}/${Enclave_Filename}" 
@@ -289,16 +271,23 @@ add_custom_command(TARGET Example_Enclave
 )
 
 target_link_libraries(Example_Enclave 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_TRUST_LIB}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_TRUST_LIB}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_TRUST_LIB}>" 
+					${WHOLE_ARCHIVE_FLAG_BEGIN} 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}>" 
+					${WHOLE_ARCHIVE_FLAG_END}
+					${GROUP_FLAG_BEGIN}
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
+					${GROUP_FLAG_END}
 					)
 
 ###########################################################
 ### Example_App
 ###########################################################
 add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
-target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_INCLUDE_DIRS})
+target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH})
 
 if(MSVC)
 	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="Example_Enclave.token")
@@ -308,19 +297,19 @@ endif()
 
 add_custom_command(TARGET Example_App
 	PRE_BUILD
-	COMMAND "${SGX_EDGER_PATH}"  
+	COMMAND "${INTEL_SGX_EDGER_PATH}"  
 	--untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
-	--search-path "${INTEL_SGX_INCLUDE_DIRS}"
+	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_app"
 )
 
 target_link_libraries(Example_App 
 #					OpenSSL::SSL 
 #					OpenSSL::Crypto 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_DEBUG_UNTRUST_LIB}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_DEBUGSIM_UNTRUST_LIB}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_RELEASE_UNTRUST_LIB}>" 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
 					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
 					${Boost_LIBRARIES}
