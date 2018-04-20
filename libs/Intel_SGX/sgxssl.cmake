@@ -38,22 +38,30 @@ if(NOT ${OPENSSL_SOURCE_SHA256} STREQUAL ${OPENSSL_SOURCE_SHA256_EXPECTED})
 endif()
 
 if(NOT EXISTS ${SSL_ARCHIVE_PATH})
-	execute_process(
-		COMMAND build_all.cmd openssl-${OPENSSL_SOURCE_VER}
-		WORKING_DIRECTORY "${SSL_WORK_DIR}"
-		OUTPUT_FILE "${SSL_WORK_DIR}/build_output.txt"
-		)
+	if(WIN32)
+		execute_process(
+			COMMAND build_all.cmd openssl-${OPENSSL_SOURCE_VER}
+			WORKING_DIRECTORY "${SSL_WORK_DIR}"
+			OUTPUT_FILE "${SSL_WORK_DIR}/build_output.txt"
+			)
+#	else()
+#		execute_process(
+#			COMMAND ./build_sgxssl.sh
+#			WORKING_DIRECTORY "${SSL_WORK_DIR}"
+#			OUTPUT_FILE "${SSL_WORK_DIR}/build_output.txt"
+#			)
+	endif()
 endif()
 
-if(NOT EXISTS ${SSL_ARCHIVE_PATH})
-	message(FATAL_ERROR "INTEL SGX SSL Build failed!!")
-endif()
+#if(NOT EXISTS ${SSL_ARCHIVE_PATH})
+#	message(FATAL_ERROR "INTEL SGX SSL Build failed!!")
+#endif()
 
-if(NOT EXISTS ${SSL_BUILD_DIR})
-	file(MAKE_DIRECTORY ${SSL_BUILD_DIR})
-endif()
+#if(NOT EXISTS ${SSL_BUILD_DIR})
+#	file(MAKE_DIRECTORY ${SSL_BUILD_DIR})
+#endif()
 
-execute_process(
-	COMMAND ${CMAKE_COMMAND} -E tar xzf "${SSL_ARCHIVE_PATH}"
-	WORKING_DIRECTORY ${SSL_BUILD_DIR}
-)
+#execute_process(
+#	COMMAND ${CMAKE_COMMAND} -E tar xzf "${SSL_ARCHIVE_PATH}"
+#	WORKING_DIRECTORY ${SSL_BUILD_DIR}
+#)
