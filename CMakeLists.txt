@@ -120,6 +120,9 @@ add_compile_options(
 	"$<$<CONFIG:Release>:${RELEASE_OPTIONS}>"
 )
 
+if(UNIX)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
+endif()
 
 message(STATUS "==================================================")
 message(STATUS "CMake Standard Libraries:")
