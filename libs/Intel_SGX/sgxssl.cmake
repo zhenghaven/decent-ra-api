@@ -10,6 +10,14 @@ else()
 	set(SGX_SSL_BINARY_POSTFIX tar.gz)
 endif()
 
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+	set(LINUX_LIB_ARCHI_STR "lib")
+	set(WIN32_LIB_ARCHI_STR "Win32")
+else()
+	set(LINUX_LIB_ARCHI_STR "lib64")
+	set(WIN32_LIB_ARCHI_STR "X64")
+endif()
+
 get_filename_component(SSL_PATH "${CMAKE_CURRENT_LIST_DIR}/intel-sgx-ssl" ABSOLUTE)
 get_filename_component(SSL_BIN_PATH "${CMAKE_CURRENT_BINARY_DIR}/intel-sgx-ssl" ABSOLUTE)
 
@@ -75,3 +83,96 @@ execute_process(
 	COMMAND ${CMAKE_COMMAND} -E tar xzf "${SSL_ARCHIVE_PATH}"
 	WORKING_DIRECTORY ${SSL_BUILD_DIR}
 )
+
+
+############################
+# SGX SSL Path
+############################
+
+# ${INTEL_SGX_SSL_INCLUDE_PATH}
+
+# ${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUG}
+# ${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUGSIM}
+# ${INTEL_SGX_SSL_LIB_WHOLE_ARC_RELEASE}
+
+# ${INTEL_SGX_SSL_LIB_GROUP_DEBUG}
+# ${INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM}
+# ${INTEL_SGX_SSL_LIB_GROUP_RELEASE}
+
+# ${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}
+# ${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}
+# ${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}
+
+get_filename_component(INTEL_SGX_SSL_INCLUDE_PATH "${SSL_BUILD_DIR}/include" ABSOLUTE)
+
+if(WIN32)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUG 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/debug/libsgx_tsgxssl.lib)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_GROUP_DEBUG 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/debug/libsgx_tsgxssl_crypto.lib)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/debug/libsgx_usgxssl.lib)
+	set(INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG ${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG} Ws2_32.lib)
+	
+	################################################################################
+	
+	file(GLOB INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUGSIM 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/debug/libsgx_tsgxssl.lib)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/debug/libsgx_tsgxssl_crypto.lib)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/debug/libsgx_usgxssl.lib)
+	set(INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM ${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM} Ws2_32.lib)
+	
+	################################################################################
+	
+	file(GLOB INTEL_SGX_SSL_LIB_WHOLE_ARC_RELEASE 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/release/libsgx_tsgxssl.lib)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_GROUP_RELEASE 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/release/libsgx_tsgxssl_crypto.lib)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE 
+				${SSL_BUILD_DIR}/lib/${WIN32_LIB_ARCHI_STR}/release/libsgx_usgxssl.lib)
+	set(INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE ${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE} Ws2_32.lib)
+	
+else()
+	
+	file(GLOB INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUG 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/debug/libsgx_tsgxssl.a)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_GROUP_DEBUG 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/debug/libsgx_tsgxssl_crypto.a)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/debug/libsgx_usgxssl.a)
+	
+	################################################################################
+	
+	file(GLOB INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUGSIM 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/debug/libsgx_tsgxssl.a)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/debug/libsgx_tsgxssl_crypto.a)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/debug/libsgx_usgxssl.a)
+	
+	################################################################################
+	
+	file(GLOB INTEL_SGX_SSL_LIB_WHOLE_ARC_RELEASE 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/release/libsgx_tsgxssl.a)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_GROUP_RELEASE 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/release/libsgx_tsgxssl_crypto.a)
+	
+	file(GLOB INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE 
+				${SSL_BUILD_DIR}/${LINUX_LIB_ARCHI_STR}/release/libsgx_usgxssl.a)
+	
+endif()
+

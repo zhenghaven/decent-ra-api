@@ -1,44 +1,29 @@
 cmake_minimum_required(VERSION 3.0)
 
-### Setup Hunter ###
-#set(gate_dir "${CMAKE_CURRENT_LIST_DIR}/hunter/gate")
-#set(gate_module "${gate_dir}/cmake/HunterGate.cmake")
-
-#get_filename_component(gate_module "${gate_module}" ABSOLUTE)
-#if(NOT EXISTS "${gate_module}")
-#	message(
-#		FATAL_ERROR
-#		"${gate_module} module not found!"
-#	)
-#endif()
-
-#message("Including HunterGate: ${gate_module}")
-#include("${gate_module}")
-
-#get_filename_component(HUNTER_ROOT "${CMAKE_CURRENT_LIST_DIR}/hunter" ABSOLUTE)
-#HunterGate(URL "x" SHA1 "xxxxxxxx" ${TESTING_CONFIG_OPT})
-
-### END Setup Hunter ###
-
 project(decent)
 
+set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module" FORCE)
 #Add any required boost libraries here:
 set(BOOST_Req_Libs filesystem date_time)
 
 ### Setup and find boost ###
 
-set(BOOST_ROOT "${CMAKE_CURRENT_LIST_DIR}/libs/boost")
-set(BOOST_LIBRARYDIR "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
+set(BOOST_ROOT "${CMAKE_CURRENT_BINARY_DIR}/libs/boost")
+set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
 
-set(Boost_LIBRARY_DIR_RELEASE "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
-set(Boost_LIBRARY_DIR_DEBUG "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
-set(Boost_LIBRARY_DIR "${CMAKE_CURRENT_LIST_DIR}/libs/boost/lib")
+set(Boost_LIBRARY_DIR_RELEASE "${BOOST_ROOT}/lib")
+set(Boost_LIBRARY_DIR_DEBUG "${BOOST_ROOT}/lib")
+set(Boost_LIBRARY_DIR "${BOOST_ROOT}/lib")
 #set(Boost_DEBUG ON)
 #set(Boost_DETAILED_FAILURE_MSG ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)
 if(MSVC)
 	set(Boost_COMPILER -vc141)
+endif()
+
+if(NOT EXISTS ${BOOST_ROOT})
+	file(MAKE_DIRECTORY ${BOOST_ROOT})
 endif()
 
 find_package(Boost 1.65.1 COMPONENTS ${BOOST_Req_Libs})
@@ -66,13 +51,19 @@ if(NOT Boost_FOUND)
 		set(BOOST_INSTALL_COMMAND "")
 	endif()
 
+	message(STATUS "==================================================")
+	message(STATUS "Building Boost...")
 	execute_process(COMMAND ${BOOST_CONFIGURE_COMMAND}
 					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
+					OUTPUT_FILE "${BOOST_ROOT}/build_output1.txt"
 					)
 
 	execute_process(COMMAND ${BOOST_BUILD_COMMAND}
 					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
+					OUTPUT_FILE "${BOOST_ROOT}/build_output2.txt"
 					)
+	message(STATUS "Build completed. Build log can be found at ${BOOST_ROOT}/build_output.txt")
+	message(STATUS "==================================================")
 endif()
 
 message(STATUS "==================================================")
@@ -219,7 +210,7 @@ endif()
 ### LibTest_App
 ###########################################################
 add_executable(LibTest_App ${LibTest_App_SOURCES}  ${COMMON_SOURCES})
-target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH})
+target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(LibTest_App 
 #					OpenSSL::SSL 
@@ -227,6 +218,9 @@ target_link_libraries(LibTest_App
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
 					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
 					${Boost_LIBRARIES}
@@ -248,7 +242,7 @@ endif()
 
 add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES})
 
-target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc" PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME}")
+target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc" PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME}" PRIVATE ${INTEL_SGX_SSL_INCLUDE_PATH})
 
 set_target_properties(Example_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}")
 
@@ -258,6 +252,7 @@ add_custom_command(TARGET Example_Enclave
 	--trusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
 	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
+	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave"
 )
 
@@ -275,11 +270,17 @@ target_link_libraries(Example_Enclave
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}>" 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_RELEASE}>" 
 					${WHOLE_ARCHIVE_FLAG_END}
 					${GROUP_FLAG_BEGIN}
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_GROUP_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_GROUP_RELEASE}>" 
 					${GROUP_FLAG_END}
 					)
 
@@ -287,7 +288,7 @@ target_link_libraries(Example_Enclave
 ### Example_App
 ###########################################################
 add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
-target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH})
+target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
 
 if(MSVC)
 	target_compile_definitions(Example_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="Example_Enclave.token")
@@ -301,6 +302,7 @@ add_custom_command(TARGET Example_App
 	--untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
 	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
+	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_app"
 )
 
@@ -310,13 +312,15 @@ target_link_libraries(Example_App
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
-					jsoncpp_lib_static
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
+					${json_LIB}
 					${COMMON_STANDARD_LIBRARIES}
 					${Boost_LIBRARIES}
 				)
 
-message(STATUS "1: " ${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG})
-message(STATUS "1: " ${INTEL_SGX_SDK_LIB_GROUP_DEBUG})
+
 ### Config Flags for Linux OS ###
 
 if(NOT MSVC)
