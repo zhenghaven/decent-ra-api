@@ -30,6 +30,6 @@
 ### For Linux or Mac
 1. Run setup-linux.sh
 2. Go to "build" directory, and run "make".
-**Note:** setup-linux.sh will generate the project in Hardware Debug mode in default. Use arguments to manually specify build mode (check script file for details).
-Or \
-The CLion can load the CMakeLists.txt directly.
+**Note:** setup-linux.sh will generate the project in Hardware Debug mode in default. Use arguments to manually specify build mode (check script file for details). \
+**Or** 
+- CLion (an C\C++ IDE) can load the CMakeLists.txt directly.
