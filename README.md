@@ -6,7 +6,7 @@
   - Some computer doesn't have or support the SGX hardware. If the computer doesn't support, try to use the simulation mode to develop the program.
 - Install [Intel SGX SDK](https://software.intel.com/en-us/sgx-sdk/download)
   - For **Windows**, install the following programs:
-    1. go to [Intel SGX SDK](https://software.intel.com/en-us/sgx-sdk/download) download an install SGX SDK.
+    1. go to [Intel SGX SDK](https://software.intel.com/en-us/sgx-sdk/download) download and install SGX SDK.
     2. Install Perl compiler (recommand: [ActivePerl](https://www.activestate.com/activeperl/downloads)) (For SGX OpenSSL)
     3. Install 7zip (For SGX OpenSSL)
     4. Install NASM (For SGX OpenSSL)
@@ -17,6 +17,10 @@
     3. PSW (this is required for hardware mode).
     - **Note:** These scripts may install some required library packages using command "sudo apt-get install ...".
 - Install [CMake](https://cmake.org/download/)
+
+## Clone this repo
+- When cloning the repo, make sure you recursively __**clone all the submodules**__ (use command "git submodule update --init --recursive"). 
+- It might be time-consuming to clone the submodules of Boost library. (Depends on network speed)
 
 ## Build
 ### For Windows
