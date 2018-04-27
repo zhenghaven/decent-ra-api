@@ -186,15 +186,16 @@ file(GLOB_RECURSE COMMON_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.c ${
 
 file(GLOB_RECURSE COMMON_ENCLAVE_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.hh)
 
+file(GLOB_RECURSE COMMON_EDL_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.edl)
+
 file(GLOB_RECURSE LibTest_App_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.hh)
 
 file(GLOB_RECURSE Example_App_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hh ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.edl)
 
 file(GLOB_RECURSE Example_Enclave_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hh ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.edl)
 
-### Filters ###
+file(GLOB_RECURSE Example_EDL_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.edl)
 
-### End Filters ###
 
 ### Library link flags ###
 if(MSVC)
@@ -232,6 +233,14 @@ target_link_libraries(LibTest_App
 ###########################################################
 ### Example_Enclave
 ###########################################################
+
+### Filters ###
+source_group("" FILES ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES} ${Example_EDL_SOURCES} ${COMMON_EDL_SOURCES})
+source_group(Common FILES ${COMMON_ENCLAVE_SOURCES})
+source_group(Example_App FILES ${Example_Enclave_SOURCES})
+source_group(EDLs FILES ${Example_EDL_SOURCES})
+source_group(Common_EDLs FILES ${COMMON_EDL_SOURCES})
+### End Filters ###
 
 if(MSVC)
 	set(Enclave_Filename "Example_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.dll")
@@ -290,6 +299,15 @@ target_link_libraries(Example_Enclave
 ###########################################################
 ### Example_App
 ###########################################################
+
+### Filters ###
+source_group("" FILES ${Example_App_SOURCES} ${COMMON_SOURCES} ${Example_EDL_SOURCES} ${COMMON_EDL_SOURCES})
+source_group(Common FILES ${COMMON_SOURCES})
+source_group(Example_App FILES ${Example_App_SOURCES})
+source_group(EDLs FILES ${Example_EDL_SOURCES})
+source_group(Common_EDLs FILES ${COMMON_EDL_SOURCES})
+### End Filters ###
+
 add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
 target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
 
