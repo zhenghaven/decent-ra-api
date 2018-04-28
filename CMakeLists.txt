@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.11)
 
 project(decent)
 
@@ -17,6 +17,7 @@ set(Boost_LIBRARY_DIR "${BOOST_ROOT}/lib")
 #set(Boost_DEBUG ON)
 #set(Boost_DETAILED_FAILURE_MSG ON)
 set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_NO_SYSTEM_PATHS ON)
 if(MSVC)
 	set(Boost_COMPILER -vc141)
@@ -26,7 +27,7 @@ if(NOT EXISTS ${BOOST_ROOT})
 	file(MAKE_DIRECTORY ${BOOST_ROOT})
 endif()
 
-find_package(Boost 1.65.1 COMPONENTS ${BOOST_Req_Libs})
+find_package(Boost 1.66.0 COMPONENTS ${BOOST_Req_Libs})
 
 if(NOT Boost_FOUND)
 	if(MSVC)
@@ -35,7 +36,7 @@ if(NOT Boost_FOUND)
 		endforeach()
 		set(BOOST_UPDATE_COMMAND "")
 		set(BOOST_CONFIGURE_COMMAND bootstrap.bat)
-		set(BOOST_BUILD_COMMAND b2 install --prefix=${BOOST_ROOT} ${BOOST_BUILD_LIB_LIST})
+		set(BOOST_BUILD_COMMAND b2 -j8 toolset=msvc-14.1 address-model=64 architecture=x86 link=static runtime-link=static install --prefix=${BOOST_ROOT} ${BOOST_BUILD_LIB_LIST})
 		set(BOOST_INSTALL_COMMAND "")
 	else()
 		foreach(lib_name IN LISTS BOOST_Req_Libs)
@@ -53,11 +54,13 @@ if(NOT Boost_FOUND)
 
 	message(STATUS "==================================================")
 	message(STATUS "Building Boost...")
+	message(STATUS "${BOOST_CONFIGURE_COMMAND}")
 	execute_process(COMMAND ${BOOST_CONFIGURE_COMMAND}
 					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
 					OUTPUT_FILE "${BOOST_ROOT}/build_output1.txt"
 					)
 
+	message(STATUS "${BOOST_BUILD_COMMAND}")
 	execute_process(COMMAND ${BOOST_BUILD_COMMAND}
 					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
 					OUTPUT_FILE "${BOOST_ROOT}/build_output2.txt"
@@ -68,7 +71,7 @@ endif()
 
 message(STATUS "==================================================")
 message(STATUS "Looking for Boost library in ${BOOST_ROOT}...")
-find_package(Boost 1.65.1 COMPONENTS ${BOOST_Req_Libs} REQUIRED)
+find_package(Boost 1.66.0 COMPONENTS ${BOOST_Req_Libs} REQUIRED)
 message(STATUS "Boost found?: ${Boost_FOUND}")
 message(STATUS "Boost Include Dir: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost Library Dir: ${Boost_LIBRARY_DIRS}")
