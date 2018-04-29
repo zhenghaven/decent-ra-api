@@ -57,7 +57,7 @@ std::vector<int> g_bColorMap =
 
 void SetConsoleColor(ConsoleColors foreground, ConsoleColors background)
 {
-	printf("\033[%d;%dm", g_fColorMap[static_cast<int>(foreground)], g_bColorMap[static_cast<int>(background)])
+	printf("\033[%d;%dm", g_fColorMap[static_cast<int>(foreground)], g_bColorMap[static_cast<int>(background)]);
 }
 
 #endif // _WIN32

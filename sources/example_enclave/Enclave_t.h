@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include "sgx_edger8r.h" /* for sgx_ocall etc. */
 
-#include "sgxssl_texception.h"
+
+#include <stdlib.h> /* for size_t */
 
 #define SGX_CAST(type, item) ((type)(item))
 
@@ -14,13 +15,12 @@
 extern "C" {
 #endif
 
-
 void ecall_initializer_list_demo();
 void ecall_square_array(int* arr, size_t len_in_byte);
 int ecall_add_two_int(int a, int b);
 
 sgx_status_t SGX_CDECL ocall_print_string(const char* str);
-sgx_status_t SGX_CDECL u_sgxssl_ftime64(void* timeptr, uint32_t timeb64Len);
+sgx_status_t SGX_CDECL u_sgxssl_ftime(void* timeptr, uint32_t timeb_len);
 sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf);
 sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const void* self);
 sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const void* waiter);

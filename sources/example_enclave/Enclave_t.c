@@ -1,6 +1,7 @@
 #include "Enclave_t.h"
 
 #include "sgx_trts.h" /* for sgx_ocalloc, sgx_is_outside_enclave */
+#include "sgx_lfence.h" /* for sgx_lfence */
 
 #include <errno.h>
 #include <string.h> /* for memcpy etc */
@@ -32,10 +33,10 @@ typedef struct ms_ocall_print_string_t {
 	char* ms_str;
 } ms_ocall_print_string_t;
 
-typedef struct ms_u_sgxssl_ftime64_t {
+typedef struct ms_u_sgxssl_ftime_t {
 	void* ms_timeptr;
-	uint32_t ms_timeb64Len;
-} ms_u_sgxssl_ftime64_t;
+	uint32_t ms_timeb_len;
+} ms_u_sgxssl_ftime_t;
 
 typedef struct ms_sgx_oc_cpuidex_t {
 	int* ms_cpuinfo;
@@ -65,12 +66,6 @@ typedef struct ms_sgx_thread_set_multiple_untrusted_events_ocall_t {
 	size_t ms_total;
 } ms_sgx_thread_set_multiple_untrusted_events_ocall_t;
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4127)
-#pragma warning(disable: 4200)
-#endif
-
 static sgx_status_t SGX_CDECL sgx_ecall_initializer_list_demo(void* pms)
 {
 	sgx_status_t status = SGX_SUCCESS;
@@ -82,6 +77,10 @@ static sgx_status_t SGX_CDECL sgx_ecall_initializer_list_demo(void* pms)
 static sgx_status_t SGX_CDECL sgx_ecall_square_array(void* pms)
 {
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_square_array_t));
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
 	ms_ecall_square_array_t* ms = SGX_CAST(ms_ecall_square_array_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	int* _tmp_arr = ms->ms_arr;
@@ -91,11 +90,10 @@ static sgx_status_t SGX_CDECL sgx_ecall_square_array(void* pms)
 
 	CHECK_UNIQUE_POINTER(_tmp_arr, _len_arr);
 
-
 	//
 	// fence after pointer checks
 	//
-	_mm_lfence();
+	sgx_lfence();
 
 	if (_tmp_arr != NULL && _len_arr != 0) {
 		_in_arr = (int*)malloc(_len_arr);
@@ -120,15 +118,13 @@ err:
 static sgx_status_t SGX_CDECL sgx_ecall_add_two_int(void* pms)
 {
 	CHECK_REF_POINTER(pms, sizeof(ms_ecall_add_two_int_t));
-	ms_ecall_add_two_int_t* ms = SGX_CAST(ms_ecall_add_two_int_t*, pms);
-	sgx_status_t status = SGX_SUCCESS;
-
-
-
 	//
 	// fence after pointer checks
 	//
-	_mm_lfence();
+	sgx_lfence();
+	ms_ecall_add_two_int_t* ms = SGX_CAST(ms_ecall_add_two_int_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+
 
 
 	ms->ms_retval = ecall_add_two_int(ms->ms_a, ms->ms_b);
@@ -139,7 +135,7 @@ static sgx_status_t SGX_CDECL sgx_ecall_add_two_int(void* pms)
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* call_addr; uint8_t is_priv;} ecall_table[3];
+	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[3];
 } g_ecall_table = {
 	3,
 	{
@@ -203,13 +199,13 @@ sgx_status_t SGX_CDECL ocall_print_string(const char* str)
 	return status;
 }
 
-sgx_status_t SGX_CDECL u_sgxssl_ftime64(void* timeptr, uint32_t timeb64Len)
+sgx_status_t SGX_CDECL u_sgxssl_ftime(void* timeptr, uint32_t timeb_len)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_timeptr = timeb64Len;
+	size_t _len_timeptr = timeb_len;
 
-	ms_u_sgxssl_ftime64_t* ms = NULL;
-	size_t ocalloc_size = sizeof(ms_u_sgxssl_ftime64_t);
+	ms_u_sgxssl_ftime_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_u_sgxssl_ftime_t);
 	void *__tmp = NULL;
 
 	void *__tmp_timeptr = NULL;
@@ -220,8 +216,8 @@ sgx_status_t SGX_CDECL u_sgxssl_ftime64(void* timeptr, uint32_t timeb64Len)
 		sgx_ocfree();
 		return SGX_ERROR_UNEXPECTED;
 	}
-	ms = (ms_u_sgxssl_ftime64_t*)__tmp;
-	__tmp = (void *)((size_t)__tmp + sizeof(ms_u_sgxssl_ftime64_t));
+	ms = (ms_u_sgxssl_ftime_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_u_sgxssl_ftime_t));
 
 	if (timeptr != NULL && sgx_is_within_enclave(timeptr, _len_timeptr)) {
 		ms->ms_timeptr = (void*)__tmp;
@@ -235,7 +231,7 @@ sgx_status_t SGX_CDECL u_sgxssl_ftime64(void* timeptr, uint32_t timeb64Len)
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	
-	ms->ms_timeb64Len = timeb64Len;
+	ms->ms_timeb_len = timeb_len;
 	status = sgx_ocall(1, ms);
 
 	if (timeptr) memcpy((void*)timeptr, __tmp_timeptr, _len_timeptr);
@@ -404,6 +400,3 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 	return status;
 }
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif

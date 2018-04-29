@@ -19,16 +19,21 @@ namespace
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_OUT_OF_MEMORY, std::pair<std::string, std::string>("Not enough memory is available to complete this operation.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_ENCLAVE_LOST, std::pair<std::string, std::string>("Enclave lost after power transition or used in child process created by linux:fork().", "Please refer to the sample \"PowerTransition\" for details.")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_INVALID_STATE, std::pair<std::string, std::string>("SGX API is invoked in incorrect order or state.", "")),
+#ifdef _WIN32
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_HYPERV_ENABLED, std::pair<std::string, std::string>("Win10 platform with Hyper-V enabled.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_FEATURE_NOT_SUPPORTED, std::pair<std::string, std::string>("Feature is not supported on this platform.", "")),
-		
+#endif
+
 		//0x1...
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_INVALID_FUNCTION, std::pair<std::string, std::string>("The ecall/ocall index is invalid.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_OUT_OF_TCS, std::pair<std::string, std::string>("The enclave is out of TCS.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_ENCLAVE_CRASHED, std::pair<std::string, std::string>("The enclave is crashed.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_ECALL_NOT_ALLOWED, std::pair<std::string, std::string>("The ECALL is not allowed at this time, e.g. ecall is blocked by the dynamic entry table, or nested ecall is not allowed during initialization.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_OCALL_NOT_ALLOWED, std::pair<std::string, std::string>("The OCALL is not allowed at this time, e.g. ocall is not allowed during exception handling.", "")),
-		
+#ifndef _WIN32
+		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_STACK_OVERRUN, std::pair<std::string, std::string>("The enclave is running out of stack", "")),
+#endif
+
 		//0x2...
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_UNDEFINED_SYMBOL, std::pair<std::string, std::string>("The enclave image has undefined symbol.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_INVALID_ENCLAVE, std::pair<std::string, std::string>("The enclave image is not correct.", "")),
@@ -46,6 +51,9 @@ namespace
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_MODE_INCOMPATIBLE, std::pair<std::string, std::string>("The target enclave 32/64 bit mode or sim/hw mode is incompatible with the mode of current uRTS.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_ENCLAVE_FILE_ACCESS, std::pair<std::string, std::string>("Can't open enclave file.", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_INVALID_MISC, std::pair<std::string, std::string>("The MiscSelct/MiscMask settings are not correct.", "")),
+#ifndef _WIN32
+		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_INVALID_LAUNCH_TOKEN, std::pair<std::string, std::string>("The launch token is not correct.", "")),
+#endif
 
 		//0x3...
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_MAC_MISMATCH, std::pair<std::string, std::string>("Indicates verification error for reports, sealed datas, etc", "")),
@@ -70,12 +78,14 @@ namespace
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_MC_OVER_QUOTA, std::pair<std::string, std::string>("Monotonic counters exceeds quota limitation", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_KDF_MISMATCH, std::pair<std::string, std::string>("Key derivation function doesn't match during key exchange", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_UNRECOGNIZED_PLATFORM, std::pair<std::string, std::string>("EPID Provisioning failed due to platform not recognized by backend server", "")),
+#ifdef _WIN32
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_SM_SERVICE_CLOSED, std::pair<std::string, std::string>("The secure message service instance was closed", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_SM_SERVICE_UNAVAILABLE, std::pair<std::string, std::string>("The secure message service applet doesn't have existing session", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_SM_SERVICE_UNCAUGHT_EXCEPTION, std::pair<std::string, std::string>("The secure message service instance was terminated with an uncaught exception", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_SM_SERVICE_RESPONSE_OVERFLOW, std::pair<std::string, std::string>("The response data of the service applet is too much", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_SM_SERVICE_INTERNAL_ERROR, std::pair<std::string, std::string>("The secure message service got an internal error", "")),
-		
+#endif
+
 		//0x5...
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_NO_PRIVILEGE, std::pair<std::string, std::string>("Not enough privilege to perform the operation", "")),
 		
@@ -92,9 +102,11 @@ namespace
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_FILE_CLOSE_FAILED, std::pair<std::string, std::string>("fclose operation (to disk) failed (only used when no EXXX is returned)", "")),
 		
 		//0x8...
+#ifdef _WIN32
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_IPLDR_NOTENCRYPTED, std::pair<std::string, std::string>("sgx_create_encrypted_enclave was called but enclave dll is not encrypted", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_IPLDR_MAC_MISMATCH, std::pair<std::string, std::string>("sgx_create_encrypted_enclave was called but there was a verification error when decrypting the data", "")),
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_ERROR_IPLDR_ENCRYPTED, std::pair<std::string, std::string>("sgx_create_enclave was called but enclave dll is encrypted", "")),
+#endif
 	};
 
 	std::map<sgx_device_status_t, std::string> g_sgxDeviceStatus = 
@@ -132,5 +144,11 @@ std::string GetSGXDeviceStatusStr(const sgx_device_status_t ret)
 
 sgx_status_t GetSGXDeviceStatus(sgx_device_status_t & res)
 {
-	return sgx_enable_device(&res);;
+#ifdef _WIN32
+	return sgx_enable_device(&res);
+#else
+    LOGW("Temporary fix for this function. Need to be fixed later.");
+	res = SGX_ENABLED;
+    return SGX_SUCCESS;
+#endif
 }
