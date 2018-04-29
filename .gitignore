@@ -33,3 +33,9 @@
 
 # Build Directory
 build/
+
+#Enclave EDL generated files
+*_t.h
+*_t.c
+*_u.h
+*_u.c
