@@ -183,6 +183,8 @@ set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
 
+set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
+
 ### END Add Sub-modules ###
 
 file(GLOB_RECURSE COMMON_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.hh)
@@ -257,7 +259,13 @@ endif()
 
 add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES})
 
-target_include_directories(Example_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc" PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME}" PRIVATE ${INTEL_SGX_SSL_INCLUDE_PATH})
+target_include_directories(Example_Enclave BEFORE 
+							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
+							PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc" 
+							PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME}" 
+							PRIVATE ${INTEL_SGX_SSL_INCLUDE_PATH}
+							PRIVATE ${CPPCODEC_INCLUDE_DIR}
+							)
 
 set_target_properties(Example_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}")
 

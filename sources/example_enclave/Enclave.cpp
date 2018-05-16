@@ -4,6 +4,8 @@
 #include <initializer_list>
 #include <vector>
 
+#include <cppcodec/base64_rfc4648.hpp>
+
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 
@@ -65,4 +67,11 @@ void ecall_square_array(int* arr, const size_t len_in_byte)
 	{
 		arr[i] *= arr[i];
 	}
+
+	std::string base64TestStr = "Base64 test string.";
+	std::string base64CodeStr = cppcodec::base64_rfc4648::encode(base64TestStr.c_str(), base64TestStr.size());
+	enclave_printf("base 64 code string: %s\n", base64CodeStr.c_str());
+	auto base64out = cppcodec::base64_rfc4648::decode(base64CodeStr); ;
+	enclave_printf("base 64 code string: %s\n", std::string((char*)base64out.data(), base64out.size()).c_str());
+
 }

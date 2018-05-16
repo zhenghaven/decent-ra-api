@@ -16,3 +16,7 @@
 [submodule "libs/Intel_SGX/intel-sgx-ssl"]
 	path = libs/Intel_SGX/intel-sgx-ssl
 	url = https://github.com/intel/intel-sgx-ssl.git
+[submodule "libs/cppcodec"]
+	path = libs/cppcodec
+	url = https://github.com/tplgy/cppcodec.git
+
