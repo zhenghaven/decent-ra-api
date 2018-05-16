@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../common/SGXEnclave.h"
+#include "../common_app/SGXEnclave.h"
 
 class ExampleEnclave : public SGXEnclave
 {

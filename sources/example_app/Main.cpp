@@ -15,8 +15,8 @@
 # define FALSE 0
 #endif
 
-#include "../common/EnclaveUtil.h"
-#include "../common/Common.h"
+#include "../common_app/EnclaveUtil.h"
+#include "../common_app/Common.h"
 #include "ExampleEnclave.h"
 
 /* Application entry */

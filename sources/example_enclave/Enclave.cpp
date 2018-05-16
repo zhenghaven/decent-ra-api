@@ -1,6 +1,3 @@
-#include <tlibc/stdarg.h>
-#include <tlibc/stdio.h>      /* vsnprintf */
-
 #include <initializer_list>
 #include <vector>
 
@@ -8,16 +5,8 @@
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
+#include "../common_enclave/enclave_tools.h"
 
-void enclave_printf(const char * fmt, ...)
-{
-	char buf[BUFSIZ] = { '\0' };
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(buf, BUFSIZ, fmt, ap);
-	va_end(ap);
-	ocall_print_string(buf);
-}
 
 //Feature name        : Initializer lists
 //Feature description : An object of type std::initializer_list<T> is a lightweight proxy object that provides access to an array of objects of type const T.

@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Enclave_u.h"
+#include "../common_app/enclave_tools.h"
 
 void ExampleEnclave::TestEnclaveFunctions()
 {

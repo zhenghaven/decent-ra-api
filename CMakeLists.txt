@@ -189,6 +189,8 @@ set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 
 file(GLOB_RECURSE COMMON_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.hh)
 
+file(GLOB_RECURSE COMMON_APP_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.hh)
+
 file(GLOB_RECURSE COMMON_ENCLAVE_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.hh)
 
 file(GLOB_RECURSE COMMON_EDL_SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.edl)
@@ -218,7 +220,7 @@ endif()
 ###########################################################
 ### LibTest_App
 ###########################################################
-add_executable(LibTest_App ${LibTest_App_SOURCES}  ${COMMON_SOURCES})
+add_executable(LibTest_App ${LibTest_App_SOURCES} ${COMMON_APP_SOURCES} ${COMMON_SOURCES})
 target_include_directories(LibTest_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(LibTest_App 
@@ -240,9 +242,13 @@ target_link_libraries(LibTest_App
 ###########################################################
 
 ### Filters ###
-source_group("" FILES ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES} ${Example_EDL_SOURCES} ${COMMON_EDL_SOURCES})
-source_group(Common FILES ${COMMON_ENCLAVE_SOURCES})
-source_group(Example_App FILES ${Example_Enclave_SOURCES})
+source_group("" FILES ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES} ${COMMON_SOURCES} ${Example_EDL_SOURCES} ${COMMON_EDL_SOURCES})
+
+source_group(Common FILES ${COMMON_SOURCES})
+source_group(Common_Enclave FILES ${COMMON_ENCLAVE_SOURCES})
+
+source_group(Example_Enclave FILES ${Example_Enclave_SOURCES})
+
 source_group(EDLs FILES ${Example_EDL_SOURCES})
 source_group(Common_EDLs FILES ${COMMON_EDL_SOURCES})
 ### End Filters ###
@@ -257,7 +263,7 @@ else()
 	set(Enclave_Bin_Path "${CMAKE_BINARY_DIR}")
 endif()
 
-add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES})
+add_library(Example_Enclave SHARED ${Example_Enclave_SOURCES} ${COMMON_ENCLAVE_SOURCES} ${COMMON_SOURCES})
 
 target_include_directories(Example_Enclave BEFORE 
 							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
@@ -274,6 +280,7 @@ add_custom_command(TARGET Example_Enclave
 	COMMAND "${INTEL_SGX_EDGER_PATH}"  
 	--trusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
+	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
 	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
 	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave"
@@ -312,14 +319,18 @@ target_link_libraries(Example_Enclave
 ###########################################################
 
 ### Filters ###
-source_group("" FILES ${Example_App_SOURCES} ${COMMON_SOURCES} ${Example_EDL_SOURCES} ${COMMON_EDL_SOURCES})
+source_group("" FILES ${Example_App_SOURCES} ${COMMON_APP_SOURCES} ${COMMON_SOURCES} ${Example_EDL_SOURCES} ${COMMON_EDL_SOURCES})
+
 source_group(Common FILES ${COMMON_SOURCES})
+source_group(Common_App FILES ${COMMON_APP_SOURCES})
+
 source_group(Example_App FILES ${Example_App_SOURCES})
+
 source_group(EDLs FILES ${Example_EDL_SOURCES})
 source_group(Common_EDLs FILES ${COMMON_EDL_SOURCES})
 ### End Filters ###
 
-add_executable(Example_App ${Example_App_SOURCES} ${COMMON_SOURCES})
+add_executable(Example_App ${Example_App_SOURCES} ${COMMON_APP_SOURCES} ${COMMON_SOURCES})
 target_include_directories(Example_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
 
 if(MSVC)
@@ -333,6 +344,7 @@ add_custom_command(TARGET Example_App
 	COMMAND "${INTEL_SGX_EDGER_PATH}"  
 	--untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/Enclave.edl" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave" 
+	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
 	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
 	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/example_app"
