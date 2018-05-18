@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.11)
 project(decent)
 
 set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module" FORCE)
+
 #Add any required boost libraries here:
 set(BOOST_Req_Libs filesystem date_time)
 
@@ -169,6 +170,7 @@ set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_EXE_LINKER_FLAGS_DEBUG})
 set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
 
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
+set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS Debug DebugSimulation)
 
 ### END Setup options ###
 
@@ -235,7 +237,8 @@ target_link_libraries(LibTest_App
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
 					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
-					${Boost_LIBRARIES}
+					Boost::filesystem
+					Boost::date_time
 					)
 
 ###########################################################
