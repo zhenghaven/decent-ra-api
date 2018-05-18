@@ -1,6 +1,8 @@
 #include <initializer_list>
 #include <vector>
 
+#include <sgx_tcrypto.h>
+
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include <rapidjson/rapidjson.h>
@@ -10,14 +12,42 @@
 
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
+#include <openssl/pem.h>
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 #include "../common_enclave/enclave_tools.h"
 
+namespace 
+{
+	sgx_ec256_private_t* sgxRAPriKey = nullptr;
+	sgx_ec256_public_t* sgxRAPubkey = nullptr;
+	sgx_ecc_state_handle_t sgxRAECCContext = nullptr;
+}
 
-#include <limits>
+static void CleanRAKeys()
+{
+	if (!sgxRAECCContext)
+	{
+		sgx_ecc256_close_context(sgxRAECCContext);
+		sgxRAECCContext = nullptr;
+	}
+	if (!sgxRAPriKey)
+	{
+		delete sgxRAPriKey;
+		sgxRAPriKey = nullptr;
+	}
+	if (!sgxRAPubkey)
+	{
+		delete sgxRAPubkey;
+		sgxRAPubkey = nullptr;
+	}
+}
 
+inline bool IsRAKeyExist()
+{
+	return (!sgxRAPriKey || !sgxRAPubkey);
+}
 
 //Feature name        : Initializer lists
 //Feature description : An object of type std::initializer_list<T> is a lightweight proxy object that provides access to an array of objects of type const T.
@@ -86,6 +116,75 @@ void ecall_square_array(int* arr, const size_t len_in_byte)
 
 	enclave_printf("JSON Example: %s\n", buffer.GetString());
 
+	std::string raPubKeyStr;
+	//ecall_GenRAKeys();
+	raPubKeyStr = SerializePubKey(sgxRAPubkey);
+	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
+	raPubKeyStr = SerializePubKey(sgxRAPubkey);
+	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
+	raPubKeyStr = SerializePubKey(sgxRAPubkey);
+	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
+	enclave_printf("Public key size: %d\n", sizeof(sgx_ec256_public_t));
+
+	CleanRAKeys();
+}
+
+sgx_status_t ecall_GenRAKeys()
+{
+	sgx_status_t res = SGX_SUCCESS;
+
+	if (!sgxRAECCContext) 
+	{
+		//Context is empty, need to create a new one.
+		res = sgx_ecc256_open_context(&sgxRAECCContext);
+	}
+	
+	//Context is not empty at this point.
+	if (res != SGX_SUCCESS)
+	{
+		//Context generation failed, clean the memory, return the result.
+		CleanRAKeys();
+		return res;
+	}
+
+	if (!sgxRAPriKey || !sgxRAPubkey)
+	{
+		//Key pairs are empty, need to generate new pair
+		sgxRAPriKey = new sgx_ec256_private_t;
+		sgxRAPubkey = new sgx_ec256_public_t;
+		if (!sgxRAPriKey || !sgxRAPubkey)
+		{
+			//memory allocation failed, clean the memory, return the result.
+			CleanRAKeys();
+			return SGX_ERROR_OUT_OF_MEMORY;
+		}
+		else
+		{
+			//memory allocation success, try to create new key pair.
+			res = sgx_ecc256_create_key_pair(sgxRAPriKey, sgxRAPubkey, sgxRAECCContext);
+		}
+	}
+	
+	if (res != SGX_SUCCESS)
+	{
+		//Key pair generation failed, clean the memory.
+		CleanRAKeys();
+	}
+
+	return res;
+}
+
+std::string SerializePubKey(const sgx_ec256_public_t* pubKey)
+{
+	if (!pubKey)
+	{
+		return std::string();
+	}
+
+	std::vector<uint8_t> buffer(sizeof(sgx_ec256_public_t), 0);
+	memcpy(&buffer[0], pubKey, sizeof(sgx_ec256_public_t));
+
+	return cppcodec::base64_rfc4648::encode(buffer);
 }
 
 int EC_KEY_get_asn1_flag(const EC_KEY* key)
@@ -101,13 +200,35 @@ int EC_KEY_get_asn1_flag(const EC_KEY* key)
 	}
 }
 
-void GenECKeys()
+void GenSSLECKeys()
 {
-	EC_KEY *key = nullptr;
+	EC_KEY *key = nullptr; 
+	EVP_PKEY *pkey = NULL;
+	int eccgrp;
+	int res = 0;
+
 	key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	if (!key)
+	{
+		enclave_printf("Gen key failed. - 0\n");
+	}
+
 	EC_KEY_set_asn1_flag(key, OPENSSL_EC_NAMED_CURVE);
 
-	EC_KEY_generate_key(key);
+	res = EC_KEY_generate_key(key);
+	if (!res)
+	{
+		enclave_printf("Gen key failed. - 1\n");
+	}
+
+	pkey = EVP_PKEY_new();
+
+	res = EVP_PKEY_assign_EC_KEY(pkey, key);
+	if (!res)
+	{
+		enclave_printf("Gen key failed. - 2\n");
+	}
+
 
 	//BIGNUM *prv = nullptr;
 	//EC_POINT *pub = nullptr;

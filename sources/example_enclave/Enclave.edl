@@ -12,6 +12,10 @@ enclave {
 		public void ecall_square_array([in, out, size=len_in_byte] int* arr, size_t len_in_byte);
 
 		public int ecall_add_two_int(int a, int b);
+
+		public sgx_status_t ecall_GenRAKeys();
+
+
 	};
 
 };
