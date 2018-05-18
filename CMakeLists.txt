@@ -171,6 +171,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}
 
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS Debug DebugSimulation)
+set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
 
 ### END Setup options ###
 
@@ -237,8 +238,7 @@ target_link_libraries(LibTest_App
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
 					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
-					Boost::filesystem
-					Boost::date_time
+					${Boost_LIBRARIES}
 					)
 
 ###########################################################
