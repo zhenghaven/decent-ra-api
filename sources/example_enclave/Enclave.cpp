@@ -3,9 +3,17 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 #include "../common_enclave/enclave_tools.h"
+
+
+#include <limits>
 
 
 //Feature name        : Initializer lists
@@ -62,5 +70,17 @@ void ecall_square_array(int* arr, const size_t len_in_byte)
 	enclave_printf("base 64 code string: %s\n", base64CodeStr.c_str());
 	auto base64out = cppcodec::base64_rfc4648::decode(base64CodeStr); ;
 	enclave_printf("base 64 code string: %s\n", std::string((char*)base64out.data(), base64out.size()).c_str());
+
+	const char* json = "{\"project\":\"rapidjson\",\"stars\":10}";
+	rapidjson::Document d;
+	d.Parse(json);
+	rapidjson::Value& s = d["stars"];
+	s.SetInt(s.GetInt() + 1);
+
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	d.Accept(writer);
+
+	enclave_printf("JSON Example: %s\n", buffer.GetString());
 
 }
