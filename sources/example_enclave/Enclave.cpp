@@ -8,6 +8,9 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include <openssl/ec.h>
+#include <openssl/obj_mac.h>
+
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 #include "../common_enclave/enclave_tools.h"
@@ -83,4 +86,32 @@ void ecall_square_array(int* arr, const size_t len_in_byte)
 
 	enclave_printf("JSON Example: %s\n", buffer.GetString());
 
+}
+
+int EC_KEY_get_asn1_flag(const EC_KEY* key)
+{
+	if (key)
+	{
+		const EC_GROUP* group = EC_KEY_get0_group(key);
+		if (group)
+		{
+			return EC_GROUP_get_asn1_flag(group);
+		}
+		return 0;
+	}
+}
+
+void GenECKeys()
+{
+	EC_KEY *key = nullptr;
+	key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	EC_KEY_set_asn1_flag(key, OPENSSL_EC_NAMED_CURVE);
+
+	EC_KEY_generate_key(key);
+
+	//BIGNUM *prv = nullptr;
+	//EC_POINT *pub = nullptr;
+
+	//EC_KEY_set_private_key(key, prv);
+	//EC_KEY_set_public_key(key, pub);
 }
