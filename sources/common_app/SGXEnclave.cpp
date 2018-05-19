@@ -3,8 +3,13 @@
 #include <sgx_urts.h>
 
 #include <boost/filesystem/operations.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include "Common.h"
+#include "SGXRemoteAttestationSession.h"
+
+using namespace boost::asio;
 
 SGXEnclave::SGXEnclave(const std::string enclavePath, const std::string tokenPath) :
 	SGXEnclave(enclavePath, fs::path(tokenPath))
@@ -69,6 +74,27 @@ bool SGXEnclave::IsLaunched() const
 	return (m_eid != 0);
 }
 
+void SGXEnclave::LaunchRemoteAttestationServer(uint32_t ipAddr, short port)
+{
+	m_RAServerIO = new boost::asio::io_service;
+	m_RAServerAcc = new boost::asio::ip::tcp::acceptor(*m_RAServerIO, ip::tcp::endpoint(ip::address_v4(ipAddr), port));
+}
+
+bool SGXEnclave::IsRAServerLaunched() const
+{
+	return (m_RAServerIO && m_RAServerAcc);
+}
+
+RemoteAttestationSession* SGXEnclave::AcceptRAConnection()
+{
+	if (!IsRAServerLaunched())
+	{
+		return nullptr;
+	}
+	RemoteAttestationSession* session = new SGXRemoteAttestationSession(*m_RAServerAcc);
+	return session;
+}
+
 sgx_status_t SGXEnclave::GetLastStatus() const
 {
 	return m_lastStatus;
@@ -79,6 +105,14 @@ SGXEnclave::~SGXEnclave()
 	if (IsLaunched())
 	{
 		sgx_destroy_enclave(m_eid);
+	}
+	if (m_RAServerIO)
+	{
+		delete m_RAServerIO;
+	}
+	if (m_RAServerAcc)
+	{
+		delete m_RAServerAcc;
 	}
 }
 
