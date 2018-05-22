@@ -7,14 +7,7 @@
 #include <sgx_urts.h>
 #include <sgx_uae_service.h>
 
-#ifdef _MSC_VER
-# include <Shlobj.h>
-#else
-# include <unistd.h>
-# include <pwd.h>
-# define MAX_PATH FILENAME_MAX
-# define FALSE 0
-#endif
+#include <tclap/CmdLine.h>
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
@@ -23,9 +16,17 @@
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
-	(void)(argc);
-	(void)(argv);
-	
+	TCLAP::CmdLine cmd("Enclave Remote Attestation", ' ', "ver", true);
+
+	//TCLAP::ValueArg<std::string> ipAddr("ip", "ipAddr", "IP Address", false, "127.0.0.1", "IP Address");
+
+	//TCLAP::SwitchArg doesRunAsServer("s", "server", "Run as server", false);
+
+	//cmd.add(ipAddr);
+	//cmd.add(doesRunAsServer);
+
+	//cmd.parse(argc, argv);
+
 	sgx_device_status_t deviceStatusRes;
 	sgx_status_t deviceStatusResErr = GetSGXDeviceStatus(deviceStatusRes);
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, GetSGXErrorMessage(deviceStatusResErr).c_str());

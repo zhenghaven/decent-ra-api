@@ -23,3 +23,6 @@
 [submodule "libs/enclaveRapidJson"]
 	path = libs/enclaveRapidJson
 	url = https://github.com/zhenghaven/enclaveRapidJson.git
+[submodule "libs/tclap"]
+	path = libs/tclap
+	url = https://git.code.sf.net/p/tclap/code

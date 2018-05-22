@@ -188,6 +188,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
 
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/enclaveRapidJson/include)
+set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 
 ### END Add Sub-modules ###
 
@@ -451,7 +452,7 @@ target_link_libraries(RemoteAttestation_Enclave
 ###########################################################
 
 add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
-target_include_directories(RemoteAttestation_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
+target_include_directories(RemoteAttestation_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS} PRIVATE ${TCLAP_INCLUDE_DIR})
 
 if(MSVC)
 	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE WIN32_LEAN_AND_MEAN)
@@ -489,7 +490,7 @@ target_link_libraries(RemoteAttestation_App
 ###########################################################
 
 add_executable(RemoteAttestationR_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
-target_include_directories(RemoteAttestationR_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
+target_include_directories(RemoteAttestationR_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS} PRIVATE ${TCLAP_INCLUDE_DIR})
 
 if(MSVC)
 	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE WIN32_LEAN_AND_MEAN)
