@@ -8,6 +8,7 @@
 #include <sgx_uae_service.h>
 
 #include <tclap/CmdLine.h>
+#include <boost/asio/ip/address_v4.hpp>
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
@@ -41,9 +42,18 @@ int SGX_CDECL main(int argc, char *argv[])
 
 	std::cout << "================ Test Process Completed ================" << std::endl;
 
+	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
+	uint16_t hostPort = 95577;
 #ifdef RA_SERVER_SIDE
 	std::cout << "================ This is server side ================" << std::endl;
 
+	exp.LaunchRemoteAttestationServer(hostIP, hostPort);
+	if (!exp.IsRAServerLaunched())
+	{
+		LOGE("RA Server Launch Failed!");
+	}
+
+	RemoteAttestationSession* RASession = exp.AcceptRAConnection();
 #else
 	std::cout << "================ This is client side ================" << std::endl;
 

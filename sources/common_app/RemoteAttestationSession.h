@@ -20,5 +20,11 @@ public:
 	virtual bool ProcessMessages() = 0;
 
 protected:
+	enum Mode
+	{
+		Server,
+		Client,
+	};
+
 	boost::asio::ip::tcp::socket m_socket;
 };
