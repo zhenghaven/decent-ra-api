@@ -22,7 +22,9 @@ SGXEnclave::SGXEnclave(const std::string enclavePath, const fs::path tokenPath) 
 	m_lastStatus(SGX_SUCCESS),
 	m_token(0),
 	m_enclavePath(enclavePath),
-	m_tokenPath(tokenPath)
+	m_tokenPath(tokenPath),
+	m_RAServerIO(nullptr),
+	m_RAServerAcc(nullptr)
 {
 }
 

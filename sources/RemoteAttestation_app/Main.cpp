@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include <string>
+#include <iostream>
 
 #include <sgx_urts.h>
 #include <sgx_uae_service.h>
@@ -36,6 +37,18 @@ int SGX_CDECL main(int argc, char *argv[])
 	printf("Info: Cxx11DemoEnclave successfully returned.\n");
 
 	printf("Enter a character before exit ...\n");
+
+	std::cout << "================ Test Process Completed ================" << std::endl;
+
+#ifdef RA_SERVER_SIDE
+	std::cout << "================ This is server side ================" << std::endl;
+
+#else
+	std::cout << "================ This is client side ================" << std::endl;
+
+#endif // RA_SERVER_SIDE
+
+
 	getchar();
 	return 0;
 }

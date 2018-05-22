@@ -454,9 +454,9 @@ add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${S
 target_include_directories(RemoteAttestation_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
 
 if(MSVC)
-	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" WIN32_LEAN_AND_MEAN)
+	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE WIN32_LEAN_AND_MEAN)
 else()
-	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token")
+	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE)
 endif()
 
 add_custom_command(TARGET RemoteAttestation_App
@@ -471,6 +471,44 @@ add_custom_command(TARGET RemoteAttestation_App
 )
 
 target_link_libraries(RemoteAttestation_App 
+#					OpenSSL::SSL 
+#					OpenSSL::Crypto 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
+					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
+					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
+					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
+					${json_LIB}
+					${COMMON_STANDARD_LIBRARIES}
+					${Boost_LIBRARIES}
+				)
+
+###########################################################
+### RemoteAttestationR_App
+###########################################################
+
+add_executable(RemoteAttestationR_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
+target_include_directories(RemoteAttestationR_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS})
+
+if(MSVC)
+	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE WIN32_LEAN_AND_MEAN)
+else()
+	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE)
+endif()
+
+add_custom_command(TARGET RemoteAttestationR_App
+	PRE_BUILD
+	COMMAND "${INTEL_SGX_EDGER_PATH}"  
+	--untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/Enclave.edl" 
+	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave" 
+	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
+	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
+	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
+	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app"
+)
+
+target_link_libraries(RemoteAttestationR_App 
 #					OpenSSL::SSL 
 #					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
