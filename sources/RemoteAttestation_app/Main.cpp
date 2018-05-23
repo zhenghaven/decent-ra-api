@@ -12,6 +12,8 @@
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
+#include "../common_app/SGXRemoteAttestationSession.h"
+
 #include "ExampleEnclave.h"
 
 /* Application entry */
@@ -43,19 +45,24 @@ int SGX_CDECL main(int argc, char *argv[])
 	std::cout << "================ Test Process Completed ================" << std::endl;
 
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
-	uint16_t hostPort = 95577;
+	uint16_t hostPort = 57755U;
+
 #ifdef RA_SERVER_SIDE
 	std::cout << "================ This is server side ================" << std::endl;
 
-	exp.LaunchRemoteAttestationServer(hostIP, hostPort);
+	exp.LaunchRAServer(hostIP, hostPort);
 	if (!exp.IsRAServerLaunched())
 	{
 		LOGE("RA Server Launch Failed!");
 	}
 
-	RemoteAttestationSession* RASession = exp.AcceptRAConnection();
+	bool res = exp.AcceptRAConnection();
+
 #else
 	std::cout << "================ This is client side ================" << std::endl;
+
+	SGXRemoteAttestationSession RASession(hostIP, hostPort);
+	bool res = RASession.ProcessMessages();
 
 #endif // RA_SERVER_SIDE
 

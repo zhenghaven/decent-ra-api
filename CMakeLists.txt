@@ -193,45 +193,46 @@ set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 ### END Add Sub-modules ###
 
 # All files:
-file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/*.hh ${CMAKE_CURRENT_LIST_DIR}/sources/*.edl)
+file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/*.[ch]* ${CMAKE_CURRENT_LIST_DIR}/sources/*.edl)
 
 # Common files:
-file(GLOB SOURCES_COMMON ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.hh)
-file(GLOB SOURCES_COMMON_APP ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.hh)
-file(GLOB SOURCES_COMMON_ENCLAVE ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.hh)
-file(GLOB SOURCES_COMMON_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.edl)
+file(GLOB_RECURSE SOURCES_COMMON ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.[ch]*)
+file(GLOB_RECURSE SOURCES_COMMON_APP ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.[ch]*)
+file(GLOB_RECURSE SOURCES_COMMON_ENCLAVE ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.[ch]*)
+file(GLOB_RECURSE SOURCES_COMMON_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.edl)
 
 # LibTest_App Files:
-file(GLOB SOURCES_LibTest_App ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.hh)
+file(GLOB_RECURSE SOURCES_LibTest_App ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.[ch]*)
 
 # Example Files:
-file(GLOB SOURCES_Example_App ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.hh)
-file(GLOB SOURCES_Example_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.hh)
-file(GLOB SOURCES_Example_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.edl)
+file(GLOB_RECURSE SOURCES_Example_App ${CMAKE_CURRENT_LIST_DIR}/sources/example_app/*.[ch]*)
+file(GLOB_RECURSE SOURCES_Example_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.[ch]*)
+file(GLOB_RECURSE SOURCES_Example_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/example_enclave/*.edl)
 
 # RemoteAttestation Files:
-file(GLOB SOURCES_RemoteAttestation_App ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.hh)
-file(GLOB SOURCES_RemoteAttestation_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.c ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.cpp ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.cc ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.h ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.hpp ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.hh)
-file(GLOB SOURCES_RemoteAttestation_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.edl)
+file(GLOB_RECURSE SOURCES_RemoteAttestation_App ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.[ch]*)
+file(GLOB_RECURSE SOURCES_RemoteAttestation_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.[ch]*)
+file(GLOB_RECURSE SOURCES_RemoteAttestation_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.edl)
 
 ### Filters ###
 
-source_group("" FILES ${SOURCES})
+source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/sources FILES ${SOURCES})
 # Common Groups
-source_group(Common FILES ${SOURCES_COMMON})
-source_group(Common_Enclave FILES ${SOURCES_COMMON_ENCLAVE})
-source_group(Common_App FILES ${SOURCES_COMMON_APP})
-source_group(Common_EDLs FILES ${SOURCES_COMMON_EDL})
-# LibTest_App Groups
-source_group(LibTest_App FILES ${SOURCES_LibTest_App})
-# Example Groups
-source_group(Example_App FILES ${SOURCES_Example_App})
-source_group(Example_Enclave FILES ${SOURCES_Example_Enclave})
-source_group(Example_EDLs FILES ${SOURCES_Example_EDL})
-# RemoteAttestation Groups
-source_group(RemoteAttestation_App FILES ${SOURCES_RemoteAttestation_App})
-source_group(RemoteAttestation_Enclave FILES ${SOURCES_RemoteAttestation_Enclave})
-source_group(RemoteAttestation_EDLs FILES ${SOURCES_RemoteAttestation_EDL})
+# source_group(Common FILES ${SOURCES_COMMON})
+# source_group(Common_Enclave FILES ${SOURCES_COMMON_ENCLAVE})
+# source_group(Common_App FILES ${SOURCES_COMMON_APP})
+# source_group(Common_App\\SGXRAMessages FILES ${SOURCES_COMMON_APP_SGXRAMESSAGES})
+# source_group(Common_EDLs FILES ${SOURCES_COMMON_EDL})
+# # LibTest_App Groups
+# source_group(LibTest_App FILES ${SOURCES_LibTest_App})
+# # Example Groups
+# source_group(Example_App FILES ${SOURCES_Example_App})
+# source_group(Example_Enclave FILES ${SOURCES_Example_Enclave})
+# source_group(Example_EDLs FILES ${SOURCES_Example_EDL})
+# # RemoteAttestation Groups
+# source_group(RemoteAttestation_App FILES ${SOURCES_RemoteAttestation_App})
+# source_group(RemoteAttestation_Enclave FILES ${SOURCES_RemoteAttestation_Enclave})
+# source_group(RemoteAttestation_EDLs FILES ${SOURCES_RemoteAttestation_EDL})
 
 ### End Filters ###
 
@@ -451,7 +452,7 @@ target_link_libraries(RemoteAttestation_Enclave
 ### RemoteAttestation_App
 ###########################################################
 
-add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
+add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_COMMON_APP_SGXRAMESSAGES} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
 target_include_directories(RemoteAttestation_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS} PRIVATE ${TCLAP_INCLUDE_DIR})
 
 if(MSVC)

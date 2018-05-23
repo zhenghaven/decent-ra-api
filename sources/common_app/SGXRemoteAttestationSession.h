@@ -11,6 +11,10 @@ public:
 
 	virtual bool ProcessMessages() override;
 
+protected:
+	virtual bool ProcessServerMessages();
+	virtual bool ProcessClientMessages();
+
 private:
 
 };
