@@ -1,5 +1,7 @@
 #include "SGXRemoteAttestationSession.h"
 
+#include <cstring>
+
 #include "Common.h"
 
 SGXRemoteAttestationSession::~SGXRemoteAttestationSession()
@@ -21,21 +23,19 @@ bool SGXRemoteAttestationSession::ProcessMessages()
 
 bool SGXRemoteAttestationSession::ProcessServerMessages()
 {
-	std::string buffer;
-	buffer.resize(1000, '\0');
-	m_socket.receive(boost::asio::buffer(&buffer[0], 1000));
-	LOGI("%s\n", buffer.c_str());
-	m_socket.send(boost::asio::buffer(&buffer[0], buffer.size()));
+	m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
+	LOGI("%s\n", m_buffer.c_str());
+	m_socket.send(boost::asio::buffer(&m_buffer[0], std::strlen(m_buffer.c_str())));
 	return true;
 }
 
 bool SGXRemoteAttestationSession::ProcessClientMessages()
 {
-	std::string buffer = "TEST MESSAGE";
-	m_socket.send(boost::asio::buffer(&buffer[0], buffer.size()));
-	buffer.resize(0);
-	buffer.resize(1000, '\0');
-	m_socket.receive(boost::asio::buffer(&buffer[0], 1000));
-	LOGI("%s\n", buffer.c_str());
+	std::string msg = "TEST MESSAGE";
+	memcpy(&m_buffer[0], &msg[0], msg.size());
+	m_socket.send(boost::asio::buffer(&m_buffer[0], std::strlen(m_buffer.c_str())));
+	m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
+	LOGI("%s\n", m_buffer.c_str());
+	LOGI("buffer size: %d\n", m_buffer.size());
 	return true;
 }

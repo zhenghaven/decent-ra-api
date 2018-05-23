@@ -2,15 +2,17 @@
 
 using namespace boost::asio;
 
-RemoteAttestationSession::RemoteAttestationSession(boost::asio::ip::tcp::acceptor& acceptor) :
+RemoteAttestationSession::RemoteAttestationSession(boost::asio::ip::tcp::acceptor& acceptor, size_t bufferSize) :
 	m_ioService(nullptr),
-	m_socket(acceptor.accept())
+	m_socket(acceptor.accept()),
+	m_buffer(std::string(bufferSize, '\0'))
 {
 }
 
-RemoteAttestationSession::RemoteAttestationSession(uint32_t ipAddr, uint16_t portNum) :
+RemoteAttestationSession::RemoteAttestationSession(uint32_t ipAddr, uint16_t portNum, size_t bufferSize) :
 	m_ioService(new io_service()),
-	m_socket(ip::tcp::socket(*m_ioService))
+	m_socket(ip::tcp::socket(*m_ioService)),
+	m_buffer(std::string(bufferSize, '\0'))
 {
 	m_socket.connect(ip::tcp::endpoint(ip::address_v4(ipAddr), portNum));
 }

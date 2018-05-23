@@ -88,6 +88,13 @@ bool SGXEnclave::IsLaunched() const
 	return (m_eid != 0);
 }
 
+bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
+{
+	SGXRemoteAttestationSession RASession(ipAddr, portNum);
+	bool res = RASession.ProcessMessages();
+	return res;
+}
+
 void SGXEnclave::LaunchRAServer(uint32_t ipAddr, uint16_t portNum)
 {
 	m_raServer = new SGXRemoteAttestationServer(ipAddr, portNum);

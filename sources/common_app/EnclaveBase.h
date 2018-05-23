@@ -14,8 +14,10 @@ public:
 
 	virtual bool IsLaunched() const = 0;
 
+	virtual bool RequestRA(uint32_t ipAddr, uint16_t portNum) = 0;
+
 	//Decent enclave functions:
-	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t port) = 0;
+	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t portNum) = 0;
 	virtual bool IsRAServerLaunched() const = 0;
 	virtual bool AcceptRAConnection() = 0;
 };

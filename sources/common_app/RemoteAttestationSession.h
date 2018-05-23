@@ -11,8 +11,8 @@ public:
 	RemoteAttestationSession() = delete;
 
 	//Caution! Blocking constructors!
-	RemoteAttestationSession(boost::asio::ip::tcp::acceptor& acceptor);
-	RemoteAttestationSession(uint32_t ipAddr, uint16_t portNum);
+	RemoteAttestationSession(boost::asio::ip::tcp::acceptor& acceptor, size_t bufferSize = 5000U);
+	RemoteAttestationSession(uint32_t ipAddr, uint16_t portNum, size_t bufferSize = 5000U);
 	~RemoteAttestationSession();
 
 	uint32_t GetIPv4Addr() const;
@@ -33,4 +33,6 @@ protected:
 
 	boost::asio::io_service* m_ioService;
 	boost::asio::ip::tcp::socket m_socket;
+
+	std::string m_buffer;
 };

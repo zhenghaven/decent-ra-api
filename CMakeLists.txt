@@ -452,7 +452,7 @@ target_link_libraries(RemoteAttestation_Enclave
 ### RemoteAttestation_App
 ###########################################################
 
-add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_COMMON_APP_SGXRAMESSAGES} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
+add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
 target_include_directories(RemoteAttestation_App PRIVATE ${JSONCPP_INCLUDE_DIRS} PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} PRIVATE ${Boost_INCLUDE_DIRS} PRIVATE ${TCLAP_INCLUDE_DIR})
 
 if(MSVC)

@@ -24,6 +24,7 @@ public:
 	virtual bool Launch() override;
 	virtual bool IsLastExecutionFailed() const override;
 	virtual bool IsLaunched() const override;
+	virtual bool RequestRA(uint32_t ipAddr, uint16_t portNum) override;
 
 	//Decent enclave functions:
 	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t port) override;

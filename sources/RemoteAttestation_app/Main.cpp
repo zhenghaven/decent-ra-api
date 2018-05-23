@@ -61,8 +61,7 @@ int SGX_CDECL main(int argc, char *argv[])
 #else
 	std::cout << "================ This is client side ================" << std::endl;
 
-	SGXRemoteAttestationSession RASession(hostIP, hostPort);
-	bool res = RASession.ProcessMessages();
+	exp.RequestRA(hostIP, hostPort);
 
 #endif // RA_SERVER_SIDE
 
