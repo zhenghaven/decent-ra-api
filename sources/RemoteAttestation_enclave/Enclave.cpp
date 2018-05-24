@@ -17,6 +17,7 @@
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
 #include "../common_enclave/enclave_tools.h"
+#include "../common/CryptoTools.h"
 
 namespace 
 {
@@ -117,16 +118,16 @@ void ecall_square_array(int* arr, const size_t len_in_byte)
 	enclave_printf("JSON Example: %s\n", buffer.GetString());
 
 	std::string raPubKeyStr;
-	//ecall_GenRAKeys();
-	raPubKeyStr = SerializePubKey(sgxRAPubkey);
+	ecall_GenRAKeys();
+	raPubKeyStr = SerializePubKey(*sgxRAPubkey);
 	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-	raPubKeyStr = SerializePubKey(sgxRAPubkey);
-	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-	raPubKeyStr = SerializePubKey(sgxRAPubkey);
-	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-	enclave_printf("Public key size: %d\n", sizeof(sgx_ec256_public_t));
+	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
+	//enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
+	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
+	//enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
+	//enclave_printf("Public key size: %d\n", sizeof(sgx_ec256_public_t));
 
-	CleanRAKeys();
+	//CleanRAKeys();
 }
 
 sgx_status_t ecall_GenRAKeys()
@@ -174,19 +175,6 @@ sgx_status_t ecall_GenRAKeys()
 	return res;
 }
 
-std::string SerializePubKey(const sgx_ec256_public_t* pubKey)
-{
-	if (!pubKey)
-	{
-		return std::string();
-	}
-
-	std::vector<uint8_t> buffer(sizeof(sgx_ec256_public_t), 0);
-	memcpy(&buffer[0], pubKey, sizeof(sgx_ec256_public_t));
-
-	return cppcodec::base64_rfc4648::encode(buffer);
-}
-
 int EC_KEY_get_asn1_flag(const EC_KEY* key)
 {
 	if (key)
@@ -198,6 +186,18 @@ int EC_KEY_get_asn1_flag(const EC_KEY* key)
 		}
 		return 0;
 	}
+}
+
+sgx_status_t ecall_GetRAPubKeys(sgx_ec256_public_t* outPubKey)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	res = ecall_GenRAKeys();
+
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	outPubKey = sgxRAPubkey;
 }
 
 void GenSSLECKeys()
