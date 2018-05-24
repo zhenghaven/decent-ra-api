@@ -2,25 +2,43 @@
 
 #include "SGXRAMessage.h"
 
-class SGXRAMessage0 : public SGXRAMessage
+#include <json/json.h>
+
+class SGXRAMessage0Send : public SGXRAMessage
 {
 public:
-	SGXRAMessage0();
-	~SGXRAMessage0();
-
-	virtual std::vector<uint8_t> SerializedMessage() const override;
+	SGXRAMessage0Send() = delete;
+	SGXRAMessage0Send(uint32_t exGrpID);
+	SGXRAMessage0Send(Json::Value& msg);
+	~SGXRAMessage0Send();
 
 	virtual std::string ToJsonString() const override;
 
-private:
+	virtual Type GetType() const override;
+	virtual bool IsResp() const override;
 
+	uint32_t GetExtendedGroupID() const;
+
+private:
+	uint32_t m_exGrpID;
 };
 
-SGXRAMessage0::SGXRAMessage0()
-{
-}
 
-SGXRAMessage0::~SGXRAMessage0()
+class SGXRAMessage0Resp : public SGXRAMessage
 {
-}
+public:
+	SGXRAMessage0Resp() = delete;
+	SGXRAMessage0Resp(bool isAccepted);
+	SGXRAMessage0Resp(Json::Value& msg);
+	~SGXRAMessage0Resp();
 
+	virtual std::string ToJsonString() const override;
+
+	virtual Type GetType() const override;
+	virtual bool IsResp() const override;
+
+	virtual bool IsAccepted() const;
+
+private:
+	bool m_isAccepted;
+};

@@ -1,6 +1,7 @@
 #include "SGXEnclave.h"
 
 #include <sgx_urts.h>
+#include <sgx_uae_service.h>
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/asio/io_service.hpp>
@@ -9,6 +10,7 @@
 #include "Common.h"
 #include "SGXRemoteAttestationServer.h"
 #include "SGXRemoteAttestationSession.h"
+#include "SGXRAMessages/SGXRAMessage0.h"
 
 using namespace boost::asio;
 
@@ -91,8 +93,24 @@ bool SGXEnclave::IsLaunched() const
 bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 {
 	SGXRemoteAttestationSession RASession(ipAddr, portNum);
-	bool res = RASession.ProcessMessages();
-	return res;
+	uint32_t extended_epid_group_id = 0;
+	sgx_status_t res = sgx_get_extended_epid_group_id(&extended_epid_group_id);
+	if (res != SGX_SUCCESS)
+	{
+		return false;
+	}
+	SGXRAMessage0Send msg0s(extended_epid_group_id);
+	RAMessages* resp = RASession.SendMessages(msg0s);
+	SGXRAMessage0Resp* msg0r = nullptr;
+	if (!resp || !(msg0r = dynamic_cast<SGXRAMessage0Resp*>(resp)))
+	{
+		return false;
+	}
+	delete resp;
+	resp = nullptr;
+	msg0r = nullptr;
+
+	return true;
 }
 
 void SGXEnclave::LaunchRAServer(uint32_t ipAddr, uint16_t portNum)
@@ -107,10 +125,31 @@ bool SGXEnclave::IsRAServerLaunched() const
 
 bool SGXEnclave::AcceptRAConnection()
 {
-	RemoteAttestationSession* session = m_raServer->AcceptRAConnection();
-	session->ProcessMessages();
+	SGXRemoteAttestationSession* session = dynamic_cast<SGXRemoteAttestationSession*>(m_raServer->AcceptRAConnection());
+	RemoteAttestationSession::MsgProcessor msgProcessor = [](const RAMessages* msg) -> RAMessages*
+	{
+		const SGXRAMessage* sgxMsg = dynamic_cast<const SGXRAMessage*>(msg);
+		if (!sgxMsg)
+		{
+			return nullptr;
+		}
+
+		switch (sgxMsg->GetType())
+		{
+		case SGXRAMessage::Type::MSG0_SEND:
+		{
+			const SGXRAMessage0Send* msg0s = dynamic_cast<const SGXRAMessage0Send*>(sgxMsg);
+			//TODO: verification here.
+			return new SGXRAMessage0Resp(true);
+		}
+		default:
+			return nullptr;
+		}
+	};
+	bool res = session->RecvMessages(msgProcessor);
+
 	delete session;
-	return true;
+	return res;
 }
 
 sgx_status_t SGXEnclave::GetLastStatus() const

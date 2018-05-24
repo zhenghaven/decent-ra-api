@@ -1,12 +1,18 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_service.hpp>
 
+class RAMessages;
+
 class RemoteAttestationSession
 {
+public:
+	typedef std::function<RAMessages*(const RAMessages*)> MsgProcessor;
+
 public:
 	RemoteAttestationSession() = delete;
 
@@ -21,7 +27,9 @@ public:
 	///Connection ID is a combination of IPv4 and Port num.
 	uint64_t GetConnectionID() const;
 
-	virtual bool ProcessMessages() = 0;
+	virtual RAMessages* SendMessages(const RAMessages& msg) = 0;
+
+	virtual bool RecvMessages(MsgProcessor msgProcessor) = 0;
 
 protected:
 	enum Mode
