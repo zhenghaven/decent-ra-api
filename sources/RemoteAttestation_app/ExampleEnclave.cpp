@@ -4,6 +4,24 @@
 
 #include "Enclave_u.h"
 #include "../common_app/enclave_tools.h"
+#include "../common/CryptoTools.h"
+
+sgx_status_t ExampleEnclave::GetRAPublicKey(sgx_ec256_public_t & outKey)
+{
+	sgx_status_t keyRes = SGX_SUCCESS;
+	sgx_status_t res = ecall_GetRAPubKeys(GetEnclaveId(), &keyRes, &outKey);
+	std::string tmp = SerializePubKey(outKey);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	if (keyRes != SGX_SUCCESS)
+	{
+		return keyRes;
+	}
+
+	return res;
+}
 
 void ExampleEnclave::TestEnclaveFunctions()
 {

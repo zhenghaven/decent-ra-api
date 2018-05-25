@@ -197,7 +197,8 @@ sgx_status_t ecall_GetRAPubKeys(sgx_ec256_public_t* outPubKey)
 	{
 		return res;
 	}
-	outPubKey = sgxRAPubkey;
+	memcpy(outPubKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	return res;
 }
 
 void GenSSLECKeys()

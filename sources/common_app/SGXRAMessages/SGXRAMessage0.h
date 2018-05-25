@@ -28,7 +28,7 @@ class SGXRAMessage0Resp : public SGXRAMessage
 {
 public:
 	SGXRAMessage0Resp() = delete;
-	SGXRAMessage0Resp(bool isAccepted);
+	SGXRAMessage0Resp(const bool isAccepted, const std::string& pubKeyBase64);
 	SGXRAMessage0Resp(Json::Value& msg);
 	~SGXRAMessage0Resp();
 
@@ -38,7 +38,9 @@ public:
 	virtual bool IsResp() const override;
 
 	virtual bool IsAccepted() const;
+	virtual std::string GetRAPubKey() const;
 
 private:
 	bool m_isAccepted;
+	std::string m_pubKey;
 };

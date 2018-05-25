@@ -66,8 +66,9 @@ uint32_t SGXRAMessage0Send::GetExtendedGroupID() const
 	return m_exGrpID;
 }
 
-SGXRAMessage0Resp::SGXRAMessage0Resp(bool isAccepted) :
-	m_isAccepted(isAccepted)
+SGXRAMessage0Resp::SGXRAMessage0Resp(const bool isAccepted, const std::string& pubKeyBase64) :
+	m_isAccepted(isAccepted),
+	m_pubKey(pubKeyBase64)
 {
 	m_isValid = true;
 }
@@ -77,9 +78,11 @@ SGXRAMessage0Resp::SGXRAMessage0Resp(Json::Value& msg)
 	if (msg.isMember("MsgType")
 		&& msg["MsgType"].asString().compare(SGXRAMessage::GetMessageTypeStr(GetType())) == 0
 		&& msg.isMember("Untrusted")
-		&& msg["Untrusted"].isMember("IsAccepted"))
+		&& msg["Untrusted"].isMember("IsAccepted")
+		&& msg["Untrusted"].isMember("RAPubKey"))
 	{
 		m_isAccepted = msg["Untrusted"]["IsAccepted"].asBool();
+		m_pubKey = msg["Untrusted"]["RAPubKey"].asString();
 		m_isValid = true;
 	}
 	else
@@ -98,6 +101,7 @@ std::string SGXRAMessage0Resp::ToJsonString() const
 	Json::Value jsonUntrusted;
 
 	jsonUntrusted["IsAccepted"] = m_isAccepted;
+	jsonUntrusted["RAPubKey"] = m_pubKey;
 
 	jsonRoot["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
 	jsonRoot["Untrusted"] = jsonUntrusted;
@@ -119,4 +123,9 @@ bool SGXRAMessage0Resp::IsResp() const
 bool SGXRAMessage0Resp::IsAccepted() const
 {
 	return m_isAccepted;
+}
+
+std::string SGXRAMessage0Resp::GetRAPubKey() const
+{
+	return m_pubKey;
 }

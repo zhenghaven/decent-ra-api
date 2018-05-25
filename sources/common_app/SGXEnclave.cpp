@@ -8,6 +8,7 @@
 #include <boost/asio/ip/tcp.hpp>
 
 #include "Common.h"
+#include "../common/CryptoTools.h"
 #include "SGXRemoteAttestationServer.h"
 #include "SGXRemoteAttestationSession.h"
 #include "SGXRAMessages/SGXRAMessage0.h"
@@ -126,7 +127,9 @@ bool SGXEnclave::IsRAServerLaunched() const
 bool SGXEnclave::AcceptRAConnection()
 {
 	SGXRemoteAttestationSession* session = dynamic_cast<SGXRemoteAttestationSession*>(m_raServer->AcceptRAConnection());
-	RemoteAttestationSession::MsgProcessor msgProcessor = [](const RAMessages* msg) -> RAMessages*
+
+	//Message Processor Lambda function:
+	RemoteAttestationSession::MsgProcessor msgProcessor = [this](const RAMessages* msg) -> RAMessages*
 	{
 		const SGXRAMessage* sgxMsg = dynamic_cast<const SGXRAMessage*>(msg);
 		if (!sgxMsg)
@@ -139,13 +142,21 @@ bool SGXEnclave::AcceptRAConnection()
 		case SGXRAMessage::Type::MSG0_SEND:
 		{
 			const SGXRAMessage0Send* msg0s = dynamic_cast<const SGXRAMessage0Send*>(sgxMsg);
+			sgx_ec256_public_t pubKey;
+			sgx_status_t res = this->GetRAPublicKey(pubKey);
+			if (res != SGX_SUCCESS)
+			{
+				return new SGXRAMessage0Resp(false, "");
+			}
+			std::string pubKeyStr = SerializePubKey(pubKey);
 			//TODO: verification here.
-			return new SGXRAMessage0Resp(true);
+			return new SGXRAMessage0Resp(true, pubKeyStr);
 		}
 		default:
 			return nullptr;
 		}
 	};
+
 	bool res = session->RecvMessages(msgProcessor);
 
 	delete session;

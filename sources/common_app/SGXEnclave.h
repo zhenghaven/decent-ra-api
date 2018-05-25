@@ -5,6 +5,7 @@
 #include <string>
 
 #include <sgx_eid.h>
+#include <sgx_tcrypto.h>
 
 #include "FileSystemUtil.h"
 #include "EnclaveUtil.h"
@@ -25,6 +26,7 @@ public:
 	virtual bool IsLastExecutionFailed() const override;
 	virtual bool IsLaunched() const override;
 	virtual bool RequestRA(uint32_t ipAddr, uint16_t portNum) override;
+	virtual sgx_status_t GetRAPublicKey(sgx_ec256_public_t& outKey) = 0;
 
 	//Decent enclave functions:
 	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t port) override;
