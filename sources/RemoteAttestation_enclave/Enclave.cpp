@@ -2,6 +2,7 @@
 #include <vector>
 
 #include <sgx_tcrypto.h>
+#include <sgx_tkey_exchange.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
 
@@ -24,6 +25,8 @@ namespace
 	sgx_ec256_private_t* sgxRAPriKey = nullptr;
 	sgx_ec256_public_t* sgxRAPubkey = nullptr;
 	sgx_ecc_state_handle_t sgxRAECCContext = nullptr;
+
+	sgx_ec256_public_t* sgxSPRAPubkey = nullptr;
 }
 
 static void CleanRAKeys()
@@ -42,6 +45,17 @@ static void CleanRAKeys()
 	{
 		delete sgxRAPubkey;
 		sgxRAPubkey = nullptr;
+	}
+}
+
+static void TerminationCleaning()
+{
+	CleanRAKeys();
+
+	if (!sgxSPRAPubkey)
+	{
+		delete sgxSPRAPubkey;
+		sgxSPRAPubkey = nullptr;
 	}
 }
 
@@ -118,7 +132,7 @@ void ecall_square_array(int* arr, const size_t len_in_byte)
 	enclave_printf("JSON Example: %s\n", buffer.GetString());
 
 	std::string raPubKeyStr;
-	ecall_GenRAKeys();
+	ecall_generate_ra_keys();
 	raPubKeyStr = SerializePubKey(*sgxRAPubkey);
 	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
 	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
@@ -130,7 +144,7 @@ void ecall_square_array(int* arr, const size_t len_in_byte)
 	//CleanRAKeys();
 }
 
-sgx_status_t ecall_GenRAKeys()
+sgx_status_t ecall_generate_ra_keys()
 {
 	sgx_status_t res = SGX_SUCCESS;
 
@@ -188,10 +202,10 @@ int EC_KEY_get_asn1_flag(const EC_KEY* key)
 	}
 }
 
-sgx_status_t ecall_GetRAPubKeys(sgx_ec256_public_t* outPubKey)
+sgx_status_t ecall_get_ra_pub_keys(sgx_ec256_public_t* outPubKey)
 {
 	sgx_status_t res = SGX_SUCCESS;
-	res = ecall_GenRAKeys();
+	res = ecall_generate_ra_keys();
 
 	if (res != SGX_SUCCESS)
 	{
@@ -199,6 +213,35 @@ sgx_status_t ecall_GetRAPubKeys(sgx_ec256_public_t* outPubKey)
 	}
 	memcpy(outPubKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
 	return res;
+}
+
+void ecall_set_sp_ra_pub_keys(sgx_ec256_public_t* inPubKey)
+{
+	if (!sgxSPRAPubkey)
+	{
+		sgxSPRAPubkey = new sgx_ec256_public_t;
+	}
+	memcpy(sgxSPRAPubkey, inPubKey, sizeof(sgx_ec256_public_t));
+}
+
+sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context)
+{
+	// isv enclave call to trusted key exchange library.
+	sgx_status_t ret;
+	if (b_pse)
+	{
+		//int busy_retry_times = 2; do {} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
+		ret = sgx_create_pse_session();
+		if (ret != SGX_SUCCESS)
+			return ret;
+	}
+	ret = sgx_ra_init(sgxSPRAPubkey, b_pse, p_context);
+	enclave_printf("RA ContextID: %d\n", *p_context);
+	if (b_pse)
+	{
+		sgx_close_pse_session();
+	}
+	return ret;
 }
 
 void GenSSLECKeys()

@@ -2,25 +2,44 @@
 
 #include <iostream>
 
+#include <sgx_key_exchange.h>
+#include <sgx_ukey_exchange.h>
+
 #include "Enclave_u.h"
 #include "../common_app/enclave_tools.h"
 #include "../common/CryptoTools.h"
 
 sgx_status_t ExampleEnclave::GetRAPublicKey(sgx_ec256_public_t & outKey)
 {
-	sgx_status_t keyRes = SGX_SUCCESS;
-	sgx_status_t res = ecall_GetRAPubKeys(GetEnclaveId(), &keyRes, &outKey);
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+	
+	res = ecall_get_ra_pub_keys(GetEnclaveId(), &retval, &outKey);
 	std::string tmp = SerializePubKey(outKey);
-	if (res != SGX_SUCCESS)
-	{
-		return res;
-	}
-	if (keyRes != SGX_SUCCESS)
-	{
-		return keyRes;
-	}
 
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::SetSrvPrvRAPublicKey(sgx_ec256_public_t & outKey)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	res = ecall_set_sp_ra_pub_keys(GetEnclaveId(), &outKey);
 	return res;
+}
+
+sgx_status_t ExampleEnclave::EnclaveInitRA(int enablePSE, sgx_ra_context_t& outContextID)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_enclave_init_ra(GetEnclaveId(), &retval, enablePSE, &outContextID);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::GetRAMsg1(sgx_ra_msg1_t & outMsg1, sgx_ra_context_t& inContextID)
+{
+	return sgx_ra_get_msg1(inContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);;
 }
 
 void ExampleEnclave::TestEnclaveFunctions()

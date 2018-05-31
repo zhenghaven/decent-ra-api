@@ -12,6 +12,7 @@
 #include "SGXRemoteAttestationServer.h"
 #include "SGXRemoteAttestationSession.h"
 #include "SGXRAMessages/SGXRAMessage0.h"
+#include "SGXRAMessages/SGXRAMessage1.h"
 
 using namespace boost::asio;
 
@@ -107,9 +108,34 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 	{
 		return false;
 	}
+	sgx_ec256_public_t spRAPubKey;
+	DeserializePubKey(msg0r->GetRAPubKey(), spRAPubKey);
+	res = SetSrvPrvRAPublicKey(spRAPubKey);
+	if (res != SGX_SUCCESS)
+	{
+		return false;
+	}
+	sgx_ra_context_t raContextID = 0;
+	res = EnclaveInitRA(false, raContextID);
+	if (res != SGX_SUCCESS)
+	{
+		return false;
+	}
+
+	//Clean Message 0 response.
 	delete resp;
 	resp = nullptr;
 	msg0r = nullptr;
+
+	sgx_ra_msg1_t msg1data;
+	res = GetRAMsg1(msg1data, raContextID);
+	if (res != SGX_SUCCESS)
+	{
+		return false;
+	}
+	SGXRAMessage1 msg1(msg1data);
+
+	resp = RASession.SendMessages(msg1);
 
 	return true;
 }
@@ -152,12 +178,29 @@ bool SGXEnclave::AcceptRAConnection()
 			//TODO: verification here.
 			return new SGXRAMessage0Resp(true, pubKeyStr);
 		}
+		case SGXRAMessage::Type::MSG1_SEND:
+		{
+			const SGXRAMessage1* msg1 = dynamic_cast<const SGXRAMessage1*>(sgxMsg);
+			sgx_ec256_public_t pubKey;
+			sgx_status_t res = this->GetRAPublicKey(pubKey);
+			if (res != SGX_SUCCESS)
+			{
+				return new SGXRAMessage0Resp(false, "");
+			}
+			std::string pubKeyStr = SerializePubKey(pubKey);
+			//TODO: verification here.
+			return new SGXRAMessage0Resp(true, pubKeyStr);
+		}
 		default:
 			return nullptr;
 		}
 	};
-
-	bool res = session->RecvMessages(msgProcessor);
+	
+	bool res = false;
+	//Message 0 from client:
+	res = session->RecvMessages(msgProcessor);
+	//Message 1 from client:
+	res = session->RecvMessages(msgProcessor);
 
 	delete session;
 	return res;

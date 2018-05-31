@@ -37,18 +37,18 @@ std::string SGXRAMessage::GetMessageTypeStr(const SGXRAMessage::Type t)
 		return "MSG0_RESP";
 	case SGXRAMessage::Type::MSG1_SEND:
 		return "MSG1_SEND";
-	case SGXRAMessage::Type::MSG1_RESP:
-		return "MSG1_RESP";
-	case SGXRAMessage::Type::MSG2_SEND:
-		return "MSG2_SEND";
+	//case SGXRAMessage::Type::MSG1_RESP:
+	//	return "MSG1_RESP";
+	//case SGXRAMessage::Type::MSG2_SEND:
+	//	return "MSG2_SEND";
 	case SGXRAMessage::Type::MSG2_RESP:
 		return "MSG2_RESP";
 	case SGXRAMessage::Type::MSG3_SEND:
 		return "MSG3_SEND";
-	case SGXRAMessage::Type::MSG3_RESP:
-		return "MSG3_RESP";
-	case SGXRAMessage::Type::MSG4_SEND:
-		return "MSG4_SEND";
+	//case SGXRAMessage::Type::MSG3_RESP:
+	//	return "MSG3_RESP";
+	//case SGXRAMessage::Type::MSG4_SEND:
+	//	return "MSG4_SEND";
 	case SGXRAMessage::Type::MSG4_RESP:
 		return "MSG4_RESP";
 	default:

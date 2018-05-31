@@ -16,12 +16,12 @@ namespace
 		std::pair<std::string, SGXRAMessage::Type>("MSG0_SEND", SGXRAMessage::Type::MSG0_SEND),
 		std::pair<std::string, SGXRAMessage::Type>("MSG0_RESP", SGXRAMessage::Type::MSG0_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("MSG1_SEND", SGXRAMessage::Type::MSG1_SEND),
-		std::pair<std::string, SGXRAMessage::Type>("MSG1_RESP", SGXRAMessage::Type::MSG1_RESP),
-		std::pair<std::string, SGXRAMessage::Type>("MSG2_SEND", SGXRAMessage::Type::MSG2_SEND),
+		//std::pair<std::string, SGXRAMessage::Type>("MSG1_RESP", SGXRAMessage::Type::MSG1_RESP),
+		//std::pair<std::string, SGXRAMessage::Type>("MSG2_SEND", SGXRAMessage::Type::MSG2_SEND),
 		std::pair<std::string, SGXRAMessage::Type>("MSG2_RESP", SGXRAMessage::Type::MSG2_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("MSG3_SEND", SGXRAMessage::Type::MSG3_SEND),
-		std::pair<std::string, SGXRAMessage::Type>("MSG3_RESP", SGXRAMessage::Type::MSG3_RESP),
-		std::pair<std::string, SGXRAMessage::Type>("MSG4_SEND", SGXRAMessage::Type::MSG4_SEND),
+		//std::pair<std::string, SGXRAMessage::Type>("MSG3_RESP", SGXRAMessage::Type::MSG3_RESP),
+		//std::pair<std::string, SGXRAMessage::Type>("MSG4_SEND", SGXRAMessage::Type::MSG4_SEND),
 		std::pair<std::string, SGXRAMessage::Type>("MSG4_RESP", SGXRAMessage::Type::MSG4_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("OTHER", SGXRAMessage::Type::OTHER),
 	};
@@ -106,8 +106,15 @@ bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 		SGXRAMessage0Send msg0s(jsonRoot);
 		RAMessages* resp = msgProcessor(&msg0s);
 		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
-	}
 		break;
+	}
+	case SGXRAMessage::Type::MSG1_SEND:
+	{
+		SGXRAMessage0Send msg1(jsonRoot);
+		RAMessages* resp = msgProcessor(&msg1);
+		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
+		break;
+	}
 	default:
 		break;
 	}
