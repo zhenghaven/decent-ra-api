@@ -20,10 +20,10 @@ sgx_status_t ExampleEnclave::GetRAPublicKey(sgx_ec256_public_t & outKey)
 	return res == SGX_SUCCESS ? retval : res;
 }
 
-sgx_status_t ExampleEnclave::SetSrvPrvRAPublicKey(sgx_ec256_public_t & outKey)
+sgx_status_t ExampleEnclave::SetRARemotePublicKey(sgx_ec256_public_t & outKey)
 {
 	sgx_status_t res = SGX_SUCCESS;
-	res = ecall_set_sp_ra_pub_keys(GetEnclaveId(), &outKey);
+	res = ecall_set_remote_ra_pub_keys(GetEnclaveId(), &outKey);
 	return res;
 }
 

@@ -110,7 +110,7 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 	}
 	sgx_ec256_public_t spRAPubKey;
 	DeserializePubKey(msg0r->GetRAPubKey(), spRAPubKey);
-	res = SetSrvPrvRAPublicKey(spRAPubKey);
+	res = SetRARemotePublicKey(spRAPubKey);
 	if (res != SGX_SUCCESS)
 	{
 		return false;

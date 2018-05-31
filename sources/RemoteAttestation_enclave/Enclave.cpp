@@ -26,7 +26,8 @@ namespace
 	sgx_ec256_public_t* sgxRAPubkey = nullptr;
 	sgx_ecc_state_handle_t sgxRAECCContext = nullptr;
 
-	sgx_ec256_public_t* sgxSPRAPubkey = nullptr;
+	sgx_ec256_public_t* sgxRARemotePubkey = nullptr;
+	sgx_ec256_dh_shared_t* sgxDHKey = nullptr;
 }
 
 static void CleanRAKeys()
@@ -52,10 +53,10 @@ static void TerminationCleaning()
 {
 	CleanRAKeys();
 
-	if (!sgxSPRAPubkey)
+	if (!sgxRARemotePubkey)
 	{
-		delete sgxSPRAPubkey;
-		sgxSPRAPubkey = nullptr;
+		delete sgxRARemotePubkey;
+		sgxRARemotePubkey = nullptr;
 	}
 }
 
@@ -215,13 +216,13 @@ sgx_status_t ecall_get_ra_pub_keys(sgx_ec256_public_t* outPubKey)
 	return res;
 }
 
-void ecall_set_sp_ra_pub_keys(sgx_ec256_public_t* inPubKey)
+void ecall_set_remote_ra_pub_keys(sgx_ec256_public_t* inPubKey)
 {
-	if (!sgxSPRAPubkey)
+	if (!sgxRARemotePubkey)
 	{
-		sgxSPRAPubkey = new sgx_ec256_public_t;
+		sgxRARemotePubkey = new sgx_ec256_public_t;
 	}
-	memcpy(sgxSPRAPubkey, inPubKey, sizeof(sgx_ec256_public_t));
+	memcpy(sgxRARemotePubkey, inPubKey, sizeof(sgx_ec256_public_t));
 }
 
 sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context)
@@ -235,7 +236,7 @@ sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context)
 		if (ret != SGX_SUCCESS)
 			return ret;
 	}
-	ret = sgx_ra_init(sgxSPRAPubkey, b_pse, p_context);
+	ret = sgx_ra_init(sgxRARemotePubkey, b_pse, p_context);
 	enclave_printf("RA ContextID: %d\n", *p_context);
 	if (b_pse)
 	{
@@ -279,4 +280,23 @@ void GenSSLECKeys()
 
 	//EC_KEY_set_private_key(key, prv);
 	//EC_KEY_set_public_key(key, pub);
+}
+
+sgx_status_t ecall_process_msg1(sgx_ra_msg1_t *inMsg1)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	ecall_set_remote_ra_pub_keys(&(inMsg1->g_a));
+	if (sgxDHKey)
+	{
+		delete sgxDHKey;
+	}
+	sgxDHKey = new sgx_ec256_dh_shared_t;
+	res = sgx_ecc256_compute_shared_dhkey(sgxRAPriKey, sgxRARemotePubkey, sgxDHKey, sgxRAECCContext);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+
+	return res;
 }
