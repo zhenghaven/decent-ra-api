@@ -10,6 +10,7 @@
 #include "SGXRAMessages/SGXRAMessage0.h"
 #include "SGXRAMessages/SGXRAMessage1.h"
 #include "SGXRAMessages/SGXRAMessage2.h"
+#include "SGXRAMessages/SGXRAMessage3.h"
 
 namespace 
 {
@@ -42,10 +43,10 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const RAMessages & msg)
 	}
 
 	std::string tmp = sgxMsg->ToJsonString();
-	memcpy(&m_buffer[0], &tmp[0], tmp.size());
-	m_socket.send(boost::asio::buffer(&m_buffer[0], std::strlen(m_buffer.c_str())));
-	m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
-	size_t actualSize = std::strlen(m_buffer.c_str());
+	m_socket.send(boost::asio::buffer(tmp.data(), tmp.size() + 1));
+	LOGI("Sent Msg: %s\n", tmp.c_str());
+	size_t actualSize = m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
+	m_buffer[actualSize] = '\0';
 	LOGI("Recv Msg: %s\n", m_buffer.c_str());
 	
 	Json::Value jsonRoot;
@@ -69,6 +70,8 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const RAMessages & msg)
 		return new SGXRAMessage0Resp(jsonRoot);
 	case SGXRAMessage::Type::MSG1_SEND:
 		return new SGXRAMessage2(jsonRoot);
+	case SGXRAMessage::Type::MSG3_SEND:
+		return new SGXRAMessage2(jsonRoot);
 	default:
 		return nullptr;
 	}
@@ -76,8 +79,8 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const RAMessages & msg)
 
 bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 {
-	m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
-	size_t actualSize = std::strlen(m_buffer.c_str());
+	size_t actualSize = m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
+	m_buffer[actualSize] = '\0';
 	LOGI("Recv Msg: %s\n", m_buffer.c_str());
 
 	Json::Value jsonRoot;
@@ -108,14 +111,21 @@ bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 	case SGXRAMessage::Type::MSG0_SEND:
 	{
 		SGXRAMessage0Send msg0s(jsonRoot);
-		RAMessages* resp = msgProcessor(&msg0s);
+		RAMessages* resp = msgProcessor(msg0s);
 		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
 		break;
 	}
 	case SGXRAMessage::Type::MSG1_SEND:
 	{
 		SGXRAMessage1 msg1(jsonRoot);
-		RAMessages* resp = msgProcessor(&msg1);
+		RAMessages* resp = msgProcessor(msg1);
+		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
+		break;
+	}
+	case SGXRAMessage::Type::MSG3_SEND:
+	{
+		SGXRAMessage3 msg3(jsonRoot);
+		RAMessages* resp = msgProcessor(msg3);
 		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
 		break;
 	}
@@ -128,8 +138,8 @@ bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 	}
 
 	std::string tmp = sgxResp->ToJsonString();
-	memcpy(&m_buffer[0], &tmp[0], tmp.size());
-	m_socket.send(boost::asio::buffer(&m_buffer[0], std::strlen(m_buffer.c_str())));
+	m_socket.send(boost::asio::buffer(tmp.data(), tmp.size() + 1));
+	LOGI("Sent Msg: %s\n", tmp.c_str());
 	return true;
 }
 

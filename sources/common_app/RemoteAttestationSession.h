@@ -11,7 +11,7 @@ class RAMessages;
 class RemoteAttestationSession
 {
 public:
-	typedef std::function<RAMessages*(const RAMessages*)> MsgProcessor;
+	typedef std::function<RAMessages*(const RAMessages&)> MsgProcessor;
 
 public:
 	RemoteAttestationSession() = delete;

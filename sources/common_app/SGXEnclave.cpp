@@ -14,6 +14,7 @@
 #include "SGXRAMessages/SGXRAMessage0.h"
 #include "SGXRAMessages/SGXRAMessage1.h"
 #include "SGXRAMessages/SGXRAMessage2.h"
+#include "SGXRAMessages/SGXRAMessage3.h"
 
 using namespace boost::asio;
 
@@ -143,12 +144,21 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 		return false;
 	}
 	sgx_ra_msg3_t msg3Data;
-	uint32_t msg3Size;
-	ProcessMsg2(msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t)+ msg2->GetMsg2Data().sig_rl_size, msg3Data, msg3Size, raContextID);
+	std::vector<uint8_t> quote;
+	ProcessMsg2(msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t)+ msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
+
 	//Clean Message 2 (Message 1 response).
 	delete resp;
 	resp = nullptr;
 	msg2 = nullptr;
+
+	SGXRAMessage3 msg3(msg3Data, quote);
+
+	resp = RASession.SendMessages(msg3);
+
+	//Clean Message 4 (Message 3 response).
+	delete resp;
+	resp = nullptr;
 
 	return true;
 }
@@ -168,9 +178,9 @@ bool SGXEnclave::AcceptRAConnection()
 	SGXRemoteAttestationSession* session = dynamic_cast<SGXRemoteAttestationSession*>(m_raServer->AcceptRAConnection());
 
 	//Message Processor Lambda function:
-	RemoteAttestationSession::MsgProcessor msgProcessor = [this](const RAMessages* msg) -> RAMessages*
+	RemoteAttestationSession::MsgProcessor msgProcessor = [this](const RAMessages& msg) -> RAMessages*
 	{
-		const SGXRAMessage* sgxMsg = dynamic_cast<const SGXRAMessage*>(msg);
+		const SGXRAMessage* sgxMsg = dynamic_cast<const SGXRAMessage*>(&msg);
 		if (!sgxMsg)
 		{
 			return nullptr;
@@ -202,6 +212,12 @@ bool SGXEnclave::AcceptRAConnection()
 			}
 			return new SGXRAMessage2(msg2Data, msg1->GetMsg1Data().gid);
 		}
+		case SGXRAMessage::Type::MSG3_SEND:
+		{
+			const SGXRAMessage3* msg3 = dynamic_cast<const SGXRAMessage3*>(sgxMsg);
+			
+			return new SGXRAMessage0Resp(false, "");
+		}
 		default:
 			return nullptr;
 		}
@@ -211,6 +227,8 @@ bool SGXEnclave::AcceptRAConnection()
 	//Message 0 from client:
 	res = session->RecvMessages(msgProcessor);
 	//Message 1 from client:
+	res = session->RecvMessages(msgProcessor);
+	//Message 3 from client:
 	res = session->RecvMessages(msgProcessor);
 
 	delete session;

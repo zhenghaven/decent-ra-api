@@ -38,7 +38,7 @@ public:
 	virtual sgx_status_t EnclaveInitRA(int enablePSE, sgx_ra_context_t& outContextID) = 0;
 	virtual sgx_status_t GetRAMsg1(sgx_ra_msg1_t& outMsg1, sgx_ra_context_t& inContextID) = 0; //This has to be abstract. (B.C. a function is from edger)
 	virtual sgx_status_t ProcessMsg1(const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2) = 0; //A decent protocol like function.
-	virtual sgx_status_t ProcessMsg2(const sgx_ra_msg2_t& inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, uint32_t& msg3Size, sgx_ra_context_t& inContextID) = 0; //A decent protocol like function.
+	virtual sgx_status_t ProcessMsg2(const sgx_ra_msg2_t& inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t& inContextID) = 0; //A decent protocol like function.
 
 	//Decent enclave functions:
 	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t port) override;

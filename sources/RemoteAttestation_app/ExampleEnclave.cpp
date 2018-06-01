@@ -50,14 +50,30 @@ sgx_status_t ExampleEnclave::ProcessMsg1(const sgx_ra_msg1_t & inMsg1, sgx_ra_ms
 	return res == SGX_SUCCESS ? retval : res;
 }
 
-sgx_status_t ExampleEnclave::ProcessMsg2(const sgx_ra_msg2_t & inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, uint32_t& msg3Size, sgx_ra_context_t& inContextID)
+sgx_status_t ExampleEnclave::ProcessMsg2(const sgx_ra_msg2_t & inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t& inContextID)
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 	sgx_ra_msg3_t* outMsg3ptr = nullptr;
+	uint32_t msg3Size = 0;
 	res = sgx_ra_proc_msg2(inContextID, GetEnclaveId(), sgx_ra_proc_msg2_trusted, sgx_ra_get_msg3_trusted, &inMsg2, msg2Size, &outMsg3ptr, &msg3Size);
-	free(outMsg3ptr);
-	return res == SGX_SUCCESS ? retval : res;
+
+	if (res != SGX_SUCCESS || retval != SGX_SUCCESS)
+	{
+		return res == SGX_SUCCESS ? retval : res;
+	}
+	if (msg3Size == 0 || msg3Size <= sizeof(sgx_ra_msg3_t))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	sgx_quote_t* quotePtr = reinterpret_cast<sgx_quote_t*>(outMsg3ptr->quote);
+	memcpy(&outMsg3, outMsg3ptr, sizeof(sgx_ra_msg3_t));
+	outQuote.resize(sizeof(sgx_quote_t) + quotePtr->signature_len);
+	memcpy(&outQuote[0], quotePtr, sizeof(sgx_quote_t) + quotePtr->signature_len);
+
+	std::free(outMsg3ptr);
+	return res;
 }
 
 void ExampleEnclave::TestEnclaveFunctions()
