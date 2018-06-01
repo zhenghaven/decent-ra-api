@@ -200,7 +200,7 @@ bool SGXEnclave::AcceptRAConnection()
 			{
 				return new SGXRAMessage0Resp(false, "");
 			}
-			return new SGXRAMessage2(msg2Data);
+			return new SGXRAMessage2(msg2Data, msg1->GetMsg1Data().gid);
 		}
 		default:
 			return nullptr;
