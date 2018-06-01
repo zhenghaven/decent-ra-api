@@ -16,7 +16,7 @@ enclave {
 		public int ecall_add_two_int(int a, int b);
 
 		//RA Functions:
-		public void ecall_set_remote_ra_pub_keys([in] sgx_ec256_public_t* inPubKey);
+		public void ecall_set_remote_ra_pub_keys([in] const sgx_ec256_public_t* inPubKey);
 
 		public sgx_status_t ecall_generate_ra_keys();
 
@@ -24,7 +24,7 @@ enclave {
 
 		public sgx_status_t ecall_enclave_init_ra(int b_pse, [out] sgx_ra_context_t *p_context);
 
-		public sgx_status_t ecall_process_msg1([in] sgx_ra_msg1_t *inMsg1);
+		public sgx_status_t ecall_process_msg1([in] const sgx_ra_msg1_t *inMsg1, [out] sgx_ra_msg2_t *outMsg2);
 
 
 	};

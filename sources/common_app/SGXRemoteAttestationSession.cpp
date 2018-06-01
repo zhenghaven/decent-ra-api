@@ -8,6 +8,8 @@
 #include "Common.h"
 #include "SGXRAMessages/SGXRAMessage.h"
 #include "SGXRAMessages/SGXRAMessage0.h"
+#include "SGXRAMessages/SGXRAMessage1.h"
+#include "SGXRAMessages/SGXRAMessage2.h"
 
 namespace 
 {
@@ -65,6 +67,8 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const RAMessages & msg)
 	{
 	case SGXRAMessage::Type::MSG0_SEND:
 		return new SGXRAMessage0Resp(jsonRoot);
+	case SGXRAMessage::Type::MSG1_SEND:
+		return new SGXRAMessage2(jsonRoot);
 	default:
 		return nullptr;
 	}
@@ -110,7 +114,7 @@ bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 	}
 	case SGXRAMessage::Type::MSG1_SEND:
 	{
-		SGXRAMessage0Send msg1(jsonRoot);
+		SGXRAMessage1 msg1(jsonRoot);
 		RAMessages* resp = msgProcessor(&msg1);
 		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
 		break;

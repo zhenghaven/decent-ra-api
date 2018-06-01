@@ -17,5 +17,5 @@ void DeserializePubKey(const std::string & inPubKeyStr, sgx_ec256_public_t & out
 	std::vector<uint8_t> buffer(sizeof(sgx_ec256_public_t), 0);
 	cppcodec::base64_rfc4648::decode(buffer, inPubKeyStr);
 
-	memcpy(&outPubKey, &buffer[0] , sizeof(sgx_ec256_public_t));
+	memcpy(&outPubKey, buffer.data(), sizeof(sgx_ec256_public_t));
 }

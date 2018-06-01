@@ -42,6 +42,24 @@ sgx_status_t ExampleEnclave::GetRAMsg1(sgx_ra_msg1_t & outMsg1, sgx_ra_context_t
 	return sgx_ra_get_msg1(inContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);;
 }
 
+sgx_status_t ExampleEnclave::ProcessMsg1(const sgx_ra_msg1_t & inMsg1, sgx_ra_msg2_t & outMsg2)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+	res = ecall_process_msg1(GetEnclaveId(), &retval, &inMsg1, &outMsg2);
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::ProcessMsg2(const sgx_ra_msg2_t & inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, uint32_t& msg3Size, sgx_ra_context_t& inContextID)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+	sgx_ra_msg3_t* outMsg3ptr = nullptr;
+	res = sgx_ra_proc_msg2(inContextID, GetEnclaveId(), sgx_ra_proc_msg2_trusted, sgx_ra_get_msg3_trusted, &inMsg2, msg2Size, &outMsg3ptr, &msg3Size);
+	free(outMsg3ptr);
+	return res == SGX_SUCCESS ? retval : res;
+}
+
 void ExampleEnclave::TestEnclaveFunctions()
 {
 	sgx_status_t ret = SGX_ERROR_UNEXPECTED;

@@ -22,12 +22,18 @@
 
 namespace 
 {
+	sgx_spid_t sgxSPID = { "Decent X" };
+
 	sgx_ec256_private_t* sgxRAPriKey = nullptr;
 	sgx_ec256_public_t* sgxRAPubkey = nullptr;
 	sgx_ecc_state_handle_t sgxRAECCContext = nullptr;
 
 	sgx_ec256_public_t* sgxRARemotePubkey = nullptr;
 	sgx_ec256_dh_shared_t* sgxDHKey = nullptr;
+	sgx_ec_key_128bit_t raRemoteSMK = { 0 };
+	sgx_ec_key_128bit_t raRemoteMK = { 0 };
+	sgx_ec_key_128bit_t raRemoteSK = { 0 };
+	sgx_ec_key_128bit_t raRemoteVK = { 0 };
 }
 
 static void CleanRAKeys()
@@ -216,7 +222,7 @@ sgx_status_t ecall_get_ra_pub_keys(sgx_ec256_public_t* outPubKey)
 	return res;
 }
 
-void ecall_set_remote_ra_pub_keys(sgx_ec256_public_t* inPubKey)
+void ecall_set_remote_ra_pub_keys(const sgx_ec256_public_t* inPubKey)
 {
 	if (!sgxRARemotePubkey)
 	{
@@ -237,7 +243,14 @@ sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context)
 			return ret;
 	}
 	ret = sgx_ra_init(sgxRARemotePubkey, b_pse, p_context);
-	enclave_printf("RA ContextID: %d\n", *p_context);
+
+	//Debug Code:
+	//std::string raPubKeyStr;
+	//raPubKeyStr = SerializePubKey(*sgxRARemotePubkey);
+	//enclave_printf("RA ContextID: %d\n", *p_context);
+	//enclave_printf("RA Remote Signing Key: %s\n", raPubKeyStr.c_str());
+	////////////////////
+
 	if (b_pse)
 	{
 		sgx_close_pse_session();
@@ -282,7 +295,7 @@ void GenSSLECKeys()
 	//EC_KEY_set_public_key(key, pub);
 }
 
-sgx_status_t ecall_process_msg1(sgx_ra_msg1_t *inMsg1)
+sgx_status_t ecall_process_msg1(const sgx_ra_msg1_t *inMsg1, sgx_ra_msg2_t *outMsg2)
 {
 	sgx_status_t res = SGX_SUCCESS;
 	ecall_set_remote_ra_pub_keys(&(inMsg1->g_a));
@@ -297,6 +310,135 @@ sgx_status_t ecall_process_msg1(sgx_ra_msg1_t *inMsg1)
 		return res;
 	}
 
+	bool keyDeriveRes = false;
+	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_SMK, &raRemoteSMK);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_MK, &raRemoteMK);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_SK, &raRemoteSK);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_VK, &raRemoteVK);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	memcpy(&(outMsg2->g_b), sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	memcpy(&(outMsg2->spid), &sgxSPID, sizeof(sgxSPID));
+	outMsg2->quote_type = SGX_QUOTE_LINKABLE_SIGNATURE;
+
+	outMsg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
+
+	sgx_ec256_public_t gb_ga[2];
+	memcpy(&gb_ga[0], sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	memcpy(&gb_ga[1], sgxRARemotePubkey, sizeof(sgx_ec256_public_t));
+
+	res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), sgxRAPriKey, &(outMsg2->sign_gb_ga), sgxRAECCContext);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	uint8_t mac[SAMPLE_EC_MAC_SIZE] = { 0 };
+	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
+	res = sgx_rijndael128_cmac_msg(reinterpret_cast<sgx_cmac_128bit_key_t*>(raRemoteSMK), (uint8_t *)&(outMsg2->g_b), cmac_size, &mac);
+	memcpy(&(outMsg2->mac), mac, sizeof(mac));
+
+	outMsg2->sig_rl_size = 0;
 
 	return res;
+}
+
+#define EC_DERIVATION_BUFFER_SIZE(label_length) ((label_length) +4)
+
+const char str_SMK[] = "SMK";
+const char str_SK[] = "SK";
+const char str_MK[] = "MK";
+const char str_VK[] = "VK";
+
+// Derive key from shared key and key id.
+// key id should be sample_derive_key_type_t.
+bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key, uint8_t key_id, sgx_ec_key_128bit_t* derived_key)
+{
+	sgx_status_t sample_ret = SGX_SUCCESS;
+	sgx_cmac_128bit_key_t cmac_key;
+	sgx_ec_key_128bit_t key_derive_key;
+
+	memset(&cmac_key, 0, sizeof(cmac_key));
+
+	sample_ret = sgx_rijndael128_cmac_msg(&cmac_key, (uint8_t*)p_shared_key, sizeof(sgx_ec256_dh_shared_t), (sgx_cmac_128bit_tag_t *)&key_derive_key);
+	if (sample_ret != SGX_SUCCESS)
+	{
+		// memset here can be optimized away by compiler, so please use memset_s on
+		// windows for production code and similar functions on other OSes.
+		memset(&key_derive_key, 0, sizeof(key_derive_key));
+		return false;
+	}
+	
+	const char *label = NULL;
+	uint32_t label_length = 0;
+	switch (key_id)
+	{
+	case SAMPLE_DERIVE_KEY_SMK:
+		label = str_SMK;
+		label_length = sizeof(str_SMK) - 1;
+		break;
+	case SAMPLE_DERIVE_KEY_SK:
+		label = str_SK;
+		label_length = sizeof(str_SK) - 1;
+		break;
+	case SAMPLE_DERIVE_KEY_MK:
+		label = str_MK;
+		label_length = sizeof(str_MK) - 1;
+		break;
+	case SAMPLE_DERIVE_KEY_VK:
+		label = str_VK;
+		label_length = sizeof(str_VK) - 1;
+		break;
+	default:
+		// memset here can be optimized away by compiler, so please use memset_s on
+		// windows for production code and similar functions on other OSes.
+		memset(&key_derive_key, 0, sizeof(key_derive_key));
+		return false;
+		break;
+	}
+	/* derivation_buffer = counter(0x01) || label || 0x00 || output_key_len(0x0080) */
+	uint32_t derivation_buffer_length = EC_DERIVATION_BUFFER_SIZE(label_length);
+	uint8_t *p_derivation_buffer = (uint8_t *)malloc(derivation_buffer_length);
+	if (p_derivation_buffer == NULL)
+	{
+		// memset here can be optimized away by compiler, so please use memset_s on
+		// windows for production code and similar functions on other OSes.
+		memset(&key_derive_key, 0, sizeof(key_derive_key));
+		return false;
+	}
+	memset(p_derivation_buffer, 0, derivation_buffer_length);
+
+	/*counter = 0x01 */
+	p_derivation_buffer[0] = 0x01;
+	/*label*/
+	memcpy(&p_derivation_buffer[1], label, derivation_buffer_length - 1);//label_length);
+	/*output_key_len=0x0080*/
+	uint16_t *key_len = (uint16_t *)(&(p_derivation_buffer[derivation_buffer_length - 2]));
+	*key_len = 0x0080;
+
+
+	sample_ret = sgx_rijndael128_cmac_msg((sgx_cmac_128bit_key_t *)&key_derive_key, p_derivation_buffer, derivation_buffer_length, (sgx_cmac_128bit_tag_t *)derived_key);
+	free(p_derivation_buffer);
+	// memset here can be optimized away by compiler, so please use memset_s on
+	// windows for production code and similar functions on other OSes.
+	memset(&key_derive_key, 0, sizeof(key_derive_key));
+	if (sample_ret != SGX_SUCCESS)
+	{
+		return false;
+	}
+	return true;
 }
