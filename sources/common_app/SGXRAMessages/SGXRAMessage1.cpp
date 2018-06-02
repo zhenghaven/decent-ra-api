@@ -8,7 +8,8 @@
 
 //#include "../../common/CryptoTools.h"
 
-SGXRAMessage1::SGXRAMessage1(sgx_ra_msg1_t& msg1Data) :
+SGXRAMessage1::SGXRAMessage1(const std::string& senderID, sgx_ra_msg1_t& msg1Data) :
+	SGXRAMessage(senderID),
 	m_msg1Data(msg1Data)
 {
 	m_isValid = true;
@@ -17,14 +18,28 @@ SGXRAMessage1::SGXRAMessage1(sgx_ra_msg1_t& msg1Data) :
 }
 
 SGXRAMessage1::SGXRAMessage1(Json::Value& msg) :
+	SGXRAMessage(msg),
 	m_msg1Data({ 0 })
 {
-	if (msg.isMember("MsgType")
-		&& msg["MsgType"].asString().compare(SGXRAMessage::GetMessageTypeStr(GetType())) == 0
-		&& msg.isMember("Untrusted")
-		&& msg["Untrusted"].isMember("msg1Data"))
+	if (!IsValid())
 	{
-		std::string msg1B64Str = msg["Untrusted"]["msg1Data"].asString();
+		return;
+	}
+	if (!msg.isMember("child")
+		|| !msg["child"].isObject())
+	{
+		m_isValid = false;
+		return;
+	}
+
+	Json::Value& root = msg["child"];
+
+	if (root.isMember("MsgType")
+		&& root["MsgType"].asString().compare(SGXRAMessage::GetMessageTypeStr(GetType())) == 0
+		&& root.isMember("Untrusted")
+		&& root["Untrusted"].isMember("msg1Data"))
+	{
+		std::string msg1B64Str = root["Untrusted"]["msg1Data"].asString();
 		std::vector<uint8_t> buffer(sizeof(sgx_ra_msg1_t), 0);
 		cppcodec::base64_rfc4648::decode(buffer, msg1B64Str);
 		memcpy(&m_msg1Data, buffer.data(), sizeof(sgx_ra_msg1_t));
@@ -40,19 +55,9 @@ SGXRAMessage1::~SGXRAMessage1()
 {
 }
 
-std::string SGXRAMessage1::ToJsonString() const
+std::string SGXRAMessage1::GetMessgaeSubTypeStr() const
 {
-	Json::Value jsonRoot;
-	Json::Value jsonUntrusted;
-
-	std::string msg1B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(&m_msg1Data), sizeof(sgx_ra_msg1_t));
-	jsonUntrusted["msg1Data"] = msg1B64Str;
-
-	jsonRoot["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
-	jsonRoot["Untrusted"] = jsonUntrusted;
-	jsonRoot["Trusted"] = Json::nullValue;
-
-	return jsonRoot.toStyledString();
+	return SGXRAMessage::GetMessageTypeStr(GetType());
 }
 
 SGXRAMessage::Type SGXRAMessage1::GetType() const
@@ -68,4 +73,23 @@ bool SGXRAMessage1::IsResp() const
 const sgx_ra_msg1_t& SGXRAMessage1::GetMsg1Data() const
 {
 	return m_msg1Data;
+}
+
+Json::Value & SGXRAMessage1::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = SGXRAMessage::GetJsonMsg(outJson);
+
+	parent["child"] = Json::objectValue;
+	Json::Value& child = parent["child"];
+
+	Json::Value jsonUntrusted;
+
+	std::string msg1B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(&m_msg1Data), sizeof(sgx_ra_msg1_t));
+	jsonUntrusted["msg1Data"] = msg1B64Str;
+
+	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
+	child["Untrusted"] = jsonUntrusted;
+	child["Trusted"] = Json::nullValue;
+
+	return child;
 }

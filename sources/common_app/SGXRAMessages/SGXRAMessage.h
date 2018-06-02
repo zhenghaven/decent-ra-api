@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstdint>
 
+#include <json/json.h>
+
 #include "RAMessages.h"
 
 class SGXRAMessage : public RAMessages
@@ -24,29 +26,30 @@ public:
 	};
 
 public:
-	SGXRAMessage();
+	SGXRAMessage() = delete;
+	SGXRAMessage(const std::string& senderID);
+	SGXRAMessage(Json::Value& msg);
 	~SGXRAMessage();
 
 	virtual void SerializedMessage(std::vector<uint8_t>& outData) const;
 
-	virtual std::string ToJsonString() const = 0;
-
-	virtual bool IsValid() const;
+	virtual std::string ToJsonString() const;
 
 	virtual Type GetType() const = 0;
 
 	virtual bool IsResp() const = 0;
 
-	virtual std::string GetMessgaeClass() const override;
+	virtual std::string GetMessgaeSubTypeStr() const override;
 
 	static Type GetTypeFromMessage(const std::string& msg);
 
 	static const std::string sk_MessageClass;
 
 protected:
-	bool m_isValid;
 
 	static std::string GetMessageTypeStr(const Type t);
+
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 
 private:
 

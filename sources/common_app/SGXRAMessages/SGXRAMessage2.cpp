@@ -11,7 +11,8 @@
 #include "../IAS/IASUtil.h"
 //#include "../../common/CryptoTools.h"
 
-SGXRAMessage2::SGXRAMessage2(sgx_ra_msg2_t& msg2Data, const sgx_epid_group_id_t& gid) :
+SGXRAMessage2::SGXRAMessage2(const std::string& senderID, sgx_ra_msg2_t& msg2Data, const sgx_epid_group_id_t& gid) :
+	SGXRAMessage(senderID),
 	m_msg2Data(nullptr),
 	m_rl()
 {
@@ -54,23 +55,40 @@ SGXRAMessage2::SGXRAMessage2(sgx_ra_msg2_t& msg2Data, const sgx_epid_group_id_t&
 }
 
 SGXRAMessage2::SGXRAMessage2(Json::Value& msg) :
+	SGXRAMessage(msg),
 	m_msg2Data(nullptr)
 {
-	if (msg.isMember("MsgType")
-		&& msg["MsgType"].asString().compare(SGXRAMessage::GetMessageTypeStr(GetType())) == 0
-		&& msg.isMember("Untrusted")
-		&& msg["Untrusted"].isMember("msg2Data")
-		&& msg["Untrusted"].isMember("rl"))
+	if (!IsValid())
+	{
+		return;
+	}
+
+	Json::Value& parent = msg["child"];
+
+	if (!parent.isMember("child")
+		|| !parent["child"].isObject())
+	{
+		m_isValid = false;
+		return;
+	}
+
+	Json::Value& root = parent["child"];
+
+	if (root.isMember("MsgType")
+		&& root["MsgType"].asString() == SGXRAMessage::GetMessageTypeStr(GetType())
+		&& root.isMember("Untrusted")
+		&& root["Untrusted"].isMember("msg2Data")
+		&& root["Untrusted"].isMember("rl"))
 	{
 		//Get data in revocation list.
-		m_rl = msg["Untrusted"]["rl"].asString();
+		m_rl = root["Untrusted"]["rl"].asString();
 		std::vector<uint8_t> buffer1;
 		cppcodec::base64_rfc4648::decode(buffer1, m_rl);
 
 		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + buffer1.size()));
 
 		//Get message 2 normal data.
-		std::string msg2B64Str = msg["Untrusted"]["msg2Data"].asString();
+		std::string msg2B64Str = root["Untrusted"]["msg2Data"].asString();
 		std::vector<uint8_t> buffer2(sizeof(sgx_ra_msg2_t), 0);
 		cppcodec::base64_rfc4648::decode(buffer2, msg2B64Str);
 		memcpy(m_msg2Data, buffer2.data(), sizeof(sgx_ra_msg2_t));
@@ -108,21 +126,9 @@ SGXRAMessage2::~SGXRAMessage2()
 	std::free(m_msg2Data);
 }
 
-std::string SGXRAMessage2::ToJsonString() const
+std::string SGXRAMessage2::GetMessgaeSubTypeStr() const
 {
-	Json::Value jsonRoot;
-	Json::Value jsonUntrusted;
-
-	std::string msg2B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(m_msg2Data), sizeof(sgx_ra_msg2_t));
-
-	jsonUntrusted["msg2Data"] = msg2B64Str;
-	jsonUntrusted["rl"] = m_rl;
-
-	jsonRoot["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
-	jsonRoot["Untrusted"] = jsonUntrusted;
-	jsonRoot["Trusted"] = Json::nullValue;
-
-	return jsonRoot.toStyledString();
+	return SGXRAMessage::GetMessageTypeStr(GetType());
 }
 
 SGXRAMessage::Type SGXRAMessage2::GetType() const
@@ -143,4 +149,25 @@ const sgx_ra_msg2_t& SGXRAMessage2::GetMsg2Data() const
 bool SGXRAMessage2::IsRLValid() const
 {
 	return m_isRLValid;
+}
+
+Json::Value & SGXRAMessage2::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = SGXRAMessage::GetJsonMsg(outJson);
+
+	parent["child"] = Json::objectValue;
+	Json::Value& child = parent["child"];
+
+	Json::Value jsonUntrusted;
+
+	std::string msg2B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(m_msg2Data), sizeof(sgx_ra_msg2_t));
+
+	jsonUntrusted["msg2Data"] = msg2B64Str;
+	jsonUntrusted["rl"] = m_rl;
+
+	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
+	child["Untrusted"] = jsonUntrusted;
+	child["Trusted"] = Json::nullValue;
+
+	return child;
 }

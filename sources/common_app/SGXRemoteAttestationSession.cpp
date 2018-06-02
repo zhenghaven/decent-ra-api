@@ -92,13 +92,14 @@ bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 	bool isValid = reader->parse(m_buffer.c_str(), m_buffer.c_str() + actualSize, &jsonRoot, &errStr);
 
 	if (!isValid
-		|| !jsonRoot.isMember("MsgType"))
+		|| !jsonRoot.isMember("MsgSubType")
+		|| !jsonRoot["MsgSubType"].isString())
 	{
 		LOGI("Recv INVALID MESSAGE!");
 		return false;
 	}
 
-	auto it = g_msgTypeNameMap.find(jsonRoot["MsgType"].asString());
+	auto it = g_msgTypeNameMap.find(jsonRoot["MsgSubType"].asString());
 	if (it == g_msgTypeNameMap.end() || it->second == SGXRAMessage::Type::OTHER)
 	{
 		LOGI("Recv INVALID MESSAGE!");

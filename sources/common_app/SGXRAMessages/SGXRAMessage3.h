@@ -15,11 +15,11 @@ class SGXRAMessage3 : public SGXRAMessage
 {
 public:
 	SGXRAMessage3() = delete;
-	SGXRAMessage3(sgx_ra_msg3_t& msg3Data, const std::vector<uint8_t>& quoteData);
+	SGXRAMessage3(const std::string& senderID, sgx_ra_msg3_t& msg3Data, const std::vector<uint8_t>& quoteData);
 	SGXRAMessage3(Json::Value& msg);
 	~SGXRAMessage3();
 
-	virtual std::string ToJsonString() const override;
+	virtual std::string GetMessgaeSubTypeStr() const override;
 
 	virtual Type GetType() const override;
 	virtual bool IsResp() const override;
@@ -27,6 +27,9 @@ public:
 	const sgx_ra_msg3_t& GetMsg3Data() const;
 
 	bool IsQuoteValid() const;
+
+protected:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 
 private:
 	sgx_ra_msg3_t* m_msg3Data;

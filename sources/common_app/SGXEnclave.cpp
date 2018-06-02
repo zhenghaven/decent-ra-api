@@ -97,13 +97,26 @@ bool SGXEnclave::IsLaunched() const
 bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 {
 	SGXRemoteAttestationSession RASession(ipAddr, portNum);
+	sgx_status_t res = SGX_SUCCESS;
+
+	//Get extended group ID.
 	uint32_t extended_epid_group_id = 0;
-	sgx_status_t res = sgx_get_extended_epid_group_id(&extended_epid_group_id);
+	res = sgx_get_extended_epid_group_id(&extended_epid_group_id);
 	if (res != SGX_SUCCESS)
 	{
 		return false;
 	}
-	SGXRAMessage0Send msg0s(extended_epid_group_id);
+
+	//Get Sign public key.
+	sgx_ec256_public_t signPubKey;
+	res = GetRAPublicKey(signPubKey);
+	if (res != SGX_SUCCESS)
+	{
+		return false;
+	}
+	std::string msgSenderID = SerializePubKey(signPubKey);
+
+	SGXRAMessage0Send msg0s(msgSenderID, extended_epid_group_id);
 	RAMessages* resp = RASession.SendMessages(msg0s);
 	SGXRAMessage0Resp* msg0r = nullptr;
 	if (!resp || !(msg0r = dynamic_cast<SGXRAMessage0Resp*>(resp)))
@@ -135,7 +148,7 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 	{
 		return false;
 	}
-	SGXRAMessage1 msg1(msg1data);
+	SGXRAMessage1 msg1(msgSenderID, msg1data);
 
 	resp = RASession.SendMessages(msg1);
 	SGXRAMessage2* msg2 = nullptr;
@@ -152,7 +165,7 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 	resp = nullptr;
 	msg2 = nullptr;
 
-	SGXRAMessage3 msg3(msg3Data, quote);
+	SGXRAMessage3 msg3(msgSenderID, msg3Data, quote);
 
 	resp = RASession.SendMessages(msg3);
 
@@ -175,10 +188,21 @@ bool SGXEnclave::IsRAServerLaunched() const
 
 bool SGXEnclave::AcceptRAConnection()
 {
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	//Get Sign public key.
+	sgx_ec256_public_t signPubKey;
+	enclaveRes = GetRAPublicKey(signPubKey);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return false;
+	}
+	std::string msgSenderID = SerializePubKey(signPubKey);
+
 	SGXRemoteAttestationSession* session = dynamic_cast<SGXRemoteAttestationSession*>(m_raServer->AcceptRAConnection());
 
 	//Message Processor Lambda function:
-	RemoteAttestationSession::MsgProcessor msgProcessor = [this](const RAMessages& msg) -> RAMessages*
+	RemoteAttestationSession::MsgProcessor msgProcessor = [this, msgSenderID](const RAMessages& msg) -> RAMessages*
 	{
 		const SGXRAMessage* sgxMsg = dynamic_cast<const SGXRAMessage*>(&msg);
 		if (!sgxMsg)
@@ -191,15 +215,8 @@ bool SGXEnclave::AcceptRAConnection()
 		case SGXRAMessage::Type::MSG0_SEND:
 		{
 			const SGXRAMessage0Send* msg0s = dynamic_cast<const SGXRAMessage0Send*>(sgxMsg);
-			sgx_ec256_public_t pubKey;
-			sgx_status_t res = this->GetRAPublicKey(pubKey);
-			if (res != SGX_SUCCESS)
-			{
-				return new SGXRAMessage0Resp(false, "");
-			}
-			std::string pubKeyStr = SerializePubKey(pubKey);
 			//TODO: verification here.
-			return new SGXRAMessage0Resp(true, pubKeyStr);
+			return new SGXRAMessage0Resp(msgSenderID, true, msgSenderID);
 		}
 		case SGXRAMessage::Type::MSG1_SEND:
 		{
@@ -208,15 +225,15 @@ bool SGXEnclave::AcceptRAConnection()
 			sgx_status_t res = this->ProcessMsg1(msg1->GetMsg1Data(), msg2Data);
 			if (res != SGX_SUCCESS)
 			{
-				return new SGXRAMessage0Resp(false, "");
+				return new SGXRAMessage0Resp(msgSenderID, false, "");
 			}
-			return new SGXRAMessage2(msg2Data, msg1->GetMsg1Data().gid);
+			return new SGXRAMessage2(msgSenderID, msg2Data, msg1->GetMsg1Data().gid);
 		}
 		case SGXRAMessage::Type::MSG3_SEND:
 		{
 			const SGXRAMessage3* msg3 = dynamic_cast<const SGXRAMessage3*>(sgxMsg);
 			
-			return new SGXRAMessage0Resp(false, "");
+			return new SGXRAMessage0Resp(msgSenderID, false, "");
 		}
 		default:
 			return nullptr;
