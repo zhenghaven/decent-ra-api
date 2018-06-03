@@ -2,6 +2,7 @@ enclave {
 	
     include "sgx_key_exchange.h"
     include "sgx_trts.h"
+	include "../common/sgx_ra_msg4.h"
 
 	from "sgx_tsgxssl.edl" import *;
 	from "common_enclave.edl" import *;
@@ -9,22 +10,9 @@ enclave {
 
 	trusted 
 	{
-		//public void ecall_initializer_list_demo(void);
-
-		//public void ecall_square_array([in, out, size=len_in_byte] int* arr, size_t len_in_byte);
-
-		//public int ecall_add_two_int(int a, int b);
-
 		//RA Functions:
-		//public void ecall_set_remote_ra_pub_keys([in] const sgx_ec256_public_t* inPubKey);
-
-		//public sgx_status_t ecall_generate_ra_keys();
 
 		public sgx_status_t ecall_get_ra_pub_keys([out] sgx_ec256_public_t* outPubKey);
-
-		//public sgx_status_t ecall_enclave_init_ra(int b_pse, [out] sgx_ra_context_t *p_context);
-
-		//public sgx_status_t ecall_process_msg1([in] const sgx_ra_msg1_t *inMsg1, [out] sgx_ra_msg2_t *outMsg2);
 
 		public sgx_status_t ecall_init_ra_environment();
 
@@ -35,6 +23,10 @@ enclave {
 		public sgx_status_t ecall_process_ra_msg1([in, string] const char* clientID, [in] const sgx_ra_msg1_t *inMsg1, [out] sgx_ra_msg2_t *outMsg2);
 
 		public sgx_status_t ecall_process_ra_msg2([in, string] const char* ServerID);
+
+		//public sgx_status_t ecall_process_ra_msg3([in, string] const char* clientID, [in, size=msg3Len] const uint8_t* inMsg3, const uint32_t msg3Len, [in, string] const char* iasReport, [in, string] const char* reportSign, [out] sgx_ra_msg4_t* outMsg4, [out] sgx_ec256_signature_t* outMsg4Sign);
+
+		public sgx_status_t ecall_process_ra_msg4([in, string] const char* ServerID, [in] const sgx_ra_msg4_t* inMsg4, [in] sgx_ec256_signature_t* inMsg4Sign);
 		
 		public sgx_status_t ecall_termination_clean();
 

@@ -22,6 +22,7 @@
 #include "../common_enclave/RAKeyManager.h"
 
 #include "../common/CryptoTools.h"
+#include "../common/sgx_ra_msg4.h"
 
 namespace 
 {
@@ -49,28 +50,6 @@ inline bool IsRAKeyExist()
 {
 	return (!sgxRAPriKey || !sgxRAPubkey);
 }
-
-//void ecall_square_array(int* arr, const size_t len_in_byte)
-//{
-//	std::string base64TestStr = "Base64 test string.";
-//	std::string base64CodeStr = cppcodec::base64_rfc4648::encode(base64TestStr.c_str(), base64TestStr.size());
-//	enclave_printf("base 64 code string: %s\n", base64CodeStr.c_str());
-//	auto base64out = cppcodec::base64_rfc4648::decode(base64CodeStr); ;
-//	enclave_printf("base 64 code string: %s\n", std::string((char*)base64out.data(), base64out.size()).c_str());
-//
-//	const char* json = "{\"project\":\"rapidjson\",\"stars\":10}";
-//	rapidjson::Document d;
-//	d.Parse(json);
-//	rapidjson::Value& s = d["stars"];
-//	s.SetInt(s.GetInt() + 1);
-//
-//	rapidjson::StringBuffer buffer;
-//	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-//	d.Accept(writer);
-//
-//	enclave_printf("JSON Example: %s\n", buffer.GetString());
-//
-//}
 
 sgx_status_t ecall_generate_ra_keys()
 {
@@ -127,6 +106,24 @@ int EC_KEY_get_asn1_flag(const EC_KEY* key)
 			return EC_GROUP_get_asn1_flag(group);
 		}
 		return 0;
+	}
+}
+
+static void DropClientRAState(const std::string& clientID)
+{
+	auto it = g_clientsMap.find(clientID);
+	if (it != g_clientsMap.end())
+	{
+		g_clientsMap.erase(it);
+	}
+}
+
+static void DropServerRAState(const std::string& serverID)
+{
+	auto it = g_serversMap.find(serverID);
+	if (it != g_serversMap.end())
+	{
+		g_serversMap.erase(it);
 	}
 }
 
@@ -205,6 +202,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	if (it == g_clientsMap.end()
 		|| it->second.first != ClientRAState::MSG0_DONE)
 	{
+		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	
@@ -218,6 +216,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	res = sgx_ecc256_compute_shared_dhkey(sgxRAPriKey, &(clientKeyMgr.GetEncryptKey()), &sharedKey, g_eccContext);
 	if (res != SGX_SUCCESS)
 	{
+		DropClientRAState(clientID);
 		return res;
 	}
 	clientKeyMgr.SetSharedKey(sharedKey);
@@ -227,24 +226,28 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
+		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	clientKeyMgr.SetSMK(tmpDerivedKey);
 	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
+		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	clientKeyMgr.SetMK(tmpDerivedKey);
 	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
+		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	clientKeyMgr.SetSK(tmpDerivedKey);
 	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
+		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	clientKeyMgr.SetVK(tmpDerivedKey);
@@ -262,6 +265,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), sgxRAPriKey, &(outMsg2->sign_gb_ga), g_eccContext);
 	if (res != SGX_SUCCESS)
 	{
+		DropClientRAState(clientID);
 		return res;
 	}
 	uint8_t mac[SAMPLE_EC_MAC_SIZE] = { 0 };
@@ -282,6 +286,7 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID)
 	if (it == g_serversMap.end()
 		|| it->second.first != ServerRAState::MSG0_DONE)
 	{
+		DropServerRAState(ServerID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 
@@ -290,6 +295,155 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID)
 	it->second.first = ServerRAState::MSG2_DONE;
 
 	return SGX_SUCCESS;
+}
+
+sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, const uint32_t msg3Len, const char* iasReport, const char* reportSign, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
+{
+	auto it = g_clientsMap.find(clientID);
+	if (it == g_clientsMap.end()
+		|| it->second.first != ClientRAState::MSG1_DONE)
+	{
+		DropClientRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	sgx_status_t res = SGX_SUCCESS;
+	int cmpRes = 0;
+	const sgx_ra_msg3_t* msg3 = reinterpret_cast<const sgx_ra_msg3_t*>(inMsg3);
+	
+	// Compare g_a in message 3 with local g_a.
+	cmpRes = std::memcmp(&(clientKeyMgr.GetEncryptKey()), &msg3->g_a, sizeof(sgx_ec256_public_t));
+	if (cmpRes)
+	{
+		DropClientRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	//Make sure that msg3_size is bigger than sample_mac_t.
+	uint32_t mac_size = msg3Len - sizeof(sgx_mac_t);
+	const uint8_t *p_msg3_cmaced = inMsg3;
+	p_msg3_cmaced += sizeof(sgx_mac_t);
+
+	// Verify the message mac using SMK
+	sgx_cmac_128bit_tag_t mac = { 0 };
+	res = sgx_rijndael128_cmac_msg(&(clientKeyMgr.GetSMK()), p_msg3_cmaced, mac_size, &mac);
+	if (res != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		return res;
+	}
+
+	// In real implementation, should use a time safe version of memcmp here,
+	// in order to avoid side channel attack.
+	cmpRes = std::memcmp(&(msg3->mac), mac, sizeof(mac));
+	if (cmpRes)
+	{
+		DropClientRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	clientKeyMgr.SetSecProp(msg3->ps_sec_prop);
+	
+	const sgx_quote_t* p_quote = reinterpret_cast<const sgx_quote_t *>(msg3->quote);
+
+	sgx_sha_state_handle_t sha_handle = nullptr;
+	sgx_report_data_t report_data = { 0 };
+	// Verify the report_data in the Quote matches the expected value.
+	// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
+	// The second 32 bytes of report_data are set to zero.
+	res = sgx_sha256_init(&sha_handle);
+	if (res != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		return res;
+	}
+
+	res = sgx_sha256_update((uint8_t *)&(clientKeyMgr.GetEncryptKey()), sizeof(sgx_ec256_public_t), sha_handle);
+	if (res != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		return res;
+	}
+
+	res = sgx_sha256_update((uint8_t *)&(sgxRAPubkey), sizeof(sgx_ec256_public_t), sha_handle);
+	if (res != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		return res;
+	}
+
+	res = sgx_sha256_update((uint8_t *)&(clientKeyMgr.GetVK()), sizeof(sgx_ec_key_128bit_t), sha_handle);
+	if (res != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		return res;
+	}
+
+	res = sgx_sha256_get_hash(sha_handle, (sgx_sha256_hash_t *)&report_data);
+	if (res != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		return res;
+	}
+
+	cmpRes = std::memcmp((uint8_t *)&report_data, (uint8_t *)&(p_quote->report_body.report_data), sizeof(report_data));
+	if (cmpRes)
+	{
+		DropClientRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	//TODO: Verify quote report here.
+
+	//Temporary code here:
+	outMsg4->id = 222;
+	outMsg4->pse_status = ias_pse_status_t::IAS_PSE_OK;
+	outMsg4->status = ias_quote_status_t::IAS_QUOTE_OK;
+
+	res = sgx_ecdsa_sign((uint8_t *)outMsg4, sizeof(sgx_ra_msg4_t), sgxRAPriKey, outMsg4Sign, g_eccContext);
+	if (res != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		return res;
+	}
+
+	it->second.first = ClientRAState::ATTESTED;
+
+	return res;
+}
+
+sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* inMsg4, sgx_ec256_signature_t* inMsg4Sign)
+{
+	auto it = g_serversMap.find(ServerID);
+	if (it == g_serversMap.end()
+		|| it->second.first != ServerRAState::MSG2_DONE)
+	{
+		DropServerRAState(ServerID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	RAKeyManager& serverKeyMgr = it->second.second;
+
+	sgx_status_t res = SGX_SUCCESS;
+
+	uint8_t signVerifyRes = 0;
+	res = sgx_ecdsa_verify((uint8_t *)inMsg4, sizeof(sgx_ra_msg4_t), &(serverKeyMgr.GetSignKey()), inMsg4Sign, &signVerifyRes, g_eccContext);
+	if (signVerifyRes != SGX_EC_VALID)
+	{
+		DropServerRAState(ServerID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (inMsg4->status != ias_quote_status_t::IAS_QUOTE_OK)
+	{
+		DropServerRAState(ServerID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	it->second.first = ServerRAState::ATTESTED;
+
+	return res;
 }
 
 sgx_status_t ecall_termination_clean()
@@ -320,15 +474,6 @@ sgx_status_t ecall_get_ra_pub_keys(sgx_ec256_public_t* outPubKey)
 	memcpy(outPubKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
 	return res;
 }
-
-//void ecall_set_remote_ra_pub_keys(const sgx_ec256_public_t* inPubKey)
-//{
-//	if (!sgxRARemotePubkey)
-//	{
-//		sgxRARemotePubkey = new sgx_ec256_public_t;
-//	}
-//	memcpy(sgxRARemotePubkey, inPubKey, sizeof(sgx_ec256_public_t));
-//}
 
 void GenSSLECKeys()
 {

@@ -2,6 +2,7 @@
 
 #include <sgx_ecp_types.h>
 #include <sgx_tcrypto.h>
+#include <sgx_tae_service.h>
 
 class RAKeyManager
 {
@@ -17,6 +18,7 @@ public:
 	void SetMK(const sgx_ec_key_128bit_t& mk);
 	void SetSK(const sgx_ec_key_128bit_t& sk);
 	void SetVK(const sgx_ec_key_128bit_t& vk);
+	void SetSecProp(const sgx_ps_sec_prop_desc_t& secProp);
 
 	sgx_ec256_public_t& GetSignKey();
 	sgx_ec256_public_t& GetEncryptKey();
@@ -25,6 +27,7 @@ public:
 	sgx_ec_key_128bit_t& GetMK();
 	sgx_ec_key_128bit_t& GetSK();
 	sgx_ec_key_128bit_t& GetVK();
+	sgx_ps_sec_prop_desc_t& GetSecProp();
 
 private:
 	sgx_ec256_public_t m_signKey;
@@ -36,4 +39,6 @@ private:
 	sgx_ec_key_128bit_t m_mk;
 	sgx_ec_key_128bit_t m_sk;
 	sgx_ec_key_128bit_t m_vk;
+
+	sgx_ps_sec_prop_desc_t m_secProp;
 };

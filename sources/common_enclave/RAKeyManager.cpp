@@ -65,7 +65,7 @@ void RAKeyManager::SetSMK(const sgx_ec_key_128bit_t & smk)
 {
 	//if (m_smk)
 	//{
-		std::memcpy(m_smk, &smk, sizeof(sgx_ec_key_128bit_t));
+		std::memcpy(&m_smk, &smk, sizeof(sgx_ec_key_128bit_t));
 	//}
 	//else
 	//{
@@ -78,7 +78,7 @@ void RAKeyManager::SetMK(const sgx_ec_key_128bit_t & mk)
 {
 	//if (m_mk)
 	//{
-		std::memcpy(m_mk, &mk, sizeof(sgx_ec_key_128bit_t));
+		std::memcpy(&m_mk, &mk, sizeof(sgx_ec_key_128bit_t));
 	//}
 	//else
 	//{
@@ -91,7 +91,7 @@ void RAKeyManager::SetSK(const sgx_ec_key_128bit_t & sk)
 {
 	//if (m_sk)
 	//{
-		std::memcpy(m_sk, &sk, sizeof(sgx_ec_key_128bit_t));
+		std::memcpy(&m_sk, &sk, sizeof(sgx_ec_key_128bit_t));
 	//}
 	//else
 	//{
@@ -104,13 +104,18 @@ void RAKeyManager::SetVK(const sgx_ec_key_128bit_t & vk)
 {
 	//if (m_vk)
 	//{
-		std::memcpy(m_vk, &vk, sizeof(sgx_ec_key_128bit_t));
+		std::memcpy(&m_vk, &vk, sizeof(sgx_ec_key_128bit_t));
 	//}
 	//else
 	//{
 	//	m_vk = reinterpret_cast<sgx_ec_key_128bit_t*>(new sgx_ec_key_128bit_t);
 	//	std::memcpy(m_vk, &vk, sizeof(sgx_ec_key_128bit_t));
 	//}
+}
+
+void RAKeyManager::SetSecProp(const sgx_ps_sec_prop_desc_t & secProp)
+{
+	std::memcpy(&m_secProp, &secProp, sizeof(sgx_ps_sec_prop_desc_t));
 }
 
 sgx_ec256_public_t & RAKeyManager::GetSignKey()
@@ -146,4 +151,9 @@ sgx_ec_key_128bit_t & RAKeyManager::GetSK()
 sgx_ec_key_128bit_t & RAKeyManager::GetVK()
 {
 	return m_vk;
+}
+
+sgx_ps_sec_prop_desc_t & RAKeyManager::GetSecProp()
+{
+	return m_secProp;
 }
