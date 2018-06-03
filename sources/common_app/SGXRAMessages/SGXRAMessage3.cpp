@@ -102,6 +102,12 @@ const sgx_ra_msg3_t& SGXRAMessage3::GetMsg3Data() const
 	return *m_msg3Data;
 }
 
+const uint32_t SGXRAMessage3::GetMsg3DataSize() const
+{
+	const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(m_msg3Data->quote);
+	return sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len;
+}
+
 bool SGXRAMessage3::IsQuoteValid() const
 {
 	return m_isQuoteValid;

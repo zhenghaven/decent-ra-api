@@ -50,7 +50,7 @@ typedef struct _ias_platform_info_blob_t
 	uint8_t platform_info[SAMPLE_PLATFORM_INFO_SIZE];
 } ias_platform_info_blob_t;
 
-typedef struct _sgx_ra_msg4_t
+typedef struct _ra_msg4_t
 {
 	uint32_t                id;
 	ias_quote_status_t      status;

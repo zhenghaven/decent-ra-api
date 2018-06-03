@@ -26,6 +26,8 @@ public:
 
 	const sgx_ra_msg3_t& GetMsg3Data() const;
 
+	const uint32_t GetMsg3DataSize() const;
+
 	bool IsQuoteValid() const;
 
 protected:

@@ -8,6 +8,7 @@
 #include "Enclave_u.h"
 #include "../common_app/enclave_tools.h"
 #include "../common/CryptoTools.h"
+#include "../common/sgx_ra_msg4.h"
 
 sgx_status_t ExampleEnclave::GetRAPublicKey(sgx_ec256_public_t & outKey)
 {
@@ -92,9 +93,27 @@ sgx_status_t ExampleEnclave::ProcessRAMsg2(const std::string& ServerID, const sg
 	std::cout << "g_a: " << SerializePubKey(outMsg3.g_a) << std::endl;
 	std::cout << "g_b: " << SerializePubKey(inMsg2.g_b) << std::endl << std::endl;
 
+	std::cout << "Report Data: " << std::endl;
+	for (int i = 0; i < 32; ++i)
+	{
+		std::cout << static_cast<int>(quotePtr->report_body.report_data.d[i]) << " ";
+	}
+	std::cout << std::endl;
+
 	std::free(outMsg3ptr);
 
 	res = ecall_process_ra_msg2(GetEnclaveId(), &retval, ServerID.c_str());
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::ProcessRAMsg3(const std::string & clientID, const sgx_ra_msg3_t & inMsg3, const uint32_t msg3Len, const std::string & iasReport, const std::string & reportSign, sgx_ra_msg4_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
+	res = ecall_process_ra_msg3(GetEnclaveId(), &retval, clientID.c_str(), reinterpret_cast<const uint8_t*>(&inMsg3), msg3Len, iasReport.c_str(), reportSign.c_str(), &outMsg4, &outMsg4Sign);
 
 	return res == SGX_SUCCESS ? retval : res;
 }

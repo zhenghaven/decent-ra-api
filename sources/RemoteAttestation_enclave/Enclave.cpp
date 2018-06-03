@@ -297,7 +297,7 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID)
 	return SGX_SUCCESS;
 }
 
-sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, const uint32_t msg3Len, const char* iasReport, const char* reportSign, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
+sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
 {
 	auto it = g_clientsMap.find(clientID);
 	if (it == g_clientsMap.end()
@@ -360,21 +360,21 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		return res;
 	}
 
-	res = sgx_sha256_update((uint8_t *)&(clientKeyMgr.GetEncryptKey()), sizeof(sgx_ec256_public_t), sha_handle);
+	res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&(clientKeyMgr.GetEncryptKey())), sizeof(sgx_ec256_public_t), sha_handle);
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
 		return res;
 	}
 
-	res = sgx_sha256_update((uint8_t *)&(sgxRAPubkey), sizeof(sgx_ec256_public_t), sha_handle);
+	res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(sgxRAPubkey), sizeof(sgx_ec256_public_t), sha_handle);
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
 		return res;
 	}
 
-	res = sgx_sha256_update((uint8_t *)&(clientKeyMgr.GetVK()), sizeof(sgx_ec_key_128bit_t), sha_handle);
+	res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&(clientKeyMgr.GetVK())), sizeof(sgx_ec_key_128bit_t), sha_handle);
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);

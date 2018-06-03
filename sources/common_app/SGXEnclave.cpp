@@ -11,6 +11,8 @@
 
 #include "Common.h"
 #include "../common/CryptoTools.h"
+#include "../common/sgx_ra_msg4.h"
+
 #include "SGXRemoteAttestationServer.h"
 #include "SGXRemoteAttestationSession.h"
 #include "SGXRAMessages/SGXRAMessage0.h"
@@ -270,7 +272,12 @@ bool SGXEnclave::AcceptRAConnection()
 		case SGXRAMessage::Type::MSG3_SEND:
 		{
 			const SGXRAMessage3* msg3 = dynamic_cast<const SGXRAMessage3*>(sgxMsg);
-			
+			sgx_ra_msg4_t msg4Data;
+			sgx_ec256_signature_t msg4Sign;
+
+			sgx_status_t enclaveRes = SGX_SUCCESS;
+			enclaveRes = ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), "", "", msg4Data, msg4Sign);
+
 			return new SGXRAMessage0Resp(msgSenderID, "");
 		}
 		default:
