@@ -1,0 +1,149 @@
+#include "RAKeyManager.h"
+
+#include <cstring>
+#include <cstdlib>
+
+RAKeyManager::RAKeyManager(const sgx_ec256_public_t & signKey) :
+	m_signKey(signKey)//,
+	//m_encryptKey(nullptr),
+	//m_sharedKey(nullptr),
+	//m_smk(nullptr),
+	//m_mk(nullptr),
+	//m_sk(nullptr),
+	//m_vk(nullptr)
+{
+}
+
+RAKeyManager::~RAKeyManager()
+{
+	//delete m_signKey;
+	//delete m_encryptKey;
+	//delete m_sharedKey;
+	//delete m_smk;
+	//delete m_mk;
+	//delete m_sk;
+	//delete m_vk;
+}
+
+void RAKeyManager::SetSignKey(const sgx_ec256_public_t & signKey)
+{
+	//if (m_signKey)
+	//{
+		std::memcpy(&m_signKey, &signKey, sizeof(sgx_ec256_public_t));
+	//}
+	//else
+	//{
+	//	m_signKey = new sgx_ec256_public_t(signKey);
+	//}
+}
+
+void RAKeyManager::SetEncryptKey(const sgx_ec256_public_t & encryptKey)
+{
+	//if (m_encryptKey)
+	//{
+		std::memcpy(&m_encryptKey, &encryptKey, sizeof(sgx_ec256_public_t));
+	//}
+	//else
+	//{
+	//	m_encryptKey = new sgx_ec256_public_t(encryptKey);
+	//}
+}
+
+void RAKeyManager::SetSharedKey(const sgx_ec256_dh_shared_t & sharedKey)
+{
+	//if (m_sharedKey)
+	//{
+		std::memcpy(&m_sharedKey, &sharedKey, sizeof(sgx_ec256_dh_shared_t));
+	//}
+	//else
+	//{
+	//	m_sharedKey = new sgx_ec256_dh_shared_t(sharedKey);
+	//}
+}
+
+void RAKeyManager::SetSMK(const sgx_ec_key_128bit_t & smk)
+{
+	//if (m_smk)
+	//{
+		std::memcpy(m_smk, &smk, sizeof(sgx_ec_key_128bit_t));
+	//}
+	//else
+	//{
+	//	m_smk =reinterpret_cast<sgx_ec_key_128bit_t*>(new sgx_ec_key_128bit_t);
+	//	std::memcpy(m_smk, &smk, sizeof(sgx_ec_key_128bit_t));
+	//}
+}
+
+void RAKeyManager::SetMK(const sgx_ec_key_128bit_t & mk)
+{
+	//if (m_mk)
+	//{
+		std::memcpy(m_mk, &mk, sizeof(sgx_ec_key_128bit_t));
+	//}
+	//else
+	//{
+	//	m_mk = reinterpret_cast<sgx_ec_key_128bit_t*>(new sgx_ec_key_128bit_t);
+	//	std::memcpy(m_mk, &mk, sizeof(sgx_ec_key_128bit_t));
+	//}
+}
+
+void RAKeyManager::SetSK(const sgx_ec_key_128bit_t & sk)
+{
+	//if (m_sk)
+	//{
+		std::memcpy(m_sk, &sk, sizeof(sgx_ec_key_128bit_t));
+	//}
+	//else
+	//{
+	//	m_sk = reinterpret_cast<sgx_ec_key_128bit_t*>(new sgx_ec_key_128bit_t);
+	//	std::memcpy(m_sk, &sk, sizeof(sgx_ec_key_128bit_t));
+	//}
+}
+
+void RAKeyManager::SetVK(const sgx_ec_key_128bit_t & vk)
+{
+	//if (m_vk)
+	//{
+		std::memcpy(m_vk, &vk, sizeof(sgx_ec_key_128bit_t));
+	//}
+	//else
+	//{
+	//	m_vk = reinterpret_cast<sgx_ec_key_128bit_t*>(new sgx_ec_key_128bit_t);
+	//	std::memcpy(m_vk, &vk, sizeof(sgx_ec_key_128bit_t));
+	//}
+}
+
+sgx_ec256_public_t & RAKeyManager::GetSignKey()
+{
+	return m_signKey;
+}
+
+sgx_ec256_public_t & RAKeyManager::GetEncryptKey()
+{
+	return m_encryptKey;
+}
+
+sgx_ec256_dh_shared_t & RAKeyManager::GetSharedKey()
+{
+	return m_sharedKey;
+}
+
+sgx_ec_key_128bit_t & RAKeyManager::GetSMK()
+{
+	return m_smk;
+}
+
+sgx_ec_key_128bit_t & RAKeyManager::GetMK()
+{
+	return m_mk;
+}
+
+sgx_ec_key_128bit_t & RAKeyManager::GetSK()
+{
+	return m_sk;
+}
+
+sgx_ec_key_128bit_t & RAKeyManager::GetVK()
+{
+	return m_vk;
+}

@@ -142,21 +142,19 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 		RASession.SendErrorMessages(SGXRAMessageErr(msgSenderID, "Wrong response message!"));
 		return false;
 	}
+
 	sgx_ec256_public_t spRAPubKey;
 	DeserializePubKey(msg0r->GetRAPubKey(), spRAPubKey);
-	res = SetRARemotePublicKey(spRAPubKey);
-	if (res != SGX_SUCCESS)
-	{
-		delete resp;
-		RASession.SendErrorMessages(SGXRAMessageErr(msgSenderID, "Wrong response message!"));
-		return false;
-	}
+
 	sgx_ra_context_t raContextID = 0;
-	res = EnclaveInitRA(false, raContextID);
+
+	sgx_ra_msg1_t msg1Data;
+
+	res = ProcessRAMsg0Resp(msg0r->GetSenderID(), spRAPubKey, false, raContextID, msg1Data);
 	if (res != SGX_SUCCESS)
 	{
 		delete resp;
-		RASession.SendErrorMessages(SGXRAMessageErr(msgSenderID, "Wrong response message!"));
+		RASession.SendErrorMessages(SGXRAMessageErr(msgSenderID, "Enclave process error!"));
 		return false;
 	}
 
@@ -165,15 +163,7 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 	resp = nullptr;
 	msg0r = nullptr;
 
-	sgx_ra_msg1_t msg1data;
-	res = GetRAMsg1(msg1data, raContextID);
-	if (res != SGX_SUCCESS)
-	{
-		delete resp;
-		RASession.SendErrorMessages(SGXRAMessageErr(msgSenderID, "Wrong response message!"));
-		return false;
-	}
-	SGXRAMessage1 msg1(msgSenderID, msg1data);
+	SGXRAMessage1 msg1(msgSenderID, msg1Data);
 
 	resp = RASession.SendMessages(msgSenderID, msg1);
 	if (!resp)
@@ -189,7 +179,7 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 	}
 	sgx_ra_msg3_t msg3Data;
 	std::vector<uint8_t> quote;
-	ProcessMsg2(msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t)+ msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
+	ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t)+ msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
 
 	//Clean Message 2 (Message 1 response).
 	delete resp;
@@ -252,7 +242,14 @@ bool SGXEnclave::AcceptRAConnection()
 			const SGXRAMessage0Send* msg0s = dynamic_cast<const SGXRAMessage0Send*>(sgxMsg);
 			if (std::find(g_acceptedExGID.begin(), g_acceptedExGID.end(), msg0s->GetExtendedGroupID()) != g_acceptedExGID.end())
 			{
+				sgx_status_t enclaveRes = SGX_SUCCESS;
+				enclaveRes = ProcessRAMsg0Send(msg0s->GetSenderID());
+				if (enclaveRes != SGX_SUCCESS)
+				{
+					return new SGXRAMessageErr(msgSenderID, "Enclave process error!");
+				}
 				return new SGXRAMessage0Resp(msgSenderID, msgSenderID);
+				
 			}
 			else
 			{
@@ -263,7 +260,7 @@ bool SGXEnclave::AcceptRAConnection()
 		{
 			const SGXRAMessage1* msg1 = dynamic_cast<const SGXRAMessage1*>(sgxMsg);
 			sgx_ra_msg2_t msg2Data;
-			sgx_status_t res = ProcessMsg1(msg1->GetMsg1Data(), msg2Data);
+			sgx_status_t res = ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Data);
 			if (res != SGX_SUCCESS)
 			{
 				return new SGXRAMessageErr(msgSenderID, "Enclave Process Error");

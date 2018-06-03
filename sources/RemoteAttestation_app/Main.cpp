@@ -36,7 +36,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
 	ExampleEnclave exp(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 	exp.Launch();
-	exp.TestEnclaveFunctions();
+	exp.InitRAEnvironment();
 
 	printf("Info: Cxx11DemoEnclave successfully returned.\n");
 

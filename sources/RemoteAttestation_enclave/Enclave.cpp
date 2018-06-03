@@ -1,5 +1,4 @@
-#include <initializer_list>
-#include <vector>
+#include <map>
 
 #include <sgx_tcrypto.h>
 #include <sgx_tkey_exchange.h>
@@ -17,7 +16,11 @@
 
 #include "Enclave.h"
 #include "Enclave_t.h"  /* print_string */
+
 #include "../common_enclave/enclave_tools.h"
+#include "../common_enclave/RAConnection.h"
+#include "../common_enclave/RAKeyManager.h"
+
 #include "../common/CryptoTools.h"
 
 namespace 
@@ -26,44 +29,20 @@ namespace
 
 	sgx_ec256_private_t* sgxRAPriKey = nullptr;
 	sgx_ec256_public_t* sgxRAPubkey = nullptr;
-	sgx_ecc_state_handle_t sgxRAECCContext = nullptr;
 
-	sgx_ec256_public_t* sgxRARemotePubkey = nullptr;
-	sgx_ec256_dh_shared_t* sgxDHKey = nullptr;
-	sgx_ec_key_128bit_t raRemoteSMK = { 0 };
-	sgx_ec_key_128bit_t raRemoteMK = { 0 };
-	sgx_ec_key_128bit_t raRemoteSK = { 0 };
-	sgx_ec_key_128bit_t raRemoteVK = { 0 };
+	sgx_ecc_state_handle_t g_eccContext = nullptr;
+	//RAKeyManager* g_serverKeyMgr = nullptr;
+	std::map<std::string, std::pair<ServerRAState, RAKeyManager> > g_serversMap;
+	std::map<std::string, std::pair<ClientRAState, RAKeyManager> > g_clientsMap;
 }
 
 static void CleanRAKeys()
 {
-	if (!sgxRAECCContext)
-	{
-		sgx_ecc256_close_context(sgxRAECCContext);
-		sgxRAECCContext = nullptr;
-	}
-	if (!sgxRAPriKey)
-	{
-		delete sgxRAPriKey;
-		sgxRAPriKey = nullptr;
-	}
-	if (!sgxRAPubkey)
-	{
-		delete sgxRAPubkey;
-		sgxRAPubkey = nullptr;
-	}
-}
+	delete sgxRAPriKey;
+	sgxRAPriKey = nullptr;
 
-static void TerminationCleaning()
-{
-	CleanRAKeys();
-
-	if (!sgxRARemotePubkey)
-	{
-		delete sgxRARemotePubkey;
-		sgxRARemotePubkey = nullptr;
-	}
+	delete sgxRAPubkey;
+	sgxRAPubkey = nullptr;
 }
 
 inline bool IsRAKeyExist()
@@ -71,94 +50,36 @@ inline bool IsRAKeyExist()
 	return (!sgxRAPriKey || !sgxRAPubkey);
 }
 
-//Feature name        : Initializer lists
-//Feature description : An object of type std::initializer_list<T> is a lightweight proxy object that provides access to an array of objects of type const T.
-//Demo description    : Demonstrates the usage of initializer list in the constructor of an object in enclave.
-class Number
-{
-public:
-	Number(const std::initializer_list<int> &v) {
-		for (auto i : v) {
-			elements.push_back(i);
-		}
-	}
-
-	void print_elements() {
-		enclave_printf("[initializer_list] The elements of the vector are:");
-		for (auto item : elements) {
-			enclave_printf(" %d", item);
-		}
-		enclave_printf(".\n");
-	}
-private:
-	std::vector<int> elements;
-};
-
-void ecall_initializer_list_demo()
-{
-	enclave_printf("[initializer_list] Using initializer list in the constructor. \n");
-	Number m = { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
-	m.print_elements();
-
-	enclave_printf("\n"); //end of demo
-}
-
-int ecall_add_two_int(int a, int b)
-{
-	int res = a + b;
-
-	enclave_printf("Added %d, %d inside enclave as result of %d\n", a, b, res);
-
-	return res;
-}
-
-void ecall_square_array(int* arr, const size_t len_in_byte)
-{
-	size_t len = len_in_byte / sizeof(int);
-	for (int i = 0; i < len; ++i)
-	{
-		arr[i] *= arr[i];
-	}
-
-	std::string base64TestStr = "Base64 test string.";
-	std::string base64CodeStr = cppcodec::base64_rfc4648::encode(base64TestStr.c_str(), base64TestStr.size());
-	enclave_printf("base 64 code string: %s\n", base64CodeStr.c_str());
-	auto base64out = cppcodec::base64_rfc4648::decode(base64CodeStr); ;
-	enclave_printf("base 64 code string: %s\n", std::string((char*)base64out.data(), base64out.size()).c_str());
-
-	const char* json = "{\"project\":\"rapidjson\",\"stars\":10}";
-	rapidjson::Document d;
-	d.Parse(json);
-	rapidjson::Value& s = d["stars"];
-	s.SetInt(s.GetInt() + 1);
-
-	rapidjson::StringBuffer buffer;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-	d.Accept(writer);
-
-	enclave_printf("JSON Example: %s\n", buffer.GetString());
-
-	std::string raPubKeyStr;
-	ecall_generate_ra_keys();
-	raPubKeyStr = SerializePubKey(*sgxRAPubkey);
-	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
-	//enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
-	//enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-	//enclave_printf("Public key size: %d\n", sizeof(sgx_ec256_public_t));
-
-	//CleanRAKeys();
-}
+//void ecall_square_array(int* arr, const size_t len_in_byte)
+//{
+//	std::string base64TestStr = "Base64 test string.";
+//	std::string base64CodeStr = cppcodec::base64_rfc4648::encode(base64TestStr.c_str(), base64TestStr.size());
+//	enclave_printf("base 64 code string: %s\n", base64CodeStr.c_str());
+//	auto base64out = cppcodec::base64_rfc4648::decode(base64CodeStr); ;
+//	enclave_printf("base 64 code string: %s\n", std::string((char*)base64out.data(), base64out.size()).c_str());
+//
+//	const char* json = "{\"project\":\"rapidjson\",\"stars\":10}";
+//	rapidjson::Document d;
+//	d.Parse(json);
+//	rapidjson::Value& s = d["stars"];
+//	s.SetInt(s.GetInt() + 1);
+//
+//	rapidjson::StringBuffer buffer;
+//	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+//	d.Accept(writer);
+//
+//	enclave_printf("JSON Example: %s\n", buffer.GetString());
+//
+//}
 
 sgx_status_t ecall_generate_ra_keys()
 {
 	sgx_status_t res = SGX_SUCCESS;
 
-	if (!sgxRAECCContext) 
+	if (!g_eccContext)
 	{
 		//Context is empty, need to create a new one.
-		res = sgx_ecc256_open_context(&sgxRAECCContext);
+		res = sgx_ecc256_open_context(&g_eccContext);
 	}
 	
 	//Context is not empty at this point.
@@ -183,7 +104,7 @@ sgx_status_t ecall_generate_ra_keys()
 		else
 		{
 			//memory allocation success, try to create new key pair.
-			res = sgx_ecc256_create_key_pair(sgxRAPriKey, sgxRAPubkey, sgxRAECCContext);
+			res = sgx_ecc256_create_key_pair(sgxRAPriKey, sgxRAPubkey, g_eccContext);
 		}
 	}
 	
@@ -209,29 +130,7 @@ int EC_KEY_get_asn1_flag(const EC_KEY* key)
 	}
 }
 
-sgx_status_t ecall_get_ra_pub_keys(sgx_ec256_public_t* outPubKey)
-{
-	sgx_status_t res = SGX_SUCCESS;
-	res = ecall_generate_ra_keys();
-
-	if (res != SGX_SUCCESS)
-	{
-		return res;
-	}
-	memcpy(outPubKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
-	return res;
-}
-
-void ecall_set_remote_ra_pub_keys(const sgx_ec256_public_t* inPubKey)
-{
-	if (!sgxRARemotePubkey)
-	{
-		sgxRARemotePubkey = new sgx_ec256_public_t;
-	}
-	memcpy(sgxRARemotePubkey, inPubKey, sizeof(sgx_ec256_public_t));
-}
-
-sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context)
+static sgx_status_t enclave_init_ra(const sgx_ec256_public_t *p_pub_key, int b_pse, sgx_ra_context_t *p_context)
 {
 	// isv enclave call to trusted key exchange library.
 	sgx_status_t ret;
@@ -242,7 +141,7 @@ sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context)
 		if (ret != SGX_SUCCESS)
 			return ret;
 	}
-	ret = sgx_ra_init(sgxRARemotePubkey, b_pse, p_context);
+	ret = sgx_ra_init(p_pub_key, b_pse, p_context);
 
 	//Debug Code:
 	//std::string raPubKeyStr;
@@ -257,6 +156,179 @@ sgx_status_t ecall_enclave_init_ra(int b_pse, sgx_ra_context_t *p_context)
 	}
 	return ret;
 }
+
+sgx_status_t ecall_init_ra_environment()
+{
+	sgx_status_t res = SGX_SUCCESS;
+
+	std::string raPubKeyStr;
+	res = ecall_generate_ra_keys();
+	raPubKeyStr = SerializePubKey(*sgxRAPubkey);
+	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
+	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
+	//enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
+
+	//CleanRAKeys();
+
+	return res;
+}
+
+sgx_status_t ecall_process_ra_msg0_send(const char* clientID)
+{
+	sgx_ec256_public_t clientSignkey;
+	DeserializePubKey(clientID, clientSignkey);
+	auto it = g_clientsMap.find(clientID);
+	if (it != g_clientsMap.end())
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	g_clientsMap.insert(std::make_pair<std::string, std::pair<ClientRAState, RAKeyManager> >(clientID, std::make_pair<ClientRAState, RAKeyManager>(ClientRAState::MSG0_DONE, RAKeyManager(clientSignkey))));
+
+	return SGX_SUCCESS;
+}
+
+sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const sgx_ec256_public_t* inPubKey, int enablePSE, sgx_ra_context_t* outContextID)
+{
+	auto it = g_serversMap.find(ServerID);
+	if (it != g_serversMap.end())
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	g_serversMap.insert(std::make_pair<std::string, std::pair<ServerRAState, RAKeyManager> >(ServerID, std::make_pair<ServerRAState, RAKeyManager>(ServerRAState::MSG0_DONE, RAKeyManager(*inPubKey))));
+	
+	return enclave_init_ra(inPubKey, enablePSE, outContextID);
+}
+
+sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *inMsg1, sgx_ra_msg2_t *outMsg2)
+{
+	auto it = g_clientsMap.find(clientID);
+	if (it == g_clientsMap.end()
+		|| it->second.first != ClientRAState::MSG0_DONE)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	sgx_status_t res = SGX_SUCCESS;
+
+	clientKeyMgr.SetEncryptKey((inMsg1->g_a));
+
+	sgx_ec256_dh_shared_t sharedKey;
+	res = sgx_ecc256_compute_shared_dhkey(sgxRAPriKey, &(clientKeyMgr.GetEncryptKey()), &sharedKey, g_eccContext);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	clientKeyMgr.SetSharedKey(sharedKey);
+
+	sgx_ec_key_128bit_t tmpDerivedKey;
+	bool keyDeriveRes = false;
+	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	clientKeyMgr.SetSMK(tmpDerivedKey);
+	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	clientKeyMgr.SetMK(tmpDerivedKey);
+	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	clientKeyMgr.SetSK(tmpDerivedKey);
+	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	clientKeyMgr.SetVK(tmpDerivedKey);
+
+	memcpy(&(outMsg2->g_b), sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	memcpy(&(outMsg2->spid), &sgxSPID, sizeof(sgxSPID));
+	outMsg2->quote_type = SGX_QUOTE_LINKABLE_SIGNATURE;
+
+	outMsg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
+
+	sgx_ec256_public_t gb_ga[2];
+	memcpy(&gb_ga[0], sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	memcpy(&gb_ga[1], &(clientKeyMgr.GetEncryptKey()), sizeof(sgx_ec256_public_t));
+
+	res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), sgxRAPriKey, &(outMsg2->sign_gb_ga), g_eccContext);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	uint8_t mac[SAMPLE_EC_MAC_SIZE] = { 0 };
+	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
+	res = sgx_rijndael128_cmac_msg(reinterpret_cast<sgx_cmac_128bit_key_t*>(clientKeyMgr.GetSMK()), (uint8_t *)&(outMsg2->g_b), cmac_size, &mac);
+	memcpy(&(outMsg2->mac), mac, sizeof(mac));
+
+	outMsg2->sig_rl_size = 0;
+
+	it->second.first = ClientRAState::MSG1_DONE;
+
+	return res;
+}
+
+sgx_status_t ecall_process_ra_msg2(const char* ServerID)
+{
+	auto it = g_serversMap.find(ServerID);
+	if (it == g_serversMap.end()
+		|| it->second.first != ServerRAState::MSG0_DONE)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	it->second.first = ServerRAState::MSG2_DONE;
+
+	return SGX_SUCCESS;
+}
+
+sgx_status_t ecall_termination_clean()
+{
+	CleanRAKeys();
+
+	if (!g_eccContext)
+	{
+		sgx_ecc256_close_context(g_eccContext);
+		g_eccContext = nullptr;
+	}
+
+	g_serversMap.clear();
+	g_clientsMap.clear();
+
+	return SGX_SUCCESS;
+}
+
+sgx_status_t ecall_get_ra_pub_keys(sgx_ec256_public_t* outPubKey)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	res = ecall_generate_ra_keys();
+
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	memcpy(outPubKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	return res;
+}
+
+//void ecall_set_remote_ra_pub_keys(const sgx_ec256_public_t* inPubKey)
+//{
+//	if (!sgxRARemotePubkey)
+//	{
+//		sgxRARemotePubkey = new sgx_ec256_public_t;
+//	}
+//	memcpy(sgxRARemotePubkey, inPubKey, sizeof(sgx_ec256_public_t));
+//}
 
 void GenSSLECKeys()
 {
@@ -293,68 +365,6 @@ void GenSSLECKeys()
 
 	//EC_KEY_set_private_key(key, prv);
 	//EC_KEY_set_public_key(key, pub);
-}
-
-sgx_status_t ecall_process_msg1(const sgx_ra_msg1_t *inMsg1, sgx_ra_msg2_t *outMsg2)
-{
-	sgx_status_t res = SGX_SUCCESS;
-	ecall_set_remote_ra_pub_keys(&(inMsg1->g_a));
-	if (sgxDHKey)
-	{
-		delete sgxDHKey;
-	}
-	sgxDHKey = new sgx_ec256_dh_shared_t;
-	res = sgx_ecc256_compute_shared_dhkey(sgxRAPriKey, sgxRARemotePubkey, sgxDHKey, sgxRAECCContext);
-	if (res != SGX_SUCCESS)
-	{
-		return res;
-	}
-
-	bool keyDeriveRes = false;
-	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_SMK, &raRemoteSMK);
-	if (!keyDeriveRes)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_MK, &raRemoteMK);
-	if (!keyDeriveRes)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_SK, &raRemoteSK);
-	if (!keyDeriveRes)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-	keyDeriveRes = derive_key(sgxDHKey, SAMPLE_DERIVE_KEY_VK, &raRemoteVK);
-	if (!keyDeriveRes)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	memcpy(&(outMsg2->g_b), sgxRAPubkey, sizeof(sgx_ec256_public_t));
-	memcpy(&(outMsg2->spid), &sgxSPID, sizeof(sgxSPID));
-	outMsg2->quote_type = SGX_QUOTE_LINKABLE_SIGNATURE;
-
-	outMsg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
-
-	sgx_ec256_public_t gb_ga[2];
-	memcpy(&gb_ga[0], sgxRAPubkey, sizeof(sgx_ec256_public_t));
-	memcpy(&gb_ga[1], sgxRARemotePubkey, sizeof(sgx_ec256_public_t));
-
-	res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), sgxRAPriKey, &(outMsg2->sign_gb_ga), sgxRAECCContext);
-	if (res != SGX_SUCCESS)
-	{
-		return res;
-	}
-	uint8_t mac[SAMPLE_EC_MAC_SIZE] = { 0 };
-	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
-	res = sgx_rijndael128_cmac_msg(reinterpret_cast<sgx_cmac_128bit_key_t*>(raRemoteSMK), (uint8_t *)&(outMsg2->g_b), cmac_size, &mac);
-	memcpy(&(outMsg2->mac), mac, sizeof(mac));
-
-	outMsg2->sig_rl_size = 0;
-
-	return res;
 }
 
 #define EC_DERIVATION_BUFFER_SIZE(label_length) ((label_length) +4)
