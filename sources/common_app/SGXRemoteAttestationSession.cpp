@@ -11,6 +11,7 @@
 #include "SGXRAMessages/SGXRAMessage1.h"
 #include "SGXRAMessages/SGXRAMessage2.h"
 #include "SGXRAMessages/SGXRAMessage3.h"
+#include "SGXRAMessages/SGXRAMessageErr.h"
 
 namespace 
 {
@@ -26,6 +27,7 @@ namespace
 		//std::pair<std::string, SGXRAMessage::Type>("MSG3_RESP", SGXRAMessage::Type::MSG3_RESP),
 		//std::pair<std::string, SGXRAMessage::Type>("MSG4_SEND", SGXRAMessage::Type::MSG4_SEND),
 		std::pair<std::string, SGXRAMessage::Type>("MSG4_RESP", SGXRAMessage::Type::MSG4_RESP),
+		std::pair<std::string, SGXRAMessage::Type>("ERRO_RESP", SGXRAMessage::Type::ERRO_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("OTHER", SGXRAMessage::Type::OTHER),
 	};
 }
@@ -34,11 +36,12 @@ SGXRemoteAttestationSession::~SGXRemoteAttestationSession()
 {
 }
 
-RAMessages * SGXRemoteAttestationSession::SendMessages(const RAMessages & msg)
+RAMessages * SGXRemoteAttestationSession::SendMessages(const std::string& senderID, const RAMessages & msg)
 {
 	const SGXRAMessage* sgxMsg = dynamic_cast<const SGXRAMessage*>(&msg);
 	if (!sgxMsg || sgxMsg->IsResp())
 	{
+		SendErrorMessages(SGXRAMessageErr(senderID, "Server Error!"));
 		return nullptr;
 	}
 
@@ -58,9 +61,24 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const RAMessages & msg)
 	bool isValid = reader->parse(m_buffer.c_str(), m_buffer.c_str() + actualSize, &jsonRoot, &errStr);
 
 	if (!isValid
-		|| !jsonRoot.isMember("MsgType"))
+		|| !jsonRoot.isMember("MsgSubType")
+		|| !jsonRoot["MsgSubType"].isString())
 	{
 		LOGI("Recv INVALID MESSAGE!");
+		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
+		return nullptr;
+	}
+
+	auto it = g_msgTypeNameMap.find(jsonRoot["MsgSubType"].asString());
+	if (it == g_msgTypeNameMap.end() || it->second == SGXRAMessage::Type::OTHER)
+	{
+		LOGI("Recv INVALID MESSAGE!");
+		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
+		return nullptr;
+	}
+
+	if (it->second == SGXRAMessage::Type::ERRO_RESP)
+	{
 		return nullptr;
 	}
 
@@ -71,13 +89,20 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const RAMessages & msg)
 	case SGXRAMessage::Type::MSG1_SEND:
 		return new SGXRAMessage2(jsonRoot);
 	case SGXRAMessage::Type::MSG3_SEND:
-		return new SGXRAMessage2(jsonRoot);
+		return nullptr;//new SGXRAMessage4(jsonRoot);
 	default:
 		return nullptr;
 	}
 }
 
-bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
+void SGXRemoteAttestationSession::SendErrorMessages(const RAMessages & msg)
+{
+	std::string tmp = dynamic_cast<const SGXRAMessageErr&>(msg).ToJsonString();
+	m_socket.send(boost::asio::buffer(tmp.data(), tmp.size() + 1));
+	LOGI("Sent Msg: %s\n", tmp.c_str());
+}
+
+bool SGXRemoteAttestationSession::RecvMessages(const std::string& senderID, MsgProcessor msgProcessor)
 {
 	size_t actualSize = m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
 	m_buffer[actualSize] = '\0';
@@ -96,6 +121,7 @@ bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 		|| !jsonRoot["MsgSubType"].isString())
 	{
 		LOGI("Recv INVALID MESSAGE!");
+		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
 		return false;
 	}
 
@@ -103,44 +129,58 @@ bool SGXRemoteAttestationSession::RecvMessages(MsgProcessor msgProcessor)
 	if (it == g_msgTypeNameMap.end() || it->second == SGXRAMessage::Type::OTHER)
 	{
 		LOGI("Recv INVALID MESSAGE!");
+		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
 		return false;
 	}
 
-	SGXRAMessage* sgxResp = nullptr;
+	SGXRAMessage* sgxResp = nullptr; 
+	RAMessages* resp = nullptr;
 	switch (it->second)
 	{
 	case SGXRAMessage::Type::MSG0_SEND:
 	{
 		SGXRAMessage0Send msg0s(jsonRoot);
-		RAMessages* resp = msgProcessor(msg0s);
+		resp = msgProcessor(msg0s);
 		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
 		break;
 	}
 	case SGXRAMessage::Type::MSG1_SEND:
 	{
 		SGXRAMessage1 msg1(jsonRoot);
-		RAMessages* resp = msgProcessor(msg1);
+		resp = msgProcessor(msg1);
 		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
 		break;
 	}
 	case SGXRAMessage::Type::MSG3_SEND:
 	{
 		SGXRAMessage3 msg3(jsonRoot);
-		RAMessages* resp = msgProcessor(msg3);
+		resp = msgProcessor(msg3);
 		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
 		break;
+	}
+	case SGXRAMessage::Type::ERRO_RESP:
+	{
+		return false;
 	}
 	default:
 		break;
 	}
 	if (!sgxResp)
 	{
+		SendErrorMessages(SGXRAMessageErr(senderID, "Server Error!"));
+		delete resp;
 		return false;
 	}
 
 	std::string tmp = sgxResp->ToJsonString();
 	m_socket.send(boost::asio::buffer(tmp.data(), tmp.size() + 1));
 	LOGI("Sent Msg: %s\n", tmp.c_str());
+	if (sgxResp->GetType() == SGXRAMessage::Type::ERRO_RESP)
+	{
+		delete sgxResp;
+		return false;
+	}
+	delete sgxResp;
 	return true;
 }
 

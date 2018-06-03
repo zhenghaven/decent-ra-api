@@ -31,7 +31,7 @@ class SGXRAMessage0Resp : public SGXRAMessage
 {
 public:
 	SGXRAMessage0Resp() = delete;
-	SGXRAMessage0Resp(const std::string& senderID, const bool isAccepted, const std::string& pubKeyBase64);
+	SGXRAMessage0Resp(const std::string& senderID, const std::string& pubKeyBase64);
 	SGXRAMessage0Resp(Json::Value& msg);
 	~SGXRAMessage0Resp();
 
@@ -40,13 +40,11 @@ public:
 	virtual Type GetType() const override;
 	virtual bool IsResp() const override;
 
-	virtual bool IsAccepted() const;
 	virtual std::string GetRAPubKey() const;
 
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 
 private:
-	bool m_isAccepted;
 	std::string m_pubKey;
 };

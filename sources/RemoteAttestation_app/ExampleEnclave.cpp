@@ -39,7 +39,10 @@ sgx_status_t ExampleEnclave::EnclaveInitRA(int enablePSE, sgx_ra_context_t& outC
 
 sgx_status_t ExampleEnclave::GetRAMsg1(sgx_ra_msg1_t & outMsg1, sgx_ra_context_t& inContextID)
 {
-	return sgx_ra_get_msg1(inContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);;
+	sgx_status_t res = sgx_ra_get_msg1(inContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);
+	std::cout << "In Get RA Msg 1: " << std::endl;
+	std::cout << "g_a: " << SerializePubKey(outMsg1.g_a) << std::endl << std::endl;
+	return res;
 }
 
 sgx_status_t ExampleEnclave::ProcessMsg1(const sgx_ra_msg1_t & inMsg1, sgx_ra_msg2_t & outMsg2)
@@ -47,6 +50,9 @@ sgx_status_t ExampleEnclave::ProcessMsg1(const sgx_ra_msg1_t & inMsg1, sgx_ra_ms
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 	res = ecall_process_msg1(GetEnclaveId(), &retval, &inMsg1, &outMsg2);
+	std::cout << "In Process RA Msg 1: " << std::endl;
+	std::cout << "g_a: " << SerializePubKey(inMsg1.g_a) << std::endl;
+	std::cout << "g_b: " << SerializePubKey(outMsg2.g_b) << std::endl << std::endl;
 	return res == SGX_SUCCESS ? retval : res;
 }
 
@@ -71,6 +77,10 @@ sgx_status_t ExampleEnclave::ProcessMsg2(const sgx_ra_msg2_t & inMsg2, const uin
 	memcpy(&outMsg3, outMsg3ptr, sizeof(sgx_ra_msg3_t));
 	outQuote.resize(sizeof(sgx_quote_t) + quotePtr->signature_len);
 	memcpy(&outQuote[0], quotePtr, sizeof(sgx_quote_t) + quotePtr->signature_len);
+
+	std::cout << "In Process RA Msg 2: " << std::endl;
+	std::cout << "g_a: " << SerializePubKey(outMsg3.g_a) << std::endl;
+	std::cout << "g_b: " << SerializePubKey(inMsg2.g_b) << std::endl << std::endl;
 
 	std::free(outMsg3ptr);
 	return res;

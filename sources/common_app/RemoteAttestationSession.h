@@ -27,9 +27,11 @@ public:
 	///Connection ID is a combination of IPv4 and Port num.
 	uint64_t GetConnectionID() const;
 
-	virtual RAMessages* SendMessages(const RAMessages& msg) = 0;
+	virtual RAMessages* SendMessages(const std::string& senderID, const RAMessages& msg) = 0;
 
-	virtual bool RecvMessages(MsgProcessor msgProcessor) = 0;
+	virtual void SendErrorMessages(const RAMessages& msg) = 0;
+
+	virtual bool RecvMessages(const std::string& senderID, MsgProcessor msgProcessor) = 0;
 
 protected:
 	enum Mode

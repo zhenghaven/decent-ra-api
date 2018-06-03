@@ -83,6 +83,8 @@ std::string SGXRAMessage::GetMessageTypeStr(const SGXRAMessage::Type t)
 	//	return "MSG4_SEND";
 	case SGXRAMessage::Type::MSG4_RESP:
 		return "MSG4_RESP";
+	case SGXRAMessage::Type::ERRO_RESP:
+		return "ERRO_RESP";
 	default:
 		return "OTHER";
 	}

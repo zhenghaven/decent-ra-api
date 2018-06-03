@@ -25,14 +25,17 @@ SGXRAMessage1::SGXRAMessage1(Json::Value& msg) :
 	{
 		return;
 	}
-	if (!msg.isMember("child")
-		|| !msg["child"].isObject())
+
+	Json::Value& parent = msg["child"];
+
+	if (!parent.isMember("child")
+		|| !parent["child"].isObject())
 	{
 		m_isValid = false;
 		return;
 	}
 
-	Json::Value& root = msg["child"];
+	Json::Value& root = parent["child"];
 
 	if (root.isMember("MsgType")
 		&& root["MsgType"].asString().compare(SGXRAMessage::GetMessageTypeStr(GetType())) == 0

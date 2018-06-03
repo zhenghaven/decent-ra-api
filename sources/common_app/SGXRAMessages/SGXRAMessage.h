@@ -22,6 +22,7 @@ public:
 		//MSG3_RESP,
 		//MSG4_SEND,
 		MSG4_RESP,
+		ERRO_RESP,
 		OTHER,
 	};
 

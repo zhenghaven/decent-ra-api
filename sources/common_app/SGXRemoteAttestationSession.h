@@ -9,9 +9,11 @@ public:
 
 	~SGXRemoteAttestationSession();
 
-	virtual RAMessages* SendMessages(const RAMessages& msg) override;
+	virtual RAMessages* SendMessages(const std::string& senderID, const RAMessages& msg) override;
 
-	virtual bool RecvMessages(MsgProcessor msgProcessor) override;
+	virtual void SendErrorMessages(const RAMessages& msg) override;
+
+	virtual bool RecvMessages(const std::string& senderID, MsgProcessor msgProcessor) override;
 
 protected:
 	//virtual bool ProcessServerMessages();
