@@ -19,6 +19,7 @@
 #include "SGXRAMessages/SGXRAMessage1.h"
 #include "SGXRAMessages/SGXRAMessage2.h"
 #include "SGXRAMessages/SGXRAMessage3.h"
+#include "SGXRAMessages/SGXRAMessage4.h"
 #include "SGXRAMessages/SGXRAMessageErr.h"
 
 using namespace boost::asio;
@@ -191,14 +192,19 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 	SGXRAMessage3 msg3(msgSenderID, msg3Data, quote);
 
 	resp = RASession.SendMessages(msgSenderID, msg3);
-	if (!resp)
+	SGXRAMessage4* msg4 = nullptr;
+	if (!resp || !(msg4 = dynamic_cast<SGXRAMessage4*>(resp)))
 	{
+		delete resp;
+		RASession.SendErrorMessages(SGXRAMessageErr(msgSenderID, "Wrong response message!"));
 		return false;
 	}
+	ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature());
 
 	//Clean Message 4 (Message 3 response).
 	delete resp;
 	resp = nullptr;
+	msg4 = nullptr;
 
 	return true;
 }
@@ -277,8 +283,12 @@ bool SGXEnclave::AcceptRAConnection()
 
 			sgx_status_t enclaveRes = SGX_SUCCESS;
 			enclaveRes = ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), "", "", msg4Data, msg4Sign);
+			if (enclaveRes != SGX_SUCCESS)
+			{
+				return new SGXRAMessageErr(msgSenderID, "Enclave process error!");
+			}
 
-			return new SGXRAMessage0Resp(msgSenderID, "");
+			return new SGXRAMessage4(msgSenderID, msg4Data, msg4Sign);
 		}
 		default:
 			return nullptr;

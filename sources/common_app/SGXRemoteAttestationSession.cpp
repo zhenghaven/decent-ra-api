@@ -11,6 +11,7 @@
 #include "SGXRAMessages/SGXRAMessage1.h"
 #include "SGXRAMessages/SGXRAMessage2.h"
 #include "SGXRAMessages/SGXRAMessage3.h"
+#include "SGXRAMessages/SGXRAMessage4.h"
 #include "SGXRAMessages/SGXRAMessageErr.h"
 
 namespace 
@@ -89,7 +90,7 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const std::string& sender
 	case SGXRAMessage::Type::MSG1_SEND:
 		return new SGXRAMessage2(jsonRoot);
 	case SGXRAMessage::Type::MSG3_SEND:
-		return nullptr;//new SGXRAMessage4(jsonRoot);
+		return new SGXRAMessage4(jsonRoot);
 	default:
 		return nullptr;
 	}

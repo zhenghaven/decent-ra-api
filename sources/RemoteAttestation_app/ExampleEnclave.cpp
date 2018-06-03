@@ -112,8 +112,19 @@ sgx_status_t ExampleEnclave::ProcessRAMsg3(const std::string & clientID, const s
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
+	//const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
 	res = ecall_process_ra_msg3(GetEnclaveId(), &retval, clientID.c_str(), reinterpret_cast<const uint8_t*>(&inMsg3), msg3Len, iasReport.c_str(), reportSign.c_str(), &outMsg4, &outMsg4Sign);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_ra_msg4_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	//const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
+	res = ecall_process_ra_msg4(GetEnclaveId(), &retval, ServerID.c_str(), &inMsg4, const_cast<sgx_ec256_signature_t*>(&inMsg4Sign));
 
 	return res == SGX_SUCCESS ? retval : res;
 }
@@ -126,39 +137,3 @@ sgx_status_t ExampleEnclave::TerminationClean()
 
 	return res == SGX_SUCCESS ? retval : res;
 }
-
-//void ExampleEnclave::TestEnclaveFunctions()
-//{
-//	sgx_status_t ret = SGX_ERROR_UNEXPECTED;
-//
-//	// Example for initializer_list:
-//	sgx_enclave_id_t eid = SGXEnclave::GetEnclaveId();
-//	ret = ecall_initializer_list_demo(eid);
-//	if (ret != SGX_SUCCESS)
-//		abort();
-//
-//	std::cout << std::endl;
-//
-//	int addRes = 0;
-//	// Example for adding two number:
-//	ret = ecall_add_two_int(SGXEnclave::GetEnclaveId(), &addRes, 123, 456);
-//	if (ret != SGX_SUCCESS)
-//		abort();
-//	std::cout << "Adding demo result: " << addRes << ". " << std::endl;
-//
-//	std::cout << std::endl;
-//
-//	std::vector<int> testArr = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-//	ret = ecall_square_array(SGXEnclave::GetEnclaveId(), testArr.data(), testArr.size() * sizeof(int));
-//	if (ret != SGX_SUCCESS)
-//		abort();
-//	std::cout << "Square array demo result:";
-//	for (int v : testArr)
-//	{
-//		std::cout << " " << v;
-//	}
-//
-//	std::cout << std::endl;
-//
-//	std::cout << std::endl;
-//}
