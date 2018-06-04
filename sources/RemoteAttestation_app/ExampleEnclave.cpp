@@ -10,16 +10,27 @@
 #include "../common/CryptoTools.h"
 #include "../common/sgx_ra_msg4.h"
 
-sgx_status_t ExampleEnclave::GetRAPublicKey(sgx_ec256_public_t & outKey)
+sgx_status_t ExampleEnclave::GetRASignPubKey(sgx_ec256_public_t & outKey)
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 	
-	res = ecall_get_ra_pub_keys(GetEnclaveId(), &retval, &outKey);
+	res = ecall_get_ra_pub_sig_key(GetEnclaveId(), &retval, 0, &outKey);
 	//std::string tmp = SerializePubKey(outKey);
 
 	return res == SGX_SUCCESS ? retval : res;
 }
+
+//sgx_status_t ExampleEnclave::GetRAEncrPubKey(sgx_ec256_public_t & outKey)
+//{
+//	sgx_status_t res = SGX_SUCCESS;
+//	sgx_status_t retval = SGX_SUCCESS;
+//
+//	res = ecall_get_ra_pub_enc_key(GetEnclaveId(), &retval, 0, &outKey);
+//	//std::string tmp = SerializePubKey(outKey);
+//
+//	return res == SGX_SUCCESS ? retval : res;
+//}
 
 sgx_status_t ExampleEnclave::InitRAEnvironment()
 {
@@ -48,10 +59,10 @@ sgx_status_t ExampleEnclave::ProcessRAMsg0Resp(const std::string & ServerID, con
 	{
 		return res == SGX_SUCCESS ? retval : res;
 	}
-
+	
 	res = sgx_ra_get_msg1(outContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);
 
-	std::cout << "In Process RA Msg 1: " << std::endl;
+	std::cout << "In Process RA Msg 0 Resp: " << std::endl;
 	std::cout << "g_a: " << SerializePubKey(outMsg1.g_a) << std::endl << std::endl;
 
 	return res == SGX_SUCCESS ? retval : res;

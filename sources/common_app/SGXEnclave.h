@@ -35,13 +35,9 @@ public:
 	virtual bool IsLastExecutionFailed() const override;
 	virtual bool IsLaunched() const override;
 	virtual bool RequestRA(uint32_t ipAddr, uint16_t portNum) override;
-	virtual sgx_status_t GetRAPublicKey(sgx_ec256_public_t& outKey) = 0;
-	//virtual sgx_status_t SetRARemotePublicKey(sgx_ec256_public_t& outKey) = 0;
-	//virtual sgx_status_t EnclaveInitRA(int enablePSE, sgx_ra_context_t& outContextID) = 0;
-	//virtual sgx_status_t GetRAMsg1(sgx_ra_msg1_t& outMsg1, sgx_ra_context_t& inContextID) = 0; //This has to be abstract. (B.C. a function is from edger)
-	//virtual sgx_status_t ProcessMsg1(const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2) = 0; //A decent protocol like function.
-	//virtual sgx_status_t ProcessMsg2(const sgx_ra_msg2_t& inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t& inContextID) = 0; //A decent protocol like function.
 
+	virtual sgx_status_t GetRASignPubKey(sgx_ec256_public_t& outKey) = 0;
+	//virtual sgx_status_t GetRAEncrPubKey(sgx_ec256_public_t& outKey) = 0;
 	virtual sgx_status_t InitRAEnvironment() = 0;
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) = 0;
 	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1) = 0;

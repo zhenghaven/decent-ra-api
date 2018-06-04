@@ -127,6 +127,32 @@ static void DropServerRAState(const std::string& serverID)
 	}
 }
 
+//sgx_status_t ecall_get_ra_pub_enc_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
+//{
+//	sgx_status_t res = SGX_SUCCESS;
+//	res = ecall_generate_ra_keys();
+//
+//	if (res != SGX_SUCCESS)
+//	{
+//		return res;
+//	}
+//	memcpy(outKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
+//	return res;
+//}
+
+sgx_status_t ecall_get_ra_pub_sig_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	res = ecall_generate_ra_keys();
+
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	memcpy(outKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	return res;
+}
+
 static sgx_status_t enclave_init_ra(const sgx_ec256_public_t *p_pub_key, int b_pse, sgx_ra_context_t *p_context)
 {
 	// isv enclave call to trusted key exchange library.
@@ -280,7 +306,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	return res;
 }
 
-sgx_status_t ecall_process_ra_msg2(const char* ServerID)
+sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inContextID)
 {
 	auto it = g_serversMap.find(ServerID);
 	if (it == g_serversMap.end()
@@ -290,11 +316,33 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID)
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	RAKeyManager& clientKeyMgr = it->second.second;
+	RAKeyManager& serverKeyMgr = it->second.second;
+
+	sgx_status_t res = SGX_SUCCESS;
+
+	sgx_ra_key_128_t tmpKey;
+	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_SK, &tmpKey);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	serverKeyMgr.SetSK(tmpKey);
+	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_MK, &tmpKey);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	serverKeyMgr.SetMK(tmpKey);
+	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_VK, &tmpKey);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	serverKeyMgr.SetVK(tmpKey);
 
 	it->second.first = ServerRAState::MSG2_DONE;
 
-	return SGX_SUCCESS;
+	return res;
 }
 
 sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
@@ -320,6 +368,7 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
+	enclave_printf("In Proc Msg 3, bp1\n");
 
 	//Make sure that msg3_size is bigger than sample_mac_t.
 	uint32_t mac_size = msg3Len - sizeof(sgx_mac_t);
@@ -460,19 +509,6 @@ sgx_status_t ecall_termination_clean()
 	g_clientsMap.clear();
 
 	return SGX_SUCCESS;
-}
-
-sgx_status_t ecall_get_ra_pub_keys(sgx_ec256_public_t* outPubKey)
-{
-	sgx_status_t res = SGX_SUCCESS;
-	res = ecall_generate_ra_keys();
-
-	if (res != SGX_SUCCESS)
-	{
-		return res;
-	}
-	memcpy(outPubKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
-	return res;
 }
 
 void GenSSLECKeys()

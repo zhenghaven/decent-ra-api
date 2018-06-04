@@ -122,7 +122,7 @@ bool SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 
 	//Get Sign public key.
 	sgx_ec256_public_t signPubKey;
-	res = GetRAPublicKey(signPubKey);
+	res = GetRASignPubKey(signPubKey);
 	if (res != SGX_SUCCESS)
 	{
 		return false;
@@ -225,7 +225,7 @@ bool SGXEnclave::AcceptRAConnection()
 
 	//Get Sign public key.
 	sgx_ec256_public_t signPubKey;
-	enclaveRes = GetRAPublicKey(signPubKey);
+	enclaveRes = GetRASignPubKey(signPubKey);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return false;

@@ -7,7 +7,8 @@ class ExampleEnclave : public SGXEnclave
 public:
 	using SGXEnclave::SGXEnclave;
 
-	virtual sgx_status_t GetRAPublicKey(sgx_ec256_public_t& outKey) override;
+	virtual sgx_status_t GetRASignPubKey(sgx_ec256_public_t& outKey) override;
+	//virtual sgx_status_t GetRAEncrPubKey(sgx_ec256_public_t& outKey) override;
 
 	virtual sgx_status_t InitRAEnvironment() override;
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) override;

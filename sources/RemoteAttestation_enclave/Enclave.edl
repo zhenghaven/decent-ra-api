@@ -12,7 +12,11 @@ enclave {
 	{
 		//RA Functions:
 
-		public sgx_status_t ecall_get_ra_pub_keys([out] sgx_ec256_public_t* outPubKey);
+		//RA Context Param is not used here.
+		public sgx_status_t ecall_get_ra_pub_sig_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
+		
+		//RA Context Param is not used here.
+		//public sgx_status_t ecall_get_ra_pub_enc_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
 
 		public sgx_status_t ecall_init_ra_environment();
 
@@ -22,7 +26,7 @@ enclave {
 
 		public sgx_status_t ecall_process_ra_msg1([in, string] const char* clientID, [in] const sgx_ra_msg1_t *inMsg1, [out] sgx_ra_msg2_t *outMsg2);
 
-		public sgx_status_t ecall_process_ra_msg2([in, string] const char* ServerID);
+		public sgx_status_t ecall_process_ra_msg2([in, string] const char* ServerID, sgx_ra_context_t inContextID);
 
 		public sgx_status_t ecall_process_ra_msg3([in, string] const char* clientID, [in, size=msg3Len] const uint8_t* inMsg3, uint32_t msg3Len, [in, string] const char* iasReport, [in, string] const char* reportSign, [out] sgx_ra_msg4_t* outMsg4, [out] sgx_ec256_signature_t* outMsg4Sign);
 
