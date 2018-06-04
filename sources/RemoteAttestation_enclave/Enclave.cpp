@@ -462,7 +462,7 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	return res;
 }
 
-sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* inMsg4, sgx_ec256_signature_t* inMsg4Sign)
+sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* inMsg4, sgx_ec256_signature_t* inMsg4Sign, sgx_ra_context_t inContextID)
 {
 	auto it = g_serversMap.find(ServerID);
 	if (it == g_serversMap.end()
@@ -490,6 +490,8 @@ sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* in
 	}
 
 	it->second.first = ServerRAState::ATTESTED;
+
+	sgx_ra_close(inContextID);
 
 	return res;
 }

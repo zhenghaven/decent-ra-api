@@ -99,7 +99,7 @@ bool SGXEnclave::IsLaunched() const
 	return (m_eid != 0);
 }
 
-std::unique_ptr<Connection>&& SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
+std::unique_ptr<Connection> SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 {
 	std::unique_ptr<Connection> connection(std::make_unique<Connection>(ipAddr, portNum));
 	SGXRemoteAttestationSession RASession(connection, RemoteAttestationSession::Mode::Client);
@@ -129,7 +129,7 @@ bool SGXEnclave::IsRAServerLaunched() const
 	return m_raServer;
 }
 
-std::unique_ptr<Connection>&& SGXEnclave::AcceptRAConnection()
+std::unique_ptr<Connection> SGXEnclave::AcceptRAConnection()
 {
 	bool res = false;
 

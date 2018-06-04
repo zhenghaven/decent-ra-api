@@ -195,7 +195,7 @@ bool SGXRemoteAttestationSession::ProcessClientSideRA(EnclaveBase & enclave)
 		m_connection->Send(errMsg.ToJsonString());
 		return false;
 	}
-	enclaveRes = sgxEnclave->ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature());
+	enclaveRes = sgxEnclave->ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature(), raContextID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete resp;

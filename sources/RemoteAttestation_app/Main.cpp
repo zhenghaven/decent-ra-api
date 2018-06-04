@@ -58,12 +58,12 @@ int SGX_CDECL main(int argc, char *argv[])
 		LOGE("RA Server Launch Failed!");
 	}
 
-	std::unique_ptr<Connection> connection(exp.AcceptRAConnection());
+	std::unique_ptr<Connection> connection(exp.AcceptRootNodeRAConnection());
 
 #else
 	std::cout << "================ This is client side ================" << std::endl;
 
-	std::unique_ptr<Connection> connection(exp.RequestRA(hostIP, hostPort));
+	std::unique_ptr<Connection> connection(exp.RequestRootNodeRA(hostIP, hostPort));
 
 #endif // RA_SERVER_SIDE
 

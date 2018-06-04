@@ -17,11 +17,11 @@ public:
 
 	virtual bool IsLaunched() const = 0;
 
-	virtual std::unique_ptr<Connection>&& RequestRA(uint32_t ipAddr, uint16_t portNum) = 0;
+	virtual std::unique_ptr<Connection> RequestRA(uint32_t ipAddr, uint16_t portNum) = 0;
 
 	//Decent enclave functions:
 	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t portNum) = 0;
 	virtual bool IsRAServerLaunched() const = 0;
-	virtual std::unique_ptr<Connection>&& AcceptRAConnection() = 0;
+	virtual std::unique_ptr<Connection> AcceptRAConnection() = 0;
 };
 

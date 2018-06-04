@@ -150,13 +150,13 @@ sgx_status_t ExampleEnclave::ProcessRAMsg3(const std::string & clientID, const s
 	return res == SGX_SUCCESS ? retval : res;
 }
 
-sgx_status_t ExampleEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_ra_msg4_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign)
+sgx_status_t ExampleEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_ra_msg4_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign, sgx_ra_context_t inContextID)
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
 	//const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
-	res = ecall_process_ra_msg4(GetEnclaveId(), &retval, ServerID.c_str(), &inMsg4, const_cast<sgx_ec256_signature_t*>(&inMsg4Sign));
+	res = ecall_process_ra_msg4(GetEnclaveId(), &retval, ServerID.c_str(), &inMsg4, const_cast<sgx_ec256_signature_t*>(&inMsg4Sign), inContextID);
 
 	return res == SGX_SUCCESS ? retval : res;
 }
