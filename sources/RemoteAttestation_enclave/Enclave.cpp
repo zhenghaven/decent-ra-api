@@ -333,12 +333,12 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inCont
 		return res;
 	}
 	serverKeyMgr.SetMK(tmpKey);
-	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_VK, &tmpKey);
-	if (res != SGX_SUCCESS)
-	{
-		return res;
-	}
-	serverKeyMgr.SetVK(tmpKey);
+	//res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_VK, &tmpKey);
+	//if (res != SGX_SUCCESS)
+	//{
+	//	return res;
+	//}
+	//serverKeyMgr.SetVK(tmpKey);
 
 	it->second.first = ServerRAState::MSG2_DONE;
 
@@ -368,7 +368,6 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
-	enclave_printf("In Proc Msg 3, bp1\n");
 
 	//Make sure that msg3_size is bigger than sample_mac_t.
 	uint32_t mac_size = msg3Len - sizeof(sgx_mac_t);
