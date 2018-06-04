@@ -1,11 +1,24 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
-#include <boost/asio/io_service.hpp>
+//#include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 class RemoteAttestationSession;
+
+namespace boost {
+	namespace asio {
+		class io_context;
+		typedef io_context io_service;
+		//template <typename Protocol> class basic_socket_acceptor;
+		//namespace ip {
+		//	class tcp;
+		//	typedef basic_socket_acceptor<tcp> acceptor;
+		//}
+	} // namespace asio
+} // namespace boost
 
 class RemoteAttestationServer
 {
@@ -13,12 +26,11 @@ public:
 	RemoteAttestationServer() = delete;
 	RemoteAttestationServer(uint32_t ipAddr, uint16_t portNum);
 	~RemoteAttestationServer();
-
+	
 	///Warning: Blocking method! This method will be blocked until a connection is accepted.
-	virtual RemoteAttestationSession* AcceptRAConnection() = 0;
+	virtual RemoteAttestationSession* AcceptRAConnection(size_t bufferSize = 5000U) = 0;
 
 protected:
-	
-	boost::asio::io_service* m_RAServerIO;
-	boost::asio::ip::tcp::acceptor* m_RAServerAcc;
+	std::shared_ptr<boost::asio::io_service> m_RAServerIO;
+	std::unique_ptr<boost::asio::ip::tcp::acceptor> m_RAServerAcc;
 };

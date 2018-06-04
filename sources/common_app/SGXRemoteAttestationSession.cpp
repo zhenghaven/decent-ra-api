@@ -6,6 +6,7 @@
 #include <json/json.h>
 
 #include "Common.h"
+#include "SGXEnclave.h"
 #include "SGXRAMessages/SGXRAMessage.h"
 #include "SGXRAMessages/SGXRAMessage0.h"
 #include "SGXRAMessages/SGXRAMessage1.h"
@@ -13,6 +14,18 @@
 #include "SGXRAMessages/SGXRAMessage3.h"
 #include "SGXRAMessages/SGXRAMessage4.h"
 #include "SGXRAMessages/SGXRAMessageErr.h"
+
+#include "Networking/Connection.h"
+#include "../common/CryptoTools.h"
+#include "../common/sgx_ra_msg4.h"
+
+namespace
+{
+	std::vector<uint32_t> g_acceptedExGID =
+	{
+		0,
+	};
+}
 
 namespace 
 {
@@ -37,36 +50,21 @@ SGXRemoteAttestationSession::~SGXRemoteAttestationSession()
 {
 }
 
-RAMessages * SGXRemoteAttestationSession::SendMessages(const std::string& senderID, const RAMessages & msg)
+static RAMessages * JsonMessageParser(const std::string& jsonStr)
 {
-	const SGXRAMessage* sgxMsg = dynamic_cast<const SGXRAMessage*>(&msg);
-	if (!sgxMsg || sgxMsg->IsResp())
-	{
-		SendErrorMessages(SGXRAMessageErr(senderID, "Server Error!"));
-		return nullptr;
-	}
-
-	std::string tmp = sgxMsg->ToJsonString();
-	m_socket.send(boost::asio::buffer(tmp.data(), tmp.size() + 1));
-	LOGI("Sent Msg: %s\n", tmp.c_str());
-	size_t actualSize = m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
-	m_buffer[actualSize] = '\0';
-	LOGI("Recv Msg: %s\n", m_buffer.c_str());
-	
 	Json::Value jsonRoot;
 	Json::CharReaderBuilder rbuilder;
 	rbuilder["collectComments"] = false;
 	std::string errStr;
 
 	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
-	bool isValid = reader->parse(m_buffer.c_str(), m_buffer.c_str() + actualSize, &jsonRoot, &errStr);
+	bool isValid = reader->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.size(), &jsonRoot, &errStr);
 
 	if (!isValid
 		|| !jsonRoot.isMember("MsgSubType")
 		|| !jsonRoot["MsgSubType"].isString())
 	{
 		LOGI("Recv INVALID MESSAGE!");
-		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
 		return nullptr;
 	}
 
@@ -74,145 +72,271 @@ RAMessages * SGXRemoteAttestationSession::SendMessages(const std::string& sender
 	if (it == g_msgTypeNameMap.end() || it->second == SGXRAMessage::Type::OTHER)
 	{
 		LOGI("Recv INVALID MESSAGE!");
-		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
 		return nullptr;
 	}
 
-	if (it->second == SGXRAMessage::Type::ERRO_RESP)
-	{
-		return nullptr;
-	}
-
-	switch (sgxMsg->GetType())
-	{
-	case SGXRAMessage::Type::MSG0_SEND:
-		return new SGXRAMessage0Resp(jsonRoot);
-	case SGXRAMessage::Type::MSG1_SEND:
-		return new SGXRAMessage2(jsonRoot);
-	case SGXRAMessage::Type::MSG3_SEND:
-		return new SGXRAMessage4(jsonRoot);
-	default:
-		return nullptr;
-	}
-}
-
-void SGXRemoteAttestationSession::SendErrorMessages(const RAMessages & msg)
-{
-	std::string tmp = dynamic_cast<const SGXRAMessageErr&>(msg).ToJsonString();
-	m_socket.send(boost::asio::buffer(tmp.data(), tmp.size() + 1));
-	LOGI("Sent Msg: %s\n", tmp.c_str());
-}
-
-bool SGXRemoteAttestationSession::RecvMessages(const std::string& senderID, MsgProcessor msgProcessor)
-{
-	size_t actualSize = m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
-	m_buffer[actualSize] = '\0';
-	LOGI("Recv Msg: %s\n", m_buffer.c_str());
-
-	Json::Value jsonRoot;
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-	std::string errStr;
-
-	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
-	bool isValid = reader->parse(m_buffer.c_str(), m_buffer.c_str() + actualSize, &jsonRoot, &errStr);
-
-	if (!isValid
-		|| !jsonRoot.isMember("MsgSubType")
-		|| !jsonRoot["MsgSubType"].isString())
-	{
-		LOGI("Recv INVALID MESSAGE!");
-		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
-		return false;
-	}
-
-	auto it = g_msgTypeNameMap.find(jsonRoot["MsgSubType"].asString());
-	if (it == g_msgTypeNameMap.end() || it->second == SGXRAMessage::Type::OTHER)
-	{
-		LOGI("Recv INVALID MESSAGE!");
-		SendErrorMessages(SGXRAMessageErr(senderID, "Wrong response message!"));
-		return false;
-	}
-
-	SGXRAMessage* sgxResp = nullptr; 
-	RAMessages* resp = nullptr;
 	switch (it->second)
 	{
 	case SGXRAMessage::Type::MSG0_SEND:
-	{
-		SGXRAMessage0Send msg0s(jsonRoot);
-		resp = msgProcessor(msg0s);
-		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
-		break;
-	}
+		return new SGXRAMessage0Send(jsonRoot);
+	case SGXRAMessage::Type::MSG0_RESP:
+		return new SGXRAMessage0Resp(jsonRoot);
 	case SGXRAMessage::Type::MSG1_SEND:
-	{
-		SGXRAMessage1 msg1(jsonRoot);
-		resp = msgProcessor(msg1);
-		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
-		break;
-	}
+		return new SGXRAMessage1(jsonRoot);
+	case SGXRAMessage::Type::MSG2_RESP:
+		return new SGXRAMessage2(jsonRoot);
 	case SGXRAMessage::Type::MSG3_SEND:
-	{
-		SGXRAMessage3 msg3(jsonRoot);
-		resp = msgProcessor(msg3);
-		sgxResp = dynamic_cast<SGXRAMessage*>(resp);
-		break;
-	}
+		return new SGXRAMessage3(jsonRoot);
+	case SGXRAMessage::Type::MSG4_RESP:
+		return new SGXRAMessage4(jsonRoot);
 	case SGXRAMessage::Type::ERRO_RESP:
+		return new SGXRAMessageErr(jsonRoot);
+	default:
+		return nullptr;
+	}
+}
+
+bool SGXRemoteAttestationSession::ProcessClientSideRA(EnclaveBase & enclave)
+{
+	if (!m_connection)
 	{
 		return false;
 	}
-	default:
-		break;
-	}
-	if (!sgxResp)
+
+	SGXEnclave* sgxEnclave = dynamic_cast<SGXEnclave*>(&enclave);
+	if (!sgxEnclave)
 	{
-		SendErrorMessages(SGXRAMessageErr(senderID, "Server Error!"));
+		return false;
+	}
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+	enclaveRes = sgxEnclave->InitRAEnvironment();
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return false;
+	}
+	
+	RAMessages* resp = nullptr;
+	std::string msgBuffer;
+	std::string msgSenderID = sgxEnclave->GetRASenderID();
+
+	SGXRAMessage0Send msg0s(msgSenderID, sgxEnclave->GetExGroupID());
+	m_connection->Send(msg0s.ToJsonString());
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+	SGXRAMessage0Resp* msg0r = dynamic_cast<SGXRAMessage0Resp*>(resp);
+	if (!resp || !msg0r || !msg0r->IsValid())
+	{
+		delete resp;
+		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	sgx_ec256_public_t spRAPubKey;
+	DeserializePubKey(msg0r->GetRAPubKey(), spRAPubKey);
+
+	sgx_ra_context_t raContextID = 0;
+	sgx_ra_msg1_t msg1Data;
+
+	enclaveRes = sgxEnclave->ProcessRAMsg0Resp(msg0r->GetSenderID(), spRAPubKey, false, raContextID, msg1Data);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		delete resp;
+		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	//Clean Message 0 response.
+	delete resp;
+	resp = nullptr;
+	msg0r = nullptr;
+
+	SGXRAMessage1 msg1(msgSenderID, msg1Data);
+
+	m_connection->Send(msg1.ToJsonString());
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+	SGXRAMessage2* msg2 = dynamic_cast<SGXRAMessage2*>(resp);
+	if (!resp || !msg2 || !msg2->IsValid())
+	{
+		delete resp;
+		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	sgx_ra_msg3_t msg3Data;
+	std::vector<uint8_t> quote;
+	enclaveRes = sgxEnclave->ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t) + msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		delete resp;
+		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	//Clean Message 2 (Message 1 response).
+	delete resp;
+	resp = nullptr;
+	msg2 = nullptr;
+
+	SGXRAMessage3 msg3(msgSenderID, msg3Data, quote);
+
+	m_connection->Send(msg3.ToJsonString());
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+	SGXRAMessage4* msg4 = dynamic_cast<SGXRAMessage4*>(resp);
+	if (!resp || !msg4 || !msg4->IsValid())
+	{
+		delete resp;
+		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+	enclaveRes = sgxEnclave->ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature());
+	if (enclaveRes != SGX_SUCCESS)
+	{
 		delete resp;
 		return false;
 	}
 
-	std::string tmp = sgxResp->ToJsonString();
-	m_socket.send(boost::asio::buffer(tmp.data(), tmp.size() + 1));
-	LOGI("Sent Msg: %s\n", tmp.c_str());
-	if (sgxResp->GetType() == SGXRAMessage::Type::ERRO_RESP)
-	{
-		delete sgxResp;
-		return false;
-	}
-	delete sgxResp;
+	//Clean Message 4 (Message 3 response).
+	delete resp;
+	resp = nullptr;
+	msg4 = nullptr;
+
 	return true;
 }
 
-//RAMessages* SGXRemoteAttestationSession::ProcessMessages()
-//{
-//	switch (RemoteAttestationSession::GetMode())
-//	{
-//	case RemoteAttestationSession::Mode::Client:
-//		return ProcessClientMessages();
-//	case RemoteAttestationSession::Mode::Server:
-//		return ProcessServerMessages();
-//	default:
-//		return false;
-//	}
-//}
-//
-//RAMessages* SGXRemoteAttestationSession::ProcessServerMessages()
-//{
-//	m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
-//	LOGI("%s\n", m_buffer.c_str());
-//	m_socket.send(boost::asio::buffer(&m_buffer[0], std::strlen(m_buffer.c_str())));
-//	return true;
-//}
-//
-//RAMessages* SGXRemoteAttestationSession::ProcessClientMessages()
-//{
-//	std::string msg = "TEST MESSAGE";
-//	memcpy(&m_buffer[0], &msg[0], msg.size());
-//	m_socket.send(boost::asio::buffer(&m_buffer[0], std::strlen(m_buffer.c_str())));
-//	m_socket.receive(boost::asio::buffer(&m_buffer[0], m_buffer.size()));
-//	LOGI("%s\n", m_buffer.c_str());
-//	LOGI("buffer size: %d\n", m_buffer.size());
-//	return true;
-//}
+bool SGXRemoteAttestationSession::ProcessServerSideRA(EnclaveBase & enclave)
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+
+	SGXEnclave* sgxEnclave = dynamic_cast<SGXEnclave*>(&enclave);
+	if (!sgxEnclave)
+	{
+		return false;
+	}
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+	enclaveRes = sgxEnclave->InitRAEnvironment();
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return false;
+	}
+
+	RAMessages* reqs = nullptr;
+	SGXRAMessage* resp = nullptr;
+	std::string msgBuffer;
+	std::string msgSenderID = sgxEnclave->GetRASenderID();
+
+	m_connection->Receive(msgBuffer);
+	reqs = JsonMessageParser(msgBuffer);
+
+	SGXRAMessage0Send* msg0s = dynamic_cast<SGXRAMessage0Send*>(reqs);
+	if (!reqs || !msg0s || !msg0s->IsValid())
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	if (std::find(g_acceptedExGID.begin(), g_acceptedExGID.end(), msg0s->GetExtendedGroupID()) != g_acceptedExGID.end())
+	{
+		enclaveRes = sgxEnclave->ProcessRAMsg0Send(msg0s->GetSenderID());
+		if (enclaveRes != SGX_SUCCESS)
+		{
+			delete reqs;
+			SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
+			m_connection->Send(errMsg.ToJsonString());
+			return false;
+		}
+		else
+		{
+			resp = new SGXRAMessage0Resp(msgSenderID, msgSenderID);
+		}
+	}
+	else
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Extended Group ID is not accepted!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	m_connection->Send(resp->ToJsonString());
+	delete resp;
+	resp = nullptr;
+	delete reqs;
+	reqs = nullptr;
+	msg0s = nullptr;
+
+	m_connection->Receive(msgBuffer);
+	reqs = JsonMessageParser(msgBuffer);
+
+	SGXRAMessage1* msg1 = dynamic_cast<SGXRAMessage1*>(reqs);
+	if (!reqs || !msg1 || !msg1->IsValid())
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	sgx_ra_msg2_t msg2Data;
+	enclaveRes = sgxEnclave->ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Data);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Extended Group ID is not accepted!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+	resp = new SGXRAMessage2(msgSenderID, msg2Data, msg1->GetMsg1Data().gid);
+
+	m_connection->Send(resp->ToJsonString());
+	delete resp;
+	resp = nullptr;
+	delete reqs;
+	reqs = nullptr;
+	msg1 = nullptr;
+
+	m_connection->Receive(msgBuffer);
+	reqs = JsonMessageParser(msgBuffer);
+
+	SGXRAMessage3* msg3 = dynamic_cast<SGXRAMessage3*>(reqs);
+	if (!reqs || !msg3 || !msg3->IsValid())
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	sgx_ra_msg4_t msg4Data;
+	sgx_ec256_signature_t msg4Sign;
+
+	enclaveRes = sgxEnclave->ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), "", "", msg4Data, msg4Sign);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+	resp = new SGXRAMessage4(msgSenderID, msg4Data, msg4Sign);
+
+	m_connection->Send(resp->ToJsonString());
+	delete resp;
+	resp = nullptr;
+	delete reqs;
+	reqs = nullptr;
+	msg3 = nullptr;
+
+	return true;
+}

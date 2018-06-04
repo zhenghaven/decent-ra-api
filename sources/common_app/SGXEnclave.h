@@ -34,7 +34,10 @@ public:
 	virtual bool Launch() override;
 	virtual bool IsLastExecutionFailed() const override;
 	virtual bool IsLaunched() const override;
-	virtual bool RequestRA(uint32_t ipAddr, uint16_t portNum) override;
+	virtual std::unique_ptr<Connection>&& RequestRA(uint32_t ipAddr, uint16_t portNum) override;
+
+	virtual std::string GetRASenderID() const;
+	virtual uint32_t GetExGroupID() const;
 
 	virtual sgx_status_t GetRASignPubKey(sgx_ec256_public_t& outKey) = 0;
 	//virtual sgx_status_t GetRAEncrPubKey(sgx_ec256_public_t& outKey) = 0;
@@ -50,7 +53,7 @@ public:
 	//Decent enclave functions:
 	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t port) override;
 	virtual bool IsRAServerLaunched() const override;
-	virtual bool AcceptRAConnection() override;
+	virtual std::unique_ptr<Connection>&& AcceptRAConnection() override;
 
 	sgx_status_t GetLastStatus() const;
 
@@ -58,6 +61,9 @@ protected:
 	sgx_enclave_id_t GetEnclaveId() const;
 	bool LoadToken();
 	bool UpdateToken();
+
+	std::string m_raSenderID;
+	uint32_t m_exGroupID;
 
 private:
 	sgx_enclave_id_t m_eid;

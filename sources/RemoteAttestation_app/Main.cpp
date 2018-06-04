@@ -12,7 +12,9 @@
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
-#include "../common_app/SGXRemoteAttestationSession.h"
+//#include "../common_app/SGXRemoteAttestationSession.h"
+
+#include "../common_app/Networking/Connection.h"
 
 #include "ExampleEnclave.h"
 
@@ -36,7 +38,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
 	ExampleEnclave exp(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 	exp.Launch();
-	exp.InitRAEnvironment();
+	//exp.InitRAEnvironment();
 
 	printf("Info: Cxx11DemoEnclave successfully returned.\n");
 
@@ -56,15 +58,16 @@ int SGX_CDECL main(int argc, char *argv[])
 		LOGE("RA Server Launch Failed!");
 	}
 
-	bool res = exp.AcceptRAConnection();
+	std::unique_ptr<Connection> connection(exp.AcceptRAConnection());
 
 #else
 	std::cout << "================ This is client side ================" << std::endl;
 
-	exp.RequestRA(hostIP, hostPort);
+	std::unique_ptr<Connection> connection(exp.RequestRA(hostIP, hostPort));
 
 #endif // RA_SERVER_SIDE
 
+	bool isConValid = static_cast<bool>(connection);
 
 	getchar();
 	return 0;

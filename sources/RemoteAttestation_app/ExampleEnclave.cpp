@@ -4,6 +4,7 @@
 
 #include <sgx_key_exchange.h>
 #include <sgx_ukey_exchange.h>
+#include <sgx_uae_service.h>
 
 #include "Enclave_u.h"
 #include "../common_app/enclave_tools.h"
@@ -37,6 +38,26 @@ sgx_status_t ExampleEnclave::InitRAEnvironment()
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 	res = ecall_init_ra_environment(GetEnclaveId(), &retval);
+	if (res != SGX_SUCCESS || retval != SGX_SUCCESS)
+	{
+		return res == SGX_SUCCESS ? retval : res;
+	}
+
+	//Get extended group ID.
+	res = sgx_get_extended_epid_group_id(&m_exGroupID);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+	//Get Sign public key.
+	sgx_ec256_public_t signPubKey;
+	res = GetRASignPubKey(signPubKey);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	m_raSenderID = SerializePubKey(signPubKey);
 
 	return res == SGX_SUCCESS ? retval : res;
 }
@@ -113,7 +134,7 @@ sgx_status_t ExampleEnclave::ProcessRAMsg2(const std::string& ServerID, const sg
 
 	std::free(outMsg3ptr);
 
-	res = ecall_process_ra_msg2(GetEnclaveId(), &retval, ServerID.c_str());
+	res = ecall_process_ra_msg2(GetEnclaveId(), &retval, ServerID.c_str(), inContextID);
 
 	return res == SGX_SUCCESS ? retval : res;
 }
