@@ -52,6 +52,7 @@ int SGX_CDECL main(int argc, char *argv[])
 #ifdef RA_SERVER_SIDE
 	std::cout << "================ This is server side ================" << std::endl;
 
+	exp.SetDecentMode(DecentNodeMode::ROOT_SERVER);
 	exp.LaunchRAServer(hostIP, hostPort);
 	if (!exp.IsRAServerLaunched())
 	{
@@ -63,6 +64,7 @@ int SGX_CDECL main(int argc, char *argv[])
 #else
 	std::cout << "================ This is client side ================" << std::endl;
 
+	exp.SetDecentMode(DecentNodeMode::ROOT_SERVER);
 	std::unique_ptr<Connection> connection(exp.RequestRootNodeRA(hostIP, hostPort));
 
 #endif // RA_SERVER_SIDE

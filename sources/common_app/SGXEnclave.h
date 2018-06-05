@@ -64,10 +64,10 @@ protected:
 
 	std::string m_raSenderID;
 	uint32_t m_exGroupID;
+	sgx_status_t m_lastStatus;
 
 private:
 	sgx_enclave_id_t m_eid;
-	sgx_status_t m_lastStatus;
 	std::vector<uint8_t> m_token;
 
 	const std::string m_enclavePath;

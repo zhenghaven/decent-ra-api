@@ -169,3 +169,24 @@ sgx_status_t ExampleEnclave::TerminationClean()
 
 	return res == SGX_SUCCESS ? retval : res;
 }
+
+void ExampleEnclave::SetDecentMode(DecentNodeMode inDecentMode)
+{
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	enclaveRes = ecall_set_decent_mode(GetEnclaveId(), inDecentMode);
+
+	m_lastStatus = enclaveRes;
+}
+
+DecentNodeMode ExampleEnclave::GetDecentMode()
+{
+	DecentNodeMode res = DecentNodeMode::ROOT_SERVER;
+
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	enclaveRes = ecall_get_decent_mode(GetEnclaveId(), &res);
+
+	m_lastStatus = enclaveRes;
+	return res;
+}

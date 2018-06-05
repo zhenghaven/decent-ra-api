@@ -19,6 +19,9 @@ public:
 	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID) override;
 	virtual sgx_status_t TerminationClean() override;
 
+	virtual void SetDecentMode(DecentNodeMode inDecentMode) override;
+	virtual DecentNodeMode GetDecentMode() override;
+
 private:
 
 };

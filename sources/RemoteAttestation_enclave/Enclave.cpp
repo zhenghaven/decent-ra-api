@@ -20,40 +20,24 @@
 #include "../common_enclave/enclave_tools.h"
 #include "../common_enclave/RAConnection.h"
 #include "../common_enclave/RAKeyManager.h"
-#include "../common_enclave/SGXCryptoManager.h"
+#include "../common_enclave/DecentCryptoManager.h"
 
 #include "../common/CryptoTools.h"
 #include "../common/sgx_ra_msg4.h"
+#include "../common/Decent.h"
 
 namespace 
 {
 	sgx_spid_t sgxSPID = { "Decent X" };
 
-	//sgx_ec256_private_t* sgxRAPriKey = nullptr;
-	//sgx_ec256_public_t* sgxRAPubkey = nullptr;
-
-	//sgx_ecc_state_handle_t g_eccContext = nullptr;
-	//RAKeyManager* g_serverKeyMgr = nullptr;
 	std::map<std::string, std::pair<ServerRAState, RAKeyManager> > g_serversMap;
 	std::map<std::string, std::pair<ClientRAState, RAKeyManager> > g_clientsMap;
-	SGXCryptoManager g_cryptoMgr;
+	DecentCryptoManager g_cryptoMgr;
+
+	DecentNodeMode g_decentMode = DecentNodeMode::ROOT_SERVER;
 }
 
-//static void CleanRAKeys()
-//{
-//	delete sgxRAPriKey;
-//	sgxRAPriKey = nullptr;
-//
-//	delete sgxRAPubkey;
-//	sgxRAPubkey = nullptr;
-//}
-
-//inline bool IsRAKeyExist()
-//{
-//	return (!sgxRAPriKey || !sgxRAPubkey);
-//}
-
-bool AdjustSharedKeysServ(const std::string& id)
+bool IsBothWayAttested(const std::string& id)
 {
 	auto itServ = g_serversMap.find(id);
 	auto itClit = g_clientsMap.find(id);
@@ -67,6 +51,18 @@ bool AdjustSharedKeysServ(const std::string& id)
 	{
 		return false;
 	}
+
+	return true;
+}
+
+bool AdjustSharedKeysServ(const std::string& id)
+{
+	if (!IsBothWayAttested(id))
+	{
+		return false;
+	}
+	auto itServ = g_serversMap.find(id);
+	auto itClit = g_clientsMap.find(id);
 
 	itClit->second.second.SetSMK(itServ->second.second.GetSMK());
 	itClit->second.second.SetSK(itServ->second.second.GetSK());
@@ -74,22 +70,17 @@ bool AdjustSharedKeysServ(const std::string& id)
 	itClit->second.second.SetVK(itServ->second.second.GetVK());
 
 	enclave_printf("Adjusted Skey: %s\n", SerializeKey(itClit->second.second.GetSK()).c_str());
+	return true;
 }
 
 bool AdjustSharedKeysClit(const std::string& id)
 {
+	if (!IsBothWayAttested(id))
+	{
+		return false;
+	}
 	auto itServ = g_serversMap.find(id);
 	auto itClit = g_clientsMap.find(id);
-	if ((itServ == g_serversMap.end())
-		|| (itClit == g_clientsMap.end()))
-	{
-		return false;
-	}
-	if ((itClit->second.first != ClientRAState::ATTESTED)
-		|| (itServ->second.first != ServerRAState::ATTESTED))
-	{
-		return false;
-	}
 
 	itServ->second.second.SetSMK(itClit->second.second.GetSMK());
 	itServ->second.second.SetSK(itClit->second.second.GetSK());
@@ -97,52 +88,8 @@ bool AdjustSharedKeysClit(const std::string& id)
 	itServ->second.second.SetVK(itClit->second.second.GetVK());
 
 	enclave_printf("Adjusted Skey: %s\n", SerializeKey(itServ->second.second.GetSK()).c_str());
+	return true;
 }
-
-//sgx_status_t ecall_generate_ra_keys()
-//{
-//	sgx_status_t res = SGX_SUCCESS;
-//
-//	if (!g_eccContext)
-//	{
-//		//Context is empty, need to create a new one.
-//		res = sgx_ecc256_open_context(&g_eccContext);
-//	}
-//	
-//	//Context is not empty at this point.
-//	if (res != SGX_SUCCESS)
-//	{
-//		//Context generation failed, clean the memory, return the result.
-//		CleanRAKeys();
-//		return res;
-//	}
-//
-//	if (!sgxRAPriKey || !sgxRAPubkey)
-//	{
-//		//Key pairs are empty, need to generate new pair
-//		sgxRAPriKey = new sgx_ec256_private_t;
-//		sgxRAPubkey = new sgx_ec256_public_t;
-//		if (!sgxRAPriKey || !sgxRAPubkey)
-//		{
-//			//memory allocation failed, clean the memory, return the result.
-//			CleanRAKeys();
-//			return SGX_ERROR_OUT_OF_MEMORY;
-//		}
-//		else
-//		{
-//			//memory allocation success, try to create new key pair.
-//			res = sgx_ecc256_create_key_pair(sgxRAPriKey, sgxRAPubkey, g_eccContext);
-//		}
-//	}
-//	
-//	if (res != SGX_SUCCESS)
-//	{
-//		//Key pair generation failed, clean the memory.
-//		CleanRAKeys();
-//	}
-//
-//	return res;
-//}
 
 int EC_KEY_get_asn1_flag(const EC_KEY* key)
 {
@@ -691,4 +638,459 @@ bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key, uint8_t key_id, sgx_e
 		return false;
 	}
 	return true;
+}
+
+void ecall_set_decent_mode(DecentNodeMode inDecentMode)
+{
+	g_decentMode = inDecentMode;
+}
+
+DecentNodeMode ecall_get_decent_mode()
+{
+	return g_decentMode;
+}
+
+sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec256_private_t* outPriKey, sgx_aes_gcm_128bit_tag_t* outPriKeyMac, sgx_ec256_public_t* outPubKey, sgx_aes_gcm_128bit_tag_t* outPubKeyMac)
+{
+	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_clientsMap.find(clientID);
+
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(), 
+		reinterpret_cast<const uint8_t*>(&g_cryptoMgr.GetSignPriKey()), 
+		sizeof(sgx_ec256_private_t),
+		reinterpret_cast<uint8_t*>(outPriKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		outPriKeyMac
+		);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(&g_cryptoMgr.GetSignPubKey()),
+		sizeof(sgx_ec256_public_t),
+		reinterpret_cast<uint8_t*>(outPubKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		outPubKeyMac
+	);
+
+	return enclaveRes;
+}
+
+sgx_status_t ecall_get_protocol_encr_key(const char* clientID, sgx_ec256_private_t* outPriKey, sgx_aes_gcm_128bit_tag_t* outPriKeyMac, sgx_ec256_public_t* outPubKey, sgx_aes_gcm_128bit_tag_t* outPubKeyMac)
+{
+	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_clientsMap.find(clientID);
+
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(&g_cryptoMgr.GetEncrPriKey()),
+		sizeof(sgx_ec256_private_t),
+		reinterpret_cast<uint8_t*>(outPriKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		outPriKeyMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(&g_cryptoMgr.GetEncrPubKey()),
+		sizeof(sgx_ec256_public_t),
+		reinterpret_cast<uint8_t*>(outPubKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		outPubKeyMac
+	);
+
+	return enclaveRes;
+}
+
+sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_private_t* inPriKey, const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, const sgx_ec256_public_t* inPubKey, const sgx_aes_gcm_128bit_tag_t* inPubKeyMac)
+{
+	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_clientsMap.find(clientID);
+
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	sgx_ec256_private_t priKey;
+	enclaveRes = sgx_rijndael128GCM_decrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(inPriKey),
+		sizeof(sgx_ec256_private_t),
+		reinterpret_cast<uint8_t*>(&priKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		inPriKeyMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+	sgx_ec256_public_t pubKey;
+	enclaveRes = sgx_rijndael128GCM_decrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(inPubKey),
+		sizeof(sgx_ec256_public_t),
+		reinterpret_cast<uint8_t*>(&pubKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		inPubKeyMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	sgx_ec256_signature_t signSign;
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&pubKey), sizeof(sgx_ec256_public_t), &priKey, &signSign, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	sgx_ec256_signature_t encrSign;
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t), &priKey, &encrSign, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	g_cryptoMgr.SetSignPriKey(priKey);
+	g_cryptoMgr.SetSignPubKey(pubKey);
+	g_cryptoMgr.SetProtoSignPubKey(pubKey);
+	g_cryptoMgr.SetSignKeySign(signSign);
+	g_cryptoMgr.SetEncrKeySign(encrSign);
+
+	return enclaveRes;
+}
+
+sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_private_t* inPriKey, const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, const sgx_ec256_public_t* inPubKey, const sgx_aes_gcm_128bit_tag_t* inPubKeyMac)
+{
+	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_clientsMap.find(clientID);
+
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	sgx_ec256_private_t priKey;
+	enclaveRes = sgx_rijndael128GCM_decrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(inPriKey),
+		sizeof(sgx_ec256_private_t),
+		reinterpret_cast<uint8_t*>(&priKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		inPriKeyMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	sgx_ec256_public_t pubKey;
+	enclaveRes = sgx_rijndael128GCM_decrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(inPubKey),
+		sizeof(sgx_ec256_public_t),
+		reinterpret_cast<uint8_t*>(&pubKey),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		inPubKeyMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	sgx_ec256_signature_t encrSign;
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&encrSign), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr.GetSignPriKey()), &encrSign, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	g_cryptoMgr.SetEncrPriKey(priKey);
+	g_cryptoMgr.SetEncrPubKey(pubKey);
+	g_cryptoMgr.SetEncrKeySign(encrSign);
+
+	return enclaveRes;
+}
+
+sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256_public_t* inSignKey, const sgx_ec256_public_t* inEncrKey,
+	sgx_ec256_signature_t* outSignSign, sgx_aes_gcm_128bit_tag_t* outSignSignMac, sgx_ec256_signature_t* outEncrSign, sgx_aes_gcm_128bit_tag_t* outEncrSignMac)
+{
+	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_clientsMap.find(clientID);
+
+	RAKeyManager& clientKeyMgr = it->second.second;
+
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+	sgx_ec256_signature_t signSign;
+	sgx_ec256_signature_t encrSign;
+
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr.GetEncrPriKey()), &signSign, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr.GetEncrPriKey()), &encrSign, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(&signSign),
+		sizeof(sgx_ec256_signature_t),
+		reinterpret_cast<uint8_t*>(outSignSign),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		outSignSignMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(&encrSign),
+		sizeof(sgx_ec256_signature_t),
+		reinterpret_cast<uint8_t*>(outEncrSign),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		outEncrSignMac
+	);
+
+	return enclaveRes;
+}
+
+sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature_t* inSignSign, const sgx_aes_gcm_128bit_tag_t* inSignSignMac, const sgx_ec256_signature_t* inEncrSign, const sgx_aes_gcm_128bit_tag_t* inEncrSignMac)
+{
+	if (g_decentMode != DecentNodeMode::APPL_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_serversMap.find(clientID);
+
+	RAKeyManager& serverKeyMgr = it->second.second;
+
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+	sgx_ec256_signature_t signSign;
+	sgx_ec256_signature_t encrSign;
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_decrypt(&serverKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(inSignSign),
+		sizeof(sgx_ec256_signature_t),
+		reinterpret_cast<uint8_t*>(&signSign),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		inSignSignMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+	enclaveRes = sgx_rijndael128GCM_decrypt(&serverKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(inEncrSign),
+		sizeof(sgx_ec256_signature_t),
+		reinterpret_cast<uint8_t*>(&encrSign),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		inEncrSignMac
+	);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+
+	g_cryptoMgr.SetSignKeySign(signSign);
+	g_cryptoMgr.SetEncrKeySign(encrSign);
+
+	g_cryptoMgr.SetProtoSignPubKey(serverKeyMgr.GetSignKey());
+
+	return enclaveRes;
+}
+
+void ecall_get_key_signs(sgx_ec256_signature_t* outSignSign, sgx_ec256_signature_t* outEncrSign)
+{
+	std::memcpy(outSignSign, &g_cryptoMgr.GetSignKeySign(), sizeof(sgx_ec256_signature_t));
+	std::memcpy(outEncrSign, &g_cryptoMgr.GetEncrKeySign(), sizeof(sgx_ec256_signature_t));
+}
+
+sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public_t* inSignKey, const sgx_ec256_signature_t* inSignSign, const sgx_ec256_public_t* inEncrKey, const sgx_ec256_signature_t* inEncrSign)
+{
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	uint8_t verifyRes = 0;
+	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), &g_cryptoMgr.GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inSignSign), &verifyRes, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+	if (verifyRes != SGX_EC_VALID)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), &g_cryptoMgr.GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inEncrSign), &verifyRes, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		return enclaveRes;
+	}
+	if (verifyRes != SGX_EC_VALID)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	g_clientsMap.insert(std::make_pair<std::string, std::pair<ClientRAState, RAKeyManager> >(clientID, std::make_pair<ClientRAState, RAKeyManager>(ClientRAState::ATTESTED, RAKeyManager(*inSignKey))));
+	g_serversMap.insert(std::make_pair<std::string, std::pair<ServerRAState, RAKeyManager> >(clientID, std::make_pair<ServerRAState, RAKeyManager>(ServerRAState::ATTESTED, RAKeyManager(*inSignKey))));
+
+	RAKeyManager& svrMgr = g_clientsMap.find(clientID)->second.second;
+	RAKeyManager& cliMgr = g_serversMap.find(clientID)->second.second;
+
+	svrMgr.SetEncryptKey(*inEncrKey);
+	cliMgr.SetEncryptKey(*inEncrKey);
+
+
+	sgx_ec256_dh_shared_t sharedKey;
+	enclaveRes = sgx_ecc256_compute_shared_dhkey(const_cast<sgx_ec256_private_t*>(&(g_cryptoMgr.GetEncrPriKey())), &(svrMgr.GetEncryptKey()), &sharedKey, g_cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		DropClientRAState(clientID);
+		DropServerRAState(clientID);
+		return enclaveRes;
+	}
+	svrMgr.SetSharedKey(sharedKey);
+	cliMgr.SetSharedKey(sharedKey);
+
+	sgx_ec_key_128bit_t tmpDerivedKey;
+	bool keyDeriveRes = false;
+	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		DropClientRAState(clientID);
+		DropServerRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+	svrMgr.SetSMK(tmpDerivedKey);
+	cliMgr.SetSMK(tmpDerivedKey);
+
+	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		DropClientRAState(clientID);
+		DropServerRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+	svrMgr.SetSK(tmpDerivedKey);
+	cliMgr.SetSK(tmpDerivedKey);
+
+	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		DropClientRAState(clientID);
+		DropServerRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+	svrMgr.SetMK(tmpDerivedKey);
+	cliMgr.SetMK(tmpDerivedKey);
+
+	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
+	if (!keyDeriveRes)
+	{
+		DropClientRAState(clientID);
+		DropServerRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+	svrMgr.SetVK(tmpDerivedKey);
+	cliMgr.SetVK(tmpDerivedKey);
+
+	return enclaveRes;
 }
