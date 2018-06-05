@@ -20,6 +20,7 @@
 #include "../common_enclave/enclave_tools.h"
 #include "../common_enclave/RAConnection.h"
 #include "../common_enclave/RAKeyManager.h"
+#include "../common_enclave/SGXCryptoManager.h"
 
 #include "../common/CryptoTools.h"
 #include "../common/sgx_ra_msg4.h"
@@ -28,28 +29,29 @@ namespace
 {
 	sgx_spid_t sgxSPID = { "Decent X" };
 
-	sgx_ec256_private_t* sgxRAPriKey = nullptr;
-	sgx_ec256_public_t* sgxRAPubkey = nullptr;
+	//sgx_ec256_private_t* sgxRAPriKey = nullptr;
+	//sgx_ec256_public_t* sgxRAPubkey = nullptr;
 
-	sgx_ecc_state_handle_t g_eccContext = nullptr;
+	//sgx_ecc_state_handle_t g_eccContext = nullptr;
 	//RAKeyManager* g_serverKeyMgr = nullptr;
 	std::map<std::string, std::pair<ServerRAState, RAKeyManager> > g_serversMap;
 	std::map<std::string, std::pair<ClientRAState, RAKeyManager> > g_clientsMap;
+	SGXCryptoManager g_cryptoMgr;
 }
 
-static void CleanRAKeys()
-{
-	delete sgxRAPriKey;
-	sgxRAPriKey = nullptr;
+//static void CleanRAKeys()
+//{
+//	delete sgxRAPriKey;
+//	sgxRAPriKey = nullptr;
+//
+//	delete sgxRAPubkey;
+//	sgxRAPubkey = nullptr;
+//}
 
-	delete sgxRAPubkey;
-	sgxRAPubkey = nullptr;
-}
-
-inline bool IsRAKeyExist()
-{
-	return (!sgxRAPriKey || !sgxRAPubkey);
-}
+//inline bool IsRAKeyExist()
+//{
+//	return (!sgxRAPriKey || !sgxRAPubkey);
+//}
 
 bool AdjustSharedKeysServ(const std::string& id)
 {
@@ -97,50 +99,50 @@ bool AdjustSharedKeysClit(const std::string& id)
 	enclave_printf("Adjusted Skey: %s\n", SerializeKey(itServ->second.second.GetSK()).c_str());
 }
 
-sgx_status_t ecall_generate_ra_keys()
-{
-	sgx_status_t res = SGX_SUCCESS;
-
-	if (!g_eccContext)
-	{
-		//Context is empty, need to create a new one.
-		res = sgx_ecc256_open_context(&g_eccContext);
-	}
-	
-	//Context is not empty at this point.
-	if (res != SGX_SUCCESS)
-	{
-		//Context generation failed, clean the memory, return the result.
-		CleanRAKeys();
-		return res;
-	}
-
-	if (!sgxRAPriKey || !sgxRAPubkey)
-	{
-		//Key pairs are empty, need to generate new pair
-		sgxRAPriKey = new sgx_ec256_private_t;
-		sgxRAPubkey = new sgx_ec256_public_t;
-		if (!sgxRAPriKey || !sgxRAPubkey)
-		{
-			//memory allocation failed, clean the memory, return the result.
-			CleanRAKeys();
-			return SGX_ERROR_OUT_OF_MEMORY;
-		}
-		else
-		{
-			//memory allocation success, try to create new key pair.
-			res = sgx_ecc256_create_key_pair(sgxRAPriKey, sgxRAPubkey, g_eccContext);
-		}
-	}
-	
-	if (res != SGX_SUCCESS)
-	{
-		//Key pair generation failed, clean the memory.
-		CleanRAKeys();
-	}
-
-	return res;
-}
+//sgx_status_t ecall_generate_ra_keys()
+//{
+//	sgx_status_t res = SGX_SUCCESS;
+//
+//	if (!g_eccContext)
+//	{
+//		//Context is empty, need to create a new one.
+//		res = sgx_ecc256_open_context(&g_eccContext);
+//	}
+//	
+//	//Context is not empty at this point.
+//	if (res != SGX_SUCCESS)
+//	{
+//		//Context generation failed, clean the memory, return the result.
+//		CleanRAKeys();
+//		return res;
+//	}
+//
+//	if (!sgxRAPriKey || !sgxRAPubkey)
+//	{
+//		//Key pairs are empty, need to generate new pair
+//		sgxRAPriKey = new sgx_ec256_private_t;
+//		sgxRAPubkey = new sgx_ec256_public_t;
+//		if (!sgxRAPriKey || !sgxRAPubkey)
+//		{
+//			//memory allocation failed, clean the memory, return the result.
+//			CleanRAKeys();
+//			return SGX_ERROR_OUT_OF_MEMORY;
+//		}
+//		else
+//		{
+//			//memory allocation success, try to create new key pair.
+//			res = sgx_ecc256_create_key_pair(sgxRAPriKey, sgxRAPubkey, g_eccContext);
+//		}
+//	}
+//	
+//	if (res != SGX_SUCCESS)
+//	{
+//		//Key pair generation failed, clean the memory.
+//		CleanRAKeys();
+//	}
+//
+//	return res;
+//}
 
 int EC_KEY_get_asn1_flag(const EC_KEY* key)
 {
@@ -189,13 +191,12 @@ static void DropServerRAState(const std::string& serverID)
 sgx_status_t ecall_get_ra_pub_sig_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
 {
 	sgx_status_t res = SGX_SUCCESS;
-	res = ecall_generate_ra_keys();
-
-	if (res != SGX_SUCCESS)
+	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
 	{
-		return res;
+		return g_cryptoMgr.GetStatus();
 	}
-	memcpy(outKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
+
+	std::memcpy(outKey, &(g_cryptoMgr.GetSignPubKey()), sizeof(sgx_ec256_public_t));
 	return res;
 }
 
@@ -229,10 +230,13 @@ static sgx_status_t enclave_init_ra(const sgx_ec256_public_t *p_pub_key, int b_p
 sgx_status_t ecall_init_ra_environment()
 {
 	sgx_status_t res = SGX_SUCCESS;
+	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
+	{
+		return g_cryptoMgr.GetStatus();
+	}
 
 	std::string raPubKeyStr;
-	res = ecall_generate_ra_keys();
-	raPubKeyStr = SerializePubKey(*sgxRAPubkey);
+	raPubKeyStr = SerializePubKey(g_cryptoMgr.GetSignPubKey());
 	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
 	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
 	//enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
@@ -285,7 +289,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	clientKeyMgr.SetEncryptKey((inMsg1->g_a));
 
 	sgx_ec256_dh_shared_t sharedKey;
-	res = sgx_ecc256_compute_shared_dhkey(sgxRAPriKey, &(clientKeyMgr.GetEncryptKey()), &sharedKey, g_eccContext);
+	res = sgx_ecc256_compute_shared_dhkey(const_cast<sgx_ec256_private_t*>(&(g_cryptoMgr.GetEncrPriKey())), &(clientKeyMgr.GetEncryptKey()), &sharedKey, g_cryptoMgr.GetECC());
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
@@ -324,17 +328,17 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	}
 	clientKeyMgr.SetVK(tmpDerivedKey);
 
-	memcpy(&(outMsg2->g_b), sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	memcpy(&(outMsg2->g_b), &(g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t));
 	memcpy(&(outMsg2->spid), &sgxSPID, sizeof(sgxSPID));
 	outMsg2->quote_type = SGX_QUOTE_LINKABLE_SIGNATURE;
 
 	outMsg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
 
 	sgx_ec256_public_t gb_ga[2];
-	memcpy(&gb_ga[0], sgxRAPubkey, sizeof(sgx_ec256_public_t));
+	memcpy(&gb_ga[0], &(g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t));
 	memcpy(&gb_ga[1], &(clientKeyMgr.GetEncryptKey()), sizeof(sgx_ec256_public_t));
 
-	res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), sgxRAPriKey, &(outMsg2->sign_gb_ga), g_eccContext);
+	res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), const_cast<sgx_ec256_private_t*>(&(g_cryptoMgr.GetSignPriKey())), &(outMsg2->sign_gb_ga), g_cryptoMgr.GetECC());
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
@@ -461,7 +465,7 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		return res;
 	}
 
-	res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(sgxRAPubkey), sizeof(sgx_ec256_public_t), sha_handle);
+	res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t), sha_handle);
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
@@ -496,7 +500,7 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	outMsg4->pse_status = ias_pse_status_t::IAS_PSE_OK;
 	outMsg4->status = ias_quote_status_t::IAS_QUOTE_OK;
 
-	res = sgx_ecdsa_sign((uint8_t *)outMsg4, sizeof(sgx_ra_msg4_t), sgxRAPriKey, outMsg4Sign, g_eccContext);
+	res = sgx_ecdsa_sign((uint8_t *)outMsg4, sizeof(sgx_ra_msg4_t), const_cast<sgx_ec256_private_t*>(&(g_cryptoMgr.GetSignPriKey())), outMsg4Sign, g_cryptoMgr.GetECC());
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
@@ -527,7 +531,7 @@ sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* in
 	sgx_status_t res = SGX_SUCCESS;
 
 	uint8_t signVerifyRes = 0;
-	res = sgx_ecdsa_verify((uint8_t *)inMsg4, sizeof(sgx_ra_msg4_t), &(serverKeyMgr.GetSignKey()), inMsg4Sign, &signVerifyRes, g_eccContext);
+	res = sgx_ecdsa_verify((uint8_t *)inMsg4, sizeof(sgx_ra_msg4_t), &(serverKeyMgr.GetSignKey()), inMsg4Sign, &signVerifyRes, g_cryptoMgr.GetECC());
 	if (signVerifyRes != SGX_EC_VALID)
 	{
 		DropServerRAState(ServerID);
@@ -552,13 +556,13 @@ sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* in
 
 sgx_status_t ecall_termination_clean()
 {
-	CleanRAKeys();
+	//CleanRAKeys();
 
-	if (!g_eccContext)
-	{
-		sgx_ecc256_close_context(g_eccContext);
-		g_eccContext = nullptr;
-	}
+	//if (!g_eccContext)
+	//{
+	//	sgx_ecc256_close_context(g_eccContext);
+	//	g_eccContext = nullptr;
+	//}
 
 	g_serversMap.clear();
 	g_clientsMap.clear();
