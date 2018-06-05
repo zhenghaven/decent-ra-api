@@ -59,6 +59,8 @@ std::string DecentMessage::GetMessageTypeStr(const Type t)
 		return "ROOT_NODE_RESP";
 	case DecentMessage::Type::APPL_NODE_RESP:
 		return "APPL_NODE_RESP";
+	case DecentMessage::Type::DECENT_ERROR_MSG:
+		return "DECENT_ERROR_MSG";
 	default:
 		return "OTHER";
 	}

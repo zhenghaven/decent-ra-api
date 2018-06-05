@@ -11,6 +11,7 @@ public:
 		DECENT_KEY_REQ,
 		ROOT_NODE_RESP,
 		APPL_NODE_RESP,
+		DECENT_ERROR_MSG,
 		OTHER,
 	};
 public:

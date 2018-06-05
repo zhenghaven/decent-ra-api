@@ -190,3 +190,102 @@ DecentNodeMode ExampleEnclave::GetDecentMode()
 	m_lastStatus = enclaveRes;
 	return res;
 }
+
+sgx_status_t ExampleEnclave::GetProtocolSignKey(const std::string & id, sgx_ec256_private_t & outPriKey, sgx_aes_gcm_128bit_tag_t & outPriKeyMac, sgx_ec256_public_t & outPubKey, sgx_aes_gcm_128bit_tag_t & outPubKeyMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_get_protocol_sign_key(GetEnclaveId(), &retval, id.c_str(), &outPriKey, &outPriKeyMac, &outPubKey, &outPubKeyMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::GetProtocolEncrKey(const std::string & id, sgx_ec256_private_t & outPriKey, sgx_aes_gcm_128bit_tag_t & outPriKeyMac, sgx_ec256_public_t & outPubKey, sgx_aes_gcm_128bit_tag_t & outPubKeyMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_get_protocol_encr_key(GetEnclaveId(), &retval, id.c_str(), &outPriKey, &outPriKeyMac, &outPubKey, &outPubKeyMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::SetProtocolSignKey(const std::string & id, const sgx_ec256_private_t & inPriKey, const sgx_aes_gcm_128bit_tag_t & inPriKeyMac, const sgx_ec256_public_t & inPubKey, const sgx_aes_gcm_128bit_tag_t & inPubKeyMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_set_protocol_sign_key(GetEnclaveId(), &retval, id.c_str(), &inPriKey, &inPriKeyMac, &inPubKey, &inPubKeyMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::SetProtocolEncrKey(const std::string & id, const sgx_ec256_private_t & inPriKey, const sgx_aes_gcm_128bit_tag_t & inPriKeyMac, const sgx_ec256_public_t & inPubKey, const sgx_aes_gcm_128bit_tag_t & inPubKeyMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_set_protocol_encr_key(GetEnclaveId(), &retval, id.c_str(), &inPriKey, &inPriKeyMac, &inPubKey, &inPubKeyMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::GetProtocolKeySigned(const std::string & id, const sgx_ec256_public_t & inSignKey, const sgx_ec256_public_t & inEncrKey, sgx_ec256_signature_t & outSignSign, sgx_aes_gcm_128bit_tag_t & outSignSignMac, sgx_ec256_signature_t & outEncrSign, sgx_aes_gcm_128bit_tag_t & outEncrSignMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_get_protocol_key_signed(GetEnclaveId(), &retval, id.c_str(), &inSignKey, &inEncrKey, &outSignSign, &outSignSignMac, &outEncrSign, &outEncrSignMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::SetKeySigns(const std::string & id, const sgx_ec256_signature_t & inSignSign, const sgx_aes_gcm_128bit_tag_t & inSignSignMac, const sgx_ec256_signature_t & inEncrSign, const sgx_aes_gcm_128bit_tag_t & inEncrSignMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_set_key_signs(GetEnclaveId(), &retval, id.c_str(), &inSignSign, &inSignSignMac, &inEncrSign, &inEncrSignMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+void ExampleEnclave::GetKeySigns(sgx_ec256_signature_t & outSignSign, sgx_ec256_signature_t & outEncrSign)
+{
+	sgx_status_t res = SGX_SUCCESS;
+
+	res = ecall_get_key_signs(GetEnclaveId(), &outSignSign, &outEncrSign);
+
+	m_lastStatus = res;
+}
+
+sgx_status_t ExampleEnclave::ProcessDecentMsg0(const std::string & id, const sgx_ec256_public_t & inSignKey, const sgx_ec256_signature_t & inSignSign, const sgx_ec256_public_t & inEncrKey, const sgx_ec256_signature_t & inEncrSign)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_proc_decent_msg0(GetEnclaveId(), &retval, id.c_str(), &inSignKey, &inSignSign, &inEncrKey, &inEncrSign);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::GetSimpleSecret(const std::string & id, uint64_t & secret, sgx_aes_gcm_128bit_tag_t & outSecretMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_get_simple_secret(GetEnclaveId(), &retval, id.c_str(), &secret, &outSecretMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t ExampleEnclave::ProcessSimpleSecret(const std::string & id, const uint64_t & secret, const sgx_aes_gcm_128bit_tag_t & inSecretMac)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_proc_simple_secret(GetEnclaveId(), &retval, id.c_str(), &secret, &inSecretMac);
+
+	return res == SGX_SUCCESS ? retval : res;
+}

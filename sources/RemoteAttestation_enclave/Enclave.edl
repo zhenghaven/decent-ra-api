@@ -48,6 +48,10 @@ enclave {
 		public sgx_status_t ecall_set_key_signs([in, string] const char* clientID, [in] const sgx_ec256_signature_t* inSignSign, [in] const sgx_aes_gcm_128bit_tag_t* inSignSignMac, [in] const sgx_ec256_signature_t* inEncrSign, [in] const sgx_aes_gcm_128bit_tag_t* inEncrSignMac);
 		public void ecall_get_key_signs([out] sgx_ec256_signature_t* outSignSign, [out] sgx_ec256_signature_t* outEncrSign);
 		public sgx_status_t ecall_proc_decent_msg0([in, string] const char* clientID, [in] const sgx_ec256_public_t* inSignKey, [in] const sgx_ec256_signature_t* inSignSign, [in] const sgx_ec256_public_t* inEncrKey, [in] const sgx_ec256_signature_t* inEncrSign);
+		
+		public sgx_status_t ecall_get_simple_secret([in, string] const char* clientID, [out] uint64_t* secret, [out] sgx_aes_gcm_128bit_tag_t* outSecretMac);
+		public sgx_status_t ecall_proc_simple_secret([in, string] const char* clientID, [in] const uint64_t* secret, [in] const sgx_aes_gcm_128bit_tag_t* inSecretMac);
+
 	};
 
 };

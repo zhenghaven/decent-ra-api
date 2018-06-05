@@ -1094,3 +1094,74 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 
 	return enclaveRes;
 }
+
+sgx_status_t ecall_get_simple_secret(const char* clientID, uint64_t* secret, sgx_aes_gcm_128bit_tag_t* outSecretMac)
+{
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	static uint64_t simple_secret = 1234567;
+
+	if (g_decentMode != DecentNodeMode::APPL_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_serversMap.find(clientID);
+
+	RAKeyManager& serverKeyMgr = it->second.second;
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_encrypt(&serverKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(&simple_secret),
+		sizeof(uint64_t),
+		reinterpret_cast<uint8_t*>(secret),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		outSecretMac
+	);
+
+	enclave_printf("Encrypted a simple secret: %llu\n", simple_secret);
+
+	return enclaveRes;
+}
+
+sgx_status_t ecall_proc_simple_secret(const char* clientID, const uint64_t* secret, const sgx_aes_gcm_128bit_tag_t* inSecretMac)
+{
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	if (g_decentMode != DecentNodeMode::APPL_SERVER)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	if (!IsBothWayAttested(clientID))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	auto it = g_serversMap.find(clientID);
+
+	RAKeyManager& serverKeyMgr = it->second.second;
+	uint64_t simple_secret = 0;
+
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_decrypt(&serverKeyMgr.GetSK(),
+		reinterpret_cast<const uint8_t*>(secret),
+		sizeof(uint64_t),
+		reinterpret_cast<uint8_t*>(&simple_secret),
+		aes_gcm_iv,
+		SAMPLE_SP_IV_SIZE,
+		nullptr,
+		0,
+		inSecretMac
+	);
+
+	enclave_printf("Decrypted a simple secret: %llu\n", simple_secret);
+
+	return enclaveRes;
+}

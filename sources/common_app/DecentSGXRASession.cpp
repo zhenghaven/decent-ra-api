@@ -14,6 +14,12 @@
 #include "Networking/Connection.h"
 #include "../common/CryptoTools.h"
 
+#include "DecentMessages/DecentMessageMsg0.h"
+#include "DecentMessages/DecentMessageKeyReq.h"
+#include "DecentMessages/DecentMessageRootResp.h"
+#include "DecentMessages/DecentMessageApplResp.h"
+#include "DecentMessages/DecentMessageErr.h"
+
 namespace 
 {
 	std::map<std::string, DecentMessage::Type> g_msgTypeNameMap =
@@ -22,6 +28,7 @@ namespace
 		std::pair<std::string, DecentMessage::Type>("DECENT_KEY_REQ", DecentMessage::Type::DECENT_KEY_REQ),
 		std::pair<std::string, DecentMessage::Type>("ROOT_NODE_RESP", DecentMessage::Type::ROOT_NODE_RESP),
 		std::pair<std::string, DecentMessage::Type>("APPL_NODE_RESP", DecentMessage::Type::APPL_NODE_RESP),
+		std::pair<std::string, DecentMessage::Type>("DECENT_ERROR_MSG", DecentMessage::Type::DECENT_ERROR_MSG),
 		std::pair<std::string, DecentMessage::Type>("OTHER", DecentMessage::Type::OTHER),
 	};
 }
@@ -59,13 +66,15 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	switch (it->second)
 	{
 	case DecentMessage::Type::DECENT_MSG0:
-		return nullptr;//new SGXRAMessage0Send(jsonRoot);
+		return new DecentMessageMsg0(jsonRoot);
 	case DecentMessage::Type::DECENT_KEY_REQ:
-		return nullptr;//new SGXRAMessage0Resp(jsonRoot);
+		return new DecentMessageKeyReq(jsonRoot);
 	case DecentMessage::Type::ROOT_NODE_RESP:
-		return nullptr;//new SGXRAMessage1(jsonRoot);
+		return new DecentMessageRootResp(jsonRoot);
 	case DecentMessage::Type::APPL_NODE_RESP:
-		return nullptr;// new SGXRAMessage2(jsonRoot);
+		return new DecentMessageApplResp(jsonRoot);
+	case DecentMessage::Type::DECENT_ERROR_MSG:
+		return new DecentMessageErr(jsonRoot);
 	default:
 		return nullptr;
 	}
