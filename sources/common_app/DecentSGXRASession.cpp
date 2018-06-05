@@ -134,3 +134,165 @@ bool DecentSGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
 
 	return true;
 }
+
+bool DecentSGXRASession::ProcessClientSideKeyRequest(EnclaveBase & enclave)
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+	DecentSGXEnclave* decentEnc = dynamic_cast<DecentSGXEnclave*>(&enclave);
+	if (!decentEnc)
+	{
+		return false;
+	}
+	RAMessages* resp = nullptr;
+	std::string msgBuffer;
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	sgx_ec256_public_t signKey;
+	sgx_ec256_public_t encrKey;
+
+	decentEnc->GetRASignPubKey(signKey);
+	decentEnc->GetRAEncrPubKey(encrKey);
+	DecentMessageKeyReq msgKR(decentEnc->GetRASenderID(), decentEnc->GetDecentMode(), signKey, encrKey);
+	m_connection->Send(msgKR.ToJsonString());
+
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+	if (resp->GetMessgaeSubTypeStr() == DecentMessage::GetMessageTypeStr(DecentMessage::Type::DECENT_ERROR_MSG))
+	{
+		return false;
+	}
+	switch (decentEnc->GetDecentMode())
+	{
+	case DecentNodeMode::ROOT_SERVER:
+	{
+		DecentMessageRootResp* krResp = dynamic_cast<DecentMessageRootResp*>(resp);
+		if (!resp || !krResp || !krResp->IsValid())
+		{
+			delete resp;
+			return false;
+		}
+
+		enclaveRes = decentEnc->SetProtocolSignKey(krResp->GetSenderID(), krResp->GetPriSignKey(), krResp->GetPriSignKeyMac(), krResp->GetPubSignKey(), krResp->GetPubSignKeyMac());
+		if (enclaveRes != SGX_SUCCESS)
+		{
+			delete resp;
+			return false;
+		}
+		
+		enclaveRes = decentEnc->SetProtocolEncrKey(krResp->GetSenderID(), krResp->GetPriEncrKey(), krResp->GetPriEncrKeyMac(), krResp->GetPubEncrKey(), krResp->GetPubEncrKeyMac());
+		if (enclaveRes != SGX_SUCCESS)
+		{
+			delete resp;
+			return false;
+		}
+	}
+	break;
+	case DecentNodeMode::APPL_SERVER:
+	default:
+	{
+		DecentMessageApplResp* krResp = dynamic_cast<DecentMessageApplResp*>(resp);
+		if (!resp || !krResp || !krResp->IsValid())
+		{
+			delete resp;
+			return false;
+		}
+
+		enclaveRes = decentEnc->SetKeySigns(krResp->GetSenderID(), krResp->GetSignSign(), krResp->GetSignMac(), krResp->GetEncrSign(), krResp->GetEncrMac());
+		if (enclaveRes != SGX_SUCCESS)
+		{
+			delete resp;
+			return false;
+		}
+		
+	}
+	break;
+	}
+
+	delete resp;
+	return true;
+}
+
+bool DecentSGXRASession::ProcessServerSideKeyRequest(EnclaveBase & enclave)
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+	DecentSGXEnclave* decentEnc = dynamic_cast<DecentSGXEnclave*>(&enclave);
+	if (!decentEnc)
+	{
+		return false;
+	}
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	RAMessages* resp = nullptr;
+	std::string msgBuffer;
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+
+	DecentMessageKeyReq* msgKR = dynamic_cast<DecentMessageKeyReq*>(resp);
+	if (!resp || !msgKR || !msgKR->IsValid())
+	{
+		delete resp;
+		return false;
+	}
+
+	DecentMessage* krResp = nullptr;
+	switch (msgKR->GetMode())
+	{
+	case DecentNodeMode::ROOT_SERVER:
+	{
+		sgx_ec256_private_t priSignKey;
+		sgx_aes_gcm_128bit_tag_t priSignKeyMac;
+		sgx_ec256_public_t pubSignKey;
+		sgx_aes_gcm_128bit_tag_t pubSignKeyMac;
+		enclaveRes = decentEnc->GetProtocolSignKey(msgKR->GetSenderID(), priSignKey, priSignKeyMac, pubSignKey, pubSignKeyMac);
+		if (enclaveRes != SGX_SUCCESS)
+		{
+			delete resp;
+			DecentMessageErr errMsg(decentEnc->GetRASenderID(), "Enclave Process Error!");
+			m_connection->Send(errMsg.ToJsonString());
+			return false;
+		}
+
+		sgx_ec256_private_t priEncrKey;
+		sgx_aes_gcm_128bit_tag_t priEncrKeyMac;
+		sgx_ec256_public_t pubEncrKey;
+		sgx_aes_gcm_128bit_tag_t pubEncrKeyMac;
+		enclaveRes = decentEnc->GetProtocolEncrKey(msgKR->GetSenderID(), priEncrKey, priEncrKeyMac, pubEncrKey, pubEncrKeyMac);
+		if (enclaveRes != SGX_SUCCESS)
+		{
+			delete resp;
+			DecentMessageErr errMsg(decentEnc->GetRASenderID(), "Enclave Process Error!");
+			m_connection->Send(errMsg.ToJsonString());
+			return false;
+		}
+
+		krResp = new DecentMessageRootResp(decentEnc->GetRASenderID(), priSignKey, priSignKeyMac, pubSignKey, pubSignKeyMac,
+			priEncrKey, priEncrKeyMac, pubEncrKey, pubEncrKeyMac);
+	}
+		break;
+	case DecentNodeMode::APPL_SERVER:
+	default:
+	{
+		sgx_ec256_signature_t signSign;
+		sgx_aes_gcm_128bit_tag_t signMac;
+		sgx_ec256_signature_t encrSign;
+		sgx_aes_gcm_128bit_tag_t encrMac;
+		enclaveRes = decentEnc->GetProtocolKeySigned(msgKR->GetSenderID(), msgKR->GetSignKey(), msgKR->GetEncrKey(), signSign, signMac, encrSign, encrMac);
+
+		krResp = new DecentMessageApplResp(decentEnc->GetRASenderID(), signSign, signMac, encrSign, encrMac);
+	}
+		break;
+	}
+	m_connection->Send(krResp->ToJsonString());
+	delete krResp;
+
+	delete resp;
+	resp = nullptr;
+	msgKR = nullptr;
+	return true;
+}

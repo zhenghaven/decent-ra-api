@@ -19,6 +19,10 @@ public:
 
 	virtual bool ProcessServerSideRA(EnclaveBase& enclave) override;
 
+	virtual bool ProcessClientSideKeyRequest(EnclaveBase& enclave);
+
+	virtual bool ProcessServerSideKeyRequest(EnclaveBase& enclave);
+
 protected:
 
 private:

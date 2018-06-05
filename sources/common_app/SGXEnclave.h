@@ -40,7 +40,7 @@ public:
 	virtual uint32_t GetExGroupID() const;
 
 	virtual sgx_status_t GetRASignPubKey(sgx_ec256_public_t& outKey) = 0;
-	//virtual sgx_status_t GetRAEncrPubKey(sgx_ec256_public_t& outKey) = 0;
+	virtual sgx_status_t GetRAEncrPubKey(sgx_ec256_public_t& outKey) = 0;
 	virtual sgx_status_t InitRAEnvironment() = 0;
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) = 0;
 	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1) = 0;

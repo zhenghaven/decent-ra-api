@@ -61,7 +61,8 @@ DecentMessageRootResp::DecentMessageRootResp(Json::Value & msg) :
 		&& root["Untrusted"]["PriEncrKey"].isString()
 		&& root["Untrusted"]["PriEncrKeyMac"].isString()
 		&& root["Untrusted"]["PubEncrKey"].isString()
-		&& root["Untrusted"]["PubEncrKeyMac"].isString())
+		&& root["Untrusted"]["PubEncrKeyMac"].isString()
+		)
 	{
 		DeserializeStruct(root["Untrusted"]["PriSignKey"].asString(), m_priSignKey);
 		DeserializeStruct(root["Untrusted"]["PriSignKeyMac"].asString(), m_priSignKeyMac);
@@ -143,15 +144,15 @@ Json::Value & DecentMessageRootResp::GetJsonMsg(Json::Value & outJson) const
 
 	Json::Value jsonUntrusted;
 
-	jsonUntrusted["Untrusted"]["PriSignKey"] = SerializeStruct(m_priSignKey);
-	jsonUntrusted["Untrusted"]["PriSignKeyMac"] = SerializeStruct(m_priSignKeyMac);
-	jsonUntrusted["Untrusted"]["PubSignKey"] = SerializeStruct(m_pubSignKey);
-	jsonUntrusted["Untrusted"]["PubSignKeyMac"] = SerializeStruct(m_pubSignKeyMac);
+	jsonUntrusted["PriSignKey"] = SerializeStruct(m_priSignKey);
+	jsonUntrusted["PriSignKeyMac"] = SerializeStruct(m_priSignKeyMac);
+	jsonUntrusted["PubSignKey"] = SerializeStruct(m_pubSignKey);
+	jsonUntrusted["PubSignKeyMac"] = SerializeStruct(m_pubSignKeyMac);
 
-	jsonUntrusted["Untrusted"]["PriEncrKey"] = SerializeStruct(m_priEncrKey);
-	jsonUntrusted["Untrusted"]["PriEncrKeyMac"] = SerializeStruct(m_priEncrKeyMac);
-	jsonUntrusted["Untrusted"]["PubEncrKey"] = SerializeStruct(m_pubEncrKey);
-	jsonUntrusted["Untrusted"]["PubEncrKeyMac"] = SerializeStruct(m_pubEncrKeyMac);
+	jsonUntrusted["PriEncrKey"] = SerializeStruct(m_priEncrKey);
+	jsonUntrusted["PriEncrKeyMac"] = SerializeStruct(m_priEncrKeyMac);
+	jsonUntrusted["PubEncrKey"] = SerializeStruct(m_pubEncrKey);
+	jsonUntrusted["PubEncrKeyMac"] = SerializeStruct(m_pubEncrKeyMac);
 
 	child["MsgType"] = DecentMessage::GetMessageTypeStr(GetType());
 	child["Untrusted"] = jsonUntrusted;

@@ -34,6 +34,24 @@ std::unique_ptr<Connection> DecentSGXEnclave::RequestRootNodeRA(uint32_t ipAddr,
 	SGXRemoteAttestationSession RASession(connection, RemoteAttestationSession::Mode::Server);
 
 	res = RASession.ProcessServerSideRA(*this);
+	if (!res)
+	{
+		return nullptr;
+	}
+
+	RASession.SwapConnection(connection);
+	decentSession.SwapConnection(connection);
+	res = decentSession.RecvReverseRARequest();
+	if (!res)
+	{
+		return nullptr;
+	}
+
+	res = decentSession.ProcessClientSideKeyRequest(*this);
+	if (!res)
+	{
+		return nullptr;
+	}
 
 	return res ? RASession.ReleaseConnection() : nullptr;
 }
@@ -60,6 +78,24 @@ std::unique_ptr<Connection> DecentSGXEnclave::AcceptRootNodeRAConnection()
 	SGXRemoteAttestationSession RASession(connection, RemoteAttestationSession::Mode::Client);
 
 	res = RASession.ProcessClientSideRA(*this);
+	if (!res)
+	{
+		return nullptr;
+	}
+
+	RASession.SwapConnection(connection);
+	decentSession.SwapConnection(connection);
+	res = decentSession.SendReverseRARequest(GetRASenderID());
+	if (!res)
+	{
+		return nullptr;
+	}
+
+	res = decentSession.ProcessServerSideKeyRequest(*this);
+	if (!res)
+	{
+		return nullptr;
+	}
 
 	return res ? RASession.ReleaseConnection() : nullptr;
 }

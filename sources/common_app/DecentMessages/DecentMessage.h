@@ -26,9 +26,9 @@ public:
 
 	virtual std::string GetMessgaeSubTypeStr() const = 0;
 
-protected:
-
 	static std::string GetMessageTypeStr(const Type t);
+
+protected:
 
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 

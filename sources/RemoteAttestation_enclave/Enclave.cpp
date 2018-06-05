@@ -122,18 +122,17 @@ static void DropServerRAState(const std::string& serverID)
 	}
 }
 
-//sgx_status_t ecall_get_ra_pub_enc_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
-//{
-//	sgx_status_t res = SGX_SUCCESS;
-//	res = ecall_generate_ra_keys();
-//
-//	if (res != SGX_SUCCESS)
-//	{
-//		return res;
-//	}
-//	memcpy(outKey, sgxRAPubkey, sizeof(sgx_ec256_public_t));
-//	return res;
-//}
+sgx_status_t ecall_get_ra_pub_enc_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
+	{
+		return g_cryptoMgr.GetStatus();
+	}
+
+	std::memcpy(outKey, &(g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t));
+	return res;
+}
 
 sgx_status_t ecall_get_ra_pub_sig_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
 {
@@ -182,13 +181,8 @@ sgx_status_t ecall_init_ra_environment()
 		return g_cryptoMgr.GetStatus();
 	}
 
-	std::string raPubKeyStr;
-	raPubKeyStr = SerializePubKey(g_cryptoMgr.GetSignPubKey());
-	enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-	//raPubKeyStr = SerializePubKey(sgxRAPubkey);
-	//enclave_printf("Public key string: %s\n", raPubKeyStr.c_str());
-
-	//CleanRAKeys();
+	enclave_printf("Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr.GetSignPubKey()).c_str());
+	enclave_printf("Public Encr Key: %s\n", SerializePubKey(g_cryptoMgr.GetEncrPubKey()).c_str());
 
 	return res;
 }
@@ -813,6 +807,8 @@ sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_p
 	g_cryptoMgr.SetSignKeySign(signSign);
 	g_cryptoMgr.SetEncrKeySign(encrSign);
 
+	enclave_printf("New Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr.GetSignPubKey()).c_str());
+
 	return enclaveRes;
 }
 
@@ -876,6 +872,8 @@ sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_p
 	g_cryptoMgr.SetEncrPriKey(priKey);
 	g_cryptoMgr.SetEncrPubKey(pubKey);
 	g_cryptoMgr.SetEncrKeySign(encrSign);
+
+	enclave_printf("New Public Encr Key: %s\n", SerializePubKey(g_cryptoMgr.GetEncrPubKey()).c_str());
 
 	return enclaveRes;
 }
