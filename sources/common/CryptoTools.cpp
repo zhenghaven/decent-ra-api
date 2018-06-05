@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <sgx_tcrypto.h>
+#include <sgx_ecp_types.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
 
@@ -34,4 +35,17 @@ void DeserializeSignature(const std::string & inSignStr, sgx_ec256_signature_t &
 	cppcodec::base64_rfc4648::decode(buffer, inSignStr);
 
 	std::memcpy(&outSign, buffer.data(), sizeof(sgx_ec256_signature_t));
+}
+
+std::string SerializeKey(const sgx_ec_key_128bit_t & key)
+{
+	return cppcodec::base64_rfc4648::encode(reinterpret_cast<const char*>(&key), sizeof(sgx_ec_key_128bit_t));
+}
+
+void DeserializeKey(const std::string & inPubStr, sgx_ec_key_128bit_t & outKey)
+{
+	std::vector<uint8_t> buffer(sizeof(sgx_ec_key_128bit_t), 0);
+	cppcodec::base64_rfc4648::decode(buffer, inPubStr);
+
+	std::memcpy(&outKey, buffer.data(), sizeof(sgx_ec_key_128bit_t));
 }

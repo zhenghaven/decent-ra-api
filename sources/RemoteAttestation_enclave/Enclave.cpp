@@ -51,6 +51,52 @@ inline bool IsRAKeyExist()
 	return (!sgxRAPriKey || !sgxRAPubkey);
 }
 
+bool AdjustSharedKeysServ(const std::string& id)
+{
+	auto itServ = g_serversMap.find(id);
+	auto itClit = g_clientsMap.find(id);
+	if ((itServ == g_serversMap.end())
+		|| (itClit == g_clientsMap.end()))
+	{
+		return false;
+	}
+	if ((itClit->second.first != ClientRAState::ATTESTED)
+		|| (itServ->second.first != ServerRAState::ATTESTED))
+	{
+		return false;
+	}
+
+	itClit->second.second.SetSMK(itServ->second.second.GetSMK());
+	itClit->second.second.SetSK(itServ->second.second.GetSK());
+	itClit->second.second.SetMK(itServ->second.second.GetMK());
+	itClit->second.second.SetVK(itServ->second.second.GetVK());
+
+	enclave_printf("Adjusted Skey: %s\n", SerializeKey(itClit->second.second.GetSK()).c_str());
+}
+
+bool AdjustSharedKeysClit(const std::string& id)
+{
+	auto itServ = g_serversMap.find(id);
+	auto itClit = g_clientsMap.find(id);
+	if ((itServ == g_serversMap.end())
+		|| (itClit == g_clientsMap.end()))
+	{
+		return false;
+	}
+	if ((itClit->second.first != ClientRAState::ATTESTED)
+		|| (itServ->second.first != ServerRAState::ATTESTED))
+	{
+		return false;
+	}
+
+	itServ->second.second.SetSMK(itClit->second.second.GetSMK());
+	itServ->second.second.SetSK(itClit->second.second.GetSK());
+	itServ->second.second.SetMK(itClit->second.second.GetMK());
+	itServ->second.second.SetVK(itClit->second.second.GetVK());
+
+	enclave_printf("Adjusted Skey: %s\n", SerializeKey(itServ->second.second.GetSK()).c_str());
+}
+
 sgx_status_t ecall_generate_ra_keys()
 {
 	sgx_status_t res = SGX_SUCCESS;
@@ -459,6 +505,10 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 
 	it->second.first = ClientRAState::ATTESTED;
 
+	AdjustSharedKeysClit(clientID);
+
+	enclave_printf("Current Skey: %s\n", SerializeKey(clientKeyMgr.GetSK()).c_str());
+
 	return res;
 }
 
@@ -492,6 +542,10 @@ sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* in
 	it->second.first = ServerRAState::ATTESTED;
 
 	sgx_ra_close(inContextID);
+
+	AdjustSharedKeysServ(ServerID);
+
+	enclave_printf("Current Skey: %s\n", SerializeKey(serverKeyMgr.GetSK()).c_str());
 
 	return res;
 }
