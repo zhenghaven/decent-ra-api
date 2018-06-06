@@ -2,6 +2,7 @@
 
 #include <sgx_tcrypto.h>
 #include <sgx_tkey_exchange.h>
+#include <sgx_utils.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
 
@@ -35,6 +36,7 @@ namespace
 	DecentCryptoManager g_cryptoMgr;
 
 	DecentNodeMode g_decentMode = DecentNodeMode::ROOT_SERVER;
+	std::string g_selfHash = "";
 }
 
 bool IsBothWayAttested(const std::string& id)
@@ -183,6 +185,16 @@ sgx_status_t ecall_init_ra_environment()
 
 	enclave_printf("Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr.GetSignPubKey()).c_str());
 	enclave_printf("Public Encr Key: %s\n", SerializePubKey(g_cryptoMgr.GetEncrPubKey()).c_str());
+
+	sgx_report_t selfReport;
+	res = sgx_create_report(nullptr, nullptr, &selfReport);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	sgx_measurement_t& enclaveHash = selfReport.body.mr_enclave;
+	enclave_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
+	g_selfHash = SerializeStruct(enclaveHash);
 
 	return res;
 }
@@ -434,6 +446,14 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		return SGX_ERROR_UNEXPECTED;
 	}
 
+	const sgx_measurement_t& enclaveHash = p_quote->report_body.mr_enclave;
+	enclave_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
+	if (SerializeStruct(enclaveHash) != g_selfHash)
+	{
+		DropClientRAState(clientID);
+		enclave_printf("Program hash not matching!!\n");
+		return SGX_ERROR_UNEXPECTED;
+	}
 	//TODO: Verify quote report here.
 
 	//Temporary code here:
