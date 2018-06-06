@@ -918,12 +918,12 @@ sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256
 	sgx_ec256_signature_t signSign;
 	sgx_ec256_signature_t encrSign;
 
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr.GetEncrPriKey()), &signSign, g_cryptoMgr.GetECC());
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr.GetSignPriKey()), &signSign, g_cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes;
 	}
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr.GetEncrPriKey()), &encrSign, g_cryptoMgr.GetECC());
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr.GetSignPriKey()), &encrSign, g_cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes;
@@ -1012,6 +1012,9 @@ sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature
 	g_cryptoMgr.SetEncrKeySign(encrSign);
 
 	g_cryptoMgr.SetProtoSignPubKey(serverKeyMgr.GetSignKey());
+	enclave_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(g_cryptoMgr.GetProtoSignPubKey()).c_str());
+	enclave_printf("The Signature of Sign Pub Key is: %s\n", SerializeSignature(signSign).c_str());
+	enclave_printf("The Signature of Encr Pub Key is: %s\n", SerializeSignature(encrSign).c_str());
 
 	return enclaveRes;
 }
@@ -1034,6 +1037,7 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 	}
 	if (verifyRes != SGX_EC_VALID)
 	{
+		enclave_printf("The signature of Attestee's Sign key is invalid.\n");
 		return SGX_ERROR_UNEXPECTED;
 	}
 
@@ -1044,11 +1048,13 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 	}
 	if (verifyRes != SGX_EC_VALID)
 	{
+		enclave_printf("The signature of Attestee's Encr key is invalid.\n");
 		return SGX_ERROR_UNEXPECTED;
 	}
 
 	g_clientsMap.insert(std::make_pair<std::string, std::pair<ClientRAState, RAKeyManager> >(clientID, std::make_pair<ClientRAState, RAKeyManager>(ClientRAState::ATTESTED, RAKeyManager(*inSignKey))));
 	g_serversMap.insert(std::make_pair<std::string, std::pair<ServerRAState, RAKeyManager> >(clientID, std::make_pair<ServerRAState, RAKeyManager>(ServerRAState::ATTESTED, RAKeyManager(*inSignKey))));
+	enclave_printf("Accept new app server: %s\n", clientID);
 
 	RAKeyManager& svrMgr = g_clientsMap.find(clientID)->second.second;
 	RAKeyManager& cliMgr = g_serversMap.find(clientID)->second.second;

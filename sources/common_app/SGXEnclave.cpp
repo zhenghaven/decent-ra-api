@@ -103,7 +103,6 @@ std::unique_ptr<Connection> SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t port
 {
 	std::unique_ptr<Connection> connection(std::make_unique<Connection>(ipAddr, portNum));
 	SGXRemoteAttestationSession RASession(connection, RemoteAttestationSession::Mode::Client);
-	
 	bool res = RASession.ProcessClientSideRA(*this);
 	
 	return res ? RASession.ReleaseConnection() : nullptr;
@@ -131,12 +130,11 @@ bool SGXEnclave::IsRAServerLaunched() const
 
 std::unique_ptr<Connection> SGXEnclave::AcceptRAConnection()
 {
-	bool res = false;
+	std::unique_ptr<Connection> connection(m_raServer->AcceptRAConnection());
+	SGXRemoteAttestationSession RASession(connection, RemoteAttestationSession::Mode::Server);
+	bool res = RASession.ProcessServerSideRA(*this);
 
-	std::shared_ptr<SGXRemoteAttestationSession> session(dynamic_cast<SGXRemoteAttestationSession*>(m_raServer->AcceptRAConnection()));
-	res = session->ProcessServerSideRA(*this);
-
-	return res ? session->ReleaseConnection() : nullptr;
+	return res ? RASession.ReleaseConnection() : nullptr;
 }
 
 sgx_status_t SGXEnclave::GetLastStatus() const

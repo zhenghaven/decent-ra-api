@@ -296,3 +296,127 @@ bool DecentSGXRASession::ProcessServerSideKeyRequest(EnclaveBase & enclave)
 	msgKR = nullptr;
 	return true;
 }
+
+DecentMessageMsg0* ConstructMessage0(DecentSGXEnclave* decentEnc)
+{
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	sgx_ec256_public_t pubSignKey;
+	sgx_ec256_signature_t signSign;
+	sgx_ec256_public_t pubEncrKey;
+	sgx_ec256_signature_t encrSign;
+
+	enclaveRes = decentEnc->GetRASignPubKey(pubSignKey);
+
+	enclaveRes = (enclaveRes != SGX_SUCCESS) ? enclaveRes : decentEnc->GetRAEncrPubKey(pubEncrKey);
+
+	decentEnc->GetKeySigns(signSign, encrSign);
+
+	enclaveRes = (enclaveRes != SGX_SUCCESS) ? enclaveRes : decentEnc->GetLastStatus();
+
+	return (enclaveRes != SGX_SUCCESS) ? nullptr : new DecentMessageMsg0(decentEnc->GetRASenderID(), pubSignKey, signSign, pubEncrKey, encrSign);
+}
+
+bool DecentSGXRASession::ProcessClientMessage0(EnclaveBase & enclave)
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+	DecentSGXEnclave* decentEnc = dynamic_cast<DecentSGXEnclave*>(&enclave);
+	if (!decentEnc)
+	{
+		return false;
+	}
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	DecentMessageMsg0* msg0Req = ConstructMessage0(decentEnc);
+	if (!msg0Req)
+	{
+		return false;
+	}
+
+	m_connection->Send(msg0Req->ToJsonString());
+	delete msg0Req;
+	msg0Req = nullptr;
+
+
+	RAMessages* resp = nullptr;
+	std::string msgBuffer;
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+
+	DecentMessageMsg0* msg0Resp = dynamic_cast<DecentMessageMsg0*>(resp);
+	if (!resp || !msg0Resp || !msg0Resp->IsValid())
+	{
+		delete resp;
+		return false;
+	}
+
+	enclaveRes = decentEnc->ProcessDecentMsg0(msg0Resp->GetSenderID(), msg0Resp->GetSignKey(), msg0Resp->GetSignSign(), msg0Resp->GetEncrKey(), msg0Resp->GetEncrSign());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		delete resp;
+		return false;
+	}
+
+	delete resp;
+	resp = nullptr;
+	msg0Resp = nullptr;
+
+	return true;
+}
+
+bool DecentSGXRASession::ProcessServerMessage0(EnclaveBase & enclave)
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+	DecentSGXEnclave* decentEnc = dynamic_cast<DecentSGXEnclave*>(&enclave);
+	if (!decentEnc)
+	{
+		return false;
+	}
+	sgx_status_t enclaveRes = SGX_SUCCESS;
+
+	RAMessages* resp = nullptr;
+	std::string msgBuffer;
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+
+	DecentMessageMsg0* msg0req = dynamic_cast<DecentMessageMsg0*>(resp);
+	if (!resp || !msg0req || !msg0req->IsValid())
+	{
+		delete resp;
+		DecentMessageErr errMsg(decentEnc->GetRASenderID(), "Invalid Message!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	enclaveRes = decentEnc->ProcessDecentMsg0(msg0req->GetSenderID(), msg0req->GetSignKey(), msg0req->GetSignSign(), msg0req->GetEncrKey(), msg0req->GetEncrSign());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		delete resp;
+		DecentMessageErr errMsg(decentEnc->GetRASenderID(), "Enclave Process Error!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	delete resp;
+	resp = nullptr;
+	msg0req = nullptr;
+
+	DecentMessageMsg0* msg0Resp = ConstructMessage0(decentEnc);
+	if (!msg0Resp)
+	{
+		DecentMessageErr errMsg(decentEnc->GetRASenderID(), "Enclave Process Error!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
+	m_connection->Send(msg0Resp->ToJsonString());
+	delete msg0Resp;
+
+	return true;
+}

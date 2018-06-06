@@ -10,9 +10,10 @@ public:
 
 	~DecentSGXEnclave();
 
-	virtual std::unique_ptr<Connection> RequestRootNodeRA(uint32_t ipAddr, uint16_t portNum);
+	virtual std::unique_ptr<Connection> AcceptRAConnection() override;
+	virtual std::unique_ptr<Connection> RequestRA(uint32_t ipAddr, uint16_t portNum) override;
+	virtual std::unique_ptr<Connection> RequestAppNodeConnection(uint32_t ipAddr, uint16_t portNum);
 
-	virtual std::unique_ptr<Connection> AcceptRootNodeRAConnection();
 
 	virtual void SetDecentMode(DecentNodeMode inDecentMode) = 0;
 
@@ -30,5 +31,8 @@ public:
 protected:
 
 private:
+	virtual std::unique_ptr<Connection> AcceptRootNodeRAConnection();
+	virtual std::unique_ptr<Connection> RequestRootNodeRA(uint32_t ipAddr, uint16_t portNum);
 
+	virtual std::unique_ptr<Connection> AcceptAppNodeConnection();
 };

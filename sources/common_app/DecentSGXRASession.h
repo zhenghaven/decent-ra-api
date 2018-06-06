@@ -23,6 +23,10 @@ public:
 
 	virtual bool ProcessServerSideKeyRequest(EnclaveBase& enclave);
 
+	virtual bool ProcessClientMessage0(EnclaveBase& enclave);
+
+	virtual bool ProcessServerMessage0(EnclaveBase& enclave);
+
 protected:
 
 private:

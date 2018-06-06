@@ -9,7 +9,7 @@ public:
 	SGXRemoteAttestationServer(uint32_t ipAddr, uint16_t portNum);
 	~SGXRemoteAttestationServer();
 
-	virtual RemoteAttestationSession* AcceptRAConnection(size_t bufferSize = 5000U) override;
+	virtual std::unique_ptr<Connection> AcceptRAConnection(size_t bufferSize = 5000U) override;
 
 private:
 

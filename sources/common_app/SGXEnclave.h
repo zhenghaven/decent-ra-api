@@ -66,12 +66,12 @@ protected:
 	uint32_t m_exGroupID;
 	sgx_status_t m_lastStatus;
 
+	SGXRemoteAttestationServer* m_raServer;
+
 private:
 	sgx_enclave_id_t m_eid;
 	std::vector<uint8_t> m_token;
 
 	const std::string m_enclavePath;
 	const fs::path m_tokenPath;
-
-	SGXRemoteAttestationServer* m_raServer;
 };
