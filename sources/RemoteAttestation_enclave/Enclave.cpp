@@ -1150,7 +1150,7 @@ sgx_status_t ecall_get_simple_secret(const char* clientID, uint64_t* secret, sgx
 		outSecretMac
 	);
 
-	enclave_printf("Encrypted a simple secret: %llu\n", simple_secret);
+	enclave_printf("\n-Inside Enclave- Encrypted a simple secret: %llu\n\n", simple_secret);
 
 	return enclaveRes;
 }
@@ -1185,7 +1185,7 @@ sgx_status_t ecall_proc_simple_secret(const char* clientID, const uint64_t* secr
 		inSecretMac
 	);
 
-	enclave_printf("Decrypted a simple secret: %llu\n", simple_secret);
+	enclave_printf("\n-Inside Enclave- Decrypted a simple secret: %llu\n\n", simple_secret);
 
 	return enclaveRes;
 }

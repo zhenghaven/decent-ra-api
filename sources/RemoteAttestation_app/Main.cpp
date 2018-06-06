@@ -4,19 +4,18 @@
 #include <string>
 #include <iostream>
 
-#include <sgx_urts.h>
-#include <sgx_uae_service.h>
-
 #include <tclap/CmdLine.h>
 #include <boost/asio/ip/address_v4.hpp>
+#include <json/json.h>
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
-//#include "../common_app/SGXRemoteAttestationSession.h"
 
 #include "../common_app/Networking/Connection.h"
 
 #include "ExampleEnclave.h"
+#include "SimpleMessage.h"
+#include "../common_app/RAMessageRevRAReq.h"
 
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
@@ -46,6 +45,13 @@ int SGX_CDECL main(int argc, char *argv[])
 
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;
+
+	Json::Value jsonRoot;
+	Json::CharReaderBuilder rbuilder;
+	rbuilder["collectComments"] = false;
+	std::string errStr;
+
+	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
 
 #ifdef RA_SERVER_SIDE
 	std::cout << "================ This is server side ================" << std::endl;
@@ -81,6 +87,17 @@ int SGX_CDECL main(int argc, char *argv[])
 
 		exp.LaunchRAServer(hostIP, 57750U);
 		std::unique_ptr<Connection> connection2 = exp.AcceptRAConnection();
+
+		std::string buffer;
+		connection2->Receive(buffer);
+		reader->parse(buffer.c_str(), buffer.c_str() + buffer.size(), &jsonRoot, &errStr);
+
+		RAMessageRevRAReq revMsg(jsonRoot);
+		uint64_t secret;
+		sgx_aes_gcm_128bit_tag_t secretMac;
+		exp.GetSimpleSecret(revMsg.GetSenderID(), secret, secretMac);
+		SimpleMessage sMsg(exp.GetRASenderID(), secret, secretMac);
+		connection2->Send(sMsg.ToJsonString());
 	}
 	break;
 	case 3:
@@ -89,6 +106,16 @@ int SGX_CDECL main(int argc, char *argv[])
 		std::unique_ptr<Connection> connection = exp.RequestRA(hostIP, hostPort);
 
 		std::unique_ptr<Connection> connection2 = exp.RequestAppNodeConnection(hostIP, 57750U);
+		RAMessageRevRAReq revMsg(exp.GetRASenderID());
+		connection2->Send(revMsg.ToJsonString());
+
+		std::string buffer;
+		connection2->Receive(buffer);
+		reader->parse(buffer.c_str(), buffer.c_str() + buffer.size(), &jsonRoot, &errStr);
+
+		SimpleMessage sMsg(jsonRoot);
+		exp.ProcessSimpleSecret(sMsg.GetSenderID(), sMsg.GetSecret(), sMsg.GetSecretMac());
+
 	}
 	break;
 	default:
