@@ -29,7 +29,24 @@
 
 namespace 
 {
-	sgx_spid_t sgxSPID = { "Decent X" };
+	sgx_spid_t sgxSPID = { {
+		0xBE,
+		0x58,
+		0x76,
+		0x4E,
+		0x4D,
+		0xAF,
+		0x05,
+		0xB3,
+		0xA8,
+		0xC9,
+		0x28,
+		0x0D,
+		0xFE,
+		0x40,
+		0x16,
+		0xDD,
+		} };
 
 	std::map<std::string, std::pair<ServerRAState, RAKeyManager> > g_serversMap;
 	std::map<std::string, std::pair<ClientRAState, RAKeyManager> > g_clientsMap;
