@@ -1,87 +1,57 @@
 cmake_minimum_required(VERSION 3.11)
 
+#==========================================================
+#   Setup Hunter
+#==========================================================
+
+set(gate_dir "${CMAKE_CURRENT_LIST_DIR}/hunter/gate")
+set(gate_module "${gate_dir}/cmake/HunterGate.cmake")
+
+get_filename_component(gate_module "${gate_module}" ABSOLUTE)
+
+if(NOT EXISTS "${gate_module}")
+	message(FATAL_ERROR "${gate_module} module not found!")
+endif()
+
+message("Including HunterGate: ${gate_module}")
+include("${gate_module}")
+
+get_filename_component(HUNTER_ROOT "${CMAKE_CURRENT_LIST_DIR}/hunter" ABSOLUTE)
+HunterGate(URL "x" SHA1 "xxxxxxxx" FILEPATH ${CMAKE_CURRENT_LIST_DIR}/HunterConfig.cmake)
+
+#==========================================================
+#   Start Decent Project
+#==========================================================
 project(decent)
 
+#==========================================================
+#   Options for Decent Project
+#==========================================================
 set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module" FORCE)
 
-#Add any required boost libraries here:
-set(BOOST_Req_Libs filesystem date_time)
-
-### Setup and find boost ###
-
-set(BOOST_ROOT "${CMAKE_CURRENT_BINARY_DIR}/libs/boost")
-set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
-
-set(Boost_LIBRARY_DIR_RELEASE "${BOOST_ROOT}/lib")
-set(Boost_LIBRARY_DIR_DEBUG "${BOOST_ROOT}/lib")
-set(Boost_LIBRARY_DIR "${BOOST_ROOT}/lib")
-#set(Boost_DEBUG ON)
-#set(Boost_DETAILED_FAILURE_MSG ON)
+#==========================================================
+#   Add Hunter Libraries
+#==========================================================
+hunter_add_package(Boost COMPONENTS filesystem date_time)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_NO_SYSTEM_PATHS ON)
-if(MSVC)
-	set(Boost_COMPILER -vc141)
-endif()
-
-if(NOT EXISTS ${BOOST_ROOT})
-	file(MAKE_DIRECTORY ${BOOST_ROOT})
-endif()
-
-find_package(Boost 1.66.0 COMPONENTS ${BOOST_Req_Libs})
-
-if(NOT Boost_FOUND)
-	if(MSVC)
-		foreach(lib_name IN LISTS BOOST_Req_Libs)
-			set(BOOST_BUILD_LIB_LIST ${BOOST_BUILD_LIB_LIST} --with-${lib_name})
-		endforeach()
-		set(BOOST_UPDATE_COMMAND "")
-		set(BOOST_CONFIGURE_COMMAND bootstrap.bat)
-		set(BOOST_BUILD_COMMAND b2 toolset=msvc-14.1 address-model=64 architecture=x86 link=static runtime-link=static install --prefix=${BOOST_ROOT} ${BOOST_BUILD_LIB_LIST})
-		set(BOOST_INSTALL_COMMAND "")
-	else()
-		foreach(lib_name IN LISTS BOOST_Req_Libs)
-			if(NOT DEFINED BOOST_BUILD_LIB_LIST)
-				set(BOOST_BUILD_LIB_LIST ${lib_name})
-			else()
-				set(BOOST_BUILD_LIB_LIST ${BOOST_BUILD_LIB_LIST},${lib_name})
-			endif()
-		endforeach()
-		set(BOOST_UPDATE_COMMAND "")
-		set(BOOST_CONFIGURE_COMMAND ./bootstrap.sh --prefix=${BOOST_ROOT} --with-libraries=${BOOST_BUILD_LIB_LIST})
-		set(BOOST_BUILD_COMMAND ./bjam install)
-		set(BOOST_INSTALL_COMMAND "")
-	endif()
-
-	message(STATUS "==================================================")
-	message(STATUS "Building Boost...")
-	message(STATUS "${BOOST_CONFIGURE_COMMAND}")
-	execute_process(COMMAND ${BOOST_CONFIGURE_COMMAND}
-					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
-					OUTPUT_FILE "${BOOST_ROOT}/build_output1.txt"
-					)
-
-	message(STATUS "${BOOST_BUILD_COMMAND}")
-	execute_process(COMMAND ${BOOST_BUILD_COMMAND}
-					WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/libs/boost
-					OUTPUT_FILE "${BOOST_ROOT}/build_output2.txt"
-					)
-	message(STATUS "Build completed. Build log can be found at ${BOOST_ROOT}/build_output.txt")
-	message(STATUS "==================================================")
-endif()
+find_package(Boost CONFIG REQUIRED system filesystem date_time)
 
 message(STATUS "==================================================")
 message(STATUS "Looking for Boost library in ${BOOST_ROOT}...")
-find_package(Boost 1.66.0 COMPONENTS ${BOOST_Req_Libs} REQUIRED)
 message(STATUS "Boost found?: ${Boost_FOUND}")
 message(STATUS "Boost Include Dir: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost Library Dir: ${Boost_LIBRARY_DIRS}")
 message(STATUS "Boost Libraries: ${Boost_LIBRARIES}")
 message(STATUS "==================================================")
 
-### End Setup and find boost ###
+#hunter_add_package(OpenSSL)
+#find_package(OpenSSL REQUIRED)
 
-### Setup options ###
+#==========================================================
+#   Setup options
+#==========================================================
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_STATIC_LIBS "Build static libraries" ON)
@@ -90,13 +60,6 @@ option(JSONCPP_WITH_TESTS OFF)
 option(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
-set(json_LIB jsoncpp_lib_static)
-
-if(OPENSSL_USE_STATIC_LIBS)
-	message("Using static openssl lib.")
-else()
-	message("Using shared openssl lib!!!")
-endif()
 
 if(MSVC)
 	set(COMMON_OPTIONS /W3 /wd4996 /we4239 /we4002 /we4700 /we4305 /EHsc /MP)
@@ -176,12 +139,6 @@ set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
 ### END Setup options ###
 
 ### Add Sub-modules ###
-
-###### Add from Hunter ######
-#hunter_add_package(OpenSSL)
-#find_package(OpenSSL REQUIRED)
-
-###### END Add from Hunter ######
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
@@ -266,7 +223,10 @@ target_link_libraries(LibTest_App
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
 					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
-					${Boost_LIBRARIES}
+					#${Boost_LIBRARIES}
+					Boost::filesystem
+					Boost::date_time
+					Boost::system
 					)
 
 
@@ -376,9 +336,11 @@ target_link_libraries(RemoteAttestation_App
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
-					${json_LIB}
+					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
-					${Boost_LIBRARIES}
+					Boost::filesystem
+					Boost::date_time
+					Boost::system
 				)
 
 ###########################################################
@@ -419,9 +381,11 @@ target_link_libraries(RemoteAttestationR_App
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
-					${json_LIB}
+					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
-					${Boost_LIBRARIES}
+					Boost::filesystem
+					Boost::date_time
+					Boost::system
 				)
 
 ### Config Flags for Linux OS ###
