@@ -16,10 +16,12 @@
 [submodule "libs/cppcodec"]
 	path = libs/cppcodec
 	url = https://github.com/tplgy/cppcodec.git
-
 [submodule "libs/enclaveRapidJson"]
 	path = libs/enclaveRapidJson
 	url = https://github.com/zhenghaven/enclaveRapidJson.git
 [submodule "libs/tclap"]
 	path = libs/tclap
 	url = https://git.code.sf.net/p/tclap/code
+[submodule "libs/curl"]
+	path = libs/curl
+	url = https://github.com/curl/curl.git
