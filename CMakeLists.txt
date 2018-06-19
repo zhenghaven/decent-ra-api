@@ -47,8 +47,8 @@ message(STATUS "Boost Library Dir: ${Boost_LIBRARY_DIRS}")
 message(STATUS "Boost Libraries: ${Boost_LIBRARIES}")
 message(STATUS "==================================================")
 
-#hunter_add_package(OpenSSL)
-#find_package(OpenSSL REQUIRED)
+hunter_add_package(OpenSSL)
+find_package(OpenSSL REQUIRED)
 
 #==========================================================
 #   Setup options
@@ -218,8 +218,8 @@ if(MSVC)
 endif()
 
 target_link_libraries(LibTest_App 
-#					OpenSSL::SSL 
-#					OpenSSL::Crypto 
+					OpenSSL::SSL 
+					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
