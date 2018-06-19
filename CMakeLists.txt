@@ -50,6 +50,9 @@ message(STATUS "==================================================")
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 
+hunter_add_package(ZLIB)
+find_package(ZLIB REQUIRED)
+
 #==========================================================
 #   Setup options
 #==========================================================
@@ -141,12 +144,22 @@ set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
 #   Add submodules
 #==========================================================
 
+set(BUILD_CURL_EXE OFF CACHE BOOL "Set to ON to build CURL executable." FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "Set to ON to build libcurl test libraries." FORCE)
+set(CURL_STATICLIB ON CACHE BOOL "Set to ON to build libcurl with static linking." FORCE)
+set(CMAKE_USE_OPENSSL ON CACHE BOOL "Set to ON to build libcurl with OpenSSL." FORCE)
+option(HTTP_ONLY ON)
+option(ENABLE_MANUAL OFF)
+
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/curl)
 
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/enclaveRapidJson/include)
 set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
+set(CURL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/curl/include)
 
 #==========================================================
 #   Add files
