@@ -10,9 +10,6 @@
 [submodule "libs/Intel_SGX/linux-sgx"]
 	path = libs/Intel_SGX/linux-sgx
 	url = https://github.com/intel/linux-sgx.git
-[submodule "libs/boost"]
-	path = libs/boost
-	url = https://github.com/boostorg/boost.git
 [submodule "libs/Intel_SGX/intel-sgx-ssl"]
 	path = libs/Intel_SGX/intel-sgx-ssl
 	url = https://github.com/intel/intel-sgx-ssl.git
