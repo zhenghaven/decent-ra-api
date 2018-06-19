@@ -137,9 +137,9 @@ set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS Debug DebugSimulation)
 set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
 
-### END Setup options ###
-
-### Add Sub-modules ###
+#==========================================================
+#   Add submodules
+#==========================================================
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
@@ -148,9 +148,10 @@ set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/enclaveRapidJson/include)
 set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 
-### END Add Sub-modules ###
+#==========================================================
+#   Add files
+#==========================================================
 
-# All files:
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/*.[ch]* ${CMAKE_CURRENT_LIST_DIR}/sources/*.edl)
 
 # Common files:
@@ -167,7 +168,9 @@ file(GLOB_RECURSE SOURCES_RemoteAttestation_App ${CMAKE_CURRENT_LIST_DIR}/source
 file(GLOB_RECURSE SOURCES_RemoteAttestation_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.[ch]*)
 file(GLOB_RECURSE SOURCES_RemoteAttestation_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.edl)
 
-### Filters ###
+#==========================================================
+#   Setup filters
+#==========================================================
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/sources FILES ${SOURCES})
 # Common Groups
@@ -183,9 +186,10 @@ source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/sources FILES ${SOURCES})
 # source_group(RemoteAttestation_Enclave FILES ${SOURCES_RemoteAttestation_Enclave})
 # source_group(RemoteAttestation_EDLs FILES ${SOURCES_RemoteAttestation_EDL})
 
-### End Filters ###
+#==========================================================
+#   G++ linking flags
+#==========================================================
 
-### Library link flags ###
 if(MSVC)
 	set(WHOLE_ARCHIVE_FLAG_BEGIN "")
 	set(WHOLE_ARCHIVE_FLAG_END "")
