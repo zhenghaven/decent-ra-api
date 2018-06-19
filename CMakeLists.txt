@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.11)
 
 #==========================================================
+#   Options for Decent Project
+#==========================================================
+set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module." FORCE)
+set(HUNTER_BOOST_RUNTIME_STATIC ON CACHE BOOL "Switch for using boost runtime static linking." FORCE)
+
+#==========================================================
 #   Setup Hunter
 #==========================================================
 
@@ -25,16 +31,11 @@ HunterGate(URL "x" SHA1 "xxxxxxxx" FILEPATH ${CMAKE_CURRENT_LIST_DIR}/HunterConf
 project(decent)
 
 #==========================================================
-#   Options for Decent Project
-#==========================================================
-set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module" FORCE)
-
-#==========================================================
 #   Add Hunter Libraries
 #==========================================================
 hunter_add_package(Boost COMPONENTS filesystem date_time)
 set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
+set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
 set(Boost_NO_SYSTEM_PATHS ON)
 find_package(Boost CONFIG REQUIRED system filesystem date_time)
 

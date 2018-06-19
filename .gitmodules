@@ -1,6 +1,6 @@
 [submodule "hunter"]
 	path = hunter
-	url = https://github.com/ruslo/hunter.git
+	url = https://github.com/zhenghaven/hunter.git
 [submodule "libs/jsoncpp"]
 	path = libs/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
