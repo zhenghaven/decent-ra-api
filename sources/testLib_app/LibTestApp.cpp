@@ -6,6 +6,7 @@
 //#include <openssl/crypto.h>
 #include <json/json.h>
 #include <sgx_uae_service.h>
+#include <curl/curl.h>
 
 #ifdef _MSC_VER
 
@@ -64,6 +65,18 @@ int main() {
 
 #endif
 	
+	CURL *hnd = curl_easy_init();
+
+	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "GET");
+	curl_easy_setopt(hnd, CURLOPT_URL, "https://google.com");
+	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
+	curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L);
+
+	struct curl_slist *headers = NULL;
+	headers = curl_slist_append(headers, "Cache-Control: no-cache");
+	curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers);
+
+	CURLcode ret = curl_easy_perform(hnd);
 
 	std::cout << "Done! Enter anything to exit..." << std::endl;
 	getchar();

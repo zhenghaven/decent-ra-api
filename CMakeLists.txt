@@ -224,24 +224,26 @@ target_include_directories(LibTest_App
 							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							PRIVATE ${Boost_INCLUDE_DIRS} 
 							PRIVATE ${TCLAP_INCLUDE_DIR}
+							PRIVATE ${CURL_INCLUDE_DIR}
 							PRIVATE ${CPPCODEC_INCLUDE_DIR})
 
 if(MSVC)
-	target_compile_definitions(LibTest_App PRIVATE WIN32_LEAN_AND_MEAN)
+	target_compile_definitions(LibTest_App PRIVATE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
 endif()
 
 target_link_libraries(LibTest_App 
-					OpenSSL::SSL 
-					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
-					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
 					#${Boost_LIBRARIES}
+					jsoncpp_lib_static
+					libcurl
+					OpenSSL::SSL 
+					OpenSSL::Crypto 
 					Boost::filesystem
 					Boost::date_time
 					Boost::system
