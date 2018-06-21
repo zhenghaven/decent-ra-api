@@ -78,6 +78,8 @@ int main() {
 
 	CURLcode ret = curl_easy_perform(hnd);
 
+	curl_easy_cleanup(hnd);
+
 	std::cout << "Done! Enter anything to exit..." << std::endl;
 	getchar();
 

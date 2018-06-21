@@ -42,6 +42,9 @@ fs::path GetKnownFolderPath(KnownFolderType type)
 	case KnownFolderType::LocalAppDataEnclave:
 		folderId = FOLDERID_LocalAppData;
 		break;
+	case KnownFolderType::Home:
+		folderId = FOLDERID_Profile;
+		break;
 	case KnownFolderType::Desktop:
 		folderId = FOLDERID_Desktop;
 		break;
@@ -82,6 +85,7 @@ fs::path GetKnownFolderPath(KnownFolderType type)
 		fs::path resPath(homePath);
 		switch (type)
 		{
+		case KnownFolderType::Home:
 		case KnownFolderType::LocalAppData:
 			break;
 		case KnownFolderType::LocalAppDataEnclave:

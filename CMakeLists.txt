@@ -67,8 +67,8 @@ set(OPENSSL_USE_STATIC_LIBS TRUE)
 
 if(MSVC)
 	set(COMMON_OPTIONS /W3 /wd4996 /we4239 /we4002 /we4700 /we4305 /EHsc /MP)
-	set(DEBUG_OPTIONS /MTd /Od /Zi)
-	set(RELEASE_OPTIONS /MT /Ox /fp:fast /GL /GR-)
+	set(DEBUG_OPTIONS /MTd /Od /Zi /DDEBUG)
+	set(RELEASE_OPTIONS /MT /Ox /fp:fast /GL /GR- /DNDEBUG)
 	
 	set(ENCLAVE_OPTIONS "/NODEFAULTLIB /NOENTRY")
 #elseif(APPLE)
@@ -328,12 +328,13 @@ target_include_directories(RemoteAttestation_App
 							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							PRIVATE ${Boost_INCLUDE_DIRS} 
 							PRIVATE ${TCLAP_INCLUDE_DIR}
+							PRIVATE ${CURL_INCLUDE_DIR}
 							PRIVATE ${CPPCODEC_INCLUDE_DIR})
 
 if(MSVC)
-	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE WIN32_LEAN_AND_MEAN)
+	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
 else()
-	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE)
+	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE CURL_STATICLIB)
 endif()
 
 add_custom_command(TARGET RemoteAttestation_App
@@ -348,16 +349,17 @@ add_custom_command(TARGET RemoteAttestation_App
 )
 
 target_link_libraries(RemoteAttestation_App 
-#					OpenSSL::SSL 
-#					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
-					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
+					jsoncpp_lib_static
+					libcurl
+					OpenSSL::SSL 
+					OpenSSL::Crypto 
 					Boost::filesystem
 					Boost::date_time
 					Boost::system
@@ -373,12 +375,13 @@ target_include_directories(RemoteAttestationR_App
 							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							PRIVATE ${Boost_INCLUDE_DIRS} 
 							PRIVATE ${TCLAP_INCLUDE_DIR}
+							PRIVATE ${CURL_INCLUDE_DIR}
 							PRIVATE ${CPPCODEC_INCLUDE_DIR})
 
 if(MSVC)
-	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE WIN32_LEAN_AND_MEAN)
+	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
 else()
-	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE)
+	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE CURL_STATICLIB)
 endif()
 
 add_custom_command(TARGET RemoteAttestationR_App
@@ -393,16 +396,17 @@ add_custom_command(TARGET RemoteAttestationR_App
 )
 
 target_link_libraries(RemoteAttestationR_App 
-#					OpenSSL::SSL 
-#					OpenSSL::Crypto 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
 					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
 					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
-					jsoncpp_lib_static
 					${COMMON_STANDARD_LIBRARIES}
+					jsoncpp_lib_static
+					libcurl
+					OpenSSL::SSL 
+					OpenSSL::Crypto 
 					Boost::filesystem
 					Boost::date_time
 					Boost::system

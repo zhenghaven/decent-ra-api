@@ -14,6 +14,7 @@ enum class KnownFolderType
 	LocalAppData,
 	LocalAppDataEnclave,
 	Temp,
+	Home,
 	Desktop,
 	Documents,
 	Downloads,
