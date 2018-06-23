@@ -1,5 +1,9 @@
 #include "CryptoTools.h"
 
+#ifndef NOMINMAX
+# define NOMINMAX
+#endif
+
 #include <cstdlib>
 #include <vector>
 
@@ -48,4 +52,17 @@ void DeserializeKey(const std::string & inPubStr, sgx_ec_key_128bit_t & outKey)
 	cppcodec::base64_rfc4648::decode(buffer, inPubStr);
 
 	std::memcpy(&outKey, buffer.data(), sizeof(sgx_ec_key_128bit_t));
+}
+
+std::string SerializeStruct(const char * ptr, size_t size)
+{
+	return cppcodec::base64_rfc4648::encode(ptr, size);
+}
+
+void DeserializeStruct(const std::string & inStr, void * ptr, size_t size)
+{
+	std::vector<uint8_t> buffer(size, 0);
+	cppcodec::base64_rfc4648::decode(buffer, inStr);
+
+	std::memcpy(ptr, buffer.data(), size);
 }

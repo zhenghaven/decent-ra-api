@@ -2,8 +2,6 @@
 
 #include <string>
 
-#include <cppcodec/base64_rfc4648.hpp>
-
 //Forward declarations:
 struct _sgx_ec256_public_t;
 typedef _sgx_ec256_public_t sgx_ec256_public_t;
@@ -26,17 +24,16 @@ std::string SerializeKey(const sgx_ec_key_128bit_t& key);
 
 void DeserializeKey(const std::string& inPubStr, sgx_ec_key_128bit_t& outKey);
 
+std::string SerializeStruct(const char* ptr, size_t size);
 template<typename T>
-std::string SerializeStruct(const T& data)
+inline std::string SerializeStruct(const T& data)
 {
-	return cppcodec::base64_rfc4648::encode(reinterpret_cast<const char*>(&data), sizeof(T));
+	return SerializeStruct(reinterpret_cast<const char*>(&data), sizeof(T));
 }
 
+void DeserializeStruct(const std::string& inStr, void* ptr, size_t size);
 template<typename T>
-void DeserializeStruct(const std::string& inStr, T& outData)
+inline void DeserializeStruct(const std::string& inStr, T& outData)
 {
-	std::vector<uint8_t> buffer(sizeof(T), 0);
-	cppcodec::base64_rfc4648::decode(buffer, inStr);
-
-	std::memcpy(&outData, buffer.data(), sizeof(T));
+	DeserializeStruct(inStr, static_cast<void*>(&outData), sizeof(T));
 }

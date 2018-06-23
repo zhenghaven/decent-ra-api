@@ -83,8 +83,8 @@ sgx_status_t ExampleEnclave::ProcessRAMsg0Resp(const std::string & ServerID, con
 	
 	res = sgx_ra_get_msg1(outContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);
 
-	std::cout << "In Process RA Msg 0 Resp: " << std::endl;
-	std::cout << "g_a: " << SerializePubKey(outMsg1.g_a) << std::endl << std::endl;
+	//std::cout << "In Process RA Msg 0 Resp: " << std::endl;
+	//std::cout << "g_a: " << SerializePubKey(outMsg1.g_a) << std::endl << std::endl;
 
 	return res == SGX_SUCCESS ? retval : res;
 }
@@ -121,16 +121,16 @@ sgx_status_t ExampleEnclave::ProcessRAMsg2(const std::string& ServerID, const sg
 	outQuote.resize(sizeof(sgx_quote_t) + quotePtr->signature_len);
 	memcpy(&outQuote[0], quotePtr, sizeof(sgx_quote_t) + quotePtr->signature_len);
 
-	std::cout << "In Process RA Msg 2: " << std::endl;
-	std::cout << "g_a: " << SerializePubKey(outMsg3.g_a) << std::endl;
-	std::cout << "g_b: " << SerializePubKey(inMsg2.g_b) << std::endl << std::endl;
+	//std::cout << "In Process RA Msg 2: " << std::endl;
+	//std::cout << "g_a: " << SerializePubKey(outMsg3.g_a) << std::endl;
+	//std::cout << "g_b: " << SerializePubKey(inMsg2.g_b) << std::endl << std::endl;
 
-	std::cout << "Report Data: " << std::endl;
-	for (int i = 0; i < 32; ++i)
-	{
-		std::cout << static_cast<int>(quotePtr->report_body.report_data.d[i]) << " ";
-	}
-	std::cout << std::endl;
+	//std::cout << "Report Data: " << std::endl;
+	//for (int i = 0; i < 32; ++i)
+	//{
+	//	std::cout << static_cast<int>(quotePtr->report_body.report_data.d[i]) << " ";
+	//}
+	//std::cout << std::endl;
 
 	std::free(outMsg3ptr);
 

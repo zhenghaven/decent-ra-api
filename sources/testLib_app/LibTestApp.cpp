@@ -8,6 +8,8 @@
 #include <sgx_uae_service.h>
 #include <curl/curl.h>
 
+#include "../common_app/IAS/IASUtil.h"
+
 #ifdef _MSC_VER
 
 std::string GetSGXDeviceStatusStr(const sgx_device_status_t& sgx_device_status)
@@ -79,6 +81,12 @@ int main() {
 	CURLcode ret = curl_easy_perform(hnd);
 
 	curl_easy_cleanup(hnd);
+
+	std::string s1;
+	std::string s2;
+	std::string s3;
+	std::string s4;
+	GetQuoteReport(s1, s2, s3, s4);
 
 	std::cout << "Done! Enter anything to exit..." << std::endl;
 	getchar();

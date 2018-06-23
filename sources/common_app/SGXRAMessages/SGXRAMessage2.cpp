@@ -40,7 +40,7 @@ SGXRAMessage2::SGXRAMessage2(const std::string& senderID, sgx_ra_msg2_t& msg2Dat
 	{
 		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + buffer.size()));
 		std::memcpy(m_msg2Data, &msg2Data, sizeof(sgx_ra_msg2_t));
-		m_msg2Data->sig_rl_size = buffer.size();
+		m_msg2Data->sig_rl_size = static_cast<uint32_t>(buffer.size());
 
 		std::memcpy(m_msg2Data->sig_rl, buffer.data(), buffer.size());
 	}

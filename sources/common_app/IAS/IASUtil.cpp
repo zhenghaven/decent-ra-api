@@ -2,10 +2,8 @@
 
 #include <vector>
 #include <algorithm>
-#include <sstream>
-#include <iomanip>
 #include <cctype>
-//#include <cstdio>
+#include <functional>
 
 #include <cppcodec/hex_lower.hpp>
 
@@ -13,15 +11,11 @@
 
 #include "../FileSystemUtil.h"
 
-//namespace
-//{
-//	const std::string IAS_URL_BASE = "https://test-as.sgx.trustedservices.intel.com:443";
-//	const std::string IAS_URL_SIGRL = IAS_URL_BASE + "/attestation/sgx/v2/sigrl/";
-//	const std::string IAS_URL_REPORT = IAS_URL_BASE + "/attestation/sgx/v2/report";
-//}
-
 namespace
 {
+	typedef std::function<size_t(char*, size_t, size_t, void*)> cUrlContentCallBackFunc;
+	typedef std::function<size_t(char*, size_t, size_t, void*)> cUrlHeaderCallBackFunc;
+
 	typedef size_t(*cUrlContentCallBack)(char*, size_t, size_t, void*);
 	typedef size_t(*cUrlHeaderCallBack)(char*, size_t, size_t, void*);
 
@@ -68,6 +62,13 @@ static inline std::string& rtrim(std::string &s)
 	return s;
 }
 
+static inline std::string& ParseHeaderLine(std::string& s)
+{
+	s = s.substr(s.find_first_of(':') + 1);
+	rtrim(ltrim(s));
+	return s;
+}
+
 static std::string GetGIDBigEndianStr(const sgx_epid_group_id_t& gid)
 {
 	std::vector<uint8_t> gidcpy(sizeof(sgx_epid_group_id_t), 0);
@@ -96,14 +97,13 @@ bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList
 		return size * nmemb;
 	};
 
-	cUrlHeaderCallBackFunc headerCallback = [&requestId](char *ptr, size_t size, size_t nitems, void *userdata)->size_t
+	cUrlHeaderCallBackFunc headerCallback = [&requestId](char *ptr, size_t size, size_t nitems, void *userdata) -> size_t
 	{
 		static std::string tmp;
 		tmp = std::string(ptr, size * nitems);
-		if (tmp.find("request-id") != std::string::npos)
+		if (tmp.find("request-id") == 0)
 		{
-			requestId = tmp.substr(tmp.find_first_of(':') + 1);
-			rtrim(ltrim(requestId));
+			requestId = ParseHeaderLine(tmp);
 		}
 		return size * nitems;
 	};
@@ -114,9 +114,9 @@ bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList
 	curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str());
 	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
 	curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(hnd, CURLOPT_SSLCERT, GetDefaultCertPath().c_str());
+	curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str());
 	curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
-	curl_easy_setopt(hnd, CURLOPT_SSLKEY, GetDefaultKeyPath().c_str());
+	curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str());
 	curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM");
 	curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, g_headerCallbackStatic);
 	curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback);
@@ -134,6 +134,7 @@ bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList
 		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code);
 	}
 
+	curl_slist_free_all(headers);
 	curl_easy_cleanup(hnd);
 
 	return res;
@@ -142,6 +143,88 @@ bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList
 bool GetRevocationList(const sgx_epid_group_id_t & gid, std::string & outRevcList)
 {
 	return GetRevocationList(gid, outRevcList, GetDefaultCertPath(), GetDefaultKeyPath());
+}
+
+bool GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert, const std::string & certPath, const std::string & keyPath)
+{
+	bool res = true;
+
+#ifdef DEBUG
+	const std::string iasURL = GetIasUrlHostDev() + GetIasUrlReportPath();
+#else
+	const std::string iasURL = GetIasUrlHostRelease() + GetIasUrlReportPath();
+#endif // DEBUG
+
+	outReport = "";
+	std::string requestId;
+
+	cUrlContentCallBackFunc contentCallback = [&outReport](char *ptr, size_t size, size_t nmemb, void *userdata) -> size_t
+	{
+		outReport = std::string(ptr, size * nmemb);
+		return size * nmemb;
+	};
+
+	cUrlHeaderCallBackFunc headerCallback = [&requestId, &outSign, &outCert](char *ptr, size_t size, size_t nitems, void *userdata) -> size_t
+	{
+		static std::string tmp;
+		tmp = std::string(ptr, size * nitems);
+		if (tmp.find("request-id") == 0)
+		{
+			requestId = ParseHeaderLine(tmp);
+		}
+		if (tmp.find("x-iasreport-signature") == 0)
+		{
+			outSign = ParseHeaderLine(tmp);
+		}
+		if (tmp.find("x-iasreport-signing-certificate") == 0)
+		{
+			outCert = ParseHeaderLine(tmp);
+		}
+		return size * nitems;
+	};
+
+	CURL *hnd = curl_easy_init();
+
+	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST");
+	curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str());
+	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
+	curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str());
+	curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
+	curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str());
+	curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM");
+	curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, g_headerCallbackStatic);
+	curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback);
+	curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, g_contentCallbackStatic);
+	curl_easy_setopt(hnd, CURLOPT_WRITEDATA, &contentCallback);
+	curl_easy_setopt(hnd, CURLOPT_POSTFIELDS, jsonReqBody.c_str());
+
+	struct curl_slist *headers = NULL;
+	headers = curl_slist_append(headers, "Cache-Control: no-cache");
+	headers = curl_slist_append(headers, "Content-Type: application/json");
+	curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers);
+
+	CURLcode ret = curl_easy_perform(hnd);
+
+	long response_code;
+	if (ret == CURLE_OK) {
+		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code);
+		
+		int outLen = 0;
+		char* outStr = curl_easy_unescape(hnd, outCert.c_str(), static_cast<int>(outCert.length()), &outLen);
+		outCert = std::string(outStr, outLen);
+		delete outStr;
+	}
+
+	curl_slist_free_all(headers);
+	curl_easy_cleanup(hnd);
+
+	return res;
+}
+
+bool GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert)
+{
+	return GetQuoteReport(jsonReqBody, outReport, outSign, outCert, GetDefaultCertPath(), GetDefaultKeyPath());
 }
 
 std::string GetDefaultIasDirPath()
