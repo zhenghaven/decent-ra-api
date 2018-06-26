@@ -11,10 +11,10 @@
 #include "../IAS/IASUtil.h"
 //#include "../../common/CryptoTools.h"
 
-SGXRAMessage2::SGXRAMessage2(const std::string& senderID, sgx_ra_msg2_t& msg2Data, const sgx_epid_group_id_t& gid) :
+SGXRAMessage2::SGXRAMessage2(const std::string& senderID, sgx_ra_msg2_t& msg2Data, const std::string& sigRL) :
 	SGXRAMessage(senderID),
 	m_msg2Data(nullptr),
-	m_rl()
+	m_rl(sigRL)
 {
 	//std::cout << "Signature: " << std::endl;
 	//size_t xSize = sizeof(msg2Data.sign_gb_ga.x) / sizeof(uint32_t);
@@ -32,26 +32,13 @@ SGXRAMessage2::SGXRAMessage2(const std::string& senderID, sgx_ra_msg2_t& msg2Dat
 
 	//std::cout << "g_b: " << std::endl << SerializePubKey(msg2Data.g_b) << std::endl;
 
-	m_isRLValid = GetRevocationList(gid, m_rl);
-	std::vector<uint8_t> buffer;
-	cppcodec::base64_rfc4648::decode(buffer, m_rl);
+	m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + sigRL.size()));
+	std::memcpy(m_msg2Data, &msg2Data, sizeof(sgx_ra_msg2_t));
+	m_msg2Data->sig_rl_size = static_cast<uint32_t>(sigRL.size());
 
-	if (m_isRLValid)
-	{
-		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + buffer.size()));
-		std::memcpy(m_msg2Data, &msg2Data, sizeof(sgx_ra_msg2_t));
-		m_msg2Data->sig_rl_size = static_cast<uint32_t>(buffer.size());
+	std::memcpy(m_msg2Data->sig_rl, sigRL.data(), sigRL.size());
 
-		std::memcpy(m_msg2Data->sig_rl, buffer.data(), buffer.size());
-	}
-	else
-	{
-		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t)));
-		std::memcpy(m_msg2Data, &msg2Data, sizeof(sgx_ra_msg2_t));
-		m_msg2Data->sig_rl_size = 0;
-	}
-
-	m_isValid = m_isRLValid;
+	m_isValid = true;
 }
 
 SGXRAMessage2::SGXRAMessage2(Json::Value& msg) :
@@ -82,10 +69,8 @@ SGXRAMessage2::SGXRAMessage2(Json::Value& msg) :
 	{
 		//Get data in revocation list.
 		m_rl = root["Untrusted"]["rl"].asString();
-		std::vector<uint8_t> buffer1;
-		cppcodec::base64_rfc4648::decode(buffer1, m_rl);
 
-		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + buffer1.size()));
+		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + m_rl.size()));
 
 		//Get message 2 normal data.
 		std::string msg2B64Str = root["Untrusted"]["msg2Data"].asString();
@@ -94,11 +79,9 @@ SGXRAMessage2::SGXRAMessage2(Json::Value& msg) :
 		memcpy(m_msg2Data, buffer2.data(), sizeof(sgx_ra_msg2_t));
 		
 		//Check if valid.
-		m_isRLValid = (m_msg2Data->sig_rl_size == buffer1.size());
+		m_isValid = (m_msg2Data->sig_rl_size == m_rl.size());
 		//Copy the revocation list data anyway.
-		std::memcpy(m_msg2Data->sig_rl, buffer1.data(), buffer1.size());
-
-		m_isValid = m_isRLValid;
+		std::memcpy(m_msg2Data->sig_rl, m_rl.data(), m_rl.size());
 	}
 	else
 	{
@@ -144,11 +127,6 @@ bool SGXRAMessage2::IsResp() const
 const sgx_ra_msg2_t& SGXRAMessage2::GetMsg2Data() const
 {
 	return *m_msg2Data;
-}
-
-bool SGXRAMessage2::IsRLValid() const
-{
-	return m_isRLValid;
 }
 
 Json::Value & SGXRAMessage2::GetJsonMsg(Json::Value & outJson) const

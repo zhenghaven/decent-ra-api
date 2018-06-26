@@ -11,20 +11,20 @@ class EnclaveBase;
 class RemoteAttestationSession
 {
 public:
-	typedef std::function<RAMessages*(const RAMessages&)> MsgProcessor;
+	//typedef std::function<RAMessages*(const RAMessages&)> MsgProcessor;
 
-	enum Mode
-	{
-		Server,
-		Client,
-	};
+	//enum Mode
+	//{
+	//	Server,
+	//	Client,
+	//};
 
 public:
 	RemoteAttestationSession() = delete;
 
 	//Caution! Blocking constructors!
-	RemoteAttestationSession(std::unique_ptr<Connection>& m_connection, Mode mode);
-	~RemoteAttestationSession();
+	RemoteAttestationSession(std::unique_ptr<Connection>& connection);
+	virtual ~RemoteAttestationSession();
 
 	virtual bool ProcessClientSideRA(EnclaveBase& enclave) = 0;
 
@@ -37,8 +37,8 @@ public:
 	void SwapConnection(std::unique_ptr<Connection>& inConnection);
 
 protected:
-	Mode GetMode() const;
+	//Mode GetMode() const;
 
 	std::unique_ptr<Connection> m_connection;
-	Mode m_mode;
+	//Mode m_mode;
 };

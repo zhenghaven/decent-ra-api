@@ -86,7 +86,7 @@ int main() {
 	std::string s2;
 	std::string s3;
 	std::string s4;
-	GetQuoteReport(s1, s2, s3, s4);
+	IASUtil::GetQuoteReport(s1, s2, s3, s4, IASUtil::GetDefaultCertPath(), IASUtil::GetDefaultKeyPath());
 
 	std::cout << "Done! Enter anything to exit..." << std::endl;
 	getchar();

@@ -1,14 +1,21 @@
 #pragma once
 
-#include "SGXEnclave.h"
+#include "DecentralizedEnclave.h"
+
+#include <string>
+
+//TODO: Replace these SGX component with general components.
+#include <sgx_error.h>
+#include <sgx_tcrypto.h>
+
 #include "../common/Decent.h"
 
-class DecentSGXEnclave : public SGXEnclave
+class DecentEnclave : public DecentralizedEnclave
 {
 public:
-	using SGXEnclave::SGXEnclave;
+	using DecentralizedEnclave::DecentralizedEnclave;
 
-	~DecentSGXEnclave();
+	~DecentEnclave();
 
 	virtual std::unique_ptr<Connection> AcceptRAConnection() override;
 	virtual std::unique_ptr<Connection> RequestRA(uint32_t ipAddr, uint16_t portNum) override;

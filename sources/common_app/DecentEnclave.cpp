@@ -1,4 +1,4 @@
-#include "DecentSGXEnclave.h"
+#include "DecentEnclave.h"
 
 #include "Common.h"
 
@@ -8,12 +8,12 @@
 
 #include "Networking/Connection.h"
 
-DecentSGXEnclave::~DecentSGXEnclave()
+DecentEnclave::~DecentEnclave()
 {
 
 }
 
-std::unique_ptr<Connection> DecentSGXEnclave::AcceptRAConnection()
+std::unique_ptr<Connection> DecentEnclave::AcceptRAConnection()
 {
 	DecentNodeMode nodeMode = GetDecentMode();
 	switch (nodeMode)
@@ -28,12 +28,12 @@ std::unique_ptr<Connection> DecentSGXEnclave::AcceptRAConnection()
 	}
 }
 
-std::unique_ptr<Connection> DecentSGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
+std::unique_ptr<Connection> DecentEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 {
 	return RequestRootNodeRA(ipAddr, portNum);
 }
 
-std::unique_ptr<Connection> DecentSGXEnclave::RequestAppNodeConnection(uint32_t ipAddr, uint16_t portNum)
+std::unique_ptr<Connection> DecentEnclave::RequestAppNodeConnection(uint32_t ipAddr, uint16_t portNum)
 {
 	bool res = true;
 
@@ -50,7 +50,7 @@ std::unique_ptr<Connection> DecentSGXEnclave::RequestAppNodeConnection(uint32_t 
 	return res ? decentSession.ReleaseConnection() : nullptr;
 }
 
-std::unique_ptr<Connection> DecentSGXEnclave::RequestRootNodeRA(uint32_t ipAddr, uint16_t portNum)
+std::unique_ptr<Connection> DecentEnclave::RequestRootNodeRA(uint32_t ipAddr, uint16_t portNum)
 {
 	bool res = true;
 
@@ -99,7 +99,7 @@ std::unique_ptr<Connection> DecentSGXEnclave::RequestRootNodeRA(uint32_t ipAddr,
 	return res ? decentSession.ReleaseConnection() : nullptr;
 }
 
-std::unique_ptr<Connection> DecentSGXEnclave::AcceptAppNodeConnection()
+std::unique_ptr<Connection> DecentEnclave::AcceptAppNodeConnection()
 {
 	bool res = true;
 
@@ -116,7 +116,7 @@ std::unique_ptr<Connection> DecentSGXEnclave::AcceptAppNodeConnection()
 	return res ? decentSession.ReleaseConnection() : nullptr;
 }
 
-std::unique_ptr<Connection> DecentSGXEnclave::AcceptRootNodeRAConnection()
+std::unique_ptr<Connection> DecentEnclave::AcceptRootNodeRAConnection()
 {
 	bool res = true;
 

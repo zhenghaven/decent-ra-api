@@ -11,6 +11,8 @@
 
 #include "../FileSystemUtil.h"
 
+using namespace IASUtil;
+
 namespace
 {
 	typedef std::function<size_t(char*, size_t, size_t, void*)> cUrlContentCallBackFunc;
@@ -29,7 +31,7 @@ namespace
 		return (*callbackFunc)(ptr, size, nmemb, nullptr);
 	};
 
-	cUrlHeaderCallBack g_headerCallbackStatic = [](char *ptr, size_t size, size_t nitems, void *userdata)->size_t
+	cUrlHeaderCallBack g_headerCallbackStatic = [](char *ptr, size_t size, size_t nitems, void *userdata) -> size_t
 	{
 		cUrlHeaderCallBackFunc* callbackFunc = static_cast<cUrlHeaderCallBackFunc*>(userdata);
 		if (!callbackFunc)
@@ -78,9 +80,9 @@ static std::string GetGIDBigEndianStr(const sgx_epid_group_id_t& gid)
 	return cppcodec::hex_lower::encode(gidcpy);
 }
 
-bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList, const std::string& certPath, const std::string& keyPath)
+int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList, const std::string& certPath, const std::string& keyPath)
 {
-	bool res = true;
+	int16_t respCode = -1;
 
 #ifdef DEBUG
 	const std::string iasURL = GetIasUrlHostDev() + GetIasUrlSigRlPath() + GetGIDBigEndianStr(gid);
@@ -128,26 +130,27 @@ bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList
 	curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers);
 
 	CURLcode ret = curl_easy_perform(hnd);
-
-	long response_code;
+	
 	if (ret == CURLE_OK) {
+		long response_code;
 		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code);
+		respCode = static_cast<int16_t>(response_code);
 	}
 
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(hnd);
 
-	return res;
+	return respCode;
 }
 
-bool GetRevocationList(const sgx_epid_group_id_t & gid, std::string & outRevcList)
-{
-	return GetRevocationList(gid, outRevcList, GetDefaultCertPath(), GetDefaultKeyPath());
-}
+//int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t & gid, std::string & outRevcList)
+//{
+//	return GetRevocationList(gid, outRevcList, GetDefaultCertPath(), GetDefaultKeyPath());
+//}
 
-bool GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert, const std::string & certPath, const std::string & keyPath)
+int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert, const std::string & certPath, const std::string & keyPath)
 {
-	bool res = true;
+	int16_t respCode = -1;
 
 #ifdef DEBUG
 	const std::string iasURL = GetIasUrlHostDev() + GetIasUrlReportPath();
@@ -206,9 +209,10 @@ bool GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, st
 
 	CURLcode ret = curl_easy_perform(hnd);
 
-	long response_code;
 	if (ret == CURLE_OK) {
+		long response_code;
 		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code);
+		respCode = static_cast<int16_t>(response_code);
 		
 		int outLen = 0;
 		char* outStr = curl_easy_unescape(hnd, outCert.c_str(), static_cast<int>(outCert.length()), &outLen);
@@ -219,30 +223,30 @@ bool GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, st
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(hnd);
 
-	return res;
+	return respCode;
 }
 
-bool GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert)
-{
-	return GetQuoteReport(jsonReqBody, outReport, outSign, outCert, GetDefaultCertPath(), GetDefaultKeyPath());
-}
+//int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert)
+//{
+//	return GetQuoteReport(jsonReqBody, outReport, outSign, outCert, GetDefaultCertPath(), GetDefaultKeyPath());
+//}
 
-std::string GetDefaultIasDirPath()
+std::string IASUtil::GetDefaultIasDirPath()
 {
 	return GetKnownFolderPath(KnownFolderType::Home).append("SGX_IAS").string();
 }
 
-std::string GetDefaultCertPath()
+std::string IASUtil::GetDefaultCertPath()
 {
 	return GetKnownFolderPath(KnownFolderType::Home).append("SGX_IAS").append("client.crt").string();
 }
 
-std::string GetDefaultKeyPath()
+std::string IASUtil::GetDefaultKeyPath()
 {
 	return GetKnownFolderPath(KnownFolderType::Home).append("SGX_IAS").append("client.pem").string();
 }
 
-std::string GetDefaultRsaKeyPath()
+std::string IASUtil::GetDefaultRsaKeyPath()
 {
 	return GetKnownFolderPath(KnownFolderType::Home).append("SGX_IAS").append("client.key").string();
 }

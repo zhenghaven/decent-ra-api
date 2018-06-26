@@ -6,16 +6,16 @@
 #include <sgx_uae_service.h>
 
 #include <boost/filesystem/operations.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
+//#include <boost/asio/io_service.hpp>
+//#include <boost/asio/ip/tcp.hpp>
 
 #include "../common/CryptoTools.h"
 #include "../common/sgx_ra_msg4.h"
 
 #include "Common.h"
-#include "SGXRemoteAttestationServer.h"
-#include "SGXRemoteAttestationSession.h"
+#include "SGXRASession.h"
 
+#include "Networking/Server.h"
 #include "Networking/Connection.h"
 
 using namespace boost::asio;
@@ -102,7 +102,7 @@ bool SGXEnclave::IsLaunched() const
 std::unique_ptr<Connection> SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
 {
 	std::unique_ptr<Connection> connection(std::make_unique<Connection>(ipAddr, portNum));
-	SGXRemoteAttestationSession RASession(connection, RemoteAttestationSession::Mode::Client);
+	SGXRASession RASession(connection);
 	bool res = RASession.ProcessClientSideRA(*this);
 	
 	return res ? RASession.ReleaseConnection() : nullptr;
@@ -120,7 +120,7 @@ uint32_t SGXEnclave::GetExGroupID() const
 
 void SGXEnclave::LaunchRAServer(uint32_t ipAddr, uint16_t portNum)
 {
-	m_raServer = new SGXRemoteAttestationServer(ipAddr, portNum);
+	m_raServer = new Server(ipAddr, portNum);
 }
 
 bool SGXEnclave::IsRAServerLaunched() const
@@ -130,8 +130,8 @@ bool SGXEnclave::IsRAServerLaunched() const
 
 std::unique_ptr<Connection> SGXEnclave::AcceptRAConnection()
 {
-	std::unique_ptr<Connection> connection(m_raServer->AcceptRAConnection());
-	SGXRemoteAttestationSession RASession(connection, RemoteAttestationSession::Mode::Server);
+	std::unique_ptr<Connection> connection(m_raServer->AcceptConnection());
+	SGXRASession RASession(connection);
 	bool res = RASession.ProcessServerSideRA(*this);
 
 	return res ? RASession.ReleaseConnection() : nullptr;

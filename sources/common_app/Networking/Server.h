@@ -6,7 +6,6 @@
 //#include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-class RemoteAttestationSession;
 class Connection;
 
 namespace boost {
@@ -21,17 +20,17 @@ namespace boost {
 	} // namespace asio
 } // namespace boost
 
-class RemoteAttestationServer
+class Server
 {
 public:
-	RemoteAttestationServer() = delete;
-	RemoteAttestationServer(uint32_t ipAddr, uint16_t portNum);
-	~RemoteAttestationServer();
+	Server() = delete;
+	Server(uint32_t ipAddr, uint16_t portNum);
+	virtual ~Server();
 	
 	///Warning: Blocking method! This method will be blocked until a connection is accepted.
-	virtual std::unique_ptr<Connection> AcceptRAConnection(size_t bufferSize = 5000U) = 0;
+	virtual std::unique_ptr<Connection> AcceptConnection(size_t bufferSize = 5000U);
 
 protected:
-	std::shared_ptr<boost::asio::io_service> m_RAServerIO;
-	std::unique_ptr<boost::asio::ip::tcp::acceptor> m_RAServerAcc;
+	std::shared_ptr<boost::asio::io_service> m_serverIO;
+	std::unique_ptr<boost::asio::ip::tcp::acceptor> m_serverAcc;
 };

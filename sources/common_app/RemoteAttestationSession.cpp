@@ -2,9 +2,8 @@
 
 #include "Networking/Connection.h"
 
-RemoteAttestationSession::RemoteAttestationSession(std::unique_ptr<Connection>& m_connection, RemoteAttestationSession::Mode mode) :
-	m_connection(std::move(m_connection)),
-	m_mode(mode)
+RemoteAttestationSession::RemoteAttestationSession(std::unique_ptr<Connection>& connection) :
+	m_connection(std::move(connection))
 {
 }
 
@@ -28,7 +27,7 @@ void RemoteAttestationSession::SwapConnection(std::unique_ptr<Connection>& inCon
 	m_connection.swap(inConnection);
 }
 
-RemoteAttestationSession::Mode RemoteAttestationSession::GetMode() const
-{
-	return m_mode;
-}
+//RemoteAttestationSession::Mode RemoteAttestationSession::GetMode() const
+//{
+//	return m_mode;
+//}

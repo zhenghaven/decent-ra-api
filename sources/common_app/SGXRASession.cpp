@@ -1,4 +1,4 @@
-#include "SGXRemoteAttestationSession.h"
+#include "SGXRASession.h"
 
 #include <cstring>
 #include <map>
@@ -18,6 +18,7 @@
 #include "Networking/Connection.h"
 #include "../common/CryptoTools.h"
 #include "../common/sgx_ra_msg4.h"
+#include "IAS/IASConnector.h"
 
 namespace
 {
@@ -46,7 +47,13 @@ namespace
 	};
 }
 
-SGXRemoteAttestationSession::~SGXRemoteAttestationSession()
+SGXRASession::SGXRASession(std::unique_ptr<Connection>& m_connection, std::shared_ptr<IASConnector> iasConnector) :
+	RemoteAttestationSession(m_connection),
+	m_iasConnector(iasConnector)
+{
+}
+
+SGXRASession::~SGXRASession()
 {
 }
 
@@ -96,7 +103,7 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	}
 }
 
-bool SGXRemoteAttestationSession::ProcessClientSideRA(EnclaveBase & enclave)
+bool SGXRASession::ProcessClientSideRA(EnclaveBase & enclave)
 {
 	if (!m_connection)
 	{
@@ -210,7 +217,7 @@ bool SGXRemoteAttestationSession::ProcessClientSideRA(EnclaveBase & enclave)
 	return true;
 }
 
-bool SGXRemoteAttestationSession::ProcessServerSideRA(EnclaveBase & enclave)
+bool SGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
 {
 	if (!m_connection)
 	{
@@ -297,7 +304,16 @@ bool SGXRemoteAttestationSession::ProcessServerSideRA(EnclaveBase & enclave)
 		m_connection->Send(errMsg.ToJsonString());
 		return false;
 	}
-	resp = new SGXRAMessage2(msgSenderID, msg2Data, msg1->GetMsg1Data().gid);
+	std::string sigRlStr;
+	int32_t respCode = m_iasConnector->GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
+	if (respCode != 200)
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Failed to get Revocation List!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+	resp = new SGXRAMessage2(msgSenderID, msg2Data, sigRlStr);
 
 	m_connection->Send(resp->ToJsonString());
 	delete resp;
