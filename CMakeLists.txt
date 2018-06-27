@@ -12,6 +12,7 @@ set(HUNTER_BOOST_RUNTIME_STATIC ON CACHE BOOL "Switch for using boost runtime st
 
 set(gate_dir "${CMAKE_CURRENT_LIST_DIR}/hunter/gate")
 set(gate_module "${gate_dir}/cmake/HunterGate.cmake")
+set(HUNTER_KEEP_PACKAGE_SOURCES ON)
 
 get_filename_component(gate_module "${gate_module}" ABSOLUTE)
 
