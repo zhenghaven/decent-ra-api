@@ -9,6 +9,7 @@
 
 #include "FileSystemUtil.h"
 #include "EnclaveUtil.h"
+#include "IAS/IASConnector.h"
 
 class Server;
 typedef uint32_t sgx_ra_context_t;
@@ -25,17 +26,17 @@ class SGXEnclave : public EnclaveBase
 {
 public:
 	SGXEnclave() = delete;
-	SGXEnclave(const std::string enclavePath, const std::string tokenPath);
-	SGXEnclave(const std::string enclavePath, const fs::path tokenPath);
-	SGXEnclave(const std::string enclavePath, const KnownFolderType tokenLocType, const std::string tokenFileName);
+	SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
+	SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath);
+	SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	~SGXEnclave();
 
 	virtual bool Launch() override;
 	virtual bool IsLastExecutionFailed() const override;
 	virtual bool IsLaunched() const override;
-	virtual std::unique_ptr<Connection> RequestRA(uint32_t ipAddr, uint16_t portNum) override;
 	virtual std::string GetRASenderID() const override;
+	virtual std::shared_ptr<RemoteAttestationSession> GetRASession(std::unique_ptr<Connection>& connection) override;
 
 	virtual uint32_t GetExGroupID() const;
 
@@ -48,11 +49,6 @@ public:
 	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID) = 0;
 	virtual sgx_status_t TerminationClean() = 0;
 
-	//Decent enclave functions:
-	virtual void LaunchRAServer(uint32_t ipAddr, uint16_t port) override;
-	virtual bool IsRAServerLaunched() const override;
-	virtual std::unique_ptr<Connection> AcceptRAConnection() override;
-
 	sgx_status_t GetLastStatus() const;
 
 protected:
@@ -64,11 +60,11 @@ protected:
 	uint32_t m_exGroupID;
 	sgx_status_t m_lastStatus;
 
-	Server* m_raServer;
-
 private:
 	sgx_enclave_id_t m_eid;
 	std::vector<uint8_t> m_token;
+
+	IASConnector m_iasConnector;
 
 	const std::string m_enclavePath;
 	const fs::path m_tokenPath;

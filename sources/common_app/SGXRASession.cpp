@@ -35,21 +35,18 @@ namespace
 		std::pair<std::string, SGXRAMessage::Type>("MSG0_SEND", SGXRAMessage::Type::MSG0_SEND),
 		std::pair<std::string, SGXRAMessage::Type>("MSG0_RESP", SGXRAMessage::Type::MSG0_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("MSG1_SEND", SGXRAMessage::Type::MSG1_SEND),
-		//std::pair<std::string, SGXRAMessage::Type>("MSG1_RESP", SGXRAMessage::Type::MSG1_RESP),
-		//std::pair<std::string, SGXRAMessage::Type>("MSG2_SEND", SGXRAMessage::Type::MSG2_SEND),
 		std::pair<std::string, SGXRAMessage::Type>("MSG2_RESP", SGXRAMessage::Type::MSG2_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("MSG3_SEND", SGXRAMessage::Type::MSG3_SEND),
-		//std::pair<std::string, SGXRAMessage::Type>("MSG3_RESP", SGXRAMessage::Type::MSG3_RESP),
-		//std::pair<std::string, SGXRAMessage::Type>("MSG4_SEND", SGXRAMessage::Type::MSG4_SEND),
 		std::pair<std::string, SGXRAMessage::Type>("MSG4_RESP", SGXRAMessage::Type::MSG4_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("ERRO_RESP", SGXRAMessage::Type::ERRO_RESP),
 		std::pair<std::string, SGXRAMessage::Type>("OTHER", SGXRAMessage::Type::OTHER),
 	};
 }
 
-SGXRASession::SGXRASession(std::unique_ptr<Connection>& m_connection, std::shared_ptr<IASConnector> iasConnector) :
-	RemoteAttestationSession(m_connection),
-	m_iasConnector(iasConnector)
+SGXRASession::SGXRASession(std::unique_ptr<Connection>& m_connection, SGXEnclave& enclave, IASConnector& iasConnector) :
+	RemoteAttestationSession(m_connection, enclave),
+	m_iasConnector(iasConnector),
+	m_enclave(enclave)
 {
 }
 
@@ -103,20 +100,15 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	}
 }
 
-bool SGXRASession::ProcessClientSideRA(EnclaveBase & enclave)
+bool SGXRASession::ProcessClientSideRA()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
 
-	SGXEnclave* sgxEnclave = dynamic_cast<SGXEnclave*>(&enclave);
-	if (!sgxEnclave)
-	{
-		return false;
-	}
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	enclaveRes = sgxEnclave->InitRAEnvironment();
+	enclaveRes = m_enclave.InitRAEnvironment();
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return false;
@@ -124,9 +116,9 @@ bool SGXRASession::ProcessClientSideRA(EnclaveBase & enclave)
 	
 	RAMessages* resp = nullptr;
 	std::string msgBuffer;
-	std::string msgSenderID = sgxEnclave->GetRASenderID();
+	std::string msgSenderID = m_enclave.GetRASenderID();
 
-	SGXRAMessage0Send msg0s(msgSenderID, sgxEnclave->GetExGroupID());
+	SGXRAMessage0Send msg0s(msgSenderID, m_enclave.GetExGroupID());
 	m_connection->Send(msg0s.ToJsonString());
 	m_connection->Receive(msgBuffer);
 	resp = JsonMessageParser(msgBuffer);
@@ -145,7 +137,7 @@ bool SGXRASession::ProcessClientSideRA(EnclaveBase & enclave)
 	sgx_ra_context_t raContextID = 0;
 	sgx_ra_msg1_t msg1Data;
 
-	enclaveRes = sgxEnclave->ProcessRAMsg0Resp(msg0r->GetSenderID(), spRAPubKey, false, raContextID, msg1Data);
+	enclaveRes = m_enclave.ProcessRAMsg0Resp(msg0r->GetSenderID(), spRAPubKey, false, raContextID, msg1Data);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete resp;
@@ -175,7 +167,7 @@ bool SGXRASession::ProcessClientSideRA(EnclaveBase & enclave)
 
 	sgx_ra_msg3_t msg3Data;
 	std::vector<uint8_t> quote;
-	enclaveRes = sgxEnclave->ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t) + msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
+	enclaveRes = m_enclave.ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t) + msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete resp;
@@ -202,7 +194,7 @@ bool SGXRASession::ProcessClientSideRA(EnclaveBase & enclave)
 		m_connection->Send(errMsg.ToJsonString());
 		return false;
 	}
-	enclaveRes = sgxEnclave->ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature(), raContextID);
+	enclaveRes = m_enclave.ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature(), raContextID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete resp;
@@ -217,20 +209,15 @@ bool SGXRASession::ProcessClientSideRA(EnclaveBase & enclave)
 	return true;
 }
 
-bool SGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
+bool SGXRASession::ProcessServerSideRA()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
 
-	SGXEnclave* sgxEnclave = dynamic_cast<SGXEnclave*>(&enclave);
-	if (!sgxEnclave)
-	{
-		return false;
-	}
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	enclaveRes = sgxEnclave->InitRAEnvironment();
+	enclaveRes = m_enclave.InitRAEnvironment();
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return false;
@@ -239,7 +226,7 @@ bool SGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
 	RAMessages* reqs = nullptr;
 	SGXRAMessage* resp = nullptr;
 	std::string msgBuffer;
-	std::string msgSenderID = sgxEnclave->GetRASenderID();
+	std::string msgSenderID = m_enclave.GetRASenderID();
 
 	m_connection->Receive(msgBuffer);
 	reqs = JsonMessageParser(msgBuffer);
@@ -255,7 +242,7 @@ bool SGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
 
 	if (std::find(g_acceptedExGID.begin(), g_acceptedExGID.end(), msg0s->GetExtendedGroupID()) != g_acceptedExGID.end())
 	{
-		enclaveRes = sgxEnclave->ProcessRAMsg0Send(msg0s->GetSenderID());
+		enclaveRes = m_enclave.ProcessRAMsg0Send(msg0s->GetSenderID());
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			delete reqs;
@@ -296,7 +283,7 @@ bool SGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
 	}
 
 	sgx_ra_msg2_t msg2Data;
-	enclaveRes = sgxEnclave->ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Data);
+	enclaveRes = m_enclave.ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Data);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete reqs;
@@ -305,7 +292,7 @@ bool SGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
 		return false;
 	}
 	std::string sigRlStr;
-	int32_t respCode = m_iasConnector->GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
+	int32_t respCode = m_iasConnector.GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
 	if (respCode != 200)
 	{
 		delete reqs;
@@ -337,7 +324,7 @@ bool SGXRASession::ProcessServerSideRA(EnclaveBase & enclave)
 	sgx_ra_msg4_t msg4Data;
 	sgx_ec256_signature_t msg4Sign;
 
-	enclaveRes = sgxEnclave->ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), "", "", msg4Data, msg4Sign);
+	enclaveRes = m_enclave.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), "", "", msg4Data, msg4Sign);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete reqs;

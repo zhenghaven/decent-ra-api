@@ -39,6 +39,7 @@ set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
 set(Boost_NO_SYSTEM_PATHS ON)
 find_package(Boost CONFIG REQUIRED system filesystem date_time)
 
+message(STATUS "")
 message(STATUS "==================================================")
 message(STATUS "Looking for Boost library in ${BOOST_ROOT}...")
 message(STATUS "Boost found?: ${Boost_FOUND}")
@@ -46,6 +47,7 @@ message(STATUS "Boost Include Dir: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost Library Dir: ${Boost_LIBRARY_DIRS}")
 message(STATUS "Boost Libraries: ${Boost_LIBRARIES}")
 message(STATUS "==================================================")
+message(STATUS "")
 
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
@@ -64,6 +66,31 @@ option(JSONCPP_WITH_TESTS OFF)
 option(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
+
+if (WIN32)
+	macro(get_WIN32_WINNT version)
+		if(CMAKE_SYSTEM_VERSION)
+			set(ver ${CMAKE_SYSTEM_VERSION})
+			string(REGEX MATCH "^([0-9]+).([0-9])" ver ${ver})
+			string(REGEX MATCH "^([0-9]+)" verMajor ${ver})
+			# Check for Windows 10, b/c we'll need to convert to hex 'A'.
+			if("${verMajor}" MATCHES "10")
+				set(verMajor "A")
+				string(REGEX REPLACE "^([0-9]+)" ${verMajor} ver ${ver})
+			endif()
+			# Remove all remaining '.' characters.
+			string(REPLACE "." "" ver ${ver})
+			# Prepend each digit with a zero.
+			string(REGEX REPLACE "([0-9A-Z])" "0\\1" ver ${ver})
+			set(${version} "0x${ver}")
+		endif()
+	endmacro()
+
+	get_WIN32_WINNT(win_ver)
+	message(STATUS "CMAKE_SYSTEM_VERSION: " "${CMAKE_SYSTEM_VERSION}")
+	message(STATUS "_WIN32_WINNT: " "${win_ver}")
+	add_definitions(-D_WIN32_WINNT=${win_ver})
+endif(WIN32)
 
 if(MSVC)
 	set(COMMON_OPTIONS /W3 /wd4996 /we4239 /we4002 /we4700 /we4305 /EHsc /MP)
@@ -95,7 +122,9 @@ if(UNIX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
 endif()
 
+message(STATUS "")
 message(STATUS "==================================================")
+message(STATUS "==> Before modification: ")
 message(STATUS "CMake Standard Libraries:")
 message(STATUS "${CMAKE_CXX_STANDARD_LIBRARIES_INIT}")
 message(STATUS "CMake CXX Flags (Debug):")
@@ -107,6 +136,7 @@ message(STATUS "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
 message(STATUS "CMake CXX Link Flags (Release):")
 message(STATUS "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 message(STATUS "==================================================")
+message(STATUS "")
 
 #Remove all standard libraries dependency here so that enclave DLL can be 
 # compiled properly. And it will be added back later for non-enclave apps.
@@ -139,6 +169,22 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS Debug DebugSimulation)
 set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
+
+message(STATUS "")
+message(STATUS "==================================================")
+message(STATUS "==> After modification: ")
+message(STATUS "CMake Standard Libraries:")
+message(STATUS "${CMAKE_CXX_STANDARD_LIBRARIES_INIT}")
+message(STATUS "CMake CXX Flags (Debug):")
+message(STATUS "${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "CMake CXX Flags (Release):")
+message(STATUS "${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "CMake CXX Link Flags (Debug):")
+message(STATUS "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+message(STATUS "CMake CXX Link Flags (Release):")
+message(STATUS "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
+message(STATUS "==================================================")
+message(STATUS "")
 
 #==========================================================
 #   Add submodules

@@ -6,8 +6,6 @@
 #include <sgx_uae_service.h>
 
 #include <boost/filesystem/operations.hpp>
-//#include <boost/asio/io_service.hpp>
-//#include <boost/asio/ip/tcp.hpp>
 
 #include "../common/CryptoTools.h"
 #include "../common/sgx_ra_msg4.h"
@@ -21,26 +19,26 @@
 using namespace boost::asio;
 
 
-SGXEnclave::SGXEnclave(const std::string enclavePath, const std::string tokenPath) :
-	SGXEnclave(enclavePath, fs::path(tokenPath))
+SGXEnclave::SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
+	SGXEnclave(enclavePath, iasConnector, fs::path(tokenPath))
 {
 	
 }
 
-SGXEnclave::SGXEnclave(const std::string enclavePath, const fs::path tokenPath) :
+SGXEnclave::SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath) :
 	m_eid(0),
 	m_lastStatus(SGX_SUCCESS),
 	m_token(0),
+	m_iasConnector(iasConnector),
 	m_enclavePath(enclavePath),
 	m_tokenPath(tokenPath),
-	m_raServer(nullptr),
 	m_raSenderID(),
 	m_exGroupID(0)
 {
 }
 
-SGXEnclave::SGXEnclave(const std::string enclavePath, const KnownFolderType tokenLocType, const std::string tokenFileName) :
-	SGXEnclave(enclavePath, GetKnownFolderPath(tokenLocType).append(tokenFileName))
+SGXEnclave::SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
+	SGXEnclave(enclavePath, iasConnector, GetKnownFolderPath(tokenLocType).append(tokenFileName))
 {
 	fs::path tokenFolder = m_tokenPath.parent_path();
 	fs::create_directories(tokenFolder);
@@ -51,10 +49,6 @@ SGXEnclave::~SGXEnclave()
 	if (IsLaunched())
 	{
 		sgx_destroy_enclave(m_eid);
-	}
-	if (m_raServer)
-	{
-		delete m_raServer;
 	}
 }
 
@@ -99,42 +93,19 @@ bool SGXEnclave::IsLaunched() const
 	return (m_eid != 0);
 }
 
-std::unique_ptr<Connection> SGXEnclave::RequestRA(uint32_t ipAddr, uint16_t portNum)
-{
-	std::unique_ptr<Connection> connection(std::make_unique<Connection>(ipAddr, portNum));
-	SGXRASession RASession(connection);
-	bool res = RASession.ProcessClientSideRA(*this);
-	
-	return res ? RASession.ReleaseConnection() : nullptr;
-}
-
 std::string SGXEnclave::GetRASenderID() const
 {
 	return m_raSenderID;
 }
 
+std::shared_ptr<RemoteAttestationSession> SGXEnclave::GetRASession(std::unique_ptr<Connection>& connection)
+{
+	return std::make_shared<SGXRASession>(connection, *this, m_iasConnector);
+}
+
 uint32_t SGXEnclave::GetExGroupID() const
 {
 	return m_exGroupID;
-}
-
-void SGXEnclave::LaunchRAServer(uint32_t ipAddr, uint16_t portNum)
-{
-	m_raServer = new Server(ipAddr, portNum);
-}
-
-bool SGXEnclave::IsRAServerLaunched() const
-{
-	return m_raServer;
-}
-
-std::unique_ptr<Connection> SGXEnclave::AcceptRAConnection()
-{
-	std::unique_ptr<Connection> connection(m_raServer->AcceptConnection());
-	SGXRASession RASession(connection);
-	bool res = RASession.ProcessServerSideRA(*this);
-
-	return res ? RASession.ReleaseConnection() : nullptr;
 }
 
 sgx_status_t SGXEnclave::GetLastStatus() const

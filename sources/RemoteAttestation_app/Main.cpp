@@ -10,15 +10,26 @@
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
+#include "../common_app/DecentRASession.h"
 
 #include "../common_app/Networking/Connection.h"
+#include "../common_app/Networking/Server.h"
+
+#include "../common_app/IAS/IASConnector.h"
 
 #include "ExampleEnclave.h"
 #include "SimpleMessage.h"
 #include "../common_app/RAMessageRevRAReq.h"
 
-/* Application entry */
-int SGX_CDECL main(int argc, char *argv[])
+/**
+ * \brief	Main entry-point for this application
+ *
+ * \param	argc	The number of command-line arguments provided.
+ * \param	argv	An array of command-line argument strings.
+ *
+ * \return	Exit-code for the process - 0 for success, else an error code.
+ */
+int main(int argc, char ** argv)
 {
 	TCLAP::CmdLine cmd("Enclave Remote Attestation", ' ', "ver", true);
 
@@ -37,9 +48,10 @@ int SGX_CDECL main(int argc, char *argv[])
 	sgx_status_t deviceStatusResErr = GetSGXDeviceStatus(deviceStatusRes);
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, GetSGXErrorMessage(deviceStatusResErr).c_str());
 
-	ExampleEnclave exp(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
-	exp.Launch();
-	//exp.InitRAEnvironment();
+	IASConnector iasConnector;
+	ExampleEnclave expEnc(ENCLAVE_FILENAME, iasConnector, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
+	expEnc.Launch();
+	//expEnc.InitRAEnvironment();
 
 	std::cout << "================ Test Process Completed ================" << std::endl;
 
@@ -60,33 +72,43 @@ int SGX_CDECL main(int argc, char *argv[])
 	{
 	case 0:
 	{
-		exp.SetDecentMode(DecentNodeMode::ROOT_SERVER);
-		exp.LaunchRAServer(hostIP, hostPort);
-		if (!exp.IsRAServerLaunched())
-		{
-			LOGE("RA Server Launch Failed!");
-		}
-		std::unique_ptr<Connection> connection = exp.AcceptRAConnection();
-		std::unique_ptr<Connection> connection2 = exp.AcceptRAConnection();
+		expEnc.SetDecentMode(DecentNodeMode::ROOT_SERVER);
+		Server ser(hostIP, hostPort);
+
+		std::unique_ptr<Connection> connection = ser.AcceptConnection();
+		DecentRASession decentRA(connection, expEnc, expEnc);
+		decentRA.ProcessServerSideRA();
+
+		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
+		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		decentRA2.ProcessServerSideRA();
 	}
-		
-		break;
+	break;
 	case 1:
 	{
-		exp.SetDecentMode(DecentNodeMode::ROOT_SERVER);
-		std::unique_ptr<Connection> connection = exp.RequestRA(hostIP, hostPort);
+		expEnc.SetDecentMode(DecentNodeMode::ROOT_SERVER);
+		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
+		DecentRASession decentRA(connection, expEnc, expEnc);
+		decentRA.ProcessClientSideRA();
 
-		exp.LaunchRAServer(hostIP, 57756U);
-		std::unique_ptr<Connection> connection2 = exp.AcceptRAConnection();
+		Server ser(hostIP, 57756U);
+		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
+		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		decentRA2.ProcessServerSideRA();
 	}
 	break;
 	case 2:
 	{
-		exp.SetDecentMode(DecentNodeMode::APPL_SERVER);
-		std::unique_ptr<Connection> connection = exp.RequestRA(hostIP, 57756U);
+		expEnc.SetDecentMode(DecentNodeMode::APPL_SERVER);
+		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, 57756U);
+		DecentRASession decentRA(connection, expEnc, expEnc);
+		decentRA.ProcessClientSideRA();
 
-		exp.LaunchRAServer(hostIP, 57750U);
-		std::unique_ptr<Connection> connection2 = exp.AcceptRAConnection();
+		Server ser(hostIP, 57750U);
+		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
+		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		decentRA2.ProcessServerSideRA();
+		decentRA2.SwapConnection(connection2);
 
 		std::string buffer;
 		connection2->Receive(buffer);
@@ -95,18 +117,24 @@ int SGX_CDECL main(int argc, char *argv[])
 		RAMessageRevRAReq revMsg(jsonRoot);
 		uint64_t secret;
 		sgx_aes_gcm_128bit_tag_t secretMac;
-		exp.GetSimpleSecret(revMsg.GetSenderID(), secret, secretMac);
-		SimpleMessage sMsg(exp.GetRASenderID(), secret, secretMac);
+		expEnc.GetSimpleSecret(revMsg.GetSenderID(), secret, secretMac);
+		SimpleMessage sMsg(expEnc.GetRASenderID(), secret, secretMac);
 		connection2->Send(sMsg.ToJsonString());
 	}
 	break;
 	case 3:
 	{
-		exp.SetDecentMode(DecentNodeMode::APPL_SERVER);
-		std::unique_ptr<Connection> connection = exp.RequestRA(hostIP, hostPort);
+		expEnc.SetDecentMode(DecentNodeMode::APPL_SERVER);
+		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
+		DecentRASession decentRA(connection, expEnc, expEnc);
+		decentRA.ProcessClientSideRA();
 
-		std::unique_ptr<Connection> connection2 = exp.RequestAppNodeConnection(hostIP, 57750U);
-		RAMessageRevRAReq revMsg(exp.GetRASenderID());
+		std::unique_ptr<Connection> connection2 = std::make_unique<Connection>(hostIP, 57750U);
+		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		decentRA2.ProcessClientMessage0();
+		decentRA2.SwapConnection(connection2);
+
+		RAMessageRevRAReq revMsg(expEnc.GetRASenderID());
 		connection2->Send(revMsg.ToJsonString());
 
 		std::string buffer;
@@ -114,7 +142,7 @@ int SGX_CDECL main(int argc, char *argv[])
 		reader->parse(buffer.c_str(), buffer.c_str() + buffer.size(), &jsonRoot, &errStr);
 
 		SimpleMessage sMsg(jsonRoot);
-		exp.ProcessSimpleSecret(sMsg.GetSenderID(), sMsg.GetSecret(), sMsg.GetSecretMac());
+		expEnc.ProcessSimpleSecret(sMsg.GetSenderID(), sMsg.GetSecret(), sMsg.GetSecretMac());
 
 	}
 	break;
@@ -125,8 +153,8 @@ int SGX_CDECL main(int argc, char *argv[])
 #else
 	std::cout << "================ This is client side ================" << std::endl;
 
-	exp.SetDecentMode(DecentNodeMode::ROOT_SERVER);
-	std::unique_ptr<Connection> connection(exp.RequestRA(hostIP, hostPort));
+	expEnc.SetDecentMode(DecentNodeMode::ROOT_SERVER);
+	//std::unique_ptr<Connection> connection(expEnc.RequestRA(hostIP, hostPort));
 
 #endif // RA_SERVER_SIDE
 

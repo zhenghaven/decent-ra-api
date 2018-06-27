@@ -1,17 +1,24 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 class RemoteAttestationSession;
+class DecentralizedEnclave;
 class Connection;
+class EnclaveBase;
 
 class DecentralizedRASession
 {
 public:
 	DecentralizedRASession() = delete;
-	DecentralizedRASession(std::unique_ptr<Connection>& connection, std::shared_ptr<RemoteAttestationSession>& hardwareSession);
+	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave);
 	
 	virtual ~DecentralizedRASession();
+
+	virtual bool ProcessClientSideRA();
+
+	virtual bool ProcessServerSideRA();
 
 	void AssignConnection(std::unique_ptr<Connection>& inConnection);
 
@@ -20,6 +27,11 @@ public:
 protected:
 	std::shared_ptr<RemoteAttestationSession> m_hardwareSession;
 	std::unique_ptr<Connection> m_connection;
+	EnclaveBase& m_hardwareEnclave;
+
+	virtual bool SendReverseRARequest(const std::string& senderID);
+
+	virtual bool RecvReverseRARequest();
 
 private:
 

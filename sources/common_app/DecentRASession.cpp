@@ -9,6 +9,7 @@
 #include "RAMessageRevRAReq.h"
 #include "DecentEnclave.h"
 #include "EnclaveBase.h"
+#include "RemoteAttestationSession.h"
 
 #include "DecentMessages/DecentMessage.h"
 
@@ -81,84 +82,79 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	}
 }
 
+DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, DecentEnclave & enclave) :
+	DecentralizedRASession(connection, hardwareEnclave),
+	m_decentEnclave(enclave)
+{
+}
+
 DecentRASession::~DecentRASession()
 {
 }
 
-bool DecentRASession::SendReverseRARequest(const std::string& senderID)
+bool DecentRASession::ProcessClientSideRA()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
 
-	RAMessageRevRAReq msg(senderID);
-	m_connection->Send(msg.ToJsonString());
+	bool res = true;
 
-	return true;
+	res = DecentralizedRASession::ProcessClientSideRA();
+	if (!res)
+	{
+		return false;
+	}
+
+	res = ProcessClientSideKeyRequest();
+
+	return res;
 }
 
-bool DecentRASession::RecvReverseRARequest()
+bool DecentRASession::ProcessServerSideRA()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
 
-	RAMessages* resp = nullptr;
-	std::string msgBuffer;
-	m_connection->Receive(msgBuffer);
-	resp = JsonMessageParser(msgBuffer); 
-
-	RAMessageRevRAReq* revReq = dynamic_cast<RAMessageRevRAReq*>(resp);
-	if (!resp || !revReq || !revReq->IsValid())
+	if (m_decentEnclave.GetDecentMode() == DecentNodeMode::APPL_SERVER)
 	{
-		delete resp;
+		return ProcessServerMessage0();
+	}
+
+	bool res = true;
+
+	res = DecentralizedRASession::ProcessServerSideRA();
+	if (!res)
+	{
 		return false;
 	}
 
-	delete resp;
-	resp = nullptr;
-	revReq = nullptr;
+	res = ProcessServerSideKeyRequest();
 
-	return true;
+	return res;
 }
 
-//bool DecentRASession::ProcessClientSideRA(EnclaveBase & enclave)
-//{
-//
-//	return true;
-//}
-//
-//bool DecentRASession::ProcessServerSideRA(EnclaveBase & enclave)
-//{
-//
-//	return true;
-//}
-
-bool DecentRASession::ProcessClientSideKeyRequest(DecentEnclave & enclave)
+bool DecentRASession::ProcessClientSideKeyRequest()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
-	//TODO: Simplify this later:
-	DecentEnclave* decentEnc = dynamic_cast<DecentEnclave*>(&enclave);
-	if (!decentEnc)
-	{
-		return false;
-	}
+
 	RAMessages* resp = nullptr;
 	std::string msgBuffer;
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	const std::string senderID = static_cast<const DecentEnclave&>(enclave).GetEnclaveHardware()->GetRASenderID();
+	const std::string senderID = m_hardwareSession->GetSenderID();
 
 	sgx_ec256_public_t signKey;
 	sgx_ec256_public_t encrKey;
 
-	decentEnc->GetEnclaveHardware()->GetRASignPubKey(signKey);
-	decentEnc->GetEnclaveHardware()->GetRAEncrPubKey(encrKey);
-	DecentMessageKeyReq msgKR(senderID, decentEnc->GetDecentMode(), signKey, encrKey);
+	m_hardwareEnclave.GetRASignPubKey(signKey);
+	m_hardwareEnclave.GetRAEncrPubKey(encrKey);
+	DecentMessageKeyReq msgKR(senderID, m_decentEnclave.GetDecentMode(), signKey, encrKey);
 	m_connection->Send(msgKR.ToJsonString());
 
 	m_connection->Receive(msgBuffer);
@@ -167,7 +163,7 @@ bool DecentRASession::ProcessClientSideKeyRequest(DecentEnclave & enclave)
 	{
 		return false;
 	}
-	switch (decentEnc->GetDecentMode())
+	switch (m_decentEnclave.GetDecentMode())
 	{
 	case DecentNodeMode::ROOT_SERVER:
 	{
@@ -178,14 +174,14 @@ bool DecentRASession::ProcessClientSideKeyRequest(DecentEnclave & enclave)
 			return false;
 		}
 
-		enclaveRes = decentEnc->SetProtocolSignKey(krResp->GetSenderID(), krResp->GetPriSignKey(), krResp->GetPriSignKeyMac(), krResp->GetPubSignKey(), krResp->GetPubSignKeyMac());
+		enclaveRes = m_decentEnclave.SetProtocolSignKey(krResp->GetSenderID(), krResp->GetPriSignKey(), krResp->GetPriSignKeyMac(), krResp->GetPubSignKey(), krResp->GetPubSignKeyMac());
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			delete resp;
 			return false;
 		}
 		
-		enclaveRes = decentEnc->SetProtocolEncrKey(krResp->GetSenderID(), krResp->GetPriEncrKey(), krResp->GetPriEncrKeyMac(), krResp->GetPubEncrKey(), krResp->GetPubEncrKeyMac());
+		enclaveRes = m_decentEnclave.SetProtocolEncrKey(krResp->GetSenderID(), krResp->GetPriEncrKey(), krResp->GetPriEncrKeyMac(), krResp->GetPubEncrKey(), krResp->GetPubEncrKeyMac());
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			delete resp;
@@ -203,7 +199,7 @@ bool DecentRASession::ProcessClientSideKeyRequest(DecentEnclave & enclave)
 			return false;
 		}
 
-		enclaveRes = decentEnc->SetKeySigns(krResp->GetSenderID(), krResp->GetSignSign(), krResp->GetSignMac(), krResp->GetEncrSign(), krResp->GetEncrMac());
+		enclaveRes = m_decentEnclave.SetKeySigns(krResp->GetSenderID(), krResp->GetSignSign(), krResp->GetSignMac(), krResp->GetEncrSign(), krResp->GetEncrMac());
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			delete resp;
@@ -218,23 +214,19 @@ bool DecentRASession::ProcessClientSideKeyRequest(DecentEnclave & enclave)
 	return true;
 }
 
-bool DecentRASession::ProcessServerSideKeyRequest(DecentEnclave & enclave)
+bool DecentRASession::ProcessServerSideKeyRequest()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
-	if (enclave.GetDecentMode != DecentNodeMode::ROOT_SERVER)
+	if (m_decentEnclave.GetDecentMode() != DecentNodeMode::ROOT_SERVER)
 	{
 		return false;
 	}
-	DecentEnclave* decentEnc = dynamic_cast<DecentEnclave*>(&enclave);
-	if (!decentEnc)
-	{
-		return false;
-	}
+
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	const std::string senderID = static_cast<const DecentEnclave&>(enclave).GetEnclaveHardware()->GetRASenderID();
+	const std::string senderID = m_hardwareSession->GetSenderID();
 
 	RAMessages* resp = nullptr;
 	std::string msgBuffer;
@@ -257,7 +249,7 @@ bool DecentRASession::ProcessServerSideKeyRequest(DecentEnclave & enclave)
 		sgx_aes_gcm_128bit_tag_t priSignKeyMac;
 		sgx_ec256_public_t pubSignKey;
 		sgx_aes_gcm_128bit_tag_t pubSignKeyMac;
-		enclaveRes = decentEnc->GetProtocolSignKey(msgKR->GetSenderID(), priSignKey, priSignKeyMac, pubSignKey, pubSignKeyMac);
+		enclaveRes = m_decentEnclave.GetProtocolSignKey(msgKR->GetSenderID(), priSignKey, priSignKeyMac, pubSignKey, pubSignKeyMac);
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			delete resp;
@@ -270,7 +262,7 @@ bool DecentRASession::ProcessServerSideKeyRequest(DecentEnclave & enclave)
 		sgx_aes_gcm_128bit_tag_t priEncrKeyMac;
 		sgx_ec256_public_t pubEncrKey;
 		sgx_aes_gcm_128bit_tag_t pubEncrKeyMac;
-		enclaveRes = decentEnc->GetProtocolEncrKey(msgKR->GetSenderID(), priEncrKey, priEncrKeyMac, pubEncrKey, pubEncrKeyMac);
+		enclaveRes = m_decentEnclave.GetProtocolEncrKey(msgKR->GetSenderID(), priEncrKey, priEncrKeyMac, pubEncrKey, pubEncrKeyMac);
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			delete resp;
@@ -290,7 +282,7 @@ bool DecentRASession::ProcessServerSideKeyRequest(DecentEnclave & enclave)
 		sgx_aes_gcm_128bit_tag_t signMac;
 		sgx_ec256_signature_t encrSign;
 		sgx_aes_gcm_128bit_tag_t encrMac;
-		enclaveRes = decentEnc->GetProtocolKeySigned(msgKR->GetSenderID(), msgKR->GetSignKey(), msgKR->GetEncrKey(), signSign, signMac, encrSign, encrMac);
+		enclaveRes = m_decentEnclave.GetProtocolKeySigned(msgKR->GetSenderID(), msgKR->GetSignKey(), msgKR->GetEncrKey(), signSign, signMac, encrSign, encrMac);
 
 		krResp = new DecentMessageApplResp(senderID, signSign, signMac, encrSign, encrMac);
 	}
@@ -305,41 +297,37 @@ bool DecentRASession::ProcessServerSideKeyRequest(DecentEnclave & enclave)
 	return true;
 }
 
-DecentMessageMsg0* ConstructMessage0(DecentEnclave* decentEnc)
+DecentMessageMsg0* DecentRASession::ConstructMessage0()
 {
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	const std::string senderID = static_cast<const DecentEnclave*>(decentEnc)->GetEnclaveHardware()->GetRASenderID();
+	const std::string senderID = m_hardwareSession->GetSenderID();
 
 	sgx_ec256_public_t pubSignKey;
 	sgx_ec256_signature_t signSign;
 	sgx_ec256_public_t pubEncrKey;
 	sgx_ec256_signature_t encrSign;
 
-	enclaveRes = decentEnc->GetEnclaveHardware()->GetRASignPubKey(pubSignKey);
+	enclaveRes = m_hardwareEnclave.GetRASignPubKey(pubSignKey);
 
-	enclaveRes = (enclaveRes != SGX_SUCCESS) ? enclaveRes : decentEnc->GetEnclaveHardware()->GetRAEncrPubKey(pubEncrKey);
+	enclaveRes = (enclaveRes != SGX_SUCCESS) ? enclaveRes : m_hardwareEnclave.GetRAEncrPubKey(pubEncrKey);
 
-	decentEnc->GetKeySigns(signSign, encrSign);
+	m_decentEnclave.GetKeySigns(signSign, encrSign);
 
 	//enclaveRes = (enclaveRes != SGX_SUCCESS) ? enclaveRes : decentEnc->GetLastStatus();
 
 	return (enclaveRes != SGX_SUCCESS) ? nullptr : new DecentMessageMsg0(senderID, pubSignKey, signSign, pubEncrKey, encrSign);
 }
 
-bool DecentRASession::ProcessClientMessage0(DecentEnclave & enclave)
+bool DecentRASession::ProcessClientMessage0()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
-	DecentEnclave* decentEnc = dynamic_cast<DecentEnclave*>(&enclave);
-	if (!decentEnc)
-	{
-		return false;
-	}
+
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 
-	DecentMessageMsg0* msg0Req = ConstructMessage0(decentEnc);
+	DecentMessageMsg0* msg0Req = ConstructMessage0();
 	if (!msg0Req)
 	{
 		return false;
@@ -362,7 +350,7 @@ bool DecentRASession::ProcessClientMessage0(DecentEnclave & enclave)
 		return false;
 	}
 
-	enclaveRes = decentEnc->ProcessDecentMsg0(msg0Resp->GetSenderID(), msg0Resp->GetSignKey(), msg0Resp->GetSignSign(), msg0Resp->GetEncrKey(), msg0Resp->GetEncrSign());
+	enclaveRes = m_decentEnclave.ProcessDecentMsg0(msg0Resp->GetSenderID(), msg0Resp->GetSignKey(), msg0Resp->GetSignSign(), msg0Resp->GetEncrKey(), msg0Resp->GetEncrSign());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete resp;
@@ -376,19 +364,15 @@ bool DecentRASession::ProcessClientMessage0(DecentEnclave & enclave)
 	return true;
 }
 
-bool DecentRASession::ProcessServerMessage0(DecentEnclave & enclave)
+bool DecentRASession::ProcessServerMessage0()
 {
 	if (!m_connection)
 	{
 		return false;
 	}
-	DecentEnclave* decentEnc = dynamic_cast<DecentEnclave*>(&enclave);
-	if (!decentEnc)
-	{
-		return false;
-	}
+
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	const std::string senderID = static_cast<const DecentEnclave&>(enclave).GetEnclaveHardware()->GetRASenderID();
+	const std::string senderID = m_hardwareSession->GetSenderID();
 
 	RAMessages* resp = nullptr;
 	std::string msgBuffer;
@@ -404,7 +388,7 @@ bool DecentRASession::ProcessServerMessage0(DecentEnclave & enclave)
 		return false;
 	}
 
-	enclaveRes = decentEnc->ProcessDecentMsg0(msg0req->GetSenderID(), msg0req->GetSignKey(), msg0req->GetSignSign(), msg0req->GetEncrKey(), msg0req->GetEncrSign());
+	enclaveRes = m_decentEnclave.ProcessDecentMsg0(msg0req->GetSenderID(), msg0req->GetSignKey(), msg0req->GetSignSign(), msg0req->GetEncrKey(), msg0req->GetEncrSign());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete resp;
@@ -417,7 +401,7 @@ bool DecentRASession::ProcessServerMessage0(DecentEnclave & enclave)
 	resp = nullptr;
 	msg0req = nullptr;
 
-	DecentMessageMsg0* msg0Resp = ConstructMessage0(decentEnc);
+	DecentMessageMsg0* msg0Resp = ConstructMessage0();
 	if (!msg0Resp)
 	{
 		DecentMessageErr errMsg(senderID, "Enclave Process Error!");

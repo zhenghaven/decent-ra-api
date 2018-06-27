@@ -1,13 +1,165 @@
 #include "DecentralizedRASession.h"
 
-DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, std::shared_ptr<RemoteAttestationSession>& hardwareSession) :
+#include "Common.h"
+#include "RemoteAttestationSession.h"
+#include "DecentralizedEnclave.h"
+#include "EnclaveBase.h"
+#include "RAMessageRevRAReq.h"
+
+#include "Networking/Connection.h"
+
+static RAMessages * JsonMessageParser(const std::string& jsonStr)
+{
+	Json::Value jsonRoot;
+	Json::CharReaderBuilder rbuilder;
+	rbuilder["collectComments"] = false;
+	std::string errStr;
+
+	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
+	bool isValid = reader->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.size(), &jsonRoot, &errStr);
+
+	if (!isValid
+		|| !jsonRoot.isMember("MsgSubType")
+		|| !jsonRoot["MsgSubType"].isString())
+	{
+		LOGI("Recv INVALID MESSAGE!");
+		return nullptr;
+	}
+
+	if (jsonRoot["MsgSubType"].asString() == "ReverseRARequest")
+	{
+		return new RAMessageRevRAReq(jsonRoot);
+	}
+
+	return nullptr;
+}
+
+DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave) :
 	m_connection(std::move(connection)),
-	m_hardwareSession(hardwareSession)
+	m_hardwareEnclave(hardwareEnclave),
+	m_hardwareSession(hardwareEnclave.GetRASession())
 {
 }
 
 DecentralizedRASession::~DecentralizedRASession()
 {
+}
+
+bool DecentralizedRASession::ProcessClientSideRA()
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+
+	bool res = true;
+	const std::string senderID = m_hardwareSession->GetSenderID();
+
+	m_hardwareSession->SwapConnection(m_connection);
+	res = m_hardwareSession->ProcessClientSideRA();
+	m_hardwareSession->SwapConnection(m_connection);
+
+	if (!res)
+	{
+		return res;
+	}
+
+	res = SendReverseRARequest(senderID);
+	if (!res)
+	{
+		return res;
+	}
+
+	m_hardwareSession->SwapConnection(m_connection);
+	res = m_hardwareSession->ProcessServerSideRA();
+	m_hardwareSession->SwapConnection(m_connection);
+
+	if (!res)
+	{
+		return res;
+	}
+
+	res = RecvReverseRARequest();
+
+	return res;
+}
+
+bool DecentralizedRASession::ProcessServerSideRA()
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+
+	bool res = true;
+	const std::string senderID = m_hardwareSession->GetSenderID();
+
+	m_hardwareSession->SwapConnection(m_connection);
+	res = m_hardwareSession->ProcessServerSideRA();
+	m_hardwareSession->SwapConnection(m_connection);
+
+	if (!res)
+	{
+		return res;
+	}
+
+	res = RecvReverseRARequest();
+	if (!res)
+	{
+		return res;
+	}
+
+	m_hardwareSession->SwapConnection(m_connection);
+	res = m_hardwareSession->ProcessClientSideRA();
+	m_hardwareSession->SwapConnection(m_connection);
+
+	if (!res)
+	{
+		return res;
+	}
+
+	res = SendReverseRARequest(senderID);
+
+	return res;
+}
+
+bool DecentralizedRASession::SendReverseRARequest(const std::string & senderID)
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+
+	RAMessageRevRAReq msg(senderID);
+	m_connection->Send(msg.ToJsonString());
+
+	return true;
+}
+
+bool DecentralizedRASession::RecvReverseRARequest()
+{
+	if (!m_connection)
+	{
+		return false;
+	}
+
+	RAMessages* resp = nullptr;
+	std::string msgBuffer;
+	m_connection->Receive(msgBuffer);
+	resp = JsonMessageParser(msgBuffer);
+
+	RAMessageRevRAReq* revReq = dynamic_cast<RAMessageRevRAReq*>(resp);
+	if (!resp || !revReq || !revReq->IsValid())
+	{
+		delete resp;
+		return false;
+	}
+
+	delete resp;
+	resp = nullptr;
+	revReq = nullptr;
+
+	return true;
 }
 
 void DecentralizedRASession::AssignConnection(std::unique_ptr<Connection>& inConnection)

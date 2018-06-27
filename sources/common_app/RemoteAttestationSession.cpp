@@ -1,14 +1,21 @@
 #include "RemoteAttestationSession.h"
 
 #include "Networking/Connection.h"
+#include "EnclaveBase.h"
 
-RemoteAttestationSession::RemoteAttestationSession(std::unique_ptr<Connection>& connection) :
-	m_connection(std::move(connection))
+RemoteAttestationSession::RemoteAttestationSession(std::unique_ptr<Connection>& connection, EnclaveBase& enclaveBase) :
+	m_connection(std::move(connection)),
+	m_enclaveBase(enclaveBase)
 {
 }
 
 RemoteAttestationSession::~RemoteAttestationSession()
 {
+}
+
+std::string RemoteAttestationSession::GetSenderID() const
+{
+	return m_enclaveBase.GetRASenderID();
 }
 
 std::unique_ptr<Connection>&& RemoteAttestationSession::ReleaseConnection()
@@ -26,8 +33,3 @@ void RemoteAttestationSession::SwapConnection(std::unique_ptr<Connection>& inCon
 {
 	m_connection.swap(inConnection);
 }
-
-//RemoteAttestationSession::Mode RemoteAttestationSession::GetMode() const
-//{
-//	return m_mode;
-//}

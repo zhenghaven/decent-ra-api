@@ -5,6 +5,7 @@
 #include <memory>
 
 class IASConnector;
+class SGXEnclave;
 
 class SGXRASession : public RemoteAttestationSession
 {
@@ -12,17 +13,17 @@ public:
 	SGXRASession() = delete;
 
 	//Caution! Blocking constructors!
-	SGXRASession(std::unique_ptr<Connection>& m_connection, std::shared_ptr<IASConnector> iasConnector);
+	SGXRASession(std::unique_ptr<Connection>& m_connection, SGXEnclave& enclave, IASConnector& iasConnector);
 
 	~SGXRASession();
 
-	virtual bool ProcessClientSideRA(EnclaveBase& enclave) override;
+	virtual bool ProcessClientSideRA() override;
 
-	virtual bool ProcessServerSideRA(EnclaveBase& enclave) override;
+	virtual bool ProcessServerSideRA() override;
 
 protected:
-	std::shared_ptr<IASConnector> m_iasConnector;
+	IASConnector& m_iasConnector;
 
 private:
-
+	SGXEnclave& m_enclave;
 };
