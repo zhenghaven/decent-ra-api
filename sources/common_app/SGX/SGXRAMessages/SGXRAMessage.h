@@ -5,7 +5,7 @@
 
 #include <json/json.h>
 
-#include "../RAMessages.h"
+#include "../../RAMessages.h"
 
 class SGXRAMessage : public RAMessages
 {

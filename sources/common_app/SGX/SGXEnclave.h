@@ -1,14 +1,14 @@
 #pragma once
 
-#include "EnclaveBase.h"
+#include "../EnclaveBase.h"
 
 #include <string>
 
 #include <sgx_eid.h>
 #include <sgx_tcrypto.h>
 
-#include "FileSystemUtil.h"
-#include "EnclaveUtil.h"
+#include "../FileSystemUtil.h"
+#include "../EnclaveUtil.h"
 #include "IAS/IASConnector.h"
 
 class Server;

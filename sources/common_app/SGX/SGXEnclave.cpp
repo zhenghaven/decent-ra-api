@@ -7,17 +7,15 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include "../common/CryptoTools.h"
-#include "../common/sgx_ra_msg4.h"
+#include "../../common/CryptoTools.h"
+#include "../../common/sgx_ra_msg4.h"
 
-#include "Common.h"
+#include "../Common.h"
 #include "SGXRASession.h"
 
-#include "Networking/Server.h"
-#include "Networking/Connection.h"
+#include "../Networking/Connection.h"
 
 using namespace boost::asio;
-
 
 SGXEnclave::SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
 	SGXEnclave(enclavePath, iasConnector, fs::path(tokenPath))

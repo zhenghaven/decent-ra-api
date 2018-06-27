@@ -15,7 +15,7 @@
 #include "../common_app/Networking/Connection.h"
 #include "../common_app/Networking/Server.h"
 
-#include "../common_app/IAS/IASConnector.h"
+#include "../common_app/SGX/IAS/IASConnector.h"
 
 #include "ExampleEnclave.h"
 #include "SimpleMessage.h"

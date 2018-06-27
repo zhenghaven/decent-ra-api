@@ -4,8 +4,8 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
-#include "../../common/sgx_ra_msg4.h"
-#include "../../common/CryptoTools.h"
+#include "../../../common/sgx_ra_msg4.h"
+#include "../../../common/CryptoTools.h"
 
 SGXRAMessage4::SGXRAMessage4(const std::string& senderID, const sgx_ra_msg4_t& msg4Data, const sgx_ec256_signature_t& signature) :
 	SGXRAMessage(senderID),

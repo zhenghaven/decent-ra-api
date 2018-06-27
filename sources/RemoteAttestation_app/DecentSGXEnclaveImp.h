@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../common_app/SGXEnclave.h"
+#include "../common_app/SGX/SGXEnclave.h"
 #include "../common_app/DecentEnclave.h"
 
 class DecentSGXEnclaveImp : public SGXEnclave, public DecentEnclave

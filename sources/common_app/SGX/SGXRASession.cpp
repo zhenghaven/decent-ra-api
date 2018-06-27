@@ -5,7 +5,7 @@
 
 #include <json/json.h>
 
-#include "Common.h"
+#include "../Common.h"
 #include "SGXEnclave.h"
 #include "SGXRAMessages/SGXRAMessage.h"
 #include "SGXRAMessages/SGXRAMessage0.h"
@@ -15,9 +15,9 @@
 #include "SGXRAMessages/SGXRAMessage4.h"
 #include "SGXRAMessages/SGXRAMessageErr.h"
 
-#include "Networking/Connection.h"
-#include "../common/CryptoTools.h"
-#include "../common/sgx_ra_msg4.h"
+#include "../Networking/Connection.h"
+#include "../../common/CryptoTools.h"
+#include "../../common/sgx_ra_msg4.h"
 #include "IAS/IASConnector.h"
 
 namespace
