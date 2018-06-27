@@ -1,3 +1,7 @@
+#ifndef NOMINMAX
+# define NOMINMAX
+#endif
+
 #include <iostream>
 #include <string>
 
@@ -7,8 +11,14 @@
 #include <json/json.h>
 #include <sgx_uae_service.h>
 #include <curl/curl.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/evp.h>
+#include <cppcodec/base64_rfc4648.hpp>
 
-#include "../common_app/IAS/IASUtil.h"
+#include "../common_app/SGX/IAS/IASUtil.h"
+#include "../common/ias_report_cert.h"
+#include "../common/CryptoTools.h"
 
 #ifdef _MSC_VER
 
@@ -82,11 +92,28 @@ int main() {
 
 	curl_easy_cleanup(hnd);
 
-	std::string s1;
+	int sslRes = 0;
+
+	std::vector<X509*> certs;
+	LoadX509CertsFromStr(certs, IAS_REPORT_CERT);
+	X509* iasCert = certs[0];
+
+	std::string s1 = "{\r\n\"isvEnclaveQuote\": \"AgABAPAKAAAHAAYAAAAAAN0WQP4NKMmoswWvTU52WL4AAAAAAAAAAAAAAAAAAAAABQUCBAECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAADHQElNZvJ5D+ILaWmNeFeIj2MyOXBG1pUSQdE428ixtAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnnferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwECALZcM+G8O0Ys+P0oIWxtVbWdSF9QCxaucw3ak8gwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqAIAABFPePLzujWuMPeJyvsNK8oFfwLdAWBDyKGajC5xhNzJw/bLsveZ8HtfK2LZnrU5PLEZkWBn2Y1awZ6FBpkHed7PRLHtbRcOSmapOpPnKot7yqBgpyotsRXvNaF1zDNmIzk6AQeaLdKl4Tlj+zbuAdF+LSCRHqbBTEcLFimI/lXEjgIimbmVXrza5iHQw0TDy/ayl1y1X0EfML6FGgzEI9dcMAnXTPxGRzoYBxmjuAWF8vdNxRfmJ3N++8zGwNQRiip4fzfx/ojfak/R4PKVILsR0N8FFcREg3gBOXSibI238b2FHEYCoxFcBfLMS+bHkPLRwzSERhxUP/jOFWTLp5lPRjbgEtDvcPoi8qlzkVGzpsrmWA8w473XjnoiuhRW+PjGtNo59M1eh4VEHmgBAAC49nn3pD9+jxjfhbDAhMFeZR62Be61dmKV/JyDlyZ4IFLxcy26soHPzWa0ZvTulmTW5MqRDyZeSe0vQ7Pkz+IuUCf2jsxB6ktBiSZpGYBWqtI7V5KKbViFxdpVbU+3kxev+YBgo0jxUiCXWA2aXkmows9vg65t2oezendW4vxUklRMPQhH+MRV0eRaFyFtXiXSd4jZQ2/lKvMgYz/wIizITVSk8zt9JxaOI3RsfFgaRslSvCbMgsoagTsedKIxpwImkg6e/G8eAXlQ8S51NsIsjwgoBH8/e8H8AhBF+PdH7emWrJIudwdL3/QZF6eK+PI5d0dfKTBdv0HTR8n0AGY5wW2IBTEUQrGbTrhbG9JVxfqc3ykkgF9ZiAXilvNx8iLRTvVVV8Gtzp5t8w/fYiL8YO68gJbE+Z+Vm6AHpdj4rQNm4OowNVTgNpHPk3J6EnUII7hikqEc+VRCYLmg3/Y472YTmY3BXARp/xfRFJmaTpujQ4JHxTLs\"\r\n}";
 	std::string s2;
 	std::string s3;
 	std::string s4;
 	IASUtil::GetQuoteReport(s1, s2, s3, s4, IASUtil::GetDefaultCertPath(), IASUtil::GetDefaultKeyPath());
+
+	LoadX509CertsFromStr(certs, s4);
+
+	bool certVerRes = VerifyIasReportCert(iasCert, certs);
+
+	std::vector<uint8_t> buffer1 = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(s3);
+
+	bool signVerRes = VerifyIasReportSignature(s2, buffer1, certs[0]);
+
+	FreeX509Cert(&iasCert);
+	FreeX509Cert(certs);
 
 	std::cout << "Done! Enter anything to exit..." << std::endl;
 	getchar();
