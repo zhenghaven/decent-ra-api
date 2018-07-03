@@ -15,7 +15,7 @@ class DecentEnclave : public DecentralizedEnclave
 public:
 	using DecentralizedEnclave::DecentralizedEnclave;
 
-	~DecentEnclave();
+	virtual ~DecentEnclave();
 
 	virtual void SetDecentMode(DecentNodeMode inDecentMode) = 0;
 

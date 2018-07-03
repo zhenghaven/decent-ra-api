@@ -11,7 +11,7 @@
 #include "../../common/sgx_ra_msg4.h"
 
 #include "../Common.h"
-#include "SGXRASession.h"
+#include "SGXClientRASession.h"
 
 #include "../Networking/Connection.h"
 
@@ -96,9 +96,9 @@ std::string SGXEnclave::GetRASenderID() const
 	return m_raSenderID;
 }
 
-std::shared_ptr<RemoteAttestationSession> SGXEnclave::GetRASession(std::unique_ptr<Connection>& connection)
+std::shared_ptr<ClientRASession> SGXEnclave::GetRASession(std::unique_ptr<Connection>& connection)
 {
-	return std::make_shared<SGXRASession>(connection, *this, m_iasConnector);
+	return std::make_shared<SGXClientRASession>(connection, *this);
 }
 
 uint32_t SGXEnclave::GetExGroupID() const

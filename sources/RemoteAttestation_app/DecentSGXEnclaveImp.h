@@ -16,7 +16,7 @@ public:
 	virtual sgx_status_t GetRASignPubKey(sgx_ec256_public_t& outKey) override;
 	virtual sgx_status_t GetRAEncrPubKey(sgx_ec256_public_t& outKey) override;
 
-	virtual sgx_status_t InitRAEnvironment() override;
+	virtual sgx_status_t InitClientRAEnvironment() override;
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) override;
 	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1) override;
 	virtual sgx_status_t ProcessRAMsg1(const std::string& clientID, const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2) override;

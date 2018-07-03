@@ -9,7 +9,7 @@
 #include "RAMessageRevRAReq.h"
 #include "DecentEnclave.h"
 #include "EnclaveBase.h"
-#include "RemoteAttestationSession.h"
+#include "ClientRASession.h"
 
 #include "DecentMessages/DecentMessage.h"
 

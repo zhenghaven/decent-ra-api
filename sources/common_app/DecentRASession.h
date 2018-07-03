@@ -13,7 +13,7 @@ public:
 	DecentRASession() = delete;
 	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, DecentEnclave& enclave);
 
-	~DecentRASession();
+	virtual ~DecentRASession();
 
 	/**
 	 * \brief	Process the client side Remote Attestation.

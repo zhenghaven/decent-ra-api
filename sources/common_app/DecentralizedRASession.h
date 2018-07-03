@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-class RemoteAttestationSession;
+class ClientRASession;
 class DecentralizedEnclave;
 class Connection;
 class EnclaveBase;
@@ -25,7 +25,7 @@ public:
 	void SwapConnection(std::unique_ptr<Connection>& inConnection);
 
 protected:
-	std::shared_ptr<RemoteAttestationSession> m_hardwareSession;
+	std::shared_ptr<ClientRASession> m_hardwareSession;
 	std::unique_ptr<Connection> m_connection;
 	EnclaveBase& m_hardwareEnclave;
 

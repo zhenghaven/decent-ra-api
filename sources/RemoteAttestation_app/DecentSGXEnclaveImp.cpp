@@ -55,7 +55,7 @@ sgx_status_t DecentSGXEnclaveImp::GetRAEncrPubKey(sgx_ec256_public_t & outKey)
 	return res == SGX_SUCCESS ? retval : res;
 }
 
-sgx_status_t DecentSGXEnclaveImp::InitRAEnvironment()
+sgx_status_t DecentSGXEnclaveImp::InitClientRAEnvironment()
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;

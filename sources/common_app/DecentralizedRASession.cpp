@@ -1,7 +1,7 @@
 #include "DecentralizedRASession.h"
 
 #include "Common.h"
-#include "RemoteAttestationSession.h"
+#include "ClientRASession.h"
 #include "DecentralizedEnclave.h"
 #include "EnclaveBase.h"
 #include "RAMessageRevRAReq.h"

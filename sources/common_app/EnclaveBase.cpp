@@ -10,7 +10,7 @@ EnclaveBase::~EnclaveBase()
 {
 }
 
-std::shared_ptr<RemoteAttestationSession> EnclaveBase::GetRASession()
+std::shared_ptr<ClientRASession> EnclaveBase::GetRASession()
 {
 	std::unique_ptr<Connection> emptyConnection;
 	return GetRASession(emptyConnection);
