@@ -12,25 +12,30 @@
 #include "../common/sgx_ra_msg4.h"
 
 DecentSGXEnclaveImp::DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
-	SGXEnclave(enclavePath, iasConnector, tokenPath),
-	DecentEnclave()
+	SGXEnclave(enclavePath, tokenPath),
+	SGXServiceProvider(iasConnector)
 {
 }
 
 DecentSGXEnclaveImp::DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath) :
-	SGXEnclave(enclavePath, iasConnector, tokenPath),
-	DecentEnclave()
+	SGXEnclave(enclavePath, tokenPath),
+	SGXServiceProvider(iasConnector)
 {
 }
 
 DecentSGXEnclaveImp::DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
-	SGXEnclave(enclavePath, iasConnector, tokenLocType, tokenFileName),
-	DecentEnclave()
+	SGXEnclave(enclavePath, tokenLocType, tokenFileName),
+	SGXServiceProvider(iasConnector)
 {
 }
 
 DecentSGXEnclaveImp::~DecentSGXEnclaveImp()
 {
+}
+
+std::string DecentSGXEnclaveImp::GetRASenderID() const
+{
+	return m_raSenderID;
 }
 
 sgx_status_t DecentSGXEnclaveImp::GetRASignPubKey(sgx_ec256_public_t & outKey)

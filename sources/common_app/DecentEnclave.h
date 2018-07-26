@@ -13,8 +13,6 @@
 class DecentEnclave : public DecentralizedEnclave
 {
 public:
-	using DecentralizedEnclave::DecentralizedEnclave;
-
 	virtual ~DecentEnclave();
 
 	virtual void SetDecentMode(DecentNodeMode inDecentMode) = 0;

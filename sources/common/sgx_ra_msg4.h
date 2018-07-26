@@ -3,7 +3,7 @@
 #ifndef SGX_RA_MSG4_H
 #define SGX_RA_MSG4_H
 
-#include <sgx_key_exchange.h>
+//#include <sgx_key_exchange.h>
 
 //NOTE: These come from Intel SGX SDK RA sample code.
 

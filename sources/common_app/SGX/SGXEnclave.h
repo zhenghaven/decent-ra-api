@@ -22,16 +22,16 @@ class SGXEnclave : public EnclaveBase
 {
 public:
 	SGXEnclave() = delete;
-	SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
-	SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath);
-	SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	SGXEnclave(const std::string& enclavePath, const std::string& tokenPath);
+	SGXEnclave(const std::string& enclavePath, const fs::path tokenPath);
+	SGXEnclave(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	virtual ~SGXEnclave();
 
 	virtual bool Launch() override;
 	virtual bool IsLastExecutionFailed() const override;
 	virtual bool IsLaunched() const override;
-	virtual std::string GetRASenderID() const override;
+	//virtual std::string GetRASenderID() const override;
 	virtual std::shared_ptr<ClientRASession> GetRASession(std::unique_ptr<Connection>& connection) override;
 
 	virtual uint32_t GetExGroupID() const;
@@ -49,15 +49,12 @@ protected:
 	bool LoadToken();
 	bool UpdateToken();
 
-	std::string m_raSenderID;
 	uint32_t m_exGroupID;
 	sgx_status_t m_lastStatus;
 
 private:
 	sgx_enclave_id_t m_eid;
 	std::vector<uint8_t> m_token;
-
-	IASConnector m_iasConnector;
 
 	const std::string m_enclavePath;
 	const fs::path m_tokenPath;

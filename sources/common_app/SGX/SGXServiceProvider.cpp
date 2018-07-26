@@ -10,11 +10,11 @@ SGXServiceProvider::SGXServiceProvider(IASConnector ias) :
 SGXServiceProvider::~SGXServiceProvider()
 {
 }
-
-std::string SGXServiceProvider::GetRASenderID() const
-{
-	return m_raSenderID;
-}
+//
+//std::string SGXServiceProvider::GetRASenderID() const
+//{
+//	return m_raSenderID;
+//}
 
 std::shared_ptr<ServiceProviderRASession> SGXServiceProvider::GetRASession(std::unique_ptr<Connection>& connection)
 {

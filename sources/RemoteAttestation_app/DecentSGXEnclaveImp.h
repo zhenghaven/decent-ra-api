@@ -1,9 +1,10 @@
 #pragma once
 
 #include "../common_app/SGX/SGXEnclave.h"
+#include "../common_app/SGX/SGXServiceProvider.h"
 #include "../common_app/DecentEnclave.h"
 
-class DecentSGXEnclaveImp : public SGXEnclave, public DecentEnclave
+class DecentSGXEnclaveImp : public SGXEnclave, public SGXServiceProvider, public DecentEnclave
 {
 public:
 	DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
@@ -11,6 +12,8 @@ public:
 	DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	~DecentSGXEnclaveImp();
+	
+	virtual std::string GetRASenderID() const override;
 
 	//SGXEnclave methods:
 	virtual sgx_status_t GetRASignPubKey(sgx_ec256_public_t& outKey) override;
@@ -40,6 +43,8 @@ public:
 	virtual sgx_status_t SetKeySigns(const std::string& id, const sgx_ec256_signature_t& inSignSign, const sgx_aes_gcm_128bit_tag_t& inSignSignMac, const sgx_ec256_signature_t& inEncrSign, const sgx_aes_gcm_128bit_tag_t& inEncrSignMac) override;
 	virtual void GetKeySigns(sgx_ec256_signature_t& outSignSign, sgx_ec256_signature_t& outEncrSign) override;
 	virtual sgx_status_t ProcessDecentMsg0(const std::string& id, const sgx_ec256_public_t& inSignKey, const sgx_ec256_signature_t& inSignSign, const sgx_ec256_public_t& inEncrKey, const sgx_ec256_signature_t& inEncrSign) override;
+
 private:
+	std::string m_raSenderID;
 
 };

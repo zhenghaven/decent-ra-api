@@ -17,26 +17,25 @@
 
 using namespace boost::asio;
 
-SGXEnclave::SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
-	SGXEnclave(enclavePath, iasConnector, fs::path(tokenPath))
+SGXEnclave::SGXEnclave(const std::string& enclavePath, const std::string& tokenPath) :
+	SGXEnclave(enclavePath, fs::path(tokenPath))
 {
 	
 }
 
-SGXEnclave::SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath) :
+SGXEnclave::SGXEnclave(const std::string& enclavePath, const fs::path tokenPath) :
 	m_eid(0),
 	m_lastStatus(SGX_SUCCESS),
 	m_token(0),
-	m_iasConnector(iasConnector),
 	m_enclavePath(enclavePath),
 	m_tokenPath(tokenPath),
-	m_raSenderID(),
+	//m_raSenderID(),
 	m_exGroupID(0)
 {
 }
 
-SGXEnclave::SGXEnclave(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
-	SGXEnclave(enclavePath, iasConnector, GetKnownFolderPath(tokenLocType).append(tokenFileName))
+SGXEnclave::SGXEnclave(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
+	SGXEnclave(enclavePath, GetKnownFolderPath(tokenLocType).append(tokenFileName))
 {
 	fs::path tokenFolder = m_tokenPath.parent_path();
 	fs::create_directories(tokenFolder);
@@ -90,11 +89,11 @@ bool SGXEnclave::IsLaunched() const
 {
 	return (m_eid != 0);
 }
-
-std::string SGXEnclave::GetRASenderID() const
-{
-	return m_raSenderID;
-}
+//
+//std::string SGXEnclave::GetRASenderID() const
+//{
+//	return m_raSenderID;
+//}
 
 std::shared_ptr<ClientRASession> SGXEnclave::GetRASession(std::unique_ptr<Connection>& connection)
 {

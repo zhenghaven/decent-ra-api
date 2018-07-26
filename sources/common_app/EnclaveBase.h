@@ -14,8 +14,6 @@ typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 class EnclaveBase
 {
 public:
-	EnclaveBase();
-
 	virtual ~EnclaveBase();
 
 	virtual bool Launch() = 0;
