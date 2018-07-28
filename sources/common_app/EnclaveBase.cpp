@@ -2,10 +2,6 @@
 
 #include "Networking/Connection.h"
 
-EnclaveBase::EnclaveBase()
-{
-}
-
 EnclaveBase::~EnclaveBase()
 {
 }

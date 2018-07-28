@@ -82,8 +82,8 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	}
 }
 
-DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, DecentEnclave & enclave) :
-	DecentralizedRASession(connection, hardwareEnclave),
+DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentEnclave & enclave) :
+	DecentralizedRASession(connection, hardwareEnclave, sp),
 	m_decentEnclave(enclave)
 {
 }

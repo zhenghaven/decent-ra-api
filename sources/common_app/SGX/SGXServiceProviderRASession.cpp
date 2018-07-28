@@ -103,7 +103,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	}
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	enclaveRes = m_sgxSP.InitSPEnvironment();
+	enclaveRes = m_sgxSP.InitSPRAEnvironment();
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return false;

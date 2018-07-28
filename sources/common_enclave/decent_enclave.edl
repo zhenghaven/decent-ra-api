@@ -1,0 +1,34 @@
+enclave {
+	
+	include "../common/sgx_ra_msg4.h"
+	include "../common/Decent.h"
+	
+	trusted 
+	{
+		
+		//Decent Functions:
+		public void ecall_set_decent_mode(DecentNodeMode inDecentMode);
+
+		public DecentNodeMode ecall_get_decent_mode();
+		
+		public int ecall_adjust_shared_keys_serv([in, string] const char* id);
+		
+		public int ecall_adjust_shared_keys_clit([in, string] const char* id);
+
+		public sgx_status_t ecall_get_protocol_sign_key([in, string] const char* clientID, [out] sgx_ec256_private_t* outPriKey, [out] sgx_aes_gcm_128bit_tag_t* outPriKeyMac, [out] sgx_ec256_public_t* outPubKey, [out] sgx_aes_gcm_128bit_tag_t* outPubKeyMac);
+		
+		public sgx_status_t ecall_get_protocol_encr_key([in, string] const char* clientID, [out] sgx_ec256_private_t* outPriKey, [out] sgx_aes_gcm_128bit_tag_t* outPriKeyMac, [out] sgx_ec256_public_t* outPubKey, [out] sgx_aes_gcm_128bit_tag_t* outPubKeyMac);
+		
+		public sgx_status_t ecall_set_protocol_sign_key([in, string] const char* clientID, [in] const sgx_ec256_private_t* inPriKey, [in] const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, [in] const sgx_ec256_public_t* inPubKey, [in] const sgx_aes_gcm_128bit_tag_t* inPubKeyMac);
+		
+		public sgx_status_t ecall_set_protocol_encr_key([in, string] const char* clientID, [in] const sgx_ec256_private_t* inPriKey, [in] const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, [in] const sgx_ec256_public_t* inPubKey, [in] const sgx_aes_gcm_128bit_tag_t* inPubKeyMac);
+		
+		public sgx_status_t ecall_get_protocol_key_signed([in, string] const char* clientID, [in] const sgx_ec256_public_t* inSignKey, [in] const sgx_ec256_public_t* inEncrKey, [out] sgx_ec256_signature_t* outSignSign, [out] sgx_aes_gcm_128bit_tag_t* outSignSignMac, [out] sgx_ec256_signature_t* outEncrSign, [out] sgx_aes_gcm_128bit_tag_t* outEncrSignMac);
+		
+		public sgx_status_t ecall_set_key_signs([in, string] const char* clientID, [in] const sgx_ec256_signature_t* inSignSign, [in] const sgx_aes_gcm_128bit_tag_t* inSignSignMac, [in] const sgx_ec256_signature_t* inEncrSign, [in] const sgx_aes_gcm_128bit_tag_t* inEncrSignMac);
+		public void ecall_get_key_signs([out] sgx_ec256_signature_t* outSignSign, [out] sgx_ec256_signature_t* outEncrSign);
+		
+		public sgx_status_t ecall_proc_decent_msg0([in, string] const char* clientID, [in] const sgx_ec256_public_t* inSignKey, [in] const sgx_ec256_signature_t* inSignSign, [in] const sgx_ec256_public_t* inEncrKey, [in] const sgx_ec256_signature_t* inEncrSign);
+	};
+
+};

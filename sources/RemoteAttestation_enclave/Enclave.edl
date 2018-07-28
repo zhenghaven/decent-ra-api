@@ -2,12 +2,14 @@ enclave {
 	
     include "sgx_key_exchange.h"
     include "sgx_trts.h"
-	include "../common/sgx_ra_msg4.h"
-	include "../common/Decent.h"
 
 	from "sgx_tsgxssl.edl" import *;
-	from "common_enclave.edl" import *;
     from "sgx_tkey_exchange.edl" import *;
+	
+	from "common_enclave.edl" import *;
+	from "ra_client_enclave.edl" import *;
+	from "ra_sp_enclave.edl" import *;
+	from "decent_enclave.edl" import *;
 
 	trusted 
 	{
@@ -18,38 +20,11 @@ enclave {
 		
 		//RA Context Param is not used here.
 		public sgx_status_t ecall_get_ra_pub_enc_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
-
-		public sgx_status_t ecall_init_ra_environment();
-
-		public sgx_status_t ecall_process_ra_msg0_send([in, string] const char* clientID);
-
-		public sgx_status_t ecall_process_ra_msg0_resp([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
-
-		public sgx_status_t ecall_process_ra_msg1([in, string] const char* clientID, [in] const sgx_ra_msg1_t *inMsg1, [out] sgx_ra_msg2_t *outMsg2);
-
-		public sgx_status_t ecall_process_ra_msg2([in, string] const char* ServerID, sgx_ra_context_t inContextID);
-
-		public sgx_status_t ecall_process_ra_msg3([in, string] const char* clientID, [in, size=msg3Len] const uint8_t* inMsg3, uint32_t msg3Len, [in, string] const char* iasReport, [in, string] const char* reportSign, [out] sgx_ra_msg4_t* outMsg4, [out] sgx_ec256_signature_t* outMsg4Sign);
-
-		public sgx_status_t ecall_process_ra_msg4([in, string] const char* ServerID, [in] const sgx_ra_msg4_t* inMsg4, [in] sgx_ec256_signature_t* inMsg4Sign, sgx_ra_context_t inContextID);
 		
-		public sgx_status_t ecall_termination_clean();
-
-		//Decent Functions:
-		public void ecall_set_decent_mode(DecentNodeMode inDecentMode);
-
-		public DecentNodeMode ecall_get_decent_mode();
-
-		public sgx_status_t ecall_get_protocol_sign_key([in, string] const char* clientID, [out] sgx_ec256_private_t* outPriKey, [out] sgx_aes_gcm_128bit_tag_t* outPriKeyMac, [out] sgx_ec256_public_t* outPubKey, [out] sgx_aes_gcm_128bit_tag_t* outPubKeyMac);
-		public sgx_status_t ecall_get_protocol_encr_key([in, string] const char* clientID, [out] sgx_ec256_private_t* outPriKey, [out] sgx_aes_gcm_128bit_tag_t* outPriKeyMac, [out] sgx_ec256_public_t* outPubKey, [out] sgx_aes_gcm_128bit_tag_t* outPubKeyMac);
-		public sgx_status_t ecall_set_protocol_sign_key([in, string] const char* clientID, [in] const sgx_ec256_private_t* inPriKey, [in] const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, [in] const sgx_ec256_public_t* inPubKey, [in] const sgx_aes_gcm_128bit_tag_t* inPubKeyMac);
-		public sgx_status_t ecall_set_protocol_encr_key([in, string] const char* clientID, [in] const sgx_ec256_private_t* inPriKey, [in] const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, [in] const sgx_ec256_public_t* inPubKey, [in] const sgx_aes_gcm_128bit_tag_t* inPubKeyMac);
-		public sgx_status_t ecall_get_protocol_key_signed([in, string] const char* clientID, [in] const sgx_ec256_public_t* inSignKey, [in] const sgx_ec256_public_t* inEncrKey, [out] sgx_ec256_signature_t* outSignSign, [out] sgx_aes_gcm_128bit_tag_t* outSignSignMac, [out] sgx_ec256_signature_t* outEncrSign, [out] sgx_aes_gcm_128bit_tag_t* outEncrSignMac);
-		public sgx_status_t ecall_set_key_signs([in, string] const char* clientID, [in] const sgx_ec256_signature_t* inSignSign, [in] const sgx_aes_gcm_128bit_tag_t* inSignSignMac, [in] const sgx_ec256_signature_t* inEncrSign, [in] const sgx_aes_gcm_128bit_tag_t* inEncrSignMac);
-		public void ecall_get_key_signs([out] sgx_ec256_signature_t* outSignSign, [out] sgx_ec256_signature_t* outEncrSign);
-		public sgx_status_t ecall_proc_decent_msg0([in, string] const char* clientID, [in] const sgx_ec256_public_t* inSignKey, [in] const sgx_ec256_signature_t* inSignSign, [in] const sgx_ec256_public_t* inEncrKey, [in] const sgx_ec256_signature_t* inEncrSign);
+		public void ecall_termination_clean();
 		
 		public sgx_status_t ecall_get_simple_secret([in, string] const char* clientID, [out] uint64_t* secret, [out] sgx_aes_gcm_128bit_tag_t* outSecretMac);
+		
 		public sgx_status_t ecall_proc_simple_secret([in, string] const char* clientID, [in] const uint64_t* secret, [in] const sgx_aes_gcm_128bit_tag_t* inSecretMac);
 
 	};

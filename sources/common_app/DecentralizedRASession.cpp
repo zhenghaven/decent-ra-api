@@ -2,8 +2,10 @@
 
 #include "Common.h"
 #include "ClientRASession.h"
+#include "ServiceProviderRASession.h"
 #include "DecentralizedEnclave.h"
 #include "EnclaveBase.h"
+#include "ServiceProviderBase.h"
 #include "RAMessageRevRAReq.h"
 
 #include "Networking/Connection.h"
@@ -34,10 +36,12 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	return nullptr;
 }
 
-DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave) :
+DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp) :
 	m_connection(std::move(connection)),
 	m_hardwareEnclave(hardwareEnclave),
-	m_hardwareSession(hardwareEnclave.GetRASession())
+	m_sp(sp),
+	m_hardwareSession(hardwareEnclave.GetRASession()),
+	m_spSession(sp.GetRASession())
 {
 }
 
@@ -70,9 +74,9 @@ bool DecentralizedRASession::ProcessClientSideRA()
 		return res;
 	}
 
-	m_hardwareSession->SwapConnection(m_connection);
-	res = m_hardwareSession->ProcessServerSideRA();
-	m_hardwareSession->SwapConnection(m_connection);
+	m_spSession->SwapConnection(m_connection);
+	res = m_spSession->ProcessServerSideRA();
+	m_spSession->SwapConnection(m_connection);
 
 	if (!res)
 	{
@@ -94,9 +98,9 @@ bool DecentralizedRASession::ProcessServerSideRA()
 	bool res = true;
 	const std::string senderID = m_hardwareSession->GetSenderID();
 
-	m_hardwareSession->SwapConnection(m_connection);
-	res = m_hardwareSession->ProcessServerSideRA();
-	m_hardwareSession->SwapConnection(m_connection);
+	m_spSession->SwapConnection(m_connection);
+	res = m_spSession->ProcessServerSideRA();
+	m_spSession->SwapConnection(m_connection);
 
 	if (!res)
 	{

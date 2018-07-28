@@ -11,7 +11,7 @@ class DecentRASession : public DecentralizedRASession
 {
 public:
 	DecentRASession() = delete;
-	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, DecentEnclave& enclave);
+	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentEnclave& enclave);
 
 	virtual ~DecentRASession();
 

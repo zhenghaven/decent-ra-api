@@ -64,7 +64,36 @@ sgx_status_t DecentSGXEnclaveImp::InitClientRAEnvironment()
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-	res = ecall_init_ra_environment(GetEnclaveId(), &retval);
+	res = ecall_init_ra_client_environment(GetEnclaveId(), &retval);
+	if (res != SGX_SUCCESS || retval != SGX_SUCCESS)
+	{
+		return res == SGX_SUCCESS ? retval : res;
+	}
+
+	//Get extended group ID.
+	res = sgx_get_extended_epid_group_id(&m_exGroupID);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+	//Get Sign public key.
+	sgx_ec256_public_t signPubKey;
+	res = GetRASignPubKey(signPubKey);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+	m_raSenderID = SerializePubKey(signPubKey);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t DecentSGXEnclaveImp::InitSPRAEnvironment()
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+	res = ecall_init_ra_sp_environment(GetEnclaveId(), &retval);
 	if (res != SGX_SUCCESS || retval != SGX_SUCCESS)
 	{
 		return res == SGX_SUCCESS ? retval : res;
@@ -170,31 +199,44 @@ sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg3(const std::string & clientID, co
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
+	int retvalint = 0;
 
 	//const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
 	res = ecall_process_ra_msg3(GetEnclaveId(), &retval, clientID.c_str(), reinterpret_cast<const uint8_t*>(&inMsg3), msg3Len, iasReport.c_str(), reportSign.c_str(), &outMsg4, &outMsg4Sign);
+	if (res != SGX_SUCCESS || retval != SGX_SUCCESS)
+	{
+		return res == SGX_SUCCESS ? retval : res;
+	}
 
-	return res == SGX_SUCCESS ? retval : res;
+	res = ecall_adjust_shared_keys_clit(GetEnclaveId(), &retvalint, clientID.c_str());
+
+	return res;
 }
 
 sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg4(const std::string & ServerID, const sgx_ra_msg4_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign, sgx_ra_context_t inContextID)
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
+	int retvalint = 0;
 
 	//const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
 	res = ecall_process_ra_msg4(GetEnclaveId(), &retval, ServerID.c_str(), &inMsg4, const_cast<sgx_ec256_signature_t*>(&inMsg4Sign), inContextID);
+	if (res != SGX_SUCCESS || retval != SGX_SUCCESS)
+	{
+		return res == SGX_SUCCESS ? retval : res;
+	}
 
-	return res == SGX_SUCCESS ? retval : res;
+	res = ecall_adjust_shared_keys_serv(GetEnclaveId(), &retvalint, ServerID.c_str());
+
+	return res;
 }
 
 sgx_status_t DecentSGXEnclaveImp::TerminationClean()
 {
 	sgx_status_t res = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	res = ecall_termination_clean(GetEnclaveId(), &retval);
+	res = ecall_termination_clean(GetEnclaveId());
 
-	return res == SGX_SUCCESS ? retval : res;
+	return res;
 }
 
 sgx_status_t DecentSGXEnclaveImp::GetSimpleSecret(const std::string & id, uint64_t & secret, sgx_aes_gcm_128bit_tag_t & outSecretMac)

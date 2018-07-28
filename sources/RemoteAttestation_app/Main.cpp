@@ -76,11 +76,11 @@ int main(int argc, char ** argv)
 		Server ser(hostIP, hostPort);
 
 		std::unique_ptr<Connection> connection = ser.AcceptConnection();
-		DecentRASession decentRA(connection, expEnc, expEnc);
+		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
 		decentRA.ProcessServerSideRA();
 
 		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
 		decentRA2.ProcessServerSideRA();
 	}
 	break;
@@ -88,12 +88,12 @@ int main(int argc, char ** argv)
 	{
 		expEnc.SetDecentMode(DecentNodeMode::ROOT_SERVER);
 		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
-		DecentRASession decentRA(connection, expEnc, expEnc);
+		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
 		decentRA.ProcessClientSideRA();
 
 		Server ser(hostIP, 57756U);
 		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
 		decentRA2.ProcessServerSideRA();
 	}
 	break;
@@ -101,12 +101,12 @@ int main(int argc, char ** argv)
 	{
 		expEnc.SetDecentMode(DecentNodeMode::APPL_SERVER);
 		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, 57756U);
-		DecentRASession decentRA(connection, expEnc, expEnc);
+		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
 		decentRA.ProcessClientSideRA();
 
 		Server ser(hostIP, 57750U);
 		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
 		decentRA2.ProcessServerSideRA();
 		decentRA2.SwapConnection(connection2);
 
@@ -126,11 +126,11 @@ int main(int argc, char ** argv)
 	{
 		expEnc.SetDecentMode(DecentNodeMode::APPL_SERVER);
 		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
-		DecentRASession decentRA(connection, expEnc, expEnc);
+		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
 		decentRA.ProcessClientSideRA();
 
 		std::unique_ptr<Connection> connection2 = std::make_unique<Connection>(hostIP, 57750U);
-		DecentRASession decentRA2(connection2, expEnc, expEnc);
+		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
 		decentRA2.ProcessClientMessage0();
 		decentRA2.SwapConnection(connection2);
 

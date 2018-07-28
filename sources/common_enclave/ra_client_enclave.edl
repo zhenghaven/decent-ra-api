@@ -1,0 +1,16 @@
+enclave {
+	
+	include "../common/sgx_ra_msg4.h"
+	
+	trusted 
+	{
+		public sgx_status_t ecall_init_ra_client_environment();
+
+		public sgx_status_t ecall_process_ra_msg0_resp([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
+
+		public sgx_status_t ecall_process_ra_msg2([in, string] const char* ServerID, sgx_ra_context_t inContextID);
+
+		public sgx_status_t ecall_process_ra_msg4([in, string] const char* ServerID, [in] const sgx_ra_msg4_t* inMsg4, [in] sgx_ec256_signature_t* inMsg4Sign, sgx_ra_context_t inContextID);
+	};
+
+};
