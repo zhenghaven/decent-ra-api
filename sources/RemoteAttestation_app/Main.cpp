@@ -53,7 +53,10 @@ int main(int argc, char ** argv)
 	expEnc.Launch();
 	//expEnc.InitRAEnvironment();
 
-	std::cout << "================ Test Process Completed ================" << std::endl;
+#ifdef SIMULATING_ENCLAVE
+	LOGW("Enclave is running under simulation mode!!\n");
+#endif // SIMULATING_ENCLAVE
+
 
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;

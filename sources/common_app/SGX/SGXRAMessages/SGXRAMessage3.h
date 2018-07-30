@@ -28,6 +28,8 @@ public:
 
 	const uint32_t GetMsg3DataSize() const;
 
+	std::string GetQuoteBase64() const;
+
 	bool IsQuoteValid() const;
 
 protected:

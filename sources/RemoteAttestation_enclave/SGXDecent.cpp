@@ -500,7 +500,7 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 
 	sgx_ec_key_128bit_t tmpDerivedKey;
 	bool keyDeriveRes = false;
-	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);
@@ -510,7 +510,7 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 	svrMgr.SetSMK(tmpDerivedKey);
 	cliMgr.SetSMK(tmpDerivedKey);
 
-	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);
@@ -520,7 +520,7 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 	svrMgr.SetSK(tmpDerivedKey);
 	cliMgr.SetSK(tmpDerivedKey);
 
-	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);
@@ -530,7 +530,7 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 	svrMgr.SetMK(tmpDerivedKey);
 	cliMgr.SetMK(tmpDerivedKey);
 
-	keyDeriveRes = derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);

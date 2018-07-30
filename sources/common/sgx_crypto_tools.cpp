@@ -18,7 +18,7 @@ namespace
 
 // Derive key from shared key and key id.
 // key id should be sample_derive_key_type_t.
-bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key, uint8_t key_id, sgx_ec_key_128bit_t* derived_key)
+bool sp_derive_key(const sgx_ec256_dh_shared_t *p_shared_key, uint8_t key_id, sgx_ec_key_128bit_t* derived_key)
 {
 	sgx_status_t sample_ret = SGX_SUCCESS;
 	sgx_cmac_128bit_key_t cmac_key;

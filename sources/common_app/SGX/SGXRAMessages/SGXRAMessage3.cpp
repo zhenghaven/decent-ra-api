@@ -108,6 +108,13 @@ const uint32_t SGXRAMessage3::GetMsg3DataSize() const
 	return sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len;
 }
 
+std::string SGXRAMessage3::GetQuoteBase64() const
+{
+	sgx_quote_t* quotePtr = reinterpret_cast<sgx_quote_t*>(m_msg3Data->quote);
+	std::string quoteB64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(quotePtr), sizeof(sgx_quote_t) + quotePtr->signature_len);
+	return quoteB64Str;
+}
+
 bool SGXRAMessage3::IsQuoteValid() const
 {
 	return m_isQuoteValid;
@@ -124,9 +131,8 @@ Json::Value & SGXRAMessage3::GetJsonMsg(Json::Value & outJson) const
 
 	std::string msg3B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(m_msg3Data), sizeof(sgx_ra_msg3_t));
 	jsonUntrusted["msg3Data"] = msg3B64Str;
-	sgx_quote_t* quotePtr = reinterpret_cast<sgx_quote_t*>(m_msg3Data->quote);
-	std::string quoteB64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(quotePtr), sizeof(sgx_quote_t) + quotePtr->signature_len);
-	jsonUntrusted["quoteData"] = quoteB64Str;
+
+	jsonUntrusted["quoteData"] = GetQuoteBase64();
 
 	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
 	child["Untrusted"] = jsonUntrusted;

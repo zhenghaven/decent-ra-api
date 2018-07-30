@@ -25,7 +25,7 @@ typedef enum _sample_derive_key_type_t
 extern "C" {
 #endif /* __cplusplus */
 
-bool derive_key(const sgx_ec256_dh_shared_t *p_shared_key, uint8_t key_id, sgx_ec_key_128bit_t* derived_key);
+bool sp_derive_key(const sgx_ec256_dh_shared_t *p_shared_key, uint8_t key_id, sgx_ec_key_128bit_t* derived_key);
 
 #ifdef __cplusplus
 }

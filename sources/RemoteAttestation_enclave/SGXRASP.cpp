@@ -3,11 +3,18 @@
 
 #include <string>
 
+#include <openssl/x509.h>
+
 #include <sgx_utils.h>
+
+#include <rapidjson/document.h>
+
+#include <cppcodec/base64_rfc4648.hpp>
 
 #include "../common_enclave/EnclaveStatus.h"
 
 #include "../common/CryptoTools.h"
+#include "../common/ias_report_cert.h"
 #include "../common/sgx_crypto_tools.h"
 #include "../common/sgx_constants.h"
 #include "../common/sgx_ra_msg4.h"
@@ -116,28 +123,28 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 
 	sgx_ec_key_128bit_t tmpDerivedKey;
 	bool keyDeriveRes = false;
-	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	clientKeyMgr.SetSMK(tmpDerivedKey);
-	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	clientKeyMgr.SetMK(tmpDerivedKey);
-	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);
 		return SGX_ERROR_UNEXPECTED;
 	}
 	clientKeyMgr.SetSK(tmpDerivedKey);
-	keyDeriveRes = derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
+	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
 	if (!keyDeriveRes)
 	{
 		DropClientRAState(clientID);
@@ -173,7 +180,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	return res;
 }
 
-sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
+sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
 {
 	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	auto it = EnclaveState::GetInstance().GetClientsMap().find(clientID);
@@ -280,12 +287,53 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		enclave_printf("Program hash not matching!!\n");
 		return SGX_ERROR_UNEXPECTED;
 	}
+	
 	//TODO: Verify quote report here.
+#ifdef SIMULATING_ENCLAVE
+	enclave_printf("IAS Report Certs Verify Result:     %s \n", "Simulated!");
+	enclave_printf("IAS Report Signature Verify Result: %s \n", "Simulated!");
+	outMsg4->status = ias_quote_status_t::IAS_QUOTE_OK;
+	//outMsg4->id = 222;
+
+#else
+	std::vector<X509*> certs;
+	LoadX509CertsFromStr(certs, IAS_REPORT_CERT);
+	X509* iasCert = certs[0];
+
+	LoadX509CertsFromStr(certs, reportCert);
+
+	bool certVerRes = VerifyIasReportCert(iasCert, certs);
+
+	std::vector<uint8_t> buffer1 = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
+
+	bool signVerRes = VerifyIasReportSignature(iasReport, buffer1, certs[0]);
+
+	FreeX509Cert(&iasCert);
+	FreeX509Cert(certs);
+
+	enclave_printf("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
+	enclave_printf("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
+
+	rapidjson::Document jsonDoc;
+	jsonDoc.Parse(iasReport);
+	outMsg4->status = ParseIASQuoteStatus(jsonDoc["isvEnclaveQuoteStatus"].GetString());
+	enclave_printf("IAS Report Verify Result:           %s \n", outMsg4->status == ias_quote_status_t::IAS_QUOTE_OK ? "Success!" : "Failed!");
+	
+	std::string msg3QuoteBody = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(p_quote), sizeof(sgx_quote_t) - sizeof(p_quote->signature_len));
+	std::string reportQuoteBody = jsonDoc["isvEnclaveQuoteBody"].GetString();
+	bool isQuoteBodyMatch = (msg3QuoteBody == reportQuoteBody);
+	enclave_printf("IAS Report Is Quote Match:          %s \n", isQuoteBodyMatch ? "Yes!" : "No!");
+	if (!isQuoteBodyMatch)
+	{
+		DropClientRAState(clientID);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+#endif // SIMULATING_ENCLAVE
+
 
 	//Temporary code here:
-	outMsg4->id = 222;
 	outMsg4->pse_status = ias_pse_status_t::IAS_PSE_OK;
-	outMsg4->status = ias_quote_status_t::IAS_QUOTE_OK;
 
 	res = sgx_ecdsa_sign((uint8_t *)outMsg4, sizeof(sgx_ra_msg4_t), const_cast<sgx_ec256_private_t*>(&(cryptoMgr.GetSignPriKey())), outMsg4Sign, cryptoMgr.GetECC());
 	if (res != SGX_SUCCESS)
@@ -294,7 +342,14 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		return res;
 	}
 
-	it->second.first = ClientRAState::ATTESTED;
+	if (outMsg4->status == ias_quote_status_t::IAS_QUOTE_OK)
+	{
+		it->second.first = ClientRAState::ATTESTED;
+	}
+	else
+	{
+		DropClientRAState(clientID);
+	}
 
 	//AdjustSharedKeysClit(clientID);
 

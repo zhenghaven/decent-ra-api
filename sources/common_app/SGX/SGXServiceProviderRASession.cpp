@@ -1,5 +1,7 @@
 #include "SGXServiceProviderRASession.h"
 
+#include <json/json.h>
+
 #include "../../common/sgx_ra_msg4.h"
 
 #include "../Common.h"
@@ -177,8 +179,16 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		m_connection->Send(errMsg.ToJsonString());
 		return false;
 	}
+
 	std::string sigRlStr;
-	int32_t respCode = m_ias.GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
+	int32_t respCode = 0;
+
+#ifdef SIMULATING_ENCLAVE
+	respCode = 200;
+#else
+	respCode = m_ias.GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
+#endif // SIMULATING_ENCLAVE
+
 	if (respCode != 200)
 	{
 		delete reqs;
@@ -199,7 +209,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	reqs = JsonMessageParser(msgBuffer);
 
 	SGXRAMessage3* msg3 = dynamic_cast<SGXRAMessage3*>(reqs);
-	if (!reqs || !msg3 || !msg3->IsValid())
+	if (!reqs || !msg3 || !msg3->IsValid() || !msg3->IsQuoteValid())
 	{
 		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
@@ -209,8 +219,14 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 
 	sgx_ra_msg4_t msg4Data;
 	sgx_ec256_signature_t msg4Sign;
-
-	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), "", "", msg4Data, msg4Sign);
+	
+	Json::Value iasReqRoot;
+	iasReqRoot["isvEnclaveQuote"] = msg3->GetQuoteBase64();
+	std::string iasReport;
+	std::string iasReportSign;
+	std::string iasCert;
+	m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert);
+	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		delete reqs;

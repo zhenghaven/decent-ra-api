@@ -195,14 +195,14 @@ sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg2(const std::string& ServerID, con
 	return res == SGX_SUCCESS ? retval : res;
 }
 
-sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg3(const std::string & clientID, const sgx_ra_msg3_t & inMsg3, const uint32_t msg3Len, const std::string & iasReport, const std::string & reportSign, sgx_ra_msg4_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign)
+sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg3(const std::string & clientID, const sgx_ra_msg3_t & inMsg3, const uint32_t msg3Len, const std::string & iasReport, const std::string & reportSign, const std::string& reportCertChain, sgx_ra_msg4_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign)
 {
 	sgx_status_t res = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 	int retvalint = 0;
 
 	//const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
-	res = ecall_process_ra_msg3(GetEnclaveId(), &retval, clientID.c_str(), reinterpret_cast<const uint8_t*>(&inMsg3), msg3Len, iasReport.c_str(), reportSign.c_str(), &outMsg4, &outMsg4Sign);
+	res = ecall_process_ra_msg3(GetEnclaveId(), &retval, clientID.c_str(), reinterpret_cast<const uint8_t*>(&inMsg3), msg3Len, iasReport.c_str(), reportSign.c_str(), reportCertChain.c_str(), &outMsg4, &outMsg4Sign);
 	if (res != SGX_SUCCESS || retval != SGX_SUCCESS)
 	{
 		return res == SGX_SUCCESS ? retval : res;
