@@ -19,7 +19,7 @@ enum class ConsoleColors
 	Cyan	= 5,
 	White	= 6,
 	Black	= 7,
-//	Default	= 8,
+	Default	= 8,
 };
 
 void SetConsoleColor(ConsoleColors foreground, ConsoleColors background);
@@ -29,18 +29,18 @@ void SetConsoleColor(ConsoleColors foreground, ConsoleColors background);
 #define LOGI(...)   printf(" I: "); \
 					(void)printf(__VA_ARGS__); \
 					printf("\n");
-#define LOGW(...)   SetConsoleColor(ConsoleColors::Yellow, ConsoleColors::Black); \
+#define LOGW(...)   SetConsoleColor(ConsoleColors::Yellow, ConsoleColors::Default); \
 					printf("File:%s\nline:%d\n", __FILE__, __LINE__); \
 					printf(" W: ");(void)printf(__VA_ARGS__); \
 					printf("\n"); \
-					SetConsoleColor(ConsoleColors::White, ConsoleColors::Black);
+					SetConsoleColor(ConsoleColors::Default, ConsoleColors::Default);
 #define LOGE(...)   SetConsoleColor(ConsoleColors::Red, ConsoleColors::Black); \
 					printf("File:%s\nline:%d\n", __FILE__, __LINE__); \
 					printf(" E: "); \
 					(void)printf(__VA_ARGS__); \
 					printf("\n"); \
 					assert(false); \
-					SetConsoleColor(ConsoleColors::White, ConsoleColors::Black);
+					SetConsoleColor(ConsoleColors::Default, ConsoleColors::Default);
 #define LOGP(...)   (void)printf(__VA_ARGS__);printf("\n");
 #define ASSERT(Condition, ...) if(!(Condition)){LOGE(__VA_ARGS__);}
 #define ASSERTP(Condition, ...)  if(!(Condition)){LOGE(__VA_ARGS__);}
