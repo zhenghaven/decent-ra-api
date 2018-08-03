@@ -2,6 +2,7 @@
 
 #include "../common_enclave/enclave_tools.h"
 #include "../common_enclave/EnclaveStatus.h"
+#include "../common_enclave/DecentError.h"
 
 #include "../common/sgx_constants.h"
 #include "../common/CryptoTools.h"
@@ -85,11 +86,13 @@ sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec256_private
 	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("This decent node is not a Root Server!");
 	}
 	if (!IsBothWayAttested(clientID))
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The requesting client had not been RAed.");
 	}
 
 	auto it = EnclaveState::GetInstance().GetClientsMap().find(clientID);
@@ -111,7 +114,7 @@ sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec256_private
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
@@ -125,7 +128,7 @@ sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec256_private
 		outPubKeyMac
 	);
 
-	return enclaveRes;
+	return enclaveRes; //Error return. (Error from SGX)
 }
 
 sgx_status_t ecall_get_protocol_encr_key(const char* clientID, sgx_ec256_private_t* outPriKey, sgx_aes_gcm_128bit_tag_t* outPriKeyMac, sgx_ec256_public_t* outPubKey, sgx_aes_gcm_128bit_tag_t* outPubKeyMac)
@@ -133,11 +136,13 @@ sgx_status_t ecall_get_protocol_encr_key(const char* clientID, sgx_ec256_private
 	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("This decent node is not a Root Server!");
 	}
 	if (!IsBothWayAttested(clientID))
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The requesting client had not been RAed.");
 	}
 
 	auto it = EnclaveState::GetInstance().GetClientsMap().find(clientID);
@@ -159,7 +164,7 @@ sgx_status_t ecall_get_protocol_encr_key(const char* clientID, sgx_ec256_private
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
@@ -173,7 +178,7 @@ sgx_status_t ecall_get_protocol_encr_key(const char* clientID, sgx_ec256_private
 		outPubKeyMac
 	);
 
-	return enclaveRes;
+	return enclaveRes; //Error return. (Error from SGX)
 }
 
 sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_private_t* inPriKey, const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, const sgx_ec256_public_t* inPubKey, const sgx_aes_gcm_128bit_tag_t* inPubKeyMac)
@@ -181,11 +186,13 @@ sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_p
 	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("This decent node is not a Root Server!");
 	}
 	if (!IsBothWayAttested(clientID))
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The requesting client had not been RAed.");
 	}
 
 	auto it = EnclaveState::GetInstance().GetClientsMap().find(clientID);
@@ -208,7 +215,7 @@ sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_p
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 	sgx_ec256_public_t pubKey;
 	enclaveRes = sgx_rijndael128GCM_decrypt(&clientKeyMgr.GetSK(),
@@ -223,21 +230,21 @@ sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_p
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	sgx_ec256_signature_t signSign;
 	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&pubKey), sizeof(sgx_ec256_public_t), &priKey, &signSign, cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	sgx_ec256_signature_t encrSign;
 	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t), &priKey, &encrSign, cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	cryptoMgr.SetSignPriKey(priKey);
@@ -248,7 +255,7 @@ sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_p
 
 	enclave_printf("New Public Sign Key: %s\n", SerializePubKey(cryptoMgr.GetSignPubKey()).c_str());
 
-	return enclaveRes;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_private_t* inPriKey, const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, const sgx_ec256_public_t* inPubKey, const sgx_aes_gcm_128bit_tag_t* inPubKeyMac)
@@ -256,11 +263,13 @@ sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_p
 	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("This decent node is not a Root Server!");
 	}
 	if (!IsBothWayAttested(clientID))
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The requesting client had not been RAed.");
 	}
 
 	auto it = EnclaveState::GetInstance().GetClientsMap().find(clientID);
@@ -283,7 +292,7 @@ sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_p
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	sgx_ec256_public_t pubKey;
@@ -299,14 +308,14 @@ sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_p
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	sgx_ec256_signature_t encrSign;
 	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&encrSign), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&cryptoMgr.GetSignPriKey()), &encrSign, cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	cryptoMgr.SetEncrPriKey(priKey);
@@ -315,7 +324,7 @@ sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_p
 
 	enclave_printf("New Public Encr Key: %s\n", SerializePubKey(cryptoMgr.GetEncrPubKey()).c_str());
 
-	return enclaveRes;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256_public_t* inSignKey, const sgx_ec256_public_t* inEncrKey,
@@ -324,11 +333,13 @@ sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256
 	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("This decent node is not a Root Server!");
 	}
 	if (!IsBothWayAttested(clientID))
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The requesting client had not been RAed.");
 	}
 
 	auto it = EnclaveState::GetInstance().GetClientsMap().find(clientID);
@@ -342,12 +353,12 @@ sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256
 	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&cryptoMgr.GetSignPriKey()), &signSign, cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&cryptoMgr.GetSignPriKey()), &encrSign, cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
@@ -363,7 +374,7 @@ sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	enclaveRes = sgx_rijndael128GCM_encrypt(&clientKeyMgr.GetSK(),
@@ -377,7 +388,7 @@ sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256
 		outEncrSignMac
 	);
 
-	return enclaveRes;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature_t* inSignSign, const sgx_aes_gcm_128bit_tag_t* inSignSignMac, const sgx_ec256_signature_t* inEncrSign, const sgx_aes_gcm_128bit_tag_t* inEncrSignMac)
@@ -385,11 +396,13 @@ sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature
 	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if (g_decentMode != DecentNodeMode::APPL_SERVER)
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("This decent node is not a Application Server!");
 	}
 	if (!IsBothWayAttested(clientID))
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The requesting client had not been RAed.");
 	}
 
 	auto it = EnclaveState::GetInstance().GetServersMap().find(clientID);
@@ -413,7 +426,7 @@ sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 	enclaveRes = sgx_rijndael128GCM_decrypt(&serverKeyMgr.GetSK(),
 		reinterpret_cast<const uint8_t*>(inEncrSign),
@@ -427,7 +440,7 @@ sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature
 	);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 
 	cryptoMgr.SetSignKeySign(signSign);
@@ -438,7 +451,7 @@ sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature
 	enclave_printf("The Signature of Sign Pub Key is: %s\n", SerializeSignature(signSign).c_str());
 	enclave_printf("The Signature of Encr Pub Key is: %s\n", SerializeSignature(encrSign).c_str());
 
-	return enclaveRes;
+	return SGX_SUCCESS;
 }
 
 void ecall_get_key_signs(sgx_ec256_signature_t* outSignSign, sgx_ec256_signature_t* outEncrSign)
@@ -457,23 +470,23 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), &cryptoMgr.GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inSignSign), &verifyRes, cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 	if (verifyRes != SGX_EC_VALID)
 	{
-		enclave_printf("The signature of Attestee's Sign key is invalid.\n");
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The signature of Attestee's Sign key is invalid.");
 	}
 
 	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), &cryptoMgr.GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inEncrSign), &verifyRes, cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
 	if (verifyRes != SGX_EC_VALID)
 	{
-		enclave_printf("The signature of Attestee's Encr key is invalid.\n");
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("The signature of Attestee's Encr key is invalid.");
 	}
 
 	EnclaveState::GetInstance().GetClientsMap().insert(std::make_pair<std::string, std::pair<ClientRAState, RAKeyManager> >(clientID, std::make_pair<ClientRAState, RAKeyManager>(ClientRAState::ATTESTED, RAKeyManager(*inSignKey))));
@@ -486,59 +499,21 @@ sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public
 	svrMgr.SetEncryptKey(*inEncrKey);
 	cliMgr.SetEncryptKey(*inEncrKey);
 
-
-	sgx_ec256_dh_shared_t sharedKey;
-	enclaveRes = sgx_ecc256_compute_shared_dhkey(const_cast<sgx_ec256_private_t*>(&(cryptoMgr.GetEncrPriKey())), &(svrMgr.GetEncryptKey()), &sharedKey, cryptoMgr.GetECC());
+	enclaveRes = svrMgr.GenerateSharedKeySet(cryptoMgr.GetEncrPriKey(), cryptoMgr.GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
 		DropServerRAState(clientID);
-		return enclaveRes;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
-	svrMgr.SetSharedKey(sharedKey);
-	cliMgr.SetSharedKey(sharedKey);
-
-	sgx_ec_key_128bit_t tmpDerivedKey;
-	bool keyDeriveRes = false;
-	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
-	if (!keyDeriveRes)
+	//TODO: Keep only one copy in future.
+	enclaveRes = cliMgr.GenerateSharedKeySet(cryptoMgr.GetEncrPriKey(), cryptoMgr.GetECC());
+	if (enclaveRes != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
 		DropServerRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
+		return enclaveRes; //Error return. (Error from SGX)
 	}
-	svrMgr.SetSMK(tmpDerivedKey);
-	cliMgr.SetSMK(tmpDerivedKey);
 
-	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
-	if (!keyDeriveRes)
-	{
-		DropClientRAState(clientID);
-		DropServerRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
-	}
-	svrMgr.SetSK(tmpDerivedKey);
-	cliMgr.SetSK(tmpDerivedKey);
-
-	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
-	if (!keyDeriveRes)
-	{
-		DropClientRAState(clientID);
-		DropServerRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
-	}
-	svrMgr.SetMK(tmpDerivedKey);
-	cliMgr.SetMK(tmpDerivedKey);
-
-	keyDeriveRes = sp_derive_key(&(svrMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
-	if (!keyDeriveRes)
-	{
-		DropClientRAState(clientID);
-		DropServerRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
-	}
-	svrMgr.SetVK(tmpDerivedKey);
-	cliMgr.SetVK(tmpDerivedKey);
-
-	return enclaveRes;
+	return SGX_SUCCESS;
 }

@@ -3,6 +3,10 @@
 #include <cstring>
 #include <cstdlib>
 
+#include <sgx_tcrypto.h>
+
+#include "../common/sgx_crypto_tools.h"
+
 RAKeyManager::RAKeyManager(const sgx_ec256_public_t & signKey) :
 	m_signKey(signKey)//,
 	//m_encryptKey(nullptr),
@@ -116,6 +120,42 @@ void RAKeyManager::SetVK(const sgx_ec_key_128bit_t & vk)
 void RAKeyManager::SetSecProp(const sgx_ps_sec_prop_desc_t & secProp)
 {
 	std::memcpy(&m_secProp, &secProp, sizeof(sgx_ps_sec_prop_desc_t));
+}
+
+sgx_status_t RAKeyManager::GenerateSharedKeySet(const sgx_ec256_private_t & priKey, const sgx_ecc_state_handle_t& ecc_handle)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	res = sgx_ecc256_compute_shared_dhkey(const_cast<sgx_ec256_private_t*>(&(priKey)), &m_encryptKey, &m_sharedKey, ecc_handle);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+	res = sp_derive_key_type(&m_sharedKey, SGX_DERIVE_KEY_SMK, &m_smk);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+	res = sp_derive_key_type(&m_sharedKey, SGX_DERIVE_KEY_MK, &m_mk);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+	res = sp_derive_key_type(&m_sharedKey, SGX_DERIVE_KEY_SK, &m_sk);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+	res = sp_derive_key_type(&m_sharedKey, SGX_DERIVE_KEY_VK, &m_vk);
+	if (res != SGX_SUCCESS)
+	{
+		return res;
+	}
+
+	return SGX_SUCCESS;
 }
 
 sgx_ec256_public_t & RAKeyManager::GetSignKey()

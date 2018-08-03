@@ -7,6 +7,7 @@
 
 #include "../common_enclave/sgx_ra_tools.h"
 #include "../common_enclave/EnclaveStatus.h"
+#include "../common_enclave/DecentError.h"
 
 #include "../common/CryptoTools.h"
 #include "../common/sgx_ra_msg4.h"
@@ -28,13 +29,13 @@ sgx_status_t ecall_init_ra_client_environment()
 	sgx_status_t res = SGX_SUCCESS;
 	if (cryptoMgr.GetStatus() != SGX_SUCCESS)
 	{
-		return cryptoMgr.GetStatus();
+		return cryptoMgr.GetStatus(); //Error return. (Error from SGX)
 	}
 
 	enclave_printf("Public Sign Key: %s\n", SerializePubKey(cryptoMgr.GetSignPubKey()).c_str());
 	enclave_printf("Public Encr Key: %s\n", SerializePubKey(cryptoMgr.GetEncrPubKey()).c_str());
 
-	return res;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const sgx_ec256_public_t* inPubKey, int enablePSE, sgx_ra_context_t* outContextID)
@@ -42,7 +43,8 @@ sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const sgx_ec256_pu
 	auto it = EnclaveState::GetInstance().GetServersMap().find(ServerID);
 	if (it != EnclaveState::GetInstance().GetServersMap().end())
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg0, but client ID already exist.");
 	}
 	EnclaveState::GetInstance().GetServersMap().
 		insert(
@@ -52,7 +54,7 @@ sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const sgx_ec256_pu
 			)
 		);
 
-	return enclave_init_ra(inPubKey, enablePSE, outContextID);
+	return enclave_init_ra(inPubKey, enablePSE, outContextID); //Error return. (Error from SGX)
 }
 
 sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inContextID)
@@ -62,7 +64,8 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inCont
 		|| it->second.first != ServerRAState::MSG0_DONE)
 	{
 		DropServerRAState(ServerID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg2, but client ID doesn't exist or in a invalid state.");
 	}
 
 	RAKeyManager& serverKeyMgr = it->second.second;
@@ -73,13 +76,13 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inCont
 	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_SK, &tmpKey);
 	if (res != SGX_SUCCESS)
 	{
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 	serverKeyMgr.SetSK(tmpKey);
 	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_MK, &tmpKey);
 	if (res != SGX_SUCCESS)
 	{
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 	serverKeyMgr.SetMK(tmpKey);
 	//res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_VK, &tmpKey);
@@ -91,7 +94,7 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inCont
 
 	it->second.first = ServerRAState::MSG2_DONE;
 
-	return res;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* inMsg4, sgx_ec256_signature_t* inMsg4Sign, sgx_ra_context_t inContextID)
@@ -101,7 +104,8 @@ sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* in
 		|| it->second.first != ServerRAState::MSG2_DONE)
 	{
 		DropServerRAState(ServerID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg4, but client ID doesn't exist or in a invalid state.");
 	}
 
 	RAKeyManager& serverKeyMgr = it->second.second;
@@ -113,21 +117,19 @@ sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* in
 	if (signVerifyRes != SGX_EC_VALID)
 	{
 		DropServerRAState(ServerID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg4, but the signature of msg 4 is invalid.");
 	}
 	if (inMsg4->status != ias_quote_status_t::IAS_QUOTE_OK)
 	{
 		DropServerRAState(ServerID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg4, but the quote is rejected by the IAS.");
 	}
 
 	it->second.first = ServerRAState::ATTESTED;
 
 	sgx_ra_close(inContextID);
 
-	//AdjustSharedKeysServ(ServerID);
-
-	//enclave_printf("Current Skey: %s\n", SerializeKey(serverKeyMgr.GetSK()).c_str());
-
-	return res;
+	return SGX_SUCCESS;
 }

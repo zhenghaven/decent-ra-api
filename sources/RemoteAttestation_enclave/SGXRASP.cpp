@@ -12,6 +12,7 @@
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include "../common_enclave/EnclaveStatus.h"
+#include "../common_enclave/DecentError.h"
 
 #include "../common/CryptoTools.h"
 #include "../common/ias_report_cert.h"
@@ -60,7 +61,7 @@ sgx_status_t ecall_init_ra_sp_environment()
 	sgx_status_t res = SGX_SUCCESS;
 	if (cryptoMgr.GetStatus() != SGX_SUCCESS)
 	{
-		return cryptoMgr.GetStatus();
+		return cryptoMgr.GetStatus(); //Error return. (Error from SGX)
 	}
 
 	enclave_printf("Public Sign Key: %s\n", SerializePubKey(cryptoMgr.GetSignPubKey()).c_str());
@@ -70,13 +71,13 @@ sgx_status_t ecall_init_ra_sp_environment()
 	res = sgx_create_report(nullptr, nullptr, &selfReport);
 	if (res != SGX_SUCCESS)
 	{
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 	sgx_measurement_t& enclaveHash = selfReport.body.mr_enclave;
 	enclave_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
 	g_selfHash = SerializeStruct(enclaveHash);
 
-	return res;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t ecall_process_ra_msg0_send(const char* clientID)
@@ -87,7 +88,8 @@ sgx_status_t ecall_process_ra_msg0_send(const char* clientID)
 	auto it = clientsMap.find(clientID);
 	if (it != clientsMap.end())
 	{
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg0, but client ID already exist.");
 	}
 	clientsMap.insert(std::make_pair<std::string, std::pair<ClientRAState, RAKeyManager> >(clientID, std::make_pair<ClientRAState, RAKeyManager>(ClientRAState::MSG0_DONE, RAKeyManager(clientSignkey))));
 
@@ -103,7 +105,8 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 		|| it->second.first != ClientRAState::MSG0_DONE)
 	{
 		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg1, but client ID doesn't exist or in a invalid state.");
 	}
 
 	RAKeyManager& clientKeyMgr = it->second.second;
@@ -112,45 +115,12 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 
 	clientKeyMgr.SetEncryptKey((inMsg1->g_a));
 
-	sgx_ec256_dh_shared_t sharedKey;
-	res = sgx_ecc256_compute_shared_dhkey(const_cast<sgx_ec256_private_t*>(&(cryptoMgr.GetEncrPriKey())), &(clientKeyMgr.GetEncryptKey()), &sharedKey, cryptoMgr.GetECC());
+	res = clientKeyMgr.GenerateSharedKeySet(cryptoMgr.GetEncrPriKey(), cryptoMgr.GetECC());
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
-	clientKeyMgr.SetSharedKey(sharedKey);
-
-	sgx_ec_key_128bit_t tmpDerivedKey;
-	bool keyDeriveRes = false;
-	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SMK, &tmpDerivedKey);
-	if (!keyDeriveRes)
-	{
-		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
-	}
-	clientKeyMgr.SetSMK(tmpDerivedKey);
-	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_MK, &tmpDerivedKey);
-	if (!keyDeriveRes)
-	{
-		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
-	}
-	clientKeyMgr.SetMK(tmpDerivedKey);
-	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_SK, &tmpDerivedKey);
-	if (!keyDeriveRes)
-	{
-		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
-	}
-	clientKeyMgr.SetSK(tmpDerivedKey);
-	keyDeriveRes = sp_derive_key(&(clientKeyMgr.GetSharedKey()), SAMPLE_DERIVE_KEY_VK, &tmpDerivedKey);
-	if (!keyDeriveRes)
-	{
-		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
-	}
-	clientKeyMgr.SetVK(tmpDerivedKey);
 
 	memcpy(&(outMsg2->g_b), &(cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t));
 	memcpy(&(outMsg2->spid), &sgxSPID, sizeof(sgxSPID));
@@ -166,7 +136,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 	uint8_t mac[SAMPLE_EC_MAC_SIZE] = { 0 };
 	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
@@ -177,7 +147,7 @@ sgx_status_t ecall_process_ra_msg1(const char* clientID, const sgx_ra_msg1_t *in
 
 	it->second.first = ClientRAState::MSG1_DONE;
 
-	return res;
+	return res; //Error return. (Error from SGX)
 }
 
 sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
@@ -188,7 +158,8 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		|| it->second.first != ClientRAState::MSG1_DONE)
 	{
 		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, but client ID doesn't exist or in a invalid state.");
 	}
 
 	RAKeyManager& clientKeyMgr = it->second.second;
@@ -202,30 +173,20 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	if (cmpRes)
 	{
 		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, g_a doesn't match!");
 	}
 
-	//Make sure that msg3_size is bigger than sample_mac_t.
+	//Make sure that msg3_size is bigger than sgx_mac_t.
 	uint32_t mac_size = msg3Len - sizeof(sgx_mac_t);
 	const uint8_t *p_msg3_cmaced = inMsg3;
 	p_msg3_cmaced += sizeof(sgx_mac_t);
 
-	// Verify the message mac using SMK
-	sgx_cmac_128bit_tag_t mac = { 0 };
-	res = sgx_rijndael128_cmac_msg(&(clientKeyMgr.GetSMK()), p_msg3_cmaced, mac_size, &mac);
+	res = verify_cmac128(&(clientKeyMgr.GetSMK()), p_msg3_cmaced, mac_size, (msg3->mac));
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
-	}
-
-	// In real implementation, should use a time safe version of memcmp here,
-	// in order to avoid side channel attack.
-	cmpRes = std::memcmp(&(msg3->mac), mac, sizeof(mac));
-	if (cmpRes)
-	{
-		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
+		return res; //Error return. (Error from SGX)
 	}
 
 	clientKeyMgr.SetSecProp(msg3->ps_sec_prop);
@@ -241,7 +202,7 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 
 	res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&(clientKeyMgr.GetEncryptKey())), sizeof(sgx_ec256_public_t), sha_handle);
@@ -255,28 +216,29 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 
 	res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&(clientKeyMgr.GetVK())), sizeof(sgx_ec_key_128bit_t), sha_handle);
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 
 	res = sgx_sha256_get_hash(sha_handle, (sgx_sha256_hash_t *)&report_data);
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 
 	cmpRes = std::memcmp((uint8_t *)&report_data, (uint8_t *)&(p_quote->report_body.report_data), sizeof(report_data));
 	if (cmpRes)
 	{
 		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, report_data doesn't match!");
 	}
 
 	const sgx_measurement_t& enclaveHash = p_quote->report_body.mr_enclave;
@@ -284,8 +246,8 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	if (SerializeStruct(enclaveHash) != g_selfHash)
 	{
 		DropClientRAState(clientID);
-		enclave_printf("Program hash not matching!!\n");
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, enclave program hash doesn't match!");
 	}
 	
 	//TODO: Verify quote report here.
@@ -313,6 +275,12 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 
 	enclave_printf("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
 	enclave_printf("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
+	if (!certVerRes || !signVerRes)
+	{
+		DropClientRAState(clientID);
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, IAS report signature invalid!");
+	}
 
 	rapidjson::Document jsonDoc;
 	jsonDoc.Parse(iasReport);
@@ -326,7 +294,8 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	if (!isQuoteBodyMatch)
 	{
 		DropClientRAState(clientID);
-		return SGX_ERROR_UNEXPECTED;
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, quote body doesn't match!");
 	}
 
 #endif // SIMULATING_ENCLAVE
@@ -339,7 +308,7 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	if (res != SGX_SUCCESS)
 	{
 		DropClientRAState(clientID);
-		return res;
+		return res; //Error return. (Error from SGX)
 	}
 
 	if (outMsg4->status == ias_quote_status_t::IAS_QUOTE_OK)
@@ -349,12 +318,10 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 	else
 	{
 		DropClientRAState(clientID);
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, quote got rejected by IAS!");
 	}
 
-	//AdjustSharedKeysClit(clientID);
-
-	//enclave_printf("Current Skey: %s\n", SerializeKey(clientKeyMgr.GetSK()).c_str());
-
-	return res;
+	return SGX_SUCCESS;
 }
 

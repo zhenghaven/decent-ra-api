@@ -13,7 +13,7 @@ void ocall_print_string(const char *str)
 	printf("%s", str);
 }
 
-void ocall_log_w(const char *file, const char *line, const char *str)
+void ocall_log_w(const char *file, int line, const char *str)
 {
 	SetConsoleColor(ConsoleColors::Yellow, ConsoleColors::Default);
 	printf("File:%s\nline:%d\n", file, line);

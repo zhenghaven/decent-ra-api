@@ -16,10 +16,10 @@
 #include "../common_app/Networking/Server.h"
 
 #include "../common_app/SGX/IAS/IASConnector.h"
+#include "../common_app/RAMessageRevRAReq.h"
 
 #include "ExampleEnclave.h"
 #include "SimpleMessage.h"
-#include "../common_app/RAMessageRevRAReq.h"
 
 /**
  * \brief	Main entry-point for this application
