@@ -34,6 +34,11 @@ std::map<std::string, std::pair<ClientRAState, RAKeyManager>>& EnclaveState::Get
 	return m_clientsMap;
 }
 
+std::map<std::string, std::string>& EnclaveState::GetClientNonceMap()
+{
+	return m_nonceMap;
+}
+
 DecentCryptoManager & EnclaveState::GetCryptoMgr()
 {
 	return m_cryptoMgr;

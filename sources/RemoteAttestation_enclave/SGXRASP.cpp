@@ -19,11 +19,14 @@
 #include "../common/sgx_crypto_tools.h"
 #include "../common/sgx_constants.h"
 #include "../common/sgx_ra_msg4.h"
+#include "../common/NonceGenerator.h"
 
 #include "Enclave.h"
 
 namespace
 {
+	constexpr size_t IAS_REQUEST_NONCE_SIZE = 32;
+
 	sgx_spid_t sgxSPID = { {
 			0xDD,
 			0x16,
@@ -53,6 +56,12 @@ void DropClientRAState(const std::string& clientID)
 	{
 		EnclaveState::GetInstance().GetClientsMap().erase(it);
 	}
+
+	auto nonceIt = EnclaveState::GetInstance().GetClientNonceMap().find(clientID);
+	if (nonceIt != EnclaveState::GetInstance().GetClientNonceMap().end())
+	{
+		EnclaveState::GetInstance().GetClientNonceMap().erase(nonceIt);
+	}
 }
 
 sgx_status_t ecall_init_ra_sp_environment()
@@ -80,6 +89,17 @@ sgx_status_t ecall_init_ra_sp_environment()
 	return SGX_SUCCESS;
 }
 
+void ecall_get_ias_nonce(const char* clientID, char* outStr)
+{
+	auto nonceIt = EnclaveState::GetInstance().GetClientNonceMap().find(clientID);
+	if (nonceIt == EnclaveState::GetInstance().GetClientNonceMap().end())
+	{
+		return;
+	}
+	const std::string& res = nonceIt->second;
+	std::memcpy(outStr, res.data(), res.size());
+}
+
 sgx_status_t ecall_process_ra_msg0_send(const char* clientID)
 {
 	std::map<std::string, std::pair<ClientRAState, RAKeyManager>>& clientsMap = EnclaveState::GetInstance().GetClientsMap();
@@ -92,6 +112,7 @@ sgx_status_t ecall_process_ra_msg0_send(const char* clientID)
 		FUNC_ERR("Processing msg0, but client ID already exist.");
 	}
 	clientsMap.insert(std::make_pair<std::string, std::pair<ClientRAState, RAKeyManager> >(clientID, std::make_pair<ClientRAState, RAKeyManager>(ClientRAState::MSG0_DONE, RAKeyManager(clientSignkey))));
+	EnclaveState::GetInstance().GetClientNonceMap()[clientID] = GenNonceForIASJson(IAS_REQUEST_NONCE_SIZE);
 
 	return SGX_SUCCESS;
 }
@@ -296,6 +317,17 @@ sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_t* inMsg3, 
 		DropClientRAState(clientID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg3, quote body doesn't match!");
+	}
+	
+	std::string iasNonceReport(jsonDoc["nonce"].GetString());
+	const std::string& iasNonceLocal = EnclaveState::GetInstance().GetClientNonceMap()[clientID];
+	bool isNonceMatch = (iasNonceReport == iasNonceLocal);
+	enclave_printf("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
+	if (!isNonceMatch)
+	{
+		DropClientRAState(clientID);
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR("Processing msg3, nonce doesn't match!");
 	}
 
 #endif // SIMULATING_ENCLAVE

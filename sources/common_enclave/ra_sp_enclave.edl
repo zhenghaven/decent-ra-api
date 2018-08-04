@@ -6,6 +6,8 @@ enclave {
 	{
 		public sgx_status_t ecall_init_ra_sp_environment();
 
+		public void ecall_get_ias_nonce([in, string] const char* clientID, [out, size=32] char* outStr);
+
 		public sgx_status_t ecall_process_ra_msg0_send([in, string] const char* clientID);
 
 		public sgx_status_t ecall_process_ra_msg1([in, string] const char* clientID, [in] const sgx_ra_msg1_t *inMsg1, [out] sgx_ra_msg2_t *outMsg2);

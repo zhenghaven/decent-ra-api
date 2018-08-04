@@ -220,8 +220,19 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	sgx_ra_msg4_t msg4Data;
 	sgx_ec256_signature_t msg4Sign;
 	
+	std::string iasNonce;
+	enclaveRes = m_sgxSP.GetIasReportNonce(msg3->GetSenderID(), iasNonce);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		delete reqs;
+		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
+		m_connection->Send(errMsg.ToJsonString());
+		return false;
+	}
+
 	Json::Value iasReqRoot;
 	iasReqRoot["isvEnclaveQuote"] = msg3->GetQuoteBase64();
+	iasReqRoot["nonce"] = iasNonce;
 	std::string iasReport;
 	std::string iasReportSign;
 	std::string iasCert;

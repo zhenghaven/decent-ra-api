@@ -118,6 +118,16 @@ sgx_status_t DecentSGXEnclaveImp::InitSPRAEnvironment()
 	return res == SGX_SUCCESS ? retval : res;
 }
 
+sgx_status_t DecentSGXEnclaveImp::GetIasReportNonce(const std::string & clientID, std::string& outNonce)
+{
+	sgx_status_t res = SGX_SUCCESS;
+
+	outNonce.resize(32);
+	res = ecall_get_ias_nonce(GetEnclaveId(), clientID.c_str(), &outNonce[0]);
+
+	return res;
+}
+
 sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg0Send(const std::string & clientID)
 {
 	sgx_status_t res = SGX_SUCCESS;

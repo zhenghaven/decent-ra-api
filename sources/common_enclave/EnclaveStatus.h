@@ -21,6 +21,7 @@ public:
 
 	//SGX RA Service Provider:
 	std::map<std::string, std::pair<ClientRAState, RAKeyManager> >& GetClientsMap();
+	std::map<std::string, std::string>& GetClientNonceMap();
 
 	//SGX Decent:
 	DecentCryptoManager& GetCryptoMgr();
@@ -32,6 +33,7 @@ private:
 
 	//SGX RA Service Provider:
 	std::map<std::string, std::pair<ClientRAState, RAKeyManager> > m_clientsMap;
+	std::map<std::string, std::string> m_nonceMap;
 
 	//SGX Decent:
 	DecentCryptoManager m_cryptoMgr;
