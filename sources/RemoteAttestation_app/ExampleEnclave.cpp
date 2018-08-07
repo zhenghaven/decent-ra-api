@@ -25,3 +25,13 @@ sgx_status_t ExampleEnclave::ProcessSimpleSecret(const std::string & id, const u
 
 	return res == SGX_SUCCESS ? retval : res;
 }
+
+sgx_status_t ExampleEnclave::CryptoTest(sgx_ec256_public_t* peerKey, sgx_ec256_dh_shared_t* sharedKey)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_crypto_test(GetEnclaveId(), &retval, peerKey, sharedKey);
+
+	return res == SGX_SUCCESS ? retval : res;
+}

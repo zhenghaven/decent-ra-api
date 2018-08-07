@@ -26,6 +26,8 @@ enclave {
 		public sgx_status_t ecall_get_simple_secret([in, string] const char* clientID, [out] uint64_t* secret, [out] sgx_aes_gcm_128bit_tag_t* outSecretMac);
 		
 		public sgx_status_t ecall_proc_simple_secret([in, string] const char* clientID, [in] const uint64_t* secret, [in] const sgx_aes_gcm_128bit_tag_t* inSecretMac);
+		
+		public sgx_status_t ecall_crypto_test([in] sgx_ec256_public_t* peerKey, [out] sgx_ec256_dh_shared_t* sharedKey);
 
 	};
 
