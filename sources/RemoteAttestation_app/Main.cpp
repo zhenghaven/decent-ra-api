@@ -101,6 +101,7 @@ int main(int argc, char ** argv)
 	enclaveRes = sgx_ecc256_compute_shared_dhkey(&prv, &peerPub, &sharedKey1, ctx);
 
 	expEnc.CryptoTest(&pub, &sharedKey2);
+	auto cmpRes = std::memcmp(&sharedKey1, &sharedKey2, sizeof(sgx_ec256_dh_shared_t));
 
 	switch (testOpt.getValue())
 	{

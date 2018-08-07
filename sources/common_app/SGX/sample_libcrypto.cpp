@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <map>
+#include <vector>
 
 #include <cerrno>
 
@@ -164,24 +165,19 @@ bool ECKeyPrvOpenSSL2SGX(const BIGNUM *inPrv, sgx_ec256_private_t *outPrv)
 		return false;
 	}
 	BN_bn2bin(inPrv, outPrv->r);
+	std::reverse(std::begin(outPrv->r), std::end(outPrv->r));
 
 	return true;
 }
 
 bool ECKeyPubOpenSSL2SGX(const EC_POINT *inPub, sgx_ec256_public_t *outPub)
 {
-	if (!inPub || !outPub)
+	if (!g_curve || !inPub || !outPub)
 	{
 		return false;
 	}
 
 	int opensslRes = 0;
-
-	EC_GROUP* curve = EC_GROUP_new_by_curve_name(SGX_ECC256_CURVE_NAME);
-	if (curve == nullptr)
-	{
-		return false;
-	}
 
 	BN_CTX* pubCtx = BN_CTX_new();
 	BIGNUM* pubX = BN_new();
@@ -191,46 +187,35 @@ bool ECKeyPubOpenSSL2SGX(const EC_POINT *inPub, sgx_ec256_public_t *outPub)
 		BN_free(pubX);
 		BN_free(pubY);
 		BN_CTX_free(pubCtx);
-		EC_GROUP_free(curve);
 		return false;
 	}
 
-	opensslRes = EC_POINT_get_affine_coordinates_GFp(curve, inPub, pubX, pubY, pubCtx);
+	opensslRes = EC_POINT_get_affine_coordinates_GFp(g_curve, inPub, pubX, pubY, pubCtx);
 	if (opensslRes != 1)
 	{
 		BN_free(pubX);
 		BN_free(pubY);
 		BN_CTX_free(pubCtx);
-		EC_GROUP_free(curve);
 		return false;;
 	}
-	int pubSize = 0;
-	pubSize = BN_num_bytes(pubX);
-	if (pubSize != SGX_ECP256_KEY_SIZE)
+
+	if (BN_num_bytes(pubX) != SGX_ECP256_KEY_SIZE ||
+		BN_num_bytes(pubY) != SGX_ECP256_KEY_SIZE)
 	{
 		BN_free(pubX);
 		BN_free(pubY);
 		BN_CTX_free(pubCtx);
-		EC_GROUP_free(curve);
-		return false;
-	}
-	pubSize = BN_num_bytes(pubY);
-	if (pubSize != SGX_ECP256_KEY_SIZE)
-	{
-		BN_free(pubX);
-		BN_free(pubY);
-		BN_CTX_free(pubCtx);
-		EC_GROUP_free(curve);
 		return false;
 	}
 
 	BN_bn2bin(pubX, outPub->gx);
 	BN_bn2bin(pubY, outPub->gy);
+	std::reverse(std::begin(outPub->gx), std::end(outPub->gx));
+	std::reverse(std::begin(outPub->gy), std::end(outPub->gy));
 
 	BN_free(pubX);
 	BN_free(pubY);
 	BN_CTX_free(pubCtx);
-	EC_GROUP_free(curve);
 
 	return true;
 }
@@ -273,7 +258,11 @@ bool ECKeyPrvSGX2OpenSSL(const sgx_ec256_private_t *inPrv, BIGNUM *outPrv)
 		return false;
 	}
 
-	BN_bin2bn(inPrv->r, SGX_ECP256_KEY_SIZE, outPrv);
+	std::vector<uint8_t> buffer(SGX_ECP256_KEY_SIZE, 0);
+
+	std::memcpy(&buffer[0], inPrv->r, SGX_ECP256_KEY_SIZE);
+	std::reverse(buffer.begin(), buffer.end());
+	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, outPrv);
 
 	return true;
 }
@@ -298,8 +287,15 @@ bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_POINT *outPub)
 		return false;
 	}
 
-	BN_bin2bn(inPub->gx, SGX_ECP256_KEY_SIZE, pubX);
-	BN_bin2bn(inPub->gy, SGX_ECP256_KEY_SIZE, pubY);
+	std::vector<uint8_t> buffer(SGX_ECP256_KEY_SIZE, 0);
+
+	std::memcpy(&buffer[0], inPub->gx, SGX_ECP256_KEY_SIZE);
+	std::reverse(buffer.begin(), buffer.end());
+	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, pubX);
+
+	std::memcpy(&buffer[0], inPub->gy, SGX_ECP256_KEY_SIZE);
+	std::reverse(buffer.begin(), buffer.end());
+	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, pubY);
 
 	opensslRes = EC_POINT_set_affine_coordinates_GFp(g_curve, outPub, pubX, pubY, pubCtx);
 	if (opensslRes != 1)
@@ -540,6 +536,8 @@ bool ECKeyCalcSharedKey(EVP_PKEY* inKey, EVP_PKEY* inPeerKey, sgx_ec256_dh_share
 		EVP_PKEY_CTX_free(ctx);
 		return false;
 	}
+
+	std::reverse(std::begin(outSharedkey->s), std::end(outSharedkey->s));
 
 	EVP_PKEY_CTX_free(ctx);
 	return true;
