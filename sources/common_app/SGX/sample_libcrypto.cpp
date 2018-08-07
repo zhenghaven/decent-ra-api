@@ -11,13 +11,13 @@
 #include <openssl/cmac.h>
 #include <openssl/sha.h>
 #include <openssl/ec.h>
-#include <openssl/bn.h>
 #include <openssl/evp.h>
+#include <openssl/ecdsa.h>
 
 #include "../Common.h"
 #include "../../common/sgx_crypto_tools.h"
 
-#define SGX_ECC256_CURVE_NAME NID_X9_62_prime256v1
+#include "SGXOpenSSLConversions.h"
 
 namespace
 {
@@ -104,10 +104,38 @@ sgx_status_t sgx_sha256_close(sgx_sha_state_handle_t sha_handle)
 	return SGX_SUCCESS;
 }
 
+sgx_status_t sgx_rijndael128GCM_encrypt(const sgx_aes_gcm_128bit_key_t *p_key,
+	const uint8_t *p_src,
+	uint32_t src_len,
+	uint8_t *p_dst,
+	const uint8_t *p_iv,
+	uint32_t iv_len,
+	const uint8_t *p_aad,
+	uint32_t aad_len,
+	sgx_aes_gcm_128bit_tag_t *p_out_mac)
+{
+#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
+
+	return SGX_SUCCESS;
+}
+
+sgx_status_t sgx_rijndael128GCM_decrypt(const sgx_aes_gcm_128bit_key_t *p_key,
+	const uint8_t *p_src,
+	uint32_t src_len,
+	uint8_t *p_dst,
+	const uint8_t *p_iv,
+	uint32_t iv_len,
+	const uint8_t *p_aad,
+	uint32_t aad_len,
+	const sgx_aes_gcm_128bit_tag_t *p_in_mac)
+{
+#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
+
+	return SGX_SUCCESS;
+}
+
 sgx_status_t sgx_rijndael128_cmac_msg(const sgx_cmac_128bit_key_t *p_key, const uint8_t *p_src, uint32_t src_len, sgx_cmac_128bit_tag_t *p_mac)
 {
-//#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
-
 	if (!p_key || !p_src || !src_len || !p_mac)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
@@ -131,17 +159,35 @@ sgx_status_t sgx_rijndael128_cmac_msg(const sgx_cmac_128bit_key_t *p_key, const 
 	return SGX_SUCCESS;
 }
 
+//sgx_status_t sgx_cmac128_init(const sgx_cmac_128bit_key_t *p_key, sgx_cmac_state_handle_t* p_cmac_handle);
+//sgx_status_t sgx_cmac128_update(const uint8_t *p_src, uint32_t src_len, sgx_cmac_state_handle_t cmac_handle);
+//sgx_status_t sgx_cmac128_final(sgx_cmac_state_handle_t cmac_handle, sgx_cmac_128bit_tag_t *p_hash);
+//sgx_status_t sgx_cmac128_close(sgx_cmac_state_handle_t cmac_handle);
+//
+//sgx_status_t sgx_aes_ctr_encrypt(
+//	const sgx_aes_ctr_128bit_key_t *p_key,
+//	const uint8_t *p_src,
+//	const uint32_t src_len,
+//	uint8_t *p_ctr,
+//	const uint32_t ctr_inc_bits,
+//	uint8_t *p_dst);
+//
+//sgx_status_t sgx_aes_ctr_decrypt(
+//	const sgx_aes_ctr_128bit_key_t *p_key,
+//	const uint8_t *p_src,
+//	const uint32_t src_len,
+//	uint8_t *p_ctr,
+//	const uint32_t ctr_inc_bits,
+//	uint8_t *p_dst);
+
 sgx_status_t sgx_ecc256_open_context(sgx_ecc_state_handle_t* p_ecc_handle)
 {
-	#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
-
-	return SGX_SUCCESS;
+	return ECKeyOpenContext(p_ecc_handle) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
 sgx_status_t sgx_ecc256_close_context(sgx_ecc_state_handle_t ecc_handle)
 {
-	#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
-
+	ECKeyCloseContext(ecc_handle);
 	return SGX_SUCCESS;
 }
 
@@ -151,397 +197,6 @@ sgx_status_t sgx_ecc256_close_context(sgx_ecc_state_handle_t ecc_handle)
 //	
 //	return SGX_SUCCESS;
 //}
-
-bool ECKeyPrvOpenSSL2SGX(const BIGNUM *inPrv, sgx_ec256_private_t *outPrv)
-{
-	if (!inPrv || !outPrv)
-	{
-		return false;
-	}
-
-	int prvSize = BN_num_bytes(inPrv);
-	if (prvSize != SGX_ECP256_KEY_SIZE)
-	{
-		return false;
-	}
-	BN_bn2bin(inPrv, outPrv->r);
-	std::reverse(std::begin(outPrv->r), std::end(outPrv->r));
-
-	return true;
-}
-
-bool ECKeyPubOpenSSL2SGX(const EC_POINT *inPub, sgx_ec256_public_t *outPub)
-{
-	if (!g_curve || !inPub || !outPub)
-	{
-		return false;
-	}
-
-	int opensslRes = 0;
-
-	BN_CTX* pubCtx = BN_CTX_new();
-	BIGNUM* pubX = BN_new();
-	BIGNUM* pubY = BN_new();
-	if (!pubCtx || !pubX || !pubY)
-	{
-		BN_free(pubX);
-		BN_free(pubY);
-		BN_CTX_free(pubCtx);
-		return false;
-	}
-
-	opensslRes = EC_POINT_get_affine_coordinates_GFp(g_curve, inPub, pubX, pubY, pubCtx);
-	if (opensslRes != 1)
-	{
-		BN_free(pubX);
-		BN_free(pubY);
-		BN_CTX_free(pubCtx);
-		return false;;
-	}
-
-	if (BN_num_bytes(pubX) != SGX_ECP256_KEY_SIZE ||
-		BN_num_bytes(pubY) != SGX_ECP256_KEY_SIZE)
-	{
-		BN_free(pubX);
-		BN_free(pubY);
-		BN_CTX_free(pubCtx);
-		return false;
-	}
-
-	BN_bn2bin(pubX, outPub->gx);
-	BN_bn2bin(pubY, outPub->gy);
-	std::reverse(std::begin(outPub->gx), std::end(outPub->gx));
-	std::reverse(std::begin(outPub->gy), std::end(outPub->gy));
-
-	BN_free(pubX);
-	BN_free(pubY);
-	BN_CTX_free(pubCtx);
-
-	return true;
-}
-
-bool ECKeyPairOpenSSL2SGX(const EC_KEY *inKeyPair, sgx_ec256_private_t *outPrv, sgx_ec256_public_t *outPub)
-{
-	if (!inKeyPair || !outPrv || !outPub)
-	{
-		return false;
-	}
-
-	const BIGNUM *prv = EC_KEY_get0_private_key(inKeyPair);
-	if (prv == nullptr)
-	{
-		return false;
-	}
-
-	const EC_POINT *pub = EC_KEY_get0_public_key(inKeyPair);
-	if (pub == nullptr)
-	{
-		return false;
-	}
-
-	if (!ECKeyPrvOpenSSL2SGX(prv, outPrv))
-	{
-		return false;
-	}
-	if (!ECKeyPubOpenSSL2SGX(pub, outPub))
-	{
-		return false;
-	}
-
-	return true;
-}
-
-bool ECKeyPrvSGX2OpenSSL(const sgx_ec256_private_t *inPrv, BIGNUM *outPrv)
-{
-	if (!inPrv || !outPrv)
-	{
-		return false;
-	}
-
-	std::vector<uint8_t> buffer(SGX_ECP256_KEY_SIZE, 0);
-
-	std::memcpy(&buffer[0], inPrv->r, SGX_ECP256_KEY_SIZE);
-	std::reverse(buffer.begin(), buffer.end());
-	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, outPrv);
-
-	return true;
-}
-
-bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_POINT *outPub)
-{
-	if (!g_curve || !inPub || !outPub)
-	{
-		return false;
-	}
-
-	int opensslRes = 0;
-
-	BN_CTX* pubCtx = BN_CTX_new();
-	BIGNUM* pubX = BN_new();
-	BIGNUM* pubY = BN_new();
-	if (!pubCtx || !pubX || !pubY)
-	{
-		BN_free(pubX);
-		BN_free(pubY);
-		BN_CTX_free(pubCtx);
-		return false;
-	}
-
-	std::vector<uint8_t> buffer(SGX_ECP256_KEY_SIZE, 0);
-
-	std::memcpy(&buffer[0], inPub->gx, SGX_ECP256_KEY_SIZE);
-	std::reverse(buffer.begin(), buffer.end());
-	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, pubX);
-
-	std::memcpy(&buffer[0], inPub->gy, SGX_ECP256_KEY_SIZE);
-	std::reverse(buffer.begin(), buffer.end());
-	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, pubY);
-
-	opensslRes = EC_POINT_set_affine_coordinates_GFp(g_curve, outPub, pubX, pubY, pubCtx);
-	if (opensslRes != 1)
-	{
-		BN_free(pubX);
-		BN_free(pubY);
-		BN_CTX_free(pubCtx);
-		return false;
-	}
-
-	BN_free(pubX);
-	BN_free(pubY);
-	BN_CTX_free(pubCtx);
-
-	return true;
-}
-
-bool ECKeyPairSGX2OpenSSL(const sgx_ec256_private_t *inPrv, const sgx_ec256_public_t *inPub, EC_KEY *outKeyPair)
-{
-	int opensslRes = 0;
-
-	if (!g_curve || !inPrv || !inPub || !outKeyPair)
-	{
-		return false;
-	}
-
-	opensslRes = EC_KEY_set_group(outKeyPair, g_curve);
-	if (opensslRes != 1)
-	{
-		return false;
-	}
-
-	BIGNUM* prvR = BN_new();
-	EC_POINT* pub = EC_POINT_new(g_curve);
-	if (!prvR || !pub)
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	if (!ECKeyPrvSGX2OpenSSL(inPrv, prvR))
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-	if (!ECKeyPubSGX2OpenSSL(inPub, pub))
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-	opensslRes = EC_KEY_set_private_key(outKeyPair, prvR);
-	if (opensslRes != 1)
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-	opensslRes = EC_KEY_set_public_key(outKeyPair, pub);
-	if (opensslRes != 1)
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	BN_free(prvR);
-	EC_POINT_free(pub);
-	return true;
-}
-
-bool ECKeyGetPubFromPrv(const BIGNUM* inPrv, EC_POINT* outPub)
-{
-	if (!g_curve || !inPrv || !outPub)
-	{
-		return false;
-	}
-
-	BN_CTX* pubCtx = BN_CTX_new();
-	if (!pubCtx)
-	{
-		return false;
-	}
-
-	int opensslRes = 0;
-
-	opensslRes = EC_POINT_mul(g_curve, outPub, inPrv, NULL, NULL, pubCtx);
-
-	if (opensslRes != 1)
-	{
-		BN_CTX_free(pubCtx);
-		return false;
-	}
-
-	BN_CTX_free(pubCtx);
-	return true;
-}
-
-bool ECKeyPairSGX2OpenSSL(const sgx_ec256_private_t *inPrv, EC_KEY *outKeyPair)
-{
-	if (!g_curve || !inPrv || !outKeyPair)
-	{
-		return false;
-	}
-
-	int opensslRes = 0;
-
-	opensslRes = EC_KEY_set_group(outKeyPair, g_curve);
-	if (opensslRes != 1)
-	{
-		return false;
-	}
-
-	BIGNUM* prvR = BN_new();
-	EC_POINT* pub = EC_POINT_new(g_curve);
-	if (!prvR || !pub)
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	if (!ECKeyPrvSGX2OpenSSL(inPrv, prvR))
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	if (!ECKeyGetPubFromPrv(prvR, pub))
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	opensslRes = EC_KEY_set_private_key(outKeyPair, prvR);
-	if (opensslRes != 1)
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-	opensslRes = EC_KEY_set_public_key(outKeyPair, pub);
-	if (opensslRes != 1)
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	BN_free(prvR);
-	EC_POINT_free(pub);
-	return true;
-}
-
-bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_KEY *outKeyPair)
-{
-	int opensslRes = 0;
-
-	if (!g_curve || !inPub || !outKeyPair)
-	{
-		return false;
-	}
-
-	opensslRes = EC_KEY_set_group(outKeyPair, g_curve);
-	if (opensslRes != 1)
-	{
-		return false;
-	}
-
-	EC_POINT* pub = EC_POINT_new(g_curve);
-	if (!pub)
-	{
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	if (!ECKeyPubSGX2OpenSSL(inPub, pub))
-	{
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	opensslRes = EC_KEY_set_public_key(outKeyPair, pub);
-	if (opensslRes != 1)
-	{
-		EC_POINT_free(pub);
-		return false;
-	}
-
-	EC_POINT_free(pub);
-	return true;
-}
-
-bool ECKeyCalcSharedKey(EVP_PKEY* inKey, EVP_PKEY* inPeerKey, sgx_ec256_dh_shared_t *outSharedkey)
-{
-	if (!inKey || !inPeerKey)
-	{
-		return false;
-	}
-
-	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(inKey, nullptr);
-	if (!ctx)
-	{
-		return false;
-	}
-
-	if (EVP_PKEY_derive_init(ctx) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	if (EVP_PKEY_derive_set_peer(ctx, inPeerKey) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	size_t keySize = 0;
-	if (EVP_PKEY_derive(ctx, NULL, &keySize) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	if (keySize != SGX_ECP256_KEY_SIZE)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	if (EVP_PKEY_derive(ctx, outSharedkey->s, &keySize) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	std::reverse(std::begin(outSharedkey->s), std::end(outSharedkey->s));
-
-	EVP_PKEY_CTX_free(ctx);
-	return true;
-}
 
 sgx_status_t sgx_ecc256_create_key_pair(sgx_ec256_private_t *p_private, sgx_ec256_public_t *p_public, sgx_ecc_state_handle_t ecc_handle)
 {
@@ -558,7 +213,7 @@ sgx_status_t sgx_ecc256_create_key_pair(sgx_ec256_private_t *p_private, sgx_ec25
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-	if (!ECKeyPairOpenSSL2SGX(key, p_private, p_public))
+	if (!ECKeyPairOpenSSL2SGX(key, p_private, p_public, ecc_handle))
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -581,7 +236,7 @@ sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, s
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	if (!ECKeyPairSGX2OpenSSL(p_private_b, myECKey))
+	if (!ECKeyPairSGX2OpenSSL(p_private_b, myECKey, ecc_handle))
 	{
 		EVP_PKEY_free(myKey);
 		EVP_PKEY_free(peerKey);
@@ -590,7 +245,7 @@ sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, s
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	if (!ECKeyPubSGX2OpenSSL(p_public_ga, peerECKey))
+	if (!ECKeyPubSGX2OpenSSL(p_public_ga, peerECKey, ecc_handle))
 	{
 		EVP_PKEY_free(myKey);
 		EVP_PKEY_free(peerKey);
@@ -638,17 +293,98 @@ sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, s
 
 sgx_status_t sgx_ecdsa_sign(const uint8_t *p_data, uint32_t data_size, sgx_ec256_private_t *p_private, sgx_ec256_signature_t *p_signature, sgx_ecc_state_handle_t ecc_handle)
 {
-	#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
+	sgx_sha256_hash_t hash;
+	sgx_status_t sgxRes = sgx_sha256_msg(p_data, data_size, &hash);
+	if (sgxRes != SGX_SUCCESS)
+	{
+		return sgxRes;
+	}
 
+	EC_KEY* prvECKey = EC_KEY_new();
+	if (!prvECKey)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if (!ECKeyPairSGX2OpenSSL(p_private, prvECKey, ecc_handle))
+	{
+		EC_KEY_free(prvECKey);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	ECDSA_SIG* sign = ECDSA_do_sign(hash, SGX_SHA256_HASH_SIZE, prvECKey);
+	if (!sign)
+	{
+		EC_KEY_free(prvECKey);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if (!ECKeySignOpenSSL2SGX(sign, p_signature))
+	{
+		EC_KEY_free(prvECKey);
+		ECDSA_SIG_free(sign);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	EC_KEY_free(prvECKey);
+	ECDSA_SIG_free(sign);
 	return SGX_SUCCESS;
 }
 
-//sgx_status_t sgx_ecdsa_verify(const uint8_t *p_data, uint32_t data_size, const sgx_ec256_public_t *p_public, sgx_ec256_signature_t *p_signature, uint8_t *p_result, sgx_ecc_state_handle_t ecc_handle)
-//{
-//#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
-//
-//	return SGX_SUCCESS;
-//}
+sgx_status_t sgx_ecdsa_verify(const uint8_t *p_data, uint32_t data_size, const sgx_ec256_public_t *p_public, sgx_ec256_signature_t *p_signature, uint8_t *p_result, sgx_ecc_state_handle_t ecc_handle)
+{
+	sgx_sha256_hash_t hash;
+	sgx_status_t sgxRes = sgx_sha256_msg(p_data, data_size, &hash);
+	if (sgxRes != SGX_SUCCESS)
+	{
+		return sgxRes;
+	}
+
+	EC_KEY* pubECKey = EC_KEY_new();
+	ECDSA_SIG* sign = ECDSA_SIG_new();
+	if (!pubECKey || !sign)
+	{
+		EC_KEY_free(pubECKey);
+		ECDSA_SIG_free(sign);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if(!ECKeySignSGX2OpenSSL(p_signature, sign))
+	{
+		EC_KEY_free(pubECKey);
+		ECDSA_SIG_free(sign);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if (!ECKeyPubSGX2OpenSSL(p_public, pubECKey, ecc_handle))
+	{
+		EC_KEY_free(pubECKey);
+		ECDSA_SIG_free(sign);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	int opensslRes = 0;
+	
+	opensslRes = ECDSA_do_verify(hash, SGX_SHA256_HASH_SIZE, sign, pubECKey);
+	if (opensslRes == 1)
+	{
+		*p_result = SGX_EC_VALID;
+	}
+	else if (opensslRes == 0)
+	{
+		*p_result = SGX_EC_INVALID_SIGNATURE;
+	}
+	else
+	{
+		EC_KEY_free(pubECKey);
+		ECDSA_SIG_free(sign);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	EC_KEY_free(pubECKey);
+	ECDSA_SIG_free(sign);
+	return SGX_SUCCESS;
+}
 
 //Copied from SDK code.
 int consttime_memequal(const void *b1, const void *b2, size_t len)

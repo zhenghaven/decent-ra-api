@@ -92,16 +92,22 @@ int main(int argc, char ** argv)
 	sgx_ec256_private_t prv;
 	sgx_ec256_public_t pub;
 	sgx_ecc_state_handle_t ctx = nullptr;
+	enclaveRes = sgx_ecc256_open_context(&ctx);
 	enclaveRes = sgx_ecc256_create_key_pair(&prv, &pub, ctx);
 
 	sgx_ec256_public_t peerPub;
 	sgx_ec256_dh_shared_t sharedKey1;
 	sgx_ec256_dh_shared_t sharedKey2;
-	expEnc.GetRAEncrPubKey(peerPub);
-	enclaveRes = sgx_ecc256_compute_shared_dhkey(&prv, &peerPub, &sharedKey1, ctx);
+	expEnc.GetRASignPubKey(peerPub);
 
-	expEnc.CryptoTest(&pub, &sharedKey2);
-	auto cmpRes = std::memcmp(&sharedKey1, &sharedKey2, sizeof(sgx_ec256_dh_shared_t));
+	sgx_ec256_signature_t sign;
+	expEnc.CryptoTest(message, sizeof(message), &pub, &sign);
+	uint8_t res = 0;
+	enclaveRes = sgx_ecdsa_verify(message, sizeof(message), &peerPub, &sign, &res, ctx);
+
+	//auto cmpRes = std::memcmp(&sharedKey1, &sharedKey2, sizeof(sgx_ec256_dh_shared_t));
+
+	enclaveRes = sgx_ecc256_close_context(ctx);
 
 	switch (testOpt.getValue())
 	{

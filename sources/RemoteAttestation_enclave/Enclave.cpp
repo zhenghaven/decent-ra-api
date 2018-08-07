@@ -177,9 +177,10 @@ sgx_status_t ecall_proc_simple_secret(const char* clientID, const uint64_t* secr
 	return enclaveRes;
 }
 
-sgx_status_t ecall_crypto_test(sgx_ec256_public_t* peerKey, sgx_ec256_dh_shared_t* sharedKey)
+sgx_status_t ecall_crypto_test(const uint8_t *p_data, uint32_t data_size, const sgx_ec256_public_t *p_public, sgx_ec256_signature_t *p_signature)
 {
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	enclaveRes = sgx_ecc256_compute_shared_dhkey(const_cast<sgx_ec256_private_t*>(&EnclaveState::GetInstance().GetCryptoMgr().GetEncrPriKey()), peerKey, sharedKey, EnclaveState::GetInstance().GetCryptoMgr().GetECC());
+	uint8_t res = 0;
+	enclaveRes = sgx_ecdsa_sign(p_data, data_size, const_cast<sgx_ec256_private_t*>(&EnclaveState::GetInstance().GetCryptoMgr().GetSignPriKey()), p_signature, EnclaveState::GetInstance().GetCryptoMgr().GetECC());
 	return enclaveRes;
 }
