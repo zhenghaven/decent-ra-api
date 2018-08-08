@@ -78,10 +78,7 @@ int main(int argc, char ** argv)
 		0xab,0xf7,0x15,0x88,
 		0x09,0xcf,0x4f,0x3c };
 
-	unsigned char message[] = { 0x6b,0xc1,0xbe,0xe2,
-		0x2e,0x40,0x9f,0x96,
-		0xe9,0x3d,0x7e,0x11,
-		0x73,0x93,0x17,0x2a };
+	unsigned char message[] = "-Test Message.-";
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	//sgx_cmac_128bit_tag_t cmacTag1;
 	//sgx_cmac_128bit_tag_t cmacTag2;
@@ -107,7 +104,8 @@ int main(int argc, char ** argv)
 	sgx_aes_gcm_128bit_tag_t mac1 = { 0 };
 	sgx_aes_gcm_128bit_tag_t mac2 = { 0 };
 	enclaveRes = sgx_rijndael128GCM_encrypt(&key, message, sizeof(message), cipher1, aes_gcm_iv, 12, nullptr, 0, &mac1);
-	expEnc.CryptoTest(&key, message, sizeof(message), cipher2, aes_gcm_iv, 12, nullptr, 0, &mac2);
+	enclaveRes = sgx_rijndael128GCM_decrypt(&key, cipher1, sizeof(message), message, aes_gcm_iv, 12, nullptr, 0, &mac1);
+	expEnc.CryptoTest(&key, cipher1, sizeof(message), message, aes_gcm_iv, 12, nullptr, 0, &mac1);
 
 	auto cmpRes1 = std::memcmp(&cipher1, &cipher2, sizeof(cipher1));
 	auto cmpRes2 = std::memcmp(&mac1, &mac2, sizeof(mac1));

@@ -125,13 +125,13 @@ sgx_status_t ecall_get_simple_secret(const char* clientID, uint64_t* secret, sgx
 
 	RAKeyManager& serverKeyMgr = it->second.second;
 
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	uint8_t aes_gcm_iv[SGX_AESGCM_IV_SIZE] = { 0 };
 	enclaveRes = sgx_rijndael128GCM_encrypt(&serverKeyMgr.GetSK(),
 		reinterpret_cast<const uint8_t*>(&simple_secret),
 		sizeof(uint64_t),
 		reinterpret_cast<uint8_t*>(secret),
 		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
+		SGX_AESGCM_IV_SIZE,
 		nullptr,
 		0,
 		outSecretMac
@@ -160,13 +160,13 @@ sgx_status_t ecall_proc_simple_secret(const char* clientID, const uint64_t* secr
 	RAKeyManager& serverKeyMgr = it->second.second;
 	uint64_t simple_secret = 0;
 
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	uint8_t aes_gcm_iv[SGX_AESGCM_IV_SIZE] = { 0 };
 	enclaveRes = sgx_rijndael128GCM_decrypt(&serverKeyMgr.GetSK(),
 		reinterpret_cast<const uint8_t*>(secret),
 		sizeof(uint64_t),
 		reinterpret_cast<uint8_t*>(&simple_secret),
 		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
+		SGX_AESGCM_IV_SIZE,
 		nullptr,
 		0,
 		inSecretMac
@@ -177,16 +177,11 @@ sgx_status_t ecall_proc_simple_secret(const char* clientID, const uint64_t* secr
 	return enclaveRes;
 }
 
-sgx_status_t ecall_crypto_test(const sgx_aes_gcm_128bit_key_t *p_key, const uint8_t *p_src, uint32_t src_len, uint8_t *p_dst, const uint8_t *p_iv, uint32_t iv_len, const uint8_t *p_aad, uint32_t aad_len, sgx_aes_gcm_128bit_tag_t *p_out_mac)
+sgx_status_t ecall_crypto_test(const sgx_aes_gcm_128bit_key_t *p_key, const uint8_t *p_src, uint32_t src_len, uint8_t *p_dst, const uint8_t *p_iv, uint32_t iv_len, const uint8_t *p_aad, uint32_t aad_len, const sgx_aes_gcm_128bit_tag_t *p_out_mac)
 {
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	uint8_t res = 0;
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_encrypt(p_key, p_src, src_len, p_dst, aes_gcm_iv, SAMPLE_SP_IV_SIZE, nullptr, 0, p_out_mac);
-	for (size_t i = 0; i < src_len; ++i)
-	{
-		enclave_printf("%d, ", p_dst[i]);
-	}
-	enclave_printf("\n");
+	uint8_t aes_gcm_iv[SGX_AESGCM_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_decrypt(p_key, p_src, src_len, p_dst, aes_gcm_iv, SGX_AESGCM_IV_SIZE, nullptr, 0, p_out_mac);
 	return enclaveRes;
 }
