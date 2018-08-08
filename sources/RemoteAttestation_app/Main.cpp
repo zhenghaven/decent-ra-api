@@ -78,7 +78,6 @@ int main(int argc, char ** argv)
 		0xab,0xf7,0x15,0x88,
 		0x09,0xcf,0x4f,0x3c };
 
-	// M: 6bc1bee2 2e409f96 e93d7e11 7393172a Mlen: 128
 	unsigned char message[] = { 0x6b,0xc1,0xbe,0xe2,
 		0x2e,0x40,0x9f,0x96,
 		0xe9,0x3d,0x7e,0x11,
@@ -89,25 +88,31 @@ int main(int argc, char ** argv)
 	// = sgx_rijndael128_cmac_msg(&key, message, sizeof(message), &cmacTag1);
 	//enclaveRes = expEnc.CryptoTest(&key, message, sizeof(message), &cmacTag2);
 	//auto cmpRes = std::memcmp(cmacTag1, cmacTag2, sizeof(sgx_cmac_128bit_tag_t));
-	sgx_ec256_private_t prv;
-	sgx_ec256_public_t pub;
-	sgx_ecc_state_handle_t ctx = nullptr;
-	enclaveRes = sgx_ecc256_open_context(&ctx);
-	enclaveRes = sgx_ecc256_create_key_pair(&prv, &pub, ctx);
+	//sgx_ec256_private_t prv;
+	//sgx_ec256_public_t pub;
+	//sgx_ecc_state_handle_t ctx = nullptr;
+	//enclaveRes = sgx_ecc256_open_context(&ctx);
+	//enclaveRes = sgx_ecc256_create_key_pair(&prv, &pub, ctx);
 
-	sgx_ec256_public_t peerPub;
-	sgx_ec256_dh_shared_t sharedKey1;
-	sgx_ec256_dh_shared_t sharedKey2;
-	expEnc.GetRASignPubKey(peerPub);
+	//sgx_ec256_public_t peerPub;
+	//sgx_ec256_dh_shared_t sharedKey1;
+	//sgx_ec256_dh_shared_t sharedKey2;
+	//expEnc.GetRASignPubKey(peerPub);
 
-	sgx_ec256_signature_t sign;
-	expEnc.CryptoTest(message, sizeof(message), &pub, &sign);
-	uint8_t res = 0;
-	enclaveRes = sgx_ecdsa_verify(message, sizeof(message), &peerPub, &sign, &res, ctx);
+	//sgx_ec256_signature_t sign;
+	//uint8_t res = 0;
+	uint8_t aes_gcm_iv[12] = { 0 };
+	uint8_t cipher1[16] = { 0 };
+	uint8_t cipher2[16] = { 0 };
+	sgx_aes_gcm_128bit_tag_t mac1 = { 0 };
+	sgx_aes_gcm_128bit_tag_t mac2 = { 0 };
+	enclaveRes = sgx_rijndael128GCM_encrypt(&key, message, sizeof(message), cipher1, aes_gcm_iv, 12, nullptr, 0, &mac1);
+	expEnc.CryptoTest(&key, message, sizeof(message), cipher2, aes_gcm_iv, 12, nullptr, 0, &mac2);
 
-	//auto cmpRes = std::memcmp(&sharedKey1, &sharedKey2, sizeof(sgx_ec256_dh_shared_t));
+	auto cmpRes1 = std::memcmp(&cipher1, &cipher2, sizeof(cipher1));
+	auto cmpRes2 = std::memcmp(&mac1, &mac2, sizeof(mac1));
 
-	enclaveRes = sgx_ecc256_close_context(ctx);
+	//enclaveRes = sgx_ecc256_close_context(ctx);
 
 	switch (testOpt.getValue())
 	{

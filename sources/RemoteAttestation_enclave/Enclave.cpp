@@ -177,10 +177,16 @@ sgx_status_t ecall_proc_simple_secret(const char* clientID, const uint64_t* secr
 	return enclaveRes;
 }
 
-sgx_status_t ecall_crypto_test(const uint8_t *p_data, uint32_t data_size, const sgx_ec256_public_t *p_public, sgx_ec256_signature_t *p_signature)
+sgx_status_t ecall_crypto_test(const sgx_aes_gcm_128bit_key_t *p_key, const uint8_t *p_src, uint32_t src_len, uint8_t *p_dst, const uint8_t *p_iv, uint32_t iv_len, const uint8_t *p_aad, uint32_t aad_len, sgx_aes_gcm_128bit_tag_t *p_out_mac)
 {
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	uint8_t res = 0;
-	enclaveRes = sgx_ecdsa_sign(p_data, data_size, const_cast<sgx_ec256_private_t*>(&EnclaveState::GetInstance().GetCryptoMgr().GetSignPriKey()), p_signature, EnclaveState::GetInstance().GetCryptoMgr().GetECC());
+	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
+	enclaveRes = sgx_rijndael128GCM_encrypt(p_key, p_src, src_len, p_dst, aes_gcm_iv, SAMPLE_SP_IV_SIZE, nullptr, 0, p_out_mac);
+	for (size_t i = 0; i < src_len; ++i)
+	{
+		enclave_printf("%d, ", p_dst[i]);
+	}
+	enclave_printf("\n");
 	return enclaveRes;
 }

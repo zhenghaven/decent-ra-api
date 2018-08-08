@@ -19,6 +19,8 @@
 
 #include "SGXOpenSSLConversions.h"
 
+#define SGX_SP_IV_SIZE 12
+
 namespace
 {
 	static std::map<void*, SHA256_CTX*> g_sha256StateMap; /* Probably this is useless, but keep it for now. */
@@ -114,8 +116,82 @@ sgx_status_t sgx_rijndael128GCM_encrypt(const sgx_aes_gcm_128bit_key_t *p_key,
 	uint32_t aad_len,
 	sgx_aes_gcm_128bit_tag_t *p_out_mac)
 {
-#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
+	if ((!p_key || !p_src || !src_len || !p_dst || !p_iv || !p_out_mac) ||
+		(aad_len > 0 && p_aad == nullptr) ||
+		(p_aad != nullptr && aad_len == 0) ||
+		(iv_len != SGX_SP_IV_SIZE))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 
+	int opensslRes = 0;
+	int len = 0, ciphertext_len = 0;
+
+	EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+	if (ctx == nullptr)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	//
+	//opensslRes = EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, NULL, NULL);
+	//if (opensslRes != 1)
+	//{
+	//	EVP_CIPHER_CTX_free(ctx);
+	//	return SGX_ERROR_UNEXPECTED;
+	//}
+
+	//std::vector<uint8_t> buffer(p_src, p_src + src_len);
+	//std::reverse(buffer.begin(), buffer.end());
+
+	opensslRes = EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, *p_key, p_iv);
+	if (opensslRes != 1)
+	{
+		EVP_CIPHER_CTX_free(ctx);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	opensslRes = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL);
+	if (opensslRes != 1)
+	{
+		EVP_CIPHER_CTX_free(ctx);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if (p_aad)
+	{
+		opensslRes = EVP_EncryptUpdate(ctx, NULL, &len, p_aad, aad_len);
+		if (opensslRes != 1)
+		{
+			EVP_CIPHER_CTX_free(ctx);
+			return SGX_ERROR_UNEXPECTED;
+		}
+	}
+
+	opensslRes = EVP_EncryptUpdate(ctx, p_dst, &len, p_src, src_len);
+	if (opensslRes != 1)
+	{
+		EVP_CIPHER_CTX_free(ctx);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	ciphertext_len = len;
+
+	opensslRes = EVP_EncryptFinal_ex(ctx, p_dst + len, &len);
+	if (opensslRes != 1)
+	{
+		EVP_CIPHER_CTX_free(ctx);
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ciphertext_len += len;
+
+	opensslRes = EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, SGX_AESGCM_MAC_SIZE, p_out_mac);
+	if (opensslRes != 1)
+	{
+		EVP_CIPHER_CTX_free(ctx);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	EVP_CIPHER_CTX_free(ctx);
 	return SGX_SUCCESS;
 }
 
@@ -130,6 +206,12 @@ sgx_status_t sgx_rijndael128GCM_decrypt(const sgx_aes_gcm_128bit_key_t *p_key,
 	const sgx_aes_gcm_128bit_tag_t *p_in_mac)
 {
 #pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
+	if ((!p_key || !p_src || !src_len || !p_dst || !p_iv || !p_in_mac) ||
+		(aad_len > 0 && p_aad == nullptr) ||
+		(iv_len != SGX_SP_IV_SIZE))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 
 	return SGX_SUCCESS;
 }
@@ -182,6 +264,10 @@ sgx_status_t sgx_rijndael128_cmac_msg(const sgx_cmac_128bit_key_t *p_key, const 
 
 sgx_status_t sgx_ecc256_open_context(sgx_ecc_state_handle_t* p_ecc_handle)
 {
+	if (!p_ecc_handle)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 	return ECKeyOpenContext(p_ecc_handle) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
@@ -200,6 +286,11 @@ sgx_status_t sgx_ecc256_close_context(sgx_ecc_state_handle_t ecc_handle)
 
 sgx_status_t sgx_ecc256_create_key_pair(sgx_ec256_private_t *p_private, sgx_ec256_public_t *p_public, sgx_ecc_state_handle_t ecc_handle)
 {
+	if (!p_private || !p_public || !ecc_handle)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
 	EC_KEY *key = nullptr;
 	int opensslRes = 0;
 	
@@ -223,6 +314,11 @@ sgx_status_t sgx_ecc256_create_key_pair(sgx_ec256_private_t *p_private, sgx_ec25
 
 sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, sgx_ec256_public_t *p_public_ga, sgx_ec256_dh_shared_t *p_shared_key, sgx_ecc_state_handle_t ecc_handle)
 {
+	if (!p_private_b || !p_public_ga || !p_shared_key || !ecc_handle)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
 	EVP_PKEY* myKey = EVP_PKEY_new();
 	EVP_PKEY* peerKey = EVP_PKEY_new();
 	EC_KEY* myECKey = EC_KEY_new();
@@ -293,6 +389,11 @@ sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, s
 
 sgx_status_t sgx_ecdsa_sign(const uint8_t *p_data, uint32_t data_size, sgx_ec256_private_t *p_private, sgx_ec256_signature_t *p_signature, sgx_ecc_state_handle_t ecc_handle)
 {
+	if (!p_data || !data_size || !p_private || !p_signature || !ecc_handle)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
 	sgx_sha256_hash_t hash;
 	sgx_status_t sgxRes = sgx_sha256_msg(p_data, data_size, &hash);
 	if (sgxRes != SGX_SUCCESS)
@@ -333,6 +434,11 @@ sgx_status_t sgx_ecdsa_sign(const uint8_t *p_data, uint32_t data_size, sgx_ec256
 
 sgx_status_t sgx_ecdsa_verify(const uint8_t *p_data, uint32_t data_size, const sgx_ec256_public_t *p_public, sgx_ec256_signature_t *p_signature, uint8_t *p_result, sgx_ecc_state_handle_t ecc_handle)
 {
+	if (!p_data || !data_size || !p_public || !p_signature || !p_result || !ecc_handle)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
 	sgx_sha256_hash_t hash;
 	sgx_status_t sgxRes = sgx_sha256_msg(p_data, data_size, &hash);
 	if (sgxRes != SGX_SUCCESS)
