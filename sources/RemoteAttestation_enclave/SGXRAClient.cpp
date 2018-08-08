@@ -3,9 +3,10 @@
 
 #include <string>
 
-#include <sgx_tkey_exchange.h>
+//#include <sgx_tkey_exchange.h>
 
-#include "../common_enclave/sgx_ra_tools.h"
+#include "../common_enclave/sgx/sgx_ra_tools.h"
+#include "../common_enclave/sgx/decent_tkey_exchange.h"
 #include "../common_enclave/EnclaveStatus.h"
 #include "../common_enclave/DecentError.h"
 
@@ -73,13 +74,13 @@ sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inCont
 	sgx_status_t res = SGX_SUCCESS;
 
 	sgx_ra_key_128_t tmpKey;
-	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_SK, &tmpKey);
+	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_SK, &tmpKey);
 	if (res != SGX_SUCCESS)
 	{
 		return res; //Error return. (Error from SGX)
 	}
 	serverKeyMgr.SetSK(tmpKey);
-	res = sgx_ra_get_keys(inContextID, SGX_RA_KEY_MK, &tmpKey);
+	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_MK, &tmpKey);
 	if (res != SGX_SUCCESS)
 	{
 		return res; //Error return. (Error from SGX)
@@ -129,7 +130,7 @@ sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* in
 
 	it->second.first = ServerRAState::ATTESTED;
 
-	sgx_ra_close(inContextID);
+	decent_ra_close(inContextID);
 
 	return SGX_SUCCESS;
 }
