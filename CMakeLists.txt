@@ -226,9 +226,11 @@ file(GLOB_RECURSE SOURCES_COMMON_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/common_en
 file(GLOB_RECURSE SOURCES_LibTest_App ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.[ch]*)
 
 # RemoteAttestation Files:
-file(GLOB_RECURSE SOURCES_RemoteAttestation_App ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app/*.[ch]*)
-file(GLOB_RECURSE SOURCES_RemoteAttestation_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.[ch]*)
-file(GLOB_RECURSE SOURCES_RemoteAttestation_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/*.edl)
+set(SOURCEDIR_RemoteAttestation_App ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app)
+set(SOURCEDIR_RemoteAttestation_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave)
+file(GLOB_RECURSE SOURCES_RemoteAttestation_App ${SOURCEDIR_RemoteAttestation_App}/*.[ch]*)
+file(GLOB_RECURSE SOURCES_RemoteAttestation_Enclave ${SOURCEDIR_RemoteAttestation_Enclave}/*.[ch]*)
+file(GLOB_RECURSE SOURCES_RemoteAttestation_EDL ${SOURCEDIR_RemoteAttestation_Enclave}/*.edl)
 
 #==========================================================
 #   Setup filters
@@ -318,6 +320,7 @@ add_library(RemoteAttestation_Enclave SHARED ${SOURCES_COMMON} ${SOURCES_COMMON_
 target_compile_definitions(RemoteAttestation_Enclave PRIVATE ENCLAVE_CODE)
 
 target_include_directories(RemoteAttestation_Enclave BEFORE 
+							PRIVATE ${SOURCEDIR_RemoteAttestation_Enclave} 
 							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc" 
 							PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME}" 
@@ -331,12 +334,12 @@ set_target_properties(RemoteAttestation_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE
 add_custom_command(TARGET RemoteAttestation_Enclave
 	PRE_BUILD
 	COMMAND "${INTEL_SGX_EDGER_PATH}"  
-	--trusted "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/Enclave.edl" 
-	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave" 
+	--trusted "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.edl" 
+	--search-path "${SOURCEDIR_RemoteAttestation_Enclave}" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
 	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
 	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
-	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave"
+	WORKING_DIRECTORY "${SOURCEDIR_RemoteAttestation_Enclave}"
 )
 
 add_custom_command(TARGET RemoteAttestation_Enclave
@@ -345,7 +348,7 @@ add_custom_command(TARGET RemoteAttestation_Enclave
 	-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
 	-enclave "${Enclave_Bin_Path}/${Enclave_Libname}" 
 	-out "${CMAKE_BINARY_DIR}/${Enclave_Filename}" 
-	-config "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/Enclave.config.xml"
+	-config "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.config.xml"
 )
 
 target_link_libraries(RemoteAttestation_Enclave 
@@ -373,6 +376,7 @@ target_link_libraries(RemoteAttestation_Enclave
 
 add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
 target_include_directories(RemoteAttestation_App 
+							PRIVATE ${SOURCEDIR_RemoteAttestation_App} 
 							PRIVATE ${JSONCPP_INCLUDE_DIRS} 
 							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							PRIVATE ${Boost_INCLUDE_DIRS} 
@@ -389,12 +393,12 @@ endif()
 add_custom_command(TARGET RemoteAttestation_App
 	PRE_BUILD
 	COMMAND "${INTEL_SGX_EDGER_PATH}"  
-	--untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/Enclave.edl" 
-	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave" 
+	--untrusted "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.edl" 
+	--search-path "${SOURCEDIR_RemoteAttestation_Enclave}" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
 	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
 	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
-	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app"
+	WORKING_DIRECTORY "${SOURCEDIR_RemoteAttestation_App}"
 )
 
 target_link_libraries(RemoteAttestation_App 
@@ -420,6 +424,7 @@ target_link_libraries(RemoteAttestation_App
 
 add_executable(RemoteAttestationR_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
 target_include_directories(RemoteAttestationR_App 
+							PRIVATE ${SOURCEDIR_RemoteAttestation_App} 
 							PRIVATE ${JSONCPP_INCLUDE_DIRS} 
 							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							PRIVATE ${Boost_INCLUDE_DIRS} 
@@ -436,12 +441,12 @@ endif()
 add_custom_command(TARGET RemoteAttestationR_App
 	PRE_BUILD
 	COMMAND "${INTEL_SGX_EDGER_PATH}"  
-	--untrusted "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave/Enclave.edl" 
-	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave" 
+	--untrusted "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.edl" 
+	--search-path "${SOURCEDIR_RemoteAttestation_Enclave}" 
 	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
 	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
 	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
-	WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app"
+	WORKING_DIRECTORY "${SOURCEDIR_RemoteAttestation_App}"
 )
 
 target_link_libraries(RemoteAttestationR_App 
