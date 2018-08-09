@@ -55,7 +55,9 @@ sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const sgx_ec256_pu
 			)
 		);
 
-	return enclave_init_ra(inPubKey, enablePSE, outContextID); //Error return. (Error from SGX)
+	const sgx_ec256_private_t* prvPtr = &(EnclaveState::GetInstance().GetCryptoMgr().GetEncrPriKey());
+	const sgx_ec256_public_t* pubPtr = &(EnclaveState::GetInstance().GetCryptoMgr().GetEncrPubKey());
+	return enclave_init_ra(inPubKey, enablePSE, prvPtr, pubPtr, nullptr,outContextID); //Error return. (Error from SGX)
 }
 
 sgx_status_t ecall_process_ra_msg2(const char* ServerID, sgx_ra_context_t inContextID)

@@ -147,7 +147,7 @@ sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg0Resp(const std::string & ServerID
 		return res == SGX_SUCCESS ? retval : res;
 	}
 	
-	res = sgx_ra_get_msg1(outContextID, GetEnclaveId(), decent_ra_get_ga, &outMsg1);
+	res = sgx_ra_get_msg1(outContextID, GetEnclaveId(), decent_ra_get_ga_only, &outMsg1);
 
 	//std::cout << "In Process RA Msg 0 Resp: " << std::endl;
 	//std::cout << "g_a: " << SerializePubKey(outMsg1.g_a) << std::endl << std::endl;

@@ -155,6 +155,123 @@ extern "C" sgx_status_t decent_ra_get_ga(
     return se_ret;
 }
 
+extern "C" sgx_status_t decent_ra_get_ga_only(
+	sgx_ra_context_t context,
+	sgx_ec256_public_t *g_a)
+{
+	sgx_status_t se_ret = SGX_SUCCESS;
+	if (vector_size(&g_ra_db) <= context || !g_a)
+		return SGX_ERROR_INVALID_PARAMETER;
+	ra_db_item_t* item = NULL;
+	sgx_spin_lock(&g_ra_db_lock);
+	if (0 != vector_get(&g_ra_db, context, reinterpret_cast<void**>(&item)) || item == NULL)
+	{
+		sgx_spin_unlock(&g_ra_db_lock);
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	sgx_spin_unlock(&g_ra_db_lock);
+
+	sgx_spin_lock(&item->item_lock);    
+	do
+	{
+		//sgx_ra_init must have been called
+		if (item->state != ra_get_gaed)
+		{
+			se_ret = SGX_ERROR_INVALID_STATE;
+			break;
+		}
+		memcpy(g_a, &item->g_a, sizeof(sgx_ec256_public_t));
+	} while (0);
+	sgx_spin_unlock(&item->item_lock);
+	return se_ret;
+}
+
+sgx_status_t decent_ra_set_key_pair(
+	sgx_ra_context_t context,
+	const sgx_ec256_private_t *p_a,
+	const sgx_ec256_public_t *p_g_a
+	)
+{
+	sgx_status_t se_ret;
+	if (vector_size(&g_ra_db) <= context || !p_a || !p_g_a)
+		return SGX_ERROR_INVALID_PARAMETER;
+	ra_db_item_t* item = NULL;
+	sgx_spin_lock(&g_ra_db_lock);
+	if (0 != vector_get(&g_ra_db, context, reinterpret_cast<void**>(&item)) || item == NULL)
+	{
+		sgx_spin_unlock(&g_ra_db_lock);
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	sgx_spin_unlock(&g_ra_db_lock);
+
+
+	sgx_ecc_state_handle_t ecc_state = NULL;
+
+	sgx_spin_lock(&item->item_lock);
+	do
+	{
+		//sgx_ra_init must have been called
+		if (item->state != ra_inited)
+		{
+			se_ret = SGX_ERROR_INVALID_STATE;
+			break;
+		}
+		// ecc_state should be closed when exit.
+		se_ret = sgx_ecc256_open_context(&ecc_state);
+		if (SGX_SUCCESS != se_ret)
+		{
+			if (SGX_ERROR_OUT_OF_MEMORY != se_ret)
+				se_ret = SGX_ERROR_UNEXPECTED;
+			break;
+		}
+		int isGaValid = 0;
+		se_ret = sgx_ecc256_check_point(p_g_a, ecc_state, &isGaValid);
+		if (SGX_SUCCESS != se_ret)
+		{
+			if (SGX_ERROR_OUT_OF_MEMORY != se_ret)
+				se_ret = SGX_ERROR_UNEXPECTED;
+			break;
+		}
+		if (!isGaValid)
+		{
+			se_ret = SGX_ERROR_INVALID_PARAMETER;
+			break;
+		}
+
+		uint8_t testBuf[SGX_SHA256_HASH_SIZE];
+		sgx_read_rand(testBuf, SGX_SHA256_HASH_SIZE);
+		sgx_ec256_signature_t testSig;
+		uint8_t isAValid = 0;
+		se_ret = sgx_ecdsa_sign(testBuf, SGX_SHA256_HASH_SIZE, const_cast<sgx_ec256_private_t*>(p_a), &testSig, ecc_state);
+		if (SGX_SUCCESS != se_ret)
+		{
+			if (SGX_ERROR_OUT_OF_MEMORY != se_ret)
+				se_ret = SGX_ERROR_UNEXPECTED;
+			break;
+		}
+		se_ret = sgx_ecdsa_verify(testBuf, SGX_SHA256_HASH_SIZE, p_g_a, &testSig, &isAValid, ecc_state);
+		if (SGX_SUCCESS != se_ret)
+		{
+			if (SGX_ERROR_OUT_OF_MEMORY != se_ret)
+				se_ret = SGX_ERROR_UNEXPECTED;
+			break;
+		}
+		if (isAValid != SGX_EC_VALID)
+		{
+			se_ret = SGX_ERROR_INVALID_PARAMETER;
+			break;
+		}
+
+		memcpy(&item->a, p_a, sizeof(item->a));
+		memcpy(&item->g_a, p_g_a, sizeof(item->g_a));
+		item->state = ra_get_gaed;
+	} while (0);
+	sgx_spin_unlock(&item->item_lock);
+	if (ecc_state != NULL)
+		sgx_ecc256_close_context(ecc_state);
+	return se_ret;
+}
+
 extern "C" sgx_status_t decent_ra_proc_msg2_trusted(
     sgx_ra_context_t context,
     const sgx_ra_msg2_t *p_msg2,            //(g_b||spid||quote_type|| KDF_ID ||sign_gb_ga||cmac||sig_rl_size||sig_rl)
