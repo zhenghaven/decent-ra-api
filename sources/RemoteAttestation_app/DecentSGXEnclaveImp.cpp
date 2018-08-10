@@ -5,27 +5,30 @@
 #include <sgx_key_exchange.h>
 #include <sgx_ukey_exchange.h>
 #include <sgx_uae_service.h>
+#include <sgx_report.h>
 
 #include "Enclave_u.h"
-#include "../common_app/enclave_tools.h"
 #include "../common/CryptoTools.h"
-#include "../common/sgx_ra_msg4.h"
+#include "../common/SGX/sgx_ra_msg4.h"
 
-DecentSGXEnclaveImp::DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
+DecentSGXEnclaveImp::DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
 	SGXEnclave(enclavePath, tokenPath),
-	SGXServiceProvider(iasConnector)
+	SGXServiceProvider(iasConnector),
+	m_spid(spid)
 {
 }
 
-DecentSGXEnclaveImp::DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath) :
+DecentSGXEnclaveImp::DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath) :
 	SGXEnclave(enclavePath, tokenPath),
-	SGXServiceProvider(iasConnector)
+	SGXServiceProvider(iasConnector),
+	m_spid(spid)
 {
 }
 
-DecentSGXEnclaveImp::DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
+DecentSGXEnclaveImp::DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
 	SGXEnclave(enclavePath, tokenLocType, tokenFileName),
-	SGXServiceProvider(iasConnector)
+	SGXServiceProvider(iasConnector),
+	m_spid(spid)
 {
 }
 
@@ -200,7 +203,7 @@ sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg2(const std::string& ServerID, con
 
 	std::free(outMsg3ptr);
 
-	res = ecall_process_ra_msg2(GetEnclaveId(), &retval, ServerID.c_str(), inContextID);
+	res = ecall_process_ra_msg2(GetEnclaveId(), &retval, ServerID.c_str(), &(inMsg2.g_b), inContextID);
 
 	return res == SGX_SUCCESS ? retval : res;
 }
@@ -218,9 +221,10 @@ sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg3(const std::string & clientID, co
 		return res == SGX_SUCCESS ? retval : res;
 	}
 
-	res = ecall_adjust_shared_keys_clit(GetEnclaveId(), &retvalint, clientID.c_str());
+	//res = ecall_adjust_shared_keys_clit(GetEnclaveId(), &retvalint, clientID.c_str());
+	TransitToDecentNode(clientID);
 
-	return res;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg4(const std::string & ServerID, const sgx_ra_msg4_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign, sgx_ra_context_t inContextID)
@@ -236,9 +240,10 @@ sgx_status_t DecentSGXEnclaveImp::ProcessRAMsg4(const std::string & ServerID, co
 		return res == SGX_SUCCESS ? retval : res;
 	}
 
-	res = ecall_adjust_shared_keys_serv(GetEnclaveId(), &retvalint, ServerID.c_str());
+	//res = ecall_adjust_shared_keys_serv(GetEnclaveId(), &retvalint, ServerID.c_str());
+	TransitToDecentNode(ServerID);
 
-	return res;
+	return SGX_SUCCESS;
 }
 
 sgx_status_t DecentSGXEnclaveImp::TerminationClean()
@@ -289,6 +294,31 @@ DecentNodeMode DecentSGXEnclaveImp::GetDecentMode()
 
 	m_lastStatus = enclaveRes;
 	return res;
+}
+
+sgx_status_t DecentSGXEnclaveImp::InitDecentRAEnvironment()
+{
+	return InitDecentRAEnvironment(m_spid);
+}
+
+sgx_status_t DecentSGXEnclaveImp::InitDecentRAEnvironment(const sgx_spid_t & inSpid)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_init_decent_ra_environment(GetEnclaveId(), &retval, &inSpid);
+
+	return res == SGX_SUCCESS ? retval : res;
+}
+
+sgx_status_t DecentSGXEnclaveImp::TransitToDecentNode(const std::string & id)
+{
+	sgx_status_t res = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	res = ecall_transit_to_decent_node(GetEnclaveId(), &retval, id.c_str());
+
+	return res == SGX_SUCCESS ? retval : res;
 }
 
 sgx_status_t DecentSGXEnclaveImp::GetProtocolSignKey(const std::string & id, sgx_ec256_private_t & outPriKey, sgx_aes_gcm_128bit_tag_t & outPriKeyMac, sgx_ec256_public_t & outPubKey, sgx_aes_gcm_128bit_tag_t & outPubKeyMac)

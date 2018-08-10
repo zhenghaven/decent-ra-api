@@ -36,12 +36,14 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	return nullptr;
 }
 
-DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp) :
+DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentralizedEnclave& enclave) :
 	m_connection(std::move(connection)),
 	m_hardwareEnclave(hardwareEnclave),
 	m_sp(sp),
 	m_hardwareSession(hardwareEnclave.GetRASession()),
-	m_spSession(sp.GetRASession())
+	m_spSession(sp.GetRASession()),
+	m_decentralizedEnc(enclave),
+	m_isEnclaveEnvInited(false)
 {
 }
 
@@ -51,6 +53,15 @@ DecentralizedRASession::~DecentralizedRASession()
 
 bool DecentralizedRASession::ProcessClientSideRA()
 {
+	if (!m_isEnclaveEnvInited)
+	{
+		if (m_decentralizedEnc.InitDecentRAEnvironment() != SGX_SUCCESS)
+		{
+			return false;
+		}
+		m_isEnclaveEnvInited = true;
+	}
+
 	if (!m_connection)
 	{
 		return false;
@@ -90,6 +101,15 @@ bool DecentralizedRASession::ProcessClientSideRA()
 
 bool DecentralizedRASession::ProcessServerSideRA()
 {
+	if (!m_isEnclaveEnvInited)
+	{
+		if (m_decentralizedEnc.InitDecentRAEnvironment() != SGX_SUCCESS)
+		{
+			return false;
+		}
+		m_isEnclaveEnvInited = true;
+	}
+
 	if (!m_connection)
 	{
 		return false;

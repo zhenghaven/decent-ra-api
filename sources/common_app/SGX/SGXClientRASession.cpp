@@ -17,7 +17,7 @@
 
 #include "../Networking/Connection.h"
 #include "../../common/CryptoTools.h"
-#include "../../common/sgx_ra_msg4.h"
+#include "../../common/SGX/sgx_ra_msg4.h"
 #include "IAS/IASConnector.h"
 
 namespace

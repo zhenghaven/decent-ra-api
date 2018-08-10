@@ -276,7 +276,8 @@ target_include_directories(LibTest_App
 							PRIVATE ${Boost_INCLUDE_DIRS} 
 							PRIVATE ${TCLAP_INCLUDE_DIR}
 							PRIVATE ${CURL_INCLUDE_DIR}
-							PRIVATE ${CPPCODEC_INCLUDE_DIR})
+							PRIVATE ${CPPCODEC_INCLUDE_DIR}
+							PRIVATE ${RAPIDJSON_INCLUDE_DIR})
 
 if(MSVC)
 	target_compile_definitions(LibTest_App PRIVATE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
@@ -382,7 +383,8 @@ target_include_directories(RemoteAttestation_App
 							PRIVATE ${Boost_INCLUDE_DIRS} 
 							PRIVATE ${TCLAP_INCLUDE_DIR}
 							PRIVATE ${CURL_INCLUDE_DIR}
-							PRIVATE ${CPPCODEC_INCLUDE_DIR})
+							PRIVATE ${CPPCODEC_INCLUDE_DIR}
+							PRIVATE ${RAPIDJSON_INCLUDE_DIR})
 
 if(MSVC)
 	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
@@ -430,7 +432,8 @@ target_include_directories(RemoteAttestationR_App
 							PRIVATE ${Boost_INCLUDE_DIRS} 
 							PRIVATE ${TCLAP_INCLUDE_DIR}
 							PRIVATE ${CURL_INCLUDE_DIR}
-							PRIVATE ${CPPCODEC_INCLUDE_DIR})
+							PRIVATE ${CPPCODEC_INCLUDE_DIR}
+							PRIVATE ${RAPIDJSON_INCLUDE_DIR})
 
 if(MSVC)
 	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE WIN32_LEAN_AND_MEAN CURL_STATICLIB)

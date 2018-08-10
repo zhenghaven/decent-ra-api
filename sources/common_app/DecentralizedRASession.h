@@ -10,11 +10,13 @@ class ServiceProviderBase;
 class ClientRASession;
 class ServiceProviderRASession;
 
+typedef struct _spid_t sgx_spid_t;
+
 class DecentralizedRASession
 {
 public:
 	DecentralizedRASession() = delete;
-	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp);
+	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentralizedEnclave& enclave);
 	
 	virtual ~DecentralizedRASession();
 
@@ -38,5 +40,6 @@ protected:
 	virtual bool RecvReverseRARequest();
 
 private:
-
+	DecentralizedEnclave& m_decentralizedEnc;
+	bool m_isEnclaveEnvInited;
 };

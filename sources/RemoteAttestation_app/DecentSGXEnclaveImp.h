@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sgx_quote.h>
+
 #include "../common_app/SGX/SGXEnclave.h"
 #include "../common_app/SGX/SGXServiceProvider.h"
 #include "../common_app/DecentEnclave.h"
@@ -7,9 +9,9 @@
 class DecentSGXEnclaveImp : public SGXEnclave, public SGXServiceProvider, public DecentEnclave
 {
 public:
-	DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
-	DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath);
-	DecentSGXEnclaveImp(const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
+	DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath);
+	DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	~DecentSGXEnclaveImp();
 	
@@ -37,6 +39,11 @@ public:
 	virtual void SetDecentMode(DecentNodeMode inDecentMode) override;
 	virtual DecentNodeMode GetDecentMode() override;
 
+	virtual sgx_status_t InitDecentRAEnvironment() override;
+	virtual sgx_status_t InitDecentRAEnvironment(const sgx_spid_t& inSpid);
+
+	virtual sgx_status_t TransitToDecentNode(const std::string& id) override;
+
 	virtual sgx_status_t GetProtocolSignKey(const std::string& id, sgx_ec256_private_t& outPriKey, sgx_aes_gcm_128bit_tag_t& outPriKeyMac, sgx_ec256_public_t& outPubKey, sgx_aes_gcm_128bit_tag_t& outPubKeyMac) override;
 	virtual sgx_status_t GetProtocolEncrKey(const std::string& id, sgx_ec256_private_t& outPriKey, sgx_aes_gcm_128bit_tag_t& outPriKeyMac, sgx_ec256_public_t& outPubKey, sgx_aes_gcm_128bit_tag_t& outPubKeyMac) override;
 	virtual sgx_status_t SetProtocolSignKey(const std::string& id, const sgx_ec256_private_t& inPriKey, const sgx_aes_gcm_128bit_tag_t& inPriKeyMac, const sgx_ec256_public_t& inPubKey, const sgx_aes_gcm_128bit_tag_t& inPubKeyMac) override;
@@ -48,5 +55,5 @@ public:
 
 private:
 	std::string m_raSenderID;
-
+	sgx_spid_t m_spid;
 };

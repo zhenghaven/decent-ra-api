@@ -8,7 +8,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "../../common/CryptoTools.h"
-#include "../../common/sgx_ra_msg4.h"
+#include "../../common/SGX/sgx_ra_msg4.h"
 
 #include "../Common.h"
 #include "SGXClientRASession.h"

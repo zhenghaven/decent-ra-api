@@ -7,9 +7,14 @@
 class RAKeyManager
 {
 public:
-	RAKeyManager() = delete;
+	RAKeyManager();
+	RAKeyManager(const RAKeyManager& other);
+	RAKeyManager(RAKeyManager&& other);
 	RAKeyManager(const sgx_ec256_public_t& signKey);
 	~RAKeyManager();
+
+	RAKeyManager& operator=(const RAKeyManager& rhs);
+	RAKeyManager& RAKeyManager::operator=(RAKeyManager&& rhs) noexcept;
 
 	void SetSignKey(const sgx_ec256_public_t& signKey);
 	void SetEncryptKey(const sgx_ec256_public_t& encryptKey);
@@ -30,6 +35,15 @@ public:
 	sgx_ec_key_128bit_t& GetSK();
 	sgx_ec_key_128bit_t& GetVK();
 	sgx_ps_sec_prop_desc_t& GetSecProp();
+
+	const sgx_ec256_public_t& GetSignKey() const;
+	const sgx_ec256_public_t& GetEncryptKey() const;
+	const sgx_ec256_dh_shared_t& GetSharedKey() const;
+	const sgx_ec_key_128bit_t& GetSMK() const;
+	const sgx_ec_key_128bit_t& GetMK() const;
+	const sgx_ec_key_128bit_t& GetSK() const;
+	const sgx_ec_key_128bit_t& GetVK() const;
+	const sgx_ps_sec_prop_desc_t& GetSecProp() const;
 
 private:
 	sgx_ec256_public_t m_signKey;

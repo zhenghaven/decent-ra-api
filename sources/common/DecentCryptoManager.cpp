@@ -4,14 +4,13 @@
 
 
 DecentCryptoManager::DecentCryptoManager() :
-	SGXCryptoManager()
+	RACryptoManager()
 {
 	SetProtoSignPubKey(GetSignPubKey());
 }
 
 DecentCryptoManager::~DecentCryptoManager()
 {
-
 }
 
 void DecentCryptoManager::SetSignPriKey(const sgx_ec256_private_t & inKey)

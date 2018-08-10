@@ -1,9 +1,9 @@
-#pragma once
+#include "DecentError.h"
 
 #include <tlibc/stdarg.h>
 #include <tlibc/stdio.h>      /* vsnprintf */
 
-void enclave_printf(const char * fmt, ...)
+void ocall_printf(const char * fmt, ...)
 {
 	char buf[BUFSIZ] = { '\0' };
 	va_list ap;

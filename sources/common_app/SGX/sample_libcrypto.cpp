@@ -15,7 +15,7 @@
 #include <openssl/ecdsa.h>
 
 #include "../Common.h"
-#include "../../common/sgx_crypto_tools.h"
+#include "../../common/SGX/sgx_crypto_tools.h"
 
 #include "SGXOpenSSLConversions.h"
 

@@ -2,19 +2,19 @@
 #ifndef DECENT_CRYPTO_MANAGER_H
 #define DECENT_CRYPTO_MANAGER_H
 
-#include "SGXCryptoManager.h"
+#include "RACryptoManager.h"
 #include <sgx_tcrypto.h>
 //struct _sgx_ec256_private_t;
 //typedef _sgx_ec256_private_t sgx_ec256_private_t;
 //struct _sgx_ec256_public_t;
 //typedef _sgx_ec256_public_t sgx_ec256_public_t;
 
-class DecentCryptoManager : public SGXCryptoManager
+class DecentCryptoManager : public RACryptoManager
 {
 public:
 	DecentCryptoManager();
 
-	~DecentCryptoManager();
+	virtual ~DecentCryptoManager();
 
 	virtual void SetSignPriKey(const sgx_ec256_private_t& inKey);
 	virtual void SetSignPubKey(const sgx_ec256_public_t& inKey);

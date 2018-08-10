@@ -23,6 +23,25 @@
 #include "ExampleEnclave.h"
 #include "SimpleMessage.h"
 
+static sgx_spid_t g_sgxSPID = { {
+		0xDD,
+		0x16,
+		0x40,
+		0xFE,
+		0x0D,
+		0x28,
+		0xC9,
+		0xA8,
+		0xB3,
+		0x05,
+		0xAF,
+		0x4D,
+		0x4E,
+		0x76,
+		0x58,
+		0xBE,
+	} };
+
 /**
  * \brief	Main entry-point for this application
  *
@@ -51,7 +70,7 @@ int main(int argc, char ** argv)
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, GetSGXErrorMessage(deviceStatusResErr).c_str());
 
 	IASConnector iasConnector;
-	ExampleEnclave expEnc(ENCLAVE_FILENAME, iasConnector, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
+	ExampleEnclave expEnc(g_sgxSPID, ENCLAVE_FILENAME, iasConnector, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 	expEnc.Launch();
 	//expEnc.InitRAEnvironment();
 

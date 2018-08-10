@@ -154,10 +154,8 @@ bool ECKeyPrvSGX2OpenSSL(const sgx_ec256_private_t *inPrv, BIGNUM *outPrv)
 		return false;
 	}
 
-	std::vector<uint8_t> buffer(SGX_ECP256_KEY_SIZE, 0);
+	std::vector<uint8_t> buffer(std::rbegin(inPrv->r), std::rend(inPrv->r));
 
-	std::memcpy(&buffer[0], inPrv->r, SGX_ECP256_KEY_SIZE);
-	std::reverse(buffer.begin(), buffer.end());
 	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, outPrv);
 
 	return true;
@@ -184,14 +182,11 @@ bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_POINT *outPub, sgx_
 		return false;
 	}
 
-	std::vector<uint8_t> buffer(SGX_ECP256_KEY_SIZE, 0);
+	std::vector<uint8_t> buffer(std::rbegin(inPub->gx), std::rend(inPub->gx));
 
-	std::memcpy(&buffer[0], inPub->gx, SGX_ECP256_KEY_SIZE);
-	std::reverse(buffer.begin(), buffer.end());
 	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, pubX);
 
-	std::memcpy(&buffer[0], inPub->gy, SGX_ECP256_KEY_SIZE);
-	std::reverse(buffer.begin(), buffer.end());
+	buffer.assign(std::rbegin(inPub->gy), std::rend(inPub->gy));
 	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, pubY);
 
 	opensslRes = EC_POINT_set_affine_coordinates_GFp(eccCtx->m_grp, outPub, pubX, pubY, eccCtx->m_bnCtx);
@@ -542,15 +537,12 @@ bool ECKeySignSGX2OpenSSL(const sgx_ec256_signature_t * inSign, ECDSA_SIG * outS
 		return false;
 	}
 
-	std::vector<uint8_t> buffer(SGX_ECP256_KEY_SIZE, 0);
+	std::vector<uint8_t> buffer(std::rbegin(inSign->x), std::rend(inSign->x));
 
-	std::memcpy(buffer.data(), inSign->x, buffer.size());
-	std::reverse(buffer.begin(), buffer.end());
-	BN_bin2bn(buffer.data(), buffer.size(), r);
+	BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), r);
 
-	std::memcpy(buffer.data(), inSign->y, buffer.size());
-	std::reverse(buffer.begin(), buffer.end());
-	BN_bin2bn(buffer.data(), buffer.size(), s);
+	buffer.assign(std::rbegin(inSign->y), std::rend(inSign->y));
+	BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), s);
 
 	if (BN_num_bytes(r) != SGX_ECP256_KEY_SIZE ||
 		BN_num_bytes(s) != SGX_ECP256_KEY_SIZE)

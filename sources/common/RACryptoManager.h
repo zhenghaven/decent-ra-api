@@ -1,6 +1,6 @@
 #pragma
-#ifndef SGX_CRYPTO_MANAGER_H
-#define SGX_CRYPTO_MANAGER_H
+#ifndef RA_CRYPTO_MANAGER_H
+#define RA_CRYPTO_MANAGER_H
 
 #include <sgx_tcrypto.h>
 //struct _sgx_ec256_private_t;
@@ -8,11 +8,11 @@
 //struct _sgx_ec256_public_t;
 //typedef _sgx_ec256_public_t sgx_ec256_public_t;
 
-class SGXCryptoManager
+class RACryptoManager
 {
 public:
-	SGXCryptoManager();
-	virtual ~SGXCryptoManager();
+	RACryptoManager();
+	virtual ~RACryptoManager();
 
 	virtual void SetSignKeySign(const sgx_ec256_signature_t& sign);
 	virtual void SetEncrKeySign(const sgx_ec256_signature_t& sign);
@@ -45,4 +45,4 @@ protected:
 	sgx_status_t m_status;
 };
 
-#endif // !SGX_CRYPTO_MANAGER_H
+#endif // !RA_CRYPTO_MANAGER_H

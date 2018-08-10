@@ -10,6 +10,8 @@
 
 #include "../common/Decent.h"
 
+typedef struct _spid_t sgx_spid_t;
+
 class DecentEnclave : public DecentralizedEnclave
 {
 public:

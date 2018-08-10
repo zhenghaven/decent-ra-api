@@ -2,7 +2,7 @@
 
 #include <json/json.h>
 
-#include "../../common/sgx_ra_msg4.h"
+#include "../../common/SGX/sgx_ra_msg4.h"
 
 #include "../Common.h"
 

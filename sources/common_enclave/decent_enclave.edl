@@ -1,19 +1,19 @@
 enclave {
 	
-	include "../common/sgx_ra_msg4.h"
 	include "../common/Decent.h"
+	include "sgx_quote.h"
 	
 	trusted 
 	{
 		
 		//Decent Functions:
 		public void ecall_set_decent_mode(DecentNodeMode inDecentMode);
+		
+		public sgx_status_t ecall_init_decent_ra_environment([in] const sgx_spid_t* inSpid);
 
 		public DecentNodeMode ecall_get_decent_mode();
 		
-		public int ecall_adjust_shared_keys_serv([in, string] const char* id);
-		
-		public int ecall_adjust_shared_keys_clit([in, string] const char* id);
+		public sgx_status_t ecall_transit_to_decent_node([in, string] const char* id);
 
 		public sgx_status_t ecall_get_protocol_sign_key([in, string] const char* clientID, [out] sgx_ec256_private_t* outPriKey, [out] sgx_aes_gcm_128bit_tag_t* outPriKeyMac, [out] sgx_ec256_public_t* outPubKey, [out] sgx_aes_gcm_128bit_tag_t* outPubKeyMac);
 		
