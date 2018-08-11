@@ -105,16 +105,12 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	}
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	enclaveRes = m_sgxSP.InitSPRAEnvironment();
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return false;
-	}
+	m_sgxSP.InitSPRAEnvironment();
 
 	RAMessages* reqs = nullptr;
 	SGXRAMessage* resp = nullptr;
 	std::string msgBuffer;
-	std::string msgSenderID = m_sgxSP.GetRASenderID();
+	std::string msgSenderID = GetSenderID();
 
 	m_connection->Receive(msgBuffer);
 	reqs = JsonMessageParser(msgBuffer);

@@ -9,6 +9,10 @@ enclave {
 	
 		public sgx_status_t ecall_init_ra_client_environment();
 
+		public sgx_status_t ecall_get_ra_client_pub_sig_key([out] sgx_ec256_public_t* outKey);
+		
+		public sgx_status_t ecall_get_ra_client_pub_enc_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
+
 		public sgx_status_t ecall_process_ra_msg0_resp([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
 
 		public sgx_status_t ecall_process_ra_msg2([in, string] const char* ServerID, [in] const sgx_ec256_public_t* p_g_b, sgx_ra_context_t inContextID);

@@ -24,7 +24,6 @@
 
 namespace
 {
-	constexpr size_t IAS_REQUEST_NONCE_SIZE = 32;
 
 	static sgx_spid_t g_sgxSPID = { { 0	} };
 
@@ -81,15 +80,51 @@ sgx_status_t SGXRAEnclave::InitRaSpEnvironment()
 	return SGX_SUCCESS;
 }
 
-void SGXRAEnclave::GetIasNonce(const char* clientID, char* outStr)
+sgx_status_t SGXRAEnclave::GetIasNonce(const char* clientID, char* outStr)
 {
+	if (!clientID)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 	auto nonceIt = g_nonceMap.find(clientID);
 	if (nonceIt == g_nonceMap.end())
 	{
-		return;
+		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	const std::string& res = nonceIt->second;
 	std::memcpy(outStr, res.data(), res.size());
+
+	return SGX_SUCCESS;
+}
+
+sgx_status_t SGXRAEnclave::GetRASPEncrPubKey(sgx_ra_context_t context, sgx_ec256_public_t * outKey)
+{
+	if (!outKey)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
+	{
+		return g_cryptoMgr.GetStatus();
+	}
+
+	std::memcpy(outKey, &(g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t));
+	return SGX_SUCCESS;
+}
+
+sgx_status_t SGXRAEnclave::GetRASPSignPubKey(sgx_ec256_public_t * outKey)
+{
+	if (!outKey)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
+	{
+		return g_cryptoMgr.GetStatus();
+	}
+
+	std::memcpy(outKey, &(g_cryptoMgr.GetSignPubKey()), sizeof(sgx_ec256_public_t));
+	return SGX_SUCCESS;
 }
 
 sgx_status_t SGXRAEnclave::ProcessRaMsg0Send(const char* clientID)

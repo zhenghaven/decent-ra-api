@@ -203,7 +203,7 @@ bool FileHandler::ReadBlock(std::vector<uint8_t>& dest, size_t size)
 	size_t resSize = std::fread(&dest[0], sizeof(uint8_t), size, m_file);
 	dest.resize(resSize);
 
-	return resSize == dest.size();
+	return resSize == size;
 }
 
 bool FileHandler::WriteBlock(const std::vector<uint8_t>& dest)

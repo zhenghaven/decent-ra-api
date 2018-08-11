@@ -99,15 +99,11 @@ bool SGXClientRASession::ProcessClientSideRA()
 	}
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	enclaveRes = m_sgxEnclave.InitClientRAEnvironment();
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return false;
-	}
+	m_sgxEnclave.InitClientRAEnvironment();
 	
 	RAMessages* resp = nullptr;
 	std::string msgBuffer;
-	std::string msgSenderID = m_sgxEnclave.GetRASenderID();
+	std::string msgSenderID = GetSenderID();
 
 	SGXRAMessage0Send msg0s(msgSenderID, m_sgxEnclave.GetExGroupID());
 	m_connection->Send(msg0s.ToJsonString());

@@ -56,6 +56,12 @@ RAKeyManager * SGXRAEnclave::GetServerKeysMgr(const std::string & serverID)
 //	return std::move(tmpMgr);
 //}
 
+
+/**
+* \brief	Initialize client's Remote Attestation environment.
+*
+* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h . *NOTE:* The error here only comes from SGX runtime.
+*/
 extern "C" sgx_status_t ecall_init_ra_client_environment()
 {
 	sgx_status_t res = SGX_SUCCESS;
@@ -67,6 +73,51 @@ extern "C" sgx_status_t ecall_init_ra_client_environment()
 	ocall_printf("Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr.GetSignPubKey()).c_str());
 	ocall_printf("Public Encr Key: %s\n", SerializePubKey(g_cryptoMgr.GetEncrPubKey()).c_str());
 
+	return SGX_SUCCESS;
+}
+
+/**
+* \brief	Get client's public encryption key.
+* 
+* \param	context    [in]  .
+* \param	outKey     [out]  .
+* 
+* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h .
+*/
+extern "C" sgx_status_t ecall_get_ra_client_pub_enc_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
+{
+	if (!outKey)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
+	{
+		return g_cryptoMgr.GetStatus();
+	}
+
+	std::memcpy(outKey, &(g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t));
+	return SGX_SUCCESS;
+}
+
+/**
+* \brief	Get client's public signing key.
+*
+* \param	outKey     [out]  .
+*
+* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h .
+*/
+extern "C" sgx_status_t ecall_get_ra_client_pub_sig_key(sgx_ec256_public_t* outKey)
+{
+	if (!outKey)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
+	{
+		return g_cryptoMgr.GetStatus();
+	}
+
+	std::memcpy(outKey, &(g_cryptoMgr.GetSignPubKey()), sizeof(sgx_ec256_public_t));
 	return SGX_SUCCESS;
 }
 

@@ -1,5 +1,8 @@
 #include "ClientRASession.h"
 
+#include <sgx_tcrypto.h>
+
+#include "../common/CryptoTools.h"
 #include "Networking/Connection.h"
 #include "EnclaveBase.h"
 
@@ -7,6 +10,9 @@ ClientRASession::ClientRASession(std::unique_ptr<Connection>& connection, Enclav
 	m_connection(std::move(connection)),
 	m_enclaveBase(enclaveBase)
 {
+	sgx_ec256_public_t signPubKey;
+	m_enclaveBase.GetRAClientSignPubKey(signPubKey);
+	m_raSenderID = SerializePubKey(signPubKey);
 }
 
 ClientRASession::~ClientRASession()
@@ -15,7 +21,7 @@ ClientRASession::~ClientRASession()
 
 std::string ClientRASession::GetSenderID() const
 {
-	return m_enclaveBase.GetRASenderID();
+	return m_raSenderID;
 }
 
 void ClientRASession::SwapConnection(std::unique_ptr<Connection>& connection)

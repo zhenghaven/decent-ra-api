@@ -5,9 +5,35 @@ extern "C" sgx_status_t ecall_init_ra_sp_environment()
 	return SGXRAEnclave::InitRaSpEnvironment();
 }
 
-extern "C" void ecall_get_ias_nonce(const char* clientID, char* outStr)
+extern "C" sgx_status_t ecall_get_ias_nonce(const char* clientID, char* outStr)
 {
-	SGXRAEnclave::GetIasNonce(clientID, outStr);
+	return SGXRAEnclave::GetIasNonce(clientID, outStr);
+}
+
+/**
+* \brief	Get client's public encryption key.
+*
+* \param	context    [in]  .
+* \param	outKey     [out]  .
+*
+* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h .
+*/
+extern "C" sgx_status_t ecall_get_ra_sp_pub_enc_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
+{
+	return SGXRAEnclave::GetRASPEncrPubKey(context, outKey);
+}
+
+/**
+* \brief	Get client's public signing key.
+*
+* \param	context    [in]  .
+* \param	outKey     [out]  .
+*
+* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h .
+*/
+extern "C" sgx_status_t ecall_get_ra_sp_pub_sig_key(sgx_ec256_public_t* outKey)
+{
+	return SGXRAEnclave::GetRASPSignPubKey(outKey);
 }
 
 extern "C" sgx_status_t ecall_process_ra_msg0_send(const char* clientID)

@@ -2,38 +2,21 @@
 
 #include <sgx_quote.h>
 
-#include "../common_app/SGX/SGXEnclave.h"
-#include "../common_app/SGX/SGXServiceProvider.h"
-#include "../common_app/DecentEnclave.h"
+#include "../DecentEnclave.h"
+#include "SGXEnclaveServiceProvider.h"
 
-class DecentSGXEnclaveImp : public SGXEnclave, public SGXServiceProvider, public DecentEnclave
+class SGXDecentEnclave : public SGXEnclaveServiceProvider, public DecentEnclave
 {
 public:
-	DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
-	DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath);
-	DecentSGXEnclaveImp(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
+	SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath);
+	SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
-	~DecentSGXEnclaveImp();
-	
-	virtual std::string GetRASenderID() const override;
+	~SGXDecentEnclave();
 
 	//SGXEnclave methods:
-	virtual sgx_status_t GetRASignPubKey(sgx_ec256_public_t& outKey) override;
-	virtual sgx_status_t GetRAEncrPubKey(sgx_ec256_public_t& outKey) override;
-
-	virtual sgx_status_t InitClientRAEnvironment() override;
-	virtual sgx_status_t InitSPRAEnvironment() override;
-	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce) override;
-	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) override;
-	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1) override;
-	virtual sgx_status_t ProcessRAMsg1(const std::string& clientID, const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2) override;
-	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const sgx_ra_msg2_t& inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t& inContextID) override;
 	virtual sgx_status_t ProcessRAMsg3(const std::string& clientID, const sgx_ra_msg3_t& inMsg3, const uint32_t msg3Len, const std::string& iasReport, const std::string& reportSign, const std::string& reportCertChain, sgx_ra_msg4_t& outMsg4, sgx_ec256_signature_t& outMsg4Sign) override;
 	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID) override;
-	virtual sgx_status_t TerminationClean() override;
-
-	virtual sgx_status_t GetSimpleSecret(const std::string& id, uint64_t& secret, sgx_aes_gcm_128bit_tag_t& outSecretMac);
-	virtual sgx_status_t ProcessSimpleSecret(const std::string& id, const uint64_t& secret, const sgx_aes_gcm_128bit_tag_t& inSecretMac);
 
 	//DecentEnclave methods:
 	virtual void SetDecentMode(DecentNodeMode inDecentMode) override;
@@ -54,6 +37,5 @@ public:
 	virtual sgx_status_t ProcessDecentMsg0(const std::string& id, const sgx_ec256_public_t& inSignKey, const sgx_ec256_signature_t& inSignSign, const sgx_ec256_public_t& inEncrKey, const sgx_ec256_signature_t& inEncrSign) override;
 
 private:
-	std::string m_raSenderID;
 	sgx_spid_t m_spid;
 };

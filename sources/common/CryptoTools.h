@@ -26,11 +26,11 @@ std::string SerializeKey(const sgx_ec_key_128bit_t& key);
 
 void DeserializeKey(const std::string& inPubStr, sgx_ec_key_128bit_t& outKey);
 
-std::string SerializeStruct(const char* ptr, size_t size);
+std::string SerializeStruct(const uint8_t* ptr, size_t size);
 template<typename T>
 inline std::string SerializeStruct(const T& data)
 {
-	return SerializeStruct(reinterpret_cast<const char*>(&data), sizeof(T));
+	return SerializeStruct(reinterpret_cast<const uint8_t*>(&data), sizeof(T));
 }
 
 void DeserializeStruct(const std::string& inStr, void* ptr, size_t size);

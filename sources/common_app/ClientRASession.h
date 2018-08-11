@@ -26,4 +26,5 @@ public:
 protected:
 	std::unique_ptr<Connection> m_connection;
 	EnclaveBase& m_enclaveBase;
+	std::string m_raSenderID;
 };

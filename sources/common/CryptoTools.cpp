@@ -58,7 +58,7 @@ void DeserializeKey(const std::string & inPubStr, sgx_ec_key_128bit_t & outKey)
 	std::memcpy(&outKey, buffer.data(), sizeof(sgx_ec_key_128bit_t));
 }
 
-std::string SerializeStruct(const char * ptr, size_t size)
+std::string SerializeStruct(const uint8_t * ptr, size_t size)
 {
 	return cppcodec::base64_rfc4648::encode(ptr, size);
 }

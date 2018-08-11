@@ -15,31 +15,6 @@
 #include "../common/RAKeyManager.h"
 #include "../common/SGX/sgx_constants.h"
 
-
-sgx_status_t ecall_get_ra_pub_enc_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
-{
-	sgx_status_t res = SGX_SUCCESS;
-	if (EnclaveState::GetInstance().GetCryptoMgr().GetStatus() != SGX_SUCCESS)
-	{
-		return EnclaveState::GetInstance().GetCryptoMgr().GetStatus();
-	}
-
-	std::memcpy(outKey, &(EnclaveState::GetInstance().GetCryptoMgr().GetEncrPubKey()), sizeof(sgx_ec256_public_t));
-	return res;
-}
-
-sgx_status_t ecall_get_ra_pub_sig_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
-{
-	sgx_status_t res = SGX_SUCCESS;
-	if (EnclaveState::GetInstance().GetCryptoMgr().GetStatus() != SGX_SUCCESS)
-	{
-		return EnclaveState::GetInstance().GetCryptoMgr().GetStatus();
-	}
-
-	std::memcpy(outKey, &(EnclaveState::GetInstance().GetCryptoMgr().GetSignPubKey()), sizeof(sgx_ec256_public_t));
-	return res;
-}
-
 void ecall_termination_clean()
 {
 	EnclaveState::GetInstance().Clear();

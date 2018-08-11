@@ -1,11 +1,11 @@
 #pragma once
 
-#include "DecentSGXEnclaveImp.h"
+#include "../common_app/SGX/SGXDecentEnclave.h"
 
-class ExampleEnclave : public DecentSGXEnclaveImp
+class ExampleEnclave : public SGXDecentEnclave
 {
 public:
-	using DecentSGXEnclaveImp::DecentSGXEnclaveImp;
+	using SGXDecentEnclave::SGXDecentEnclave;
 
 	~ExampleEnclave();
 

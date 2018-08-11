@@ -28,34 +28,33 @@ public:
 
 	virtual ~SGXEnclave();
 
-	virtual bool Launch() override;
-	virtual bool IsLastExecutionFailed() const override;
-	virtual bool IsLaunched() const override;
+	virtual void Launch() override; 
 	//virtual std::string GetRASenderID() const override;
+	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) override;
+	virtual sgx_status_t GetRAClientEncrPubKey(sgx_ec256_public_t& outKey) override;
 	virtual std::shared_ptr<ClientRASession> GetRASession(std::unique_ptr<Connection>& connection) override;
 
-	virtual uint32_t GetExGroupID() const;
+	virtual uint32_t GetExGroupID();
 
-	virtual sgx_status_t InitClientRAEnvironment() = 0;
-	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1) = 0;
-	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const sgx_ra_msg2_t& inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t& inContextID) = 0;
-	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID) = 0;
-	virtual sgx_status_t TerminationClean() = 0;
+	virtual void InitClientRAEnvironment();
+	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1);
+	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const sgx_ra_msg2_t& inMsg2, const uint32_t& msg2Size, sgx_ra_msg3_t& outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t& inContextID);
+	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID);
+	virtual sgx_status_t TerminationClean();
 
-	sgx_status_t GetLastStatus() const;
+	//sgx_status_t GetLastStatus() const;
 
 protected:
 	sgx_enclave_id_t GetEnclaveId() const;
-	bool LoadToken();
-	bool UpdateToken();
+	bool LoadToken(std::vector<uint8_t>& outToken);
+	bool UpdateToken(const std::vector<uint8_t>& inToken);
 
-	uint32_t m_exGroupID;
-	sgx_status_t m_lastStatus;
+	//std::string m_raSenderID;
 
 private:
 	sgx_enclave_id_t m_eid;
-	std::vector<uint8_t> m_token;
 
 	const std::string m_enclavePath;
 	const fs::path m_tokenPath;
+
 };

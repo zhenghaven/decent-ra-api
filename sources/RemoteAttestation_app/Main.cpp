@@ -10,6 +10,8 @@
 
 #include <sgx_tcrypto.h>
 
+#include "../common/CryptoTools.h"
+
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
 #include "../common_app/DecentRASession.h"
@@ -71,8 +73,11 @@ int main(int argc, char ** argv)
 
 	IASConnector iasConnector;
 	ExampleEnclave expEnc(g_sgxSPID, ENCLAVE_FILENAME, iasConnector, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
-	expEnc.Launch();
 	//expEnc.InitRAEnvironment();
+
+	sgx_ec256_public_t signPubKey;
+	expEnc.GetRASPSignPubKey(signPubKey);
+	std::string raSenderID = SerializePubKey(signPubKey);
 
 #ifdef SIMULATING_ENCLAVE
 	LOGW("Enclave is running under simulation mode!!\n");
@@ -142,7 +147,7 @@ int main(int argc, char ** argv)
 		uint64_t secret;
 		sgx_aes_gcm_128bit_tag_t secretMac;
 		expEnc.GetSimpleSecret(revMsg.GetSenderID(), secret, secretMac);
-		SimpleMessage sMsg(expEnc.GetRASenderID(), secret, secretMac);
+		SimpleMessage sMsg(raSenderID, secret, secretMac);
 		connection2->Send(sMsg.ToJsonString());
 	}
 	break;
@@ -158,7 +163,7 @@ int main(int argc, char ** argv)
 		decentRA2.ProcessClientMessage0();
 		decentRA2.SwapConnection(connection2);
 
-		RAMessageRevRAReq revMsg(expEnc.GetRASenderID());
+		RAMessageRevRAReq revMsg(raSenderID);
 		connection2->Send(revMsg.ToJsonString());
 
 		std::string buffer;

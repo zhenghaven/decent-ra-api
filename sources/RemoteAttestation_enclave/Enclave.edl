@@ -12,13 +12,6 @@ enclave {
 
 	trusted 
 	{
-		//RA Functions:
-
-		//RA Context Param is not used here.
-		public sgx_status_t ecall_get_ra_pub_sig_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
-		
-		//RA Context Param is not used here.
-		public sgx_status_t ecall_get_ra_pub_enc_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
 		
 		public void ecall_termination_clean();
 		
