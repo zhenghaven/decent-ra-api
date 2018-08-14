@@ -22,7 +22,7 @@ public:
 
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) = 0;
 
-	virtual sgx_status_t GetRAClientEncrPubKey(sgx_ec256_public_t& outKey) = 0;
+	//virtual sgx_status_t GetRAClientEncrPubKey(sgx_ec256_public_t& outKey) = 0;
 
 	virtual std::shared_ptr<ClientRASession> GetRASession(std::unique_ptr<Connection>& connection) = 0;
 

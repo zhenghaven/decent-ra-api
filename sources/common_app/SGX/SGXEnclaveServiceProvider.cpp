@@ -37,15 +37,15 @@ void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
 }
 
-sgx_status_t SGXEnclaveServiceProvider::GetRASPEncrPubKey(sgx_ec256_public_t & outKey)
-{
-	sgx_status_t retval = SGX_SUCCESS;
-
-	sgx_status_t enclaveRet = ecall_get_ra_sp_pub_enc_key(GetEnclaveId(), &retval, 0, &outKey);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_sp_pub_enc_key);
-
-	return retval;
-}
+//sgx_status_t SGXEnclaveServiceProvider::GetRASPEncrPubKey(sgx_ec256_public_t & outKey)
+//{
+//	sgx_status_t retval = SGX_SUCCESS;
+//
+//	sgx_status_t enclaveRet = ecall_get_ra_sp_pub_enc_key(GetEnclaveId(), &retval, 0, &outKey);
+//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_sp_pub_enc_key);
+//
+//	return retval;
+//}
 
 void SGXEnclaveServiceProvider::InitSPRAEnvironment()
 {

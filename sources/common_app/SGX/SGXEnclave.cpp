@@ -93,15 +93,15 @@ void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_get_ra_client_pub_sig_key);
 }
 
-sgx_status_t SGXEnclave::GetRAClientEncrPubKey(sgx_ec256_public_t & outKey)
-{
-	sgx_status_t retval = SGX_SUCCESS;
-
-	sgx_status_t enclaveRet = ecall_get_ra_client_pub_enc_key(GetEnclaveId(), &retval, 0, &outKey);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_client_pub_sig_key);
-
-	return retval;
-}
+//sgx_status_t SGXEnclave::GetRAClientEncrPubKey(sgx_ec256_public_t & outKey)
+//{
+//	sgx_status_t retval = SGX_SUCCESS;
+//
+//	sgx_status_t enclaveRet = ecall_get_ra_client_pub_enc_key(GetEnclaveId(), &retval, 0, &outKey);
+//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_client_pub_sig_key);
+//
+//	return retval;
+//}
 
 //bool SGXEnclave::IsLaunched() const
 //{

@@ -17,7 +17,6 @@ public:
 	RAKeyManager& RAKeyManager::operator=(RAKeyManager&& rhs) noexcept;
 
 	void SetSignKey(const sgx_ec256_public_t& signKey);
-	void SetEncryptKey(const sgx_ec256_public_t& encryptKey);
 	void SetSharedKey(const sgx_ec256_dh_shared_t& sharedKey);
 	void SetSMK(const sgx_ec_key_128bit_t& smk);
 	void SetMK(const sgx_ec_key_128bit_t& mk);
@@ -28,7 +27,6 @@ public:
 	sgx_status_t GenerateSharedKeySet(const sgx_ec256_private_t& priKey, const sgx_ecc_state_handle_t& ecc_handle);
 
 	sgx_ec256_public_t& GetSignKey();
-	sgx_ec256_public_t& GetEncryptKey();
 	sgx_ec256_dh_shared_t& GetSharedKey();
 	sgx_ec_key_128bit_t& GetSMK();
 	sgx_ec_key_128bit_t& GetMK();
@@ -37,7 +35,6 @@ public:
 	sgx_ps_sec_prop_desc_t& GetSecProp();
 
 	const sgx_ec256_public_t& GetSignKey() const;
-	const sgx_ec256_public_t& GetEncryptKey() const;
 	const sgx_ec256_dh_shared_t& GetSharedKey() const;
 	const sgx_ec_key_128bit_t& GetSMK() const;
 	const sgx_ec_key_128bit_t& GetMK() const;
@@ -47,7 +44,6 @@ public:
 
 private:
 	sgx_ec256_public_t m_signKey;
-	sgx_ec256_public_t m_encryptKey;
 
 	sgx_ec256_dh_shared_t m_sharedKey;
 

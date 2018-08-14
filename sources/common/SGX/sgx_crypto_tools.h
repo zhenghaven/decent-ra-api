@@ -35,6 +35,8 @@ extern "C" {
 
 	sgx_status_t sp_derive_key_type(const sgx_ec256_dh_shared_t* shared_key, sgx_derive_key_type_t type, sgx_ec_key_128bit_t* derived_key);
 
+	sgx_status_t derive_key_set(const sgx_ec256_dh_shared_t* shared_key, sgx_ec_key_128bit_t* out_smk, sgx_ec_key_128bit_t* out_mk, sgx_ec_key_128bit_t* out_sk, sgx_ec_key_128bit_t* out_vk);
+
 	sgx_status_t verify_cmac128(const sgx_ec_key_128bit_t* mac_key, const uint8_t* data_buf, uint32_t buf_size, const uint8_t* mac_buf);
 
 #if !defined(ENCLAVE_CODE)

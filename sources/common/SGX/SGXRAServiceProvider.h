@@ -17,6 +17,8 @@ typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 typedef struct _spid_t sgx_spid_t;
 typedef uint32_t sgx_ra_context_t;
+#define SGX_CMAC_KEY_SIZE               16
+typedef uint8_t sgx_ec_key_128bit_t[SGX_CMAC_KEY_SIZE];
 
 class RAKeyManager;
 
@@ -26,13 +28,13 @@ namespace SGXRAEnclave
 	bool SetReportDataVerifier(const std::string& clientID, ReportDataVerifier func);
 	void DropClientRAState(const std::string& clientID);
 	bool IsClientAttested(const std::string& clientID);
-	RAKeyManager* GetClientKeysMgr(const std::string& clientID);
+	bool GetClientShareKeys(const std::string& clientID, sgx_ec_key_128bit_t* outSK, sgx_ec_key_128bit_t* outMK);
 	void SetTargetEnclaveHash(const std::string& hashBase64);
 	void SetSPID(const sgx_spid_t& spid);
 
 	sgx_status_t InitRaSpEnvironment();
 	sgx_status_t GetIasNonce(const char* clientID, char* outStr);
-	sgx_status_t GetRASPEncrPubKey(sgx_ra_context_t context, sgx_ec256_public_t* outKey);
+	//sgx_status_t GetRASPEncrPubKey(sgx_ra_context_t context, sgx_ec256_public_t* outKey);
 	sgx_status_t GetRASPSignPubKey(sgx_ec256_public_t* outKey);
 	sgx_status_t ProcessRaMsg0Send(const char* clientID);
 	sgx_status_t ProcessRaMsg1(const char* clientID, const sgx_ra_msg1_t *inMsg1, sgx_ra_msg2_t *outMsg2);

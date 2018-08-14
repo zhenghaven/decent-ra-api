@@ -49,7 +49,7 @@ public:
 	virtual void Launch() override; 
 	//virtual std::string GetRASenderID() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) override;
-	virtual sgx_status_t GetRAClientEncrPubKey(sgx_ec256_public_t& outKey) override;
+	//virtual sgx_status_t GetRAClientEncrPubKey(sgx_ec256_public_t& outKey) override;
 	virtual std::shared_ptr<ClientRASession> GetRASession(std::unique_ptr<Connection>& connection) override;
 
 	virtual uint32_t GetExGroupID();

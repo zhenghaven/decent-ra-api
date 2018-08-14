@@ -16,7 +16,7 @@ public:
 
 	//virtual std::string GetRASenderID() const override;
 	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) override;
-	virtual sgx_status_t GetRASPEncrPubKey(sgx_ec256_public_t& outKey) override;
+	//virtual sgx_status_t GetRASPEncrPubKey(sgx_ec256_public_t& outKey) override;
 
 	virtual void InitSPRAEnvironment() override;
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce) override;

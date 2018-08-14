@@ -87,6 +87,39 @@ sgx_status_t sp_derive_key_type(const sgx_ec256_dh_shared_t * shared_key, sgx_de
 	return sp_derive_key(shared_key, label, label_length, derived_key);
 }
 
+sgx_status_t derive_key_set(const sgx_ec256_dh_shared_t * shared_key, sgx_ec_key_128bit_t * out_smk, sgx_ec_key_128bit_t * out_mk, sgx_ec_key_128bit_t * out_sk, sgx_ec_key_128bit_t * out_vk)
+{
+	if (!shared_key ||
+		(!out_mk && !out_mk && !out_sk && !out_vk))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	sgx_status_t ret = SGX_SUCCESS;
+	if (out_smk &&
+		(ret = sp_derive_key_type(shared_key, SGX_DERIVE_KEY_SMK, out_smk)) != SGX_SUCCESS)
+	{
+		return ret;
+	}
+	if (out_mk &&
+		(ret = sp_derive_key_type(shared_key, SGX_DERIVE_KEY_MK, out_mk)) != SGX_SUCCESS)
+	{
+		return ret;
+	}
+	if (out_sk &&
+		(ret = sp_derive_key_type(shared_key, SGX_DERIVE_KEY_SK, out_sk)) != SGX_SUCCESS)
+	{
+		return ret;
+	}
+	if (out_vk &&
+		(ret = sp_derive_key_type(shared_key, SGX_DERIVE_KEY_VK, out_vk)) != SGX_SUCCESS)
+	{
+		return ret;
+	}
+
+	return SGX_SUCCESS;
+}
+
 sgx_status_t verify_cmac128(const sgx_ec_key_128bit_t* mac_key, const uint8_t* data_buf, uint32_t buf_size, const uint8_t* mac_buf)
 {
 	uint8_t data_mac[SGX_CMAC_MAC_SIZE];

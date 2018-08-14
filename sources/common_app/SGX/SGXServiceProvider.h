@@ -25,7 +25,7 @@ public:
 	virtual std::shared_ptr<ServiceProviderRASession> GetRASession(std::unique_ptr<Connection>& connection) override;
 
 	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) override;
-	virtual sgx_status_t GetRASPEncrPubKey(sgx_ec256_public_t& outKey) override;
+	//virtual sgx_status_t GetRASPEncrPubKey(sgx_ec256_public_t& outKey) override;
 	virtual void InitSPRAEnvironment();
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce);
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID);

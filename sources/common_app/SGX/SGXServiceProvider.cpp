@@ -31,10 +31,10 @@ void SGXServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, SGXRAEnclave::GetRASPSignPubKey);
 }
 
-sgx_status_t SGXServiceProvider::GetRASPEncrPubKey(sgx_ec256_public_t & outKey)
-{
-	return SGXRAEnclave::GetRASPEncrPubKey(0, &outKey);
-}
+//sgx_status_t SGXServiceProvider::GetRASPEncrPubKey(sgx_ec256_public_t & outKey)
+//{
+//	return SGXRAEnclave::GetRASPEncrPubKey(0, &outKey);
+//}
 
 void SGXServiceProvider::InitSPRAEnvironment()
 {

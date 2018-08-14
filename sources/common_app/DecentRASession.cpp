@@ -153,7 +153,7 @@ bool DecentRASession::ProcessClientSideKeyRequest()
 	sgx_ec256_public_t encrKey;
 
 	m_hardwareEnclave.GetRAClientSignPubKey(signKey);
-	m_hardwareEnclave.GetRAClientEncrPubKey(encrKey);
+	//m_hardwareEnclave.GetRAClientEncrPubKey(encrKey);
 	DecentMessageKeyReq msgKR(senderID, m_decentEnclave.GetDecentMode(), signKey, encrKey);
 	m_connection->Send(msgKR.ToJsonString());
 
@@ -309,7 +309,7 @@ DecentMessageMsg0* DecentRASession::ConstructMessage0()
 
 	m_hardwareEnclave.GetRAClientSignPubKey(pubSignKey);
 
-	enclaveRes = m_hardwareEnclave.GetRAClientEncrPubKey(pubEncrKey);
+	//enclaveRes = m_hardwareEnclave.GetRAClientEncrPubKey(pubEncrKey);
 
 	m_decentEnclave.GetKeySigns(signSign, encrSign);
 
