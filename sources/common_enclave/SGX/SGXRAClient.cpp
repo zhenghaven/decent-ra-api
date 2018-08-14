@@ -23,6 +23,25 @@ namespace
 	static RACryptoManager& g_cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 }
 
+bool SGXRAEnclave::AddNewServerRAState(const std::string& ServerID, const sgx_ec256_public_t& inPubKey)
+{
+	auto it = g_serversMap.find(ServerID);
+	if (it != g_serversMap.end())
+	{
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR_Y("Processing msg0, but client ID already exist.", false);
+	}
+	g_serversMap.
+		insert(
+			std::make_pair<const std::string&, std::pair<ServerRAState, RAKeyManager> >(
+				ServerID,
+				std::make_pair<ServerRAState, RAKeyManager>(ServerRAState::MSG0_DONE, RAKeyManager(inPubKey))
+				)
+		);
+
+	return true;
+}
+
 void SGXRAEnclave::DropServerRAState(const std::string& serverID)
 {
 	auto it = g_serversMap.find(serverID);
@@ -71,7 +90,6 @@ extern "C" sgx_status_t ecall_init_ra_client_environment()
 	}
 
 	ocall_printf("Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr.GetSignPubKey()).c_str());
-	ocall_printf("Public Encr Key: %s\n", SerializePubKey(g_cryptoMgr.GetEncrPubKey()).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -123,23 +141,13 @@ extern "C" sgx_status_t ecall_get_ra_client_pub_sig_key(sgx_ec256_public_t* outK
 
 extern "C" sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const sgx_ec256_public_t* inPubKey, int enablePSE, sgx_ra_context_t* outContextID)
 {
-	auto it = g_serversMap.find(ServerID);
-	if (it != g_serversMap.end())
+	if (!ServerID || !inPubKey || !outContextID || 
+		!SGXRAEnclave::AddNewServerRAState(ServerID, *inPubKey))
 	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg0, but client ID already exist.");
+		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	g_serversMap.
-		insert(
-			std::make_pair<std::string, std::pair<ServerRAState, RAKeyManager> >(
-				ServerID, 
-				std::make_pair<ServerRAState, RAKeyManager>(ServerRAState::MSG0_DONE, RAKeyManager(*inPubKey))
-			)
-		);
 
-	const sgx_ec256_private_t* prvPtr = &(g_cryptoMgr.GetEncrPriKey());
-	const sgx_ec256_public_t* pubPtr = &(g_cryptoMgr.GetEncrPubKey());
-	return enclave_init_ra(inPubKey, enablePSE, prvPtr, pubPtr, nullptr,outContextID); //Error return. (Error from SGX)
+	return enclave_init_sgx_ra(inPubKey, enablePSE, nullptr,outContextID); //Error return. (Error from SGX)
 }
 
 extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec256_public_t* p_g_b, sgx_ra_context_t inContextID)
@@ -172,12 +180,19 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 
 	RAKeyManager& serverKeyMgr = it->second.second;
 
-	serverKeyMgr.SetEncryptKey(*p_g_b);
-	res = serverKeyMgr.GenerateSharedKeySet(g_cryptoMgr.GetEncrPriKey(), g_cryptoMgr.GetECC());
+	sgx_ra_key_128_t tmpKey;
+	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_SK, &tmpKey);
 	if (res != SGX_SUCCESS)
 	{
-		return res; //Error return. (Error from SGX)
+		return res; //Error return. (Error from SGX)	
 	}
+	serverKeyMgr.SetSK(tmpKey);
+	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_MK, &tmpKey);
+	if (res != SGX_SUCCESS)
+	{
+		return res; //Error return. (Error from SGX)	
+	}
+	serverKeyMgr.SetMK(tmpKey);
 
 	it->second.first = ServerRAState::MSG2_DONE;
 

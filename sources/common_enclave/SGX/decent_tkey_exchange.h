@@ -28,10 +28,15 @@
 #ifndef _DECENT_TKEY_EXCHANGE_H_
 #define _DECENT_TKEY_EXCHANGE_H_
 
-//#include <sgx.h>
-//#include <sgx_defs.h>
-//#include <sgx_key_exchange.h>
-#include <sgx_tkey_exchange.h>
+#include <sgx.h>
+#include <sgx_defs.h>
+#include <sgx_key_exchange.h>
+//#include <sgx_tkey_exchange.h>
+
+#include <functional>
+#include <vector>
+
+typedef std::function<bool(const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen)> ReportDataGenerator;
 
 #ifdef  __cplusplus
 extern "C" {
@@ -48,6 +53,7 @@ extern "C" {
  *                  established using sgx_create_pse_session before attempting
  *                  to establish a remote attestation and key exchange session
  *                  involving platform service information.
+ * @param func      Report data generator lambda function.
  * @param p_context The output context for the subsequent remote attestation
  *                  and key exchange process, to be used in sgx_ra_get_msg1 and
  *                  sgx_ra_proc_msg2.
@@ -66,7 +72,40 @@ extern "C" {
 sgx_status_t SGXAPI decent_ra_init(
     const sgx_ec256_public_t *p_pub_key,
     int b_pse,
+	ReportDataGenerator func,
     sgx_ra_context_t *p_context);
+
+/*
+* The sgx_ra_derive_secret_keys_t function should takes the Diffie-Hellman
+* shared secret as input to allow the ISV enclave to generate their own derived
+* shared keys (SMK, SK, MK and VK).
+*
+* @param p_shared_key The the Diffie-Hellman shared secret.
+* @param kdf_id,      Key Derivation Function ID
+* @param p_smk_key    The output SMK.
+* @param p_sk_key     The output SK.
+* @param p_mk_key     The output MK.
+* @param p_vk_key     The output VK.
+* @return sgx_status_t SGX_SUCCESS                     Indicates success.
+*                      SGX_ERROR_INVALID_PARAMETER     Indicates an error that
+*                                                      the input parameters are
+*                                                      invalid.
+*                      SGX_ERROR_KDF_MISMATCH          Indicates key derivation
+*                                                      function doesn't match.
+*                      SGX_ERROR_OUT_OF_MEMORY         There is not enough
+*                                                      memory available to
+*                                                      complete this operation.
+*                      SGX_ERROR_UNEXPECTED            Indicates an unexpected
+*                                                      error occurs.
+*/
+
+typedef sgx_status_t(*sgx_ra_derive_secret_keys_t)(
+	const sgx_ec256_dh_shared_t* p_shared_key,
+	uint16_t kdf_id,
+	sgx_ec_key_128bit_t* p_smk_key,
+	sgx_ec_key_128bit_t* p_sk_key,
+	sgx_ec_key_128bit_t* p_mk_key,
+	sgx_ec_key_128bit_t* p_vk_key);
 
 /*
 * The decent_ra_init_ex function creates a context for the remote attestation and
@@ -103,6 +142,7 @@ sgx_status_t SGXAPI decent_ra_init_ex(
     const sgx_ec256_public_t *p_pub_key,
     int b_pse,
     sgx_ra_derive_secret_keys_t derive_key_cb,
+	ReportDataGenerator func,
     sgx_ra_context_t *p_context);
 
 /*
@@ -126,26 +166,6 @@ sgx_status_t SGXAPI decent_ra_get_keys(
     sgx_ra_context_t context,
     sgx_ra_key_type_t type,
     sgx_ra_key_128_t *p_key);
-
-/*
-* The decent_ra_set_key_pair function is used to set customized ECDH key pair. 
-* This function must be called after the decent_ra_init. Once this function is 
-* called, a call to decent_ra_get_ga will be failed.
-*
-* @param context   Context returned by decent_ra_init.
-* @param a         Pointer to the private key.
-* @param g_a       Pointer to the public key.
-* @return sgx_status_t SGX_SUCCESS                     Indicates success.
-*                      SGX_ERROR_INVALID_PARAMETER     Indicates an error that
-*                                                      the input parameters are
-*                                                      invalid.
-*                      SGX_ERROR_INVALID_STATE         Indicates this function
-*                                                      is called out of order.
-*/
-sgx_status_t SGXAPI decent_ra_set_key_pair(
-	sgx_ra_context_t context,
-	const sgx_ec256_private_t *p_a,
-	const sgx_ec256_public_t *p_g_a);
 
 /*
  * Call the decent_ra_close function to release the remote attestation and key

@@ -2,7 +2,7 @@ enclave {
 	
 	include "../common/SGX/sgx_ra_msg4.h"
 	
-	from "decent_tkey_exchange.edl" import *;
+	from "sgx_tkey_exchange.edl" import *;
 	
 	trusted 
 	{

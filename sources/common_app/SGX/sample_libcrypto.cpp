@@ -16,8 +16,7 @@
 
 #include "../Common.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
-
-#include "SGXOpenSSLConversions.h"
+#include "../../common/SGX/SGXOpenSSLConversions.h"
 
 #define SGX_SP_IV_SIZE 12
 

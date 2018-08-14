@@ -3,10 +3,13 @@
 #include <string>
 #include <map>
 
+#include <openssl/ec.h>
+
 #include <sgx_utils.h>
 
 #include "../common_enclave/DecentError.h"
 
+#include "../common/CommonTool.h"
 #include "../common/EnclaveRAState.h"
 #include "../common/CryptoTools.h"
 #include "../common/Decent.h"
@@ -14,7 +17,10 @@
 #include "../common/SGX/sgx_constants.h"
 #include "../common/SGX/sgx_crypto_tools.h"
 #include "../common/SGX/SGXRAServiceProvider.h"
+#include "../common/SGX/SGXOpenSSLConversions.h"
+#include "../common/OpenSSLTools.h"
 
+#include "sgx_ra_tools.h"
 #include "SGXRAClient.h"
 
 namespace
@@ -62,14 +68,21 @@ extern "C" sgx_status_t ecall_init_decent_ra_environment(const sgx_spid_t* inSpi
 	return SGX_SUCCESS;
 }
 
-extern "C" sgx_status_t ecall_transit_to_decent_node(const char* id)
+extern "C" sgx_status_t ecall_transit_to_decent_node(const char* id, int is_server)
 {
 	if (!IsBothWayAttested(id))
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	g_decentNodesMap.insert(std::make_pair(id, *SGXRAEnclave::GetServerKeysMgr(id)));
+	if (is_server) 
+	{
+		g_decentNodesMap.insert(std::make_pair(id, *SGXRAEnclave::GetClientKeysMgr(id)));
+	}
+	else
+	{
+		g_decentNodesMap.insert(std::make_pair(id, *SGXRAEnclave::GetServerKeysMgr(id)));
+	}
 
 	return SGX_SUCCESS;
 }
@@ -82,6 +95,128 @@ extern "C" void ecall_set_decent_mode(DecentNodeMode inDecentMode)
 extern "C" DecentNodeMode ecall_get_decent_mode()
 {
 	return g_decentMode;
+}
+
+extern "C" sgx_status_t ecall_process_ra_msg0_send_decent(const char* clientID)
+{
+	if (!clientID)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	//std::map<std::string, std::pair<ClientRAState, RAKeyManager>>& clientsMap = EnclaveState::GetInstance().GetClientsMap();
+	sgx_ec256_public_t clientSignkey;
+	DeserializePubKey(clientID, clientSignkey);
+	if (!SGXRAEnclave::AddNewClientRAState(clientID, clientSignkey))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	ReportDataVerifier reportDataVerifier = [clientSignkey](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
+	{
+		EC_KEY* pubKey = EC_KEY_new();
+		if (!pubKey || !ECKeyPubSGX2OpenSSL(&clientSignkey, pubKey, nullptr))
+		{
+			EC_KEY_free(pubKey);
+			return false;
+		}
+		std::string pubKeyPem = ECKeyPubGetPEMStr(pubKey);
+		EC_KEY_free(pubKey);
+		if (pubKeyPem.size() == 0)
+		{
+			return false;
+		}
+
+		COMMON_PRINTF("Verifying report data with Public Key:\n%s\n", pubKeyPem.c_str());
+		sgx_sha_state_handle_t shaState;
+		sgx_sha256_hash_t tmpHash;
+		sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			return false;
+		}
+		enclaveRet = sgx_sha256_update(initData, SGX_SHA256_HASH_SIZE / 2, shaState);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			sgx_sha256_close(shaState);
+			return false;
+		}
+		enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubKeyPem.data()), static_cast<uint32_t>(pubKeyPem.size()), shaState);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			sgx_sha256_close(shaState);
+			return false;
+		}
+		enclaveRet = sgx_sha256_get_hash(shaState, &tmpHash);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			sgx_sha256_close(shaState);
+			return false;
+		}
+		sgx_sha256_close(shaState);
+
+		return std::memcmp(tmpHash, inData.data(), inData.size()) == 0;
+	};
+
+	SGXRAEnclave::SetReportDataVerifier(clientID, reportDataVerifier); //Imposible to return false on this call.
+
+	return SGX_SUCCESS;
+}
+
+extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* ServerID, const sgx_ec256_public_t* inPubKey, int enablePSE, sgx_ra_context_t* outContextID)
+{
+	if (!ServerID || !inPubKey || !outContextID ||
+		!SGXRAEnclave::AddNewServerRAState(ServerID, *inPubKey))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	ReportDataGenerator rdGenerator = [](const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen) -> bool
+	{
+		EC_KEY* pubKey = EC_KEY_new();
+		if (!pubKey || !ECKeyPubSGX2OpenSSL(&g_cryptoMgr.GetSignPubKey(), pubKey, nullptr))
+		{
+			EC_KEY_free(pubKey);
+			return false;
+		}
+		std::string pubKeyPem = ECKeyPubGetPEMStr(pubKey);
+		EC_KEY_free(pubKey);
+		if (pubKeyPem.size() == 0)
+		{
+			return false;
+		}
+
+		COMMON_PRINTF("Generating report data with Public Key:\n%s\n", pubKeyPem.c_str());
+		sgx_sha_state_handle_t shaState;
+		sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			return false;
+		}
+		enclaveRet = sgx_sha256_update(initData, SGX_SHA256_HASH_SIZE / 2, shaState);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			sgx_sha256_close(shaState);
+			return false;
+		}
+		enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubKeyPem.data()), static_cast<uint32_t>(pubKeyPem.size()), shaState);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			sgx_sha256_close(shaState);
+			return false;
+		}
+		outData.resize(SGX_SHA256_HASH_SIZE, 0);
+		enclaveRet = sgx_sha256_get_hash(shaState, reinterpret_cast<sgx_sha256_hash_t*>(outData.data()));
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			sgx_sha256_close(shaState);
+			return false;
+		}
+		sgx_sha256_close(shaState);
+
+		return true;
+	};
+
+	return enclave_init_decent_ra(inPubKey, enablePSE, rdGenerator, nullptr, outContextID); //Error return. (Error from SGX)
 }
 
 extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec256_private_t* outPriKey, sgx_aes_gcm_128bit_tag_t* outPriKeyMac, sgx_ec256_public_t* outPubKey, sgx_aes_gcm_128bit_tag_t* outPubKeyMac)

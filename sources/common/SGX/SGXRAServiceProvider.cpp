@@ -22,17 +22,59 @@
 #include "../../common/SGX/sgx_constants.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 
+struct RASPContext
+{
+	ClientRAState m_state;
+	RAKeyManager m_keyMgr;
+	std::string m_nonce;
+	ReportDataVerifier m_reportDataVerifier;
+
+	RASPContext(RAKeyManager keyMgr) :
+		m_state(ClientRAState::MSG0_DONE),
+		m_keyMgr(keyMgr),
+		m_nonce(GenNonceForIASJson(IAS_REQUEST_NONCE_SIZE))
+	{
+		m_reportDataVerifier = [](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
+		{
+			return std::memcmp(initData, inData.data(), inData.size()) == 0;
+		};
+	}
+};
+
 namespace
 {
 
 	static sgx_spid_t g_sgxSPID = { { 0	} };
 
 	static std::string g_selfHash = "";
-	static std::map<std::string, std::pair<ClientRAState, RAKeyManager> > g_clientsMap;
-	static std::map<std::string, std::string> g_nonceMap;
+	static std::map<std::string, RASPContext> g_clientsMap;
 
 	//Shared objects:
 	static RACryptoManager& g_cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
+}
+
+bool SGXRAEnclave::AddNewClientRAState(const std::string& clientID, const sgx_ec256_public_t& inPubKey)
+{
+	auto it = g_clientsMap.find(clientID);
+	if (it != g_clientsMap.end())
+	{
+		//Error return. (Error caused by invalid input.)
+		FUNC_ERR_Y("Processing msg0, but client ID already exist.", false);
+	}
+	g_clientsMap.insert(std::make_pair<const std::string&, RASPContext >(clientID, RASPContext(RAKeyManager(inPubKey))));
+	return true;
+}
+
+bool SGXRAEnclave::SetReportDataVerifier(const std::string & clientID, ReportDataVerifier func)
+{
+	auto it = g_clientsMap.find(clientID);
+	if (it == g_clientsMap.end())
+	{
+		return false;
+	}
+
+	it->second.m_reportDataVerifier = func;
+	return true;
 }
 
 void SGXRAEnclave::DropClientRAState(const std::string & clientID)
@@ -42,18 +84,18 @@ void SGXRAEnclave::DropClientRAState(const std::string & clientID)
 	{
 		g_clientsMap.erase(it);
 	}
-
-	auto nonceIt = g_nonceMap.find(clientID);
-	if (nonceIt != g_nonceMap.end())
-	{
-		g_nonceMap.erase(nonceIt);
-	}
 }
 
 bool SGXRAEnclave::IsClientAttested(const std::string & clientID)
 {
 	auto it = g_clientsMap.find(clientID);
-	return it == g_clientsMap.end() ? false : (it->second.first == ClientRAState::ATTESTED);
+	return it == g_clientsMap.end() ? false : (it->second.m_state == ClientRAState::ATTESTED);
+}
+
+RAKeyManager * SGXRAEnclave::GetClientKeysMgr(const std::string & clientID)
+{
+	auto it = g_clientsMap.find(clientID);
+	return it == g_clientsMap.end() ? nullptr : &(it->second.m_keyMgr);
 }
 
 void SGXRAEnclave::SetTargetEnclaveHash(const std::string & hashBase64)
@@ -86,12 +128,12 @@ sgx_status_t SGXRAEnclave::GetIasNonce(const char* clientID, char* outStr)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	auto nonceIt = g_nonceMap.find(clientID);
-	if (nonceIt == g_nonceMap.end())
+	auto it = g_clientsMap.find(clientID);
+	if (it == g_clientsMap.end())
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	const std::string& res = nonceIt->second;
+	const std::string& res = it->second.m_nonce;
 	std::memcpy(outStr, res.data(), res.size());
 
 	return SGX_SUCCESS;
@@ -129,17 +171,17 @@ sgx_status_t SGXRAEnclave::GetRASPSignPubKey(sgx_ec256_public_t * outKey)
 
 sgx_status_t SGXRAEnclave::ProcessRaMsg0Send(const char* clientID)
 {
+	if (!clientID)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 	//std::map<std::string, std::pair<ClientRAState, RAKeyManager>>& clientsMap = EnclaveState::GetInstance().GetClientsMap();
 	sgx_ec256_public_t clientSignkey;
 	DeserializePubKey(clientID, clientSignkey);
-	auto it = g_clientsMap.find(clientID);
-	if (it != g_clientsMap.end())
+	if (!AddNewClientRAState(clientID, clientSignkey))
 	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg0, but client ID already exist.");
+		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	g_clientsMap.insert(std::make_pair<std::string, std::pair<ClientRAState, RAKeyManager> >(clientID, std::make_pair<ClientRAState, RAKeyManager>(ClientRAState::MSG0_DONE, RAKeyManager(clientSignkey))));
-	g_nonceMap[clientID] = GenNonceForIASJson(IAS_REQUEST_NONCE_SIZE);
 
 	return SGX_SUCCESS;
 }
@@ -148,14 +190,14 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 {
 	auto it = g_clientsMap.find(clientID);
 	if (it == g_clientsMap.end()
-		|| it->second.first != ClientRAState::MSG0_DONE)
+		|| it->second.m_state != ClientRAState::MSG0_DONE)
 	{
 		SGXRAEnclave::DropClientRAState(clientID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg1, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RAKeyManager& clientKeyMgr = it->second.second;
+	RAKeyManager& clientKeyMgr = it->second.m_keyMgr;
 
 	sgx_status_t res = SGX_SUCCESS;
 
@@ -191,7 +233,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 
 	outMsg2->sig_rl_size = 0;
 
-	it->second.first = ClientRAState::MSG1_DONE;
+	it->second.m_state = ClientRAState::MSG1_DONE;
 
 	return res; //Error return. (Error from SGX)
 }
@@ -200,14 +242,14 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 {
 	auto it = g_clientsMap.find(clientID);
 	if (it == g_clientsMap.end()
-		|| it->second.first != ClientRAState::MSG1_DONE)
+		|| it->second.m_state != ClientRAState::MSG1_DONE)
 	{
 		SGXRAEnclave::DropClientRAState(clientID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg3, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RAKeyManager& clientKeyMgr = it->second.second;
+	RAKeyManager& clientKeyMgr = it->second.m_keyMgr;
 
 	sgx_status_t res = SGX_SUCCESS;
 	int cmpRes = 0;
@@ -277,9 +319,8 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 		SGXRAEnclave::DropClientRAState(clientID);
 		return res; //Error return. (Error from SGX)
 	}
-
-	cmpRes = std::memcmp((uint8_t *)&report_data, (uint8_t *)&(p_quote->report_body.report_data), sizeof(report_data));
-	if (cmpRes)
+	
+	if (it->second.m_reportDataVerifier(report_data.d, std::vector<uint8_t>(p_quote->report_body.report_data.d, p_quote->report_body.report_data.d + sizeof(report_data))))
 	{
 		SGXRAEnclave::DropClientRAState(clientID);
 		//Error return. (Error caused by invalid input.)
@@ -344,7 +385,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 	}
 
 	std::string iasNonceReport(jsonDoc["nonce"].GetString());
-	const std::string& iasNonceLocal = g_nonceMap[clientID];
+	const std::string& iasNonceLocal = it->second.m_nonce;
 	bool isNonceMatch = (iasNonceReport == iasNonceLocal);
 	COMMON_PRINTF("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
 	if (!isNonceMatch)
@@ -369,7 +410,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 
 	if (outMsg4->status == ias_quote_status_t::IAS_QUOTE_OK)
 	{
-		it->second.first = ClientRAState::ATTESTED;
+		it->second.m_state = ClientRAState::ATTESTED;
 	}
 	else
 	{

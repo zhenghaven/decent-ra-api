@@ -153,20 +153,25 @@ sgx_status_t SGXEnclave::ProcessRAMsg0Resp(const std::string & ServerID, const s
 		return retval;
 	}
 
-	enclaveRet = sgx_ra_get_msg1(outContextID, GetEnclaveId(), decent_ra_get_ga_only, &outMsg1);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg0_resp);
+	enclaveRet = sgx_ra_get_msg1(outContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, sgx_ra_get_msg1);
 
 	return SGX_SUCCESS;
 }
 
 sgx_status_t SGXEnclave::ProcessRAMsg2(const std::string & ServerID, const sgx_ra_msg2_t & inMsg2, const uint32_t & msg2Size, sgx_ra_msg3_t & outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t & inContextID)
 {
+	return SGXEnclave::ProcessRAMsg2(ServerID, inMsg2, msg2Size, outMsg3, outQuote, inContextID, sgx_ra_proc_msg2_trusted, sgx_ra_get_msg3_trusted);
+}
+
+sgx_status_t SGXEnclave::ProcessRAMsg2(const std::string & ServerID, const sgx_ra_msg2_t & inMsg2, const uint32_t & msg2Size, sgx_ra_msg3_t & outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t & inContextID, sgx_ecall_proc_msg2_trusted_t proc_msg2_func, sgx_ecall_get_msg3_trusted_t get_msg3_func)
+{
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 	sgx_ra_msg3_t* outMsg3ptr = nullptr;
 	uint32_t msg3Size = 0;
 
-	retval = sgx_ra_proc_msg2(inContextID, GetEnclaveId(), decent_ra_proc_msg2_trusted, decent_ra_get_msg3_trusted, &inMsg2, msg2Size, &outMsg3ptr, &msg3Size);
+	retval = sgx_ra_proc_msg2(inContextID, GetEnclaveId(), proc_msg2_func, get_msg3_func, &inMsg2, msg2Size, &outMsg3ptr, &msg3Size);
 	if (retval != SGX_SUCCESS)
 	{
 		return retval;

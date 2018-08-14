@@ -11,6 +11,8 @@
 #include <sgx_tcrypto.h>
 
 #include "../common/CryptoTools.h"
+#include "../common/OpenSSLTools.h"
+#include "../common/SGX/SGXOpenSSLConversions.h"
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"

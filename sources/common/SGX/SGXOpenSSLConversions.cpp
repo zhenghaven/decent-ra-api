@@ -1,8 +1,9 @@
 #include "SGXOpenSSLConversions.h"
 
-#include <xutility>
+//#include <xutility>
 #include <vector>
 #include <cstdint>
+#include <iterator>
 
 #include <openssl/cmac.h>
 #include <openssl/sha.h>
@@ -11,6 +12,25 @@
 #include <openssl/evp.h>
 
 #include <sgx_tcrypto.h>
+
+#ifdef ENCLAVE_CODE
+
+namespace std
+{
+	template<class T, size_t Size>
+	inline reverse_iterator<T *> rbegin(T(&_Array)[Size])
+	{	// get beginning of reversed array
+		return (reverse_iterator<T *>(_Array + Size));
+	}
+
+	template<class T, size_t Size>
+	inline reverse_iterator<T *> rend(T(&_Array)[Size])
+	{	// get end of reversed array
+		return (reverse_iterator<T *>(_Array));
+	}
+}
+
+#endif // ENCLAVE_CODE
 
 struct DecentEccContext
 {
@@ -183,6 +203,7 @@ bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_POINT *outPub, sgx_
 	}
 
 	std::vector<uint8_t> buffer(std::rbegin(inPub->gx), std::rend(inPub->gx));
+	//std::reverse(buffer.begin(), buffer.end());
 
 	BN_bin2bn(buffer.data(), SGX_ECP256_KEY_SIZE, pubX);
 

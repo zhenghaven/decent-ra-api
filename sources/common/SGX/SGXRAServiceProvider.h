@@ -5,6 +5,11 @@
 
 #include <sgx_error.h>
 
+#include <functional>
+#include <vector>
+
+typedef std::function<bool(const uint8_t* initData, const std::vector<uint8_t>& inData)> ReportDataVerifier;
+
 typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
 typedef struct _ra_msg4_t sgx_ra_msg4_t;
@@ -13,10 +18,15 @@ typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 typedef struct _spid_t sgx_spid_t;
 typedef uint32_t sgx_ra_context_t;
 
+class RAKeyManager;
+
 namespace SGXRAEnclave
 {
+	bool AddNewClientRAState(const std::string& clientID, const sgx_ec256_public_t& inPubKey);
+	bool SetReportDataVerifier(const std::string& clientID, ReportDataVerifier func);
 	void DropClientRAState(const std::string& clientID);
 	bool IsClientAttested(const std::string& clientID);
+	RAKeyManager* GetClientKeysMgr(const std::string& clientID);
 	void SetTargetEnclaveHash(const std::string& hashBase64);
 	void SetSPID(const sgx_spid_t& spid);
 
