@@ -42,8 +42,7 @@ DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& conn
 	m_sp(sp),
 	m_hardwareSession(hardwareEnclave.GetRASession()),
 	m_spSession(sp.GetRASession()),
-	m_decentralizedEnc(enclave),
-	m_isEnclaveEnvInited(false)
+	m_decentralizedEnc(enclave)
 {
 }
 
@@ -53,15 +52,6 @@ DecentralizedRASession::~DecentralizedRASession()
 
 bool DecentralizedRASession::ProcessClientSideRA()
 {
-	if (!m_isEnclaveEnvInited)
-	{
-		if (m_decentralizedEnc.InitDecentRAEnvironment() != SGX_SUCCESS)
-		{
-			return false;
-		}
-		m_isEnclaveEnvInited = true;
-	}
-
 	if (!m_connection)
 	{
 		return false;
@@ -101,15 +91,6 @@ bool DecentralizedRASession::ProcessClientSideRA()
 
 bool DecentralizedRASession::ProcessServerSideRA()
 {
-	if (!m_isEnclaveEnvInited)
-	{
-		if (m_decentralizedEnc.InitDecentRAEnvironment() != SGX_SUCCESS)
-		{
-			return false;
-		}
-		m_isEnclaveEnvInited = true;
-	}
-
 	if (!m_connection)
 	{
 		return false;

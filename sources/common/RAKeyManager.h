@@ -24,8 +24,6 @@ public:
 	void SetVK(const sgx_ec_key_128bit_t& vk);
 	void SetSecProp(const sgx_ps_sec_prop_desc_t& secProp);
 
-	sgx_status_t GenerateSharedKeySet(const sgx_ec256_private_t& priKey, const sgx_ecc_state_handle_t& ecc_handle);
-
 	sgx_ec256_public_t& GetSignKey();
 	sgx_ec256_dh_shared_t& GetSharedKey();
 	sgx_ec_key_128bit_t& GetSMK();

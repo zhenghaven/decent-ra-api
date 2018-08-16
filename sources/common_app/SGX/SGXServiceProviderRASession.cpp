@@ -105,7 +105,6 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	}
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	m_sgxSP.InitSPRAEnvironment();
 
 	RAMessages* reqs = nullptr;
 	SGXRAMessage* resp = nullptr;
@@ -118,9 +117,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	SGXRAMessage0Send* msg0s = dynamic_cast<SGXRAMessage0Send*>(reqs);
 	if (!reqs || !msg0s || !msg0s->IsValid())
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 
@@ -129,9 +128,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		enclaveRes = m_sgxSP.ProcessRAMsg0Send(msg0s->GetSenderID());
 		if (enclaveRes != SGX_SUCCESS)
 		{
-			delete reqs;
 			SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
 			m_connection->Send(errMsg.ToJsonString());
+			delete reqs;
 			return false;
 		}
 		else
@@ -141,9 +140,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	}
 	else
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Extended Group ID is not accepted!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 
@@ -160,9 +159,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	SGXRAMessage1* msg1 = dynamic_cast<SGXRAMessage1*>(reqs);
 	if (!reqs || !msg1 || !msg1->IsValid())
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 
@@ -170,9 +169,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Data);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Extended Group ID is not accepted!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 
@@ -187,9 +186,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 
 	if (respCode != 200)
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Failed to get Revocation List!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 	resp = new SGXRAMessage2(msgSenderID, msg2Data, sigRlStr);
@@ -207,9 +206,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	SGXRAMessage3* msg3 = dynamic_cast<SGXRAMessage3*>(reqs);
 	if (!reqs || !msg3 || !msg3->IsValid() || !msg3->IsQuoteValid())
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 
@@ -220,9 +219,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	enclaveRes = m_sgxSP.GetIasReportNonce(msg3->GetSenderID(), iasNonce);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 
@@ -236,9 +235,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		delete reqs;
 		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
 		return false;
 	}
 	resp = new SGXRAMessage4(msgSenderID, msg4Data, msg4Sign);

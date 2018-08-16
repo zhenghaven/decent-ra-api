@@ -9,16 +9,14 @@
 SGXServiceProvider::SGXServiceProvider(IASConnector ias) :
 	m_ias(ias)
 {
+	sgx_status_t retval = SGXRAEnclave::ServiceProviderInit();
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, SGXRAEnclave::InitRaSpEnvironment);
 }
 
 SGXServiceProvider::~SGXServiceProvider()
 {
+	SGXRAEnclave::ServiceProviderTerminate();
 }
-//
-//std::string SGXServiceProvider::GetRASenderID() const
-//{
-//	return m_raSenderID;
-//}
 
 std::shared_ptr<ServiceProviderRASession> SGXServiceProvider::GetRASession(std::unique_ptr<Connection>& connection)
 {
@@ -29,17 +27,6 @@ void SGXServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey)
 {
 	sgx_status_t retval = SGXRAEnclave::GetRASPSignPubKey(&outKey);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, SGXRAEnclave::GetRASPSignPubKey);
-}
-
-//sgx_status_t SGXServiceProvider::GetRASPEncrPubKey(sgx_ec256_public_t & outKey)
-//{
-//	return SGXRAEnclave::GetRASPEncrPubKey(0, &outKey);
-//}
-
-void SGXServiceProvider::InitSPRAEnvironment()
-{
-	sgx_status_t retval = SGXRAEnclave::InitRaSpEnvironment();
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, SGXRAEnclave::InitRaSpEnvironment);
 }
 
 sgx_status_t SGXServiceProvider::GetIasReportNonce(const std::string & clientID, std::string & outNonce)

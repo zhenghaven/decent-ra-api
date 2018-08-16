@@ -4,11 +4,11 @@ enclave {
 	
 	trusted 
 	{
-		public sgx_status_t ecall_init_ra_sp_environment();
+		public sgx_status_t ecall_sgx_ra_sp_init();
+		
+		public void ecall_sgx_ra_sp_terminate();
 
 		public sgx_status_t ecall_get_ra_sp_pub_sig_key([out] sgx_ec256_public_t* outKey);
-
-		public sgx_status_t ecall_get_ra_sp_pub_enc_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
 
 		public sgx_status_t ecall_get_ias_nonce([in, string] const char* clientID, [out, size=32] char* outStr);
 

@@ -99,7 +99,6 @@ bool SGXClientRASession::ProcessClientSideRA()
 	}
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	m_sgxEnclave.InitClientRAEnvironment();
 	
 	RAMessages* resp = nullptr;
 	std::string msgBuffer;
@@ -112,9 +111,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	SGXRAMessage0Resp* msg0r = dynamic_cast<SGXRAMessage0Resp*>(resp);
 	if (!resp || !msg0r || !msg0r->IsValid())
 	{
-		delete resp;
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete resp;
 		return false;
 	}
 
@@ -127,9 +126,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	enclaveRes = m_sgxEnclave.ProcessRAMsg0Resp(msg0r->GetSenderID(), spRAPubKey, false, raContextID, msg1Data);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		delete resp;
 		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete resp;
 		return false;
 	}
 
@@ -146,9 +145,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	SGXRAMessage2* msg2 = dynamic_cast<SGXRAMessage2*>(resp);
 	if (!resp || !msg2 || !msg2->IsValid())
 	{
-		delete resp;
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete resp;
 		return false;
 	}
 
@@ -157,9 +156,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	enclaveRes = m_sgxEnclave.ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t) + msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		delete resp;
 		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete resp;
 		return false;
 	}
 
@@ -176,9 +175,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	SGXRAMessage4* msg4 = dynamic_cast<SGXRAMessage4*>(resp);
 	if (!resp || !msg4 || !msg4->IsValid())
 	{
-		delete resp;
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
+		delete resp;
 		return false;
 	}
 	enclaveRes = m_sgxEnclave.ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature(), raContextID);

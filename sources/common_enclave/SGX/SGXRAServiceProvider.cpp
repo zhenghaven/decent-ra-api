@@ -1,26 +1,27 @@
 #include "../../common/SGX/SGXRAServiceProvider.h"
 
-extern "C" sgx_status_t ecall_init_ra_sp_environment()
+/**
+* \brief	Initialize Service Provider's Remote Attestation environment.
+*
+* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h . *NOTE:* The error here only comes from SGX runtime.
+*/
+extern "C" sgx_status_t ecall_sgx_ra_sp_init()
 {
-	return SGXRAEnclave::InitRaSpEnvironment();
+	return SGXRAEnclave::ServiceProviderInit();
+}
+
+/**
+* \brief	Terminate Service Provider's Remote Attestation environment.
+*
+*/
+extern "C" void ecall_sgx_ra_sp_terminate()
+{
+	SGXRAEnclave::ServiceProviderTerminate();
 }
 
 extern "C" sgx_status_t ecall_get_ias_nonce(const char* clientID, char* outStr)
 {
 	return SGXRAEnclave::GetIasNonce(clientID, outStr);
-}
-
-/**
-* \brief	Get client's public encryption key.
-*
-* \param	context    [in]  .
-* \param	outKey     [out]  .
-*
-* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h .
-*/
-extern "C" sgx_status_t ecall_get_ra_sp_pub_enc_key(sgx_ra_context_t context, sgx_ec256_public_t* outKey)
-{
-	return SGXRAEnclave::GetRASPEncrPubKey(context, outKey);
 }
 
 /**

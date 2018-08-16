@@ -46,10 +46,8 @@ SGXEnclave::SGXEnclave(const std::string& enclavePath, const KnownFolderType tok
 
 SGXEnclave::~SGXEnclave()
 {
-	//if (IsLaunched())
-	//{
-		sgx_destroy_enclave(m_eid);
-	//}
+	ecall_sgx_ra_client_terminate(m_eid);
+	sgx_destroy_enclave(m_eid);
 }
 
 void SGXEnclave::Launch()
@@ -77,12 +75,12 @@ void SGXEnclave::Launch()
 			LOGW("Enclave App - %s, Write token to %s Failed!", m_enclavePath.c_str(), m_tokenPath.string().c_str());
 		}
 	}
-}
 
-//std::string SGXEnclave::GetRASenderID() const
-//{
-//	return m_raSenderID;
-//}
+	sgx_status_t retval = SGX_SUCCESS;
+	enclaveRet = ecall_sgx_ra_client_init(GetEnclaveId(), &retval);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_client_environment);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_client_environment);
+}
 
 void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey)
 {
@@ -120,26 +118,6 @@ uint32_t SGXEnclave::GetExGroupID()
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, sgx_get_extended_epid_group_id);
 
 	return res;
-}
-
-void SGXEnclave::InitClientRAEnvironment()
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_init_ra_client_environment(GetEnclaveId(), &retval);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_client_environment);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_client_environment);
-
-	//Get Sign public key.
-	//sgx_ec256_public_t signPubKey;
-	//retval = GetRASignPubKey(signPubKey);
-	//if (retval != SGX_SUCCESS)
-	//{
-	//	return retval;
-	//}
-	//m_raSenderID = SerializePubKey(signPubKey);
-
-	//return SGX_SUCCESS;
 }
 
 sgx_status_t SGXEnclave::ProcessRAMsg0Resp(const std::string & ServerID, const sgx_ec256_public_t & inKey, int enablePSE, sgx_ra_context_t & outContextID, sgx_ra_msg1_t & outMsg1)

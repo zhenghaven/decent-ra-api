@@ -41,5 +41,4 @@ protected:
 
 private:
 	DecentralizedEnclave& m_decentralizedEnc;
-	bool m_isEnclaveEnvInited;
 };

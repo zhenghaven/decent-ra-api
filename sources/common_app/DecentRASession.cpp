@@ -181,12 +181,12 @@ bool DecentRASession::ProcessClientSideKeyRequest()
 			return false;
 		}
 		
-		enclaveRes = m_decentEnclave.SetProtocolEncrKey(krResp->GetSenderID(), krResp->GetPriEncrKey(), krResp->GetPriEncrKeyMac(), krResp->GetPubEncrKey(), krResp->GetPubEncrKeyMac());
-		if (enclaveRes != SGX_SUCCESS)
-		{
-			delete resp;
-			return false;
-		}
+		//enclaveRes = m_decentEnclave.SetProtocolEncrKey(krResp->GetSenderID(), krResp->GetPriEncrKey(), krResp->GetPriEncrKeyMac(), krResp->GetPubEncrKey(), krResp->GetPubEncrKeyMac());
+		//if (enclaveRes != SGX_SUCCESS)
+		//{
+		//	delete resp;
+		//	return false;
+		//}
 	}
 	break;
 	case DecentNodeMode::APPL_SERVER:
@@ -262,14 +262,14 @@ bool DecentRASession::ProcessServerSideKeyRequest()
 		sgx_aes_gcm_128bit_tag_t priEncrKeyMac;
 		sgx_ec256_public_t pubEncrKey;
 		sgx_aes_gcm_128bit_tag_t pubEncrKeyMac;
-		enclaveRes = m_decentEnclave.GetProtocolEncrKey(msgKR->GetSenderID(), priEncrKey, priEncrKeyMac, pubEncrKey, pubEncrKeyMac);
-		if (enclaveRes != SGX_SUCCESS)
-		{
-			delete resp;
-			DecentMessageErr errMsg(senderID, "Enclave Process Error!");
-			m_connection->Send(errMsg.ToJsonString());
-			return false;
-		}
+		//enclaveRes = m_decentEnclave.GetProtocolEncrKey(msgKR->GetSenderID(), priEncrKey, priEncrKeyMac, pubEncrKey, pubEncrKeyMac);
+		//if (enclaveRes != SGX_SUCCESS)
+		//{
+		//	delete resp;
+		//	DecentMessageErr errMsg(senderID, "Enclave Process Error!");
+		//	m_connection->Send(errMsg.ToJsonString());
+		//	return false;
+		//}
 
 		krResp = new DecentMessageRootResp(senderID, priSignKey, priSignKeyMac, pubSignKey, pubSignKeyMac,
 			priEncrKey, priEncrKeyMac, pubEncrKey, pubEncrKeyMac);
@@ -311,7 +311,7 @@ DecentMessageMsg0* DecentRASession::ConstructMessage0()
 
 	//enclaveRes = m_hardwareEnclave.GetRAClientEncrPubKey(pubEncrKey);
 
-	m_decentEnclave.GetKeySigns(signSign, encrSign);
+	//m_decentEnclave.GetKeySigns(signSign, encrSign);
 
 	//enclaveRes = (enclaveRes != SGX_SUCCESS) ? enclaveRes : decentEnc->GetLastStatus();
 

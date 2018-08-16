@@ -2,6 +2,7 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 #include <openssl/ec.h>
 
@@ -23,13 +24,21 @@
 #include "sgx_ra_tools.h"
 #include "SGXRAClient.h"
 
+struct DecentNodeContext
+{
+	sgx_ec256_public_t m_peerSignKey = { {0},{0} };
+	sgx_ec_key_128bit_t m_mk = { 0 };
+	sgx_ec_key_128bit_t m_sk = { 0 };
+
+};
+
 namespace
 {
 	static DecentNodeMode g_decentMode = DecentNodeMode::ROOT_SERVER;
-	static std::map<std::string, RAKeyManager> g_decentNodesMap;
+	static std::map<std::string, DecentNodeContext> g_decentNodesMap;
 
 	//Shared objects:
-	static RACryptoManager& g_cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
+	static std::shared_ptr<DecentCryptoManager> g_cryptoMgr = std::make_shared<DecentCryptoManager>();
 }
 
 static bool IsBothWayAttested(const std::string& id)
@@ -45,13 +54,7 @@ bool DecentEnclave::IsAttested(const std::string& id)
 	return g_decentNodesMap.find(id) != g_decentNodesMap.end();
 }
 
-const RAKeyManager * DecentEnclave::GetNodeKeyMgr(const std::string& id)
-{
-	auto it = g_decentNodesMap.find(id);
-	return it == g_decentNodesMap.end() ? nullptr : (&it->second);
-}
-
-extern "C" sgx_status_t ecall_init_decent_ra_environment(const sgx_spid_t* inSpid)
+extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 {
 	SGXRAEnclave::SetSPID(*inSpid);
 
@@ -64,8 +67,16 @@ extern "C" sgx_status_t ecall_init_decent_ra_environment(const sgx_spid_t* inSpi
 	sgx_measurement_t& enclaveHash = selfReport.body.mr_enclave;
 	ocall_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
 	SGXRAEnclave::SetTargetEnclaveHash(SerializeStruct(enclaveHash));
+	ocall_printf("Enclave Public Sign key: %s\n", SerializeStruct(g_cryptoMgr->GetSignPubKey()).c_str());
+	SGXRAEnclave::SetClientCryptoManager(g_cryptoMgr);
+	SGXRAEnclave::SetServerCryptoManager(g_cryptoMgr);
 
 	return SGX_SUCCESS;
+}
+
+extern "C" void ecall_decent_terminate()
+{
+
 }
 
 extern "C" sgx_status_t ecall_transit_to_decent_node(const char* id, int is_server)
@@ -77,11 +88,13 @@ extern "C" sgx_status_t ecall_transit_to_decent_node(const char* id, int is_serv
 
 	if (is_server) 
 	{
-		g_decentNodesMap.insert(std::make_pair(id, *SGXRAEnclave::GetClientKeysMgr(id)));
+		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
+		SGXRAEnclave::GetClientKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
 	}
 	else
 	{
-		g_decentNodesMap.insert(std::make_pair(id, *SGXRAEnclave::GetServerKeysMgr(id)));
+		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
+		SGXRAEnclave::GetServerKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
 	}
 
 	return SGX_SUCCESS;
@@ -173,7 +186,7 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* ServerID, 
 	ReportDataGenerator rdGenerator = [](const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen) -> bool
 	{
 		EC_KEY* pubKey = EC_KEY_new();
-		if (!pubKey || !ECKeyPubSGX2OpenSSL(&g_cryptoMgr.GetSignPubKey(), pubKey, nullptr))
+		if (!pubKey || !ECKeyPubSGX2OpenSSL(&g_cryptoMgr->GetSignPubKey(), pubKey, nullptr))
 		{
 			EC_KEY_free(pubKey);
 			return false;
@@ -238,12 +251,12 @@ extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec
 		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
 	}
 
-	RAKeyManager& nodeKeyMgr = nodeIt->second;
+	DecentNodeContext& nodeCTX = nodeIt->second;
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 
 	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(&cryptoMgr.GetSignPriKey()),
 		sizeof(sgx_ec256_private_t),
 		reinterpret_cast<uint8_t*>(outPriKey),
@@ -258,61 +271,8 @@ extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(&cryptoMgr.GetSignPubKey()),
-		sizeof(sgx_ec256_public_t),
-		reinterpret_cast<uint8_t*>(outPubKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		outPubKeyMac
-	);
-
-	return enclaveRes; //Error return. (Error from SGX)
-}
-
-extern "C" sgx_status_t ecall_get_protocol_encr_key(const char* clientID, sgx_ec256_private_t* outPriKey, sgx_aes_gcm_128bit_tag_t* outPriKeyMac, sgx_ec256_public_t* outPubKey, sgx_aes_gcm_128bit_tag_t* outPubKeyMac)
-{
-	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
-	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("This decent node is not a Root Server!");
-	}
-
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
-	if ((!clientID || !outPriKey || !outPriKeyMac || !outPubKey || !outPubKeyMac))
-	{
-		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
-	}
-	auto nodeIt = g_decentNodesMap.find(clientID);
-	if (nodeIt == g_decentNodesMap.end())
-	{
-		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
-	}
-
-	RAKeyManager& nodeKeyMgr = nodeIt->second;
-
-	sgx_status_t enclaveRes = SGX_SUCCESS;
-
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeKeyMgr.GetSK(),
-		reinterpret_cast<const uint8_t*>(&cryptoMgr.GetEncrPriKey()),
-		sizeof(sgx_ec256_private_t),
-		reinterpret_cast<uint8_t*>(outPriKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		outPriKeyMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeKeyMgr.GetSK(),
-		reinterpret_cast<const uint8_t*>(&cryptoMgr.GetEncrPubKey()),
 		sizeof(sgx_ec256_public_t),
 		reinterpret_cast<uint8_t*>(outPubKey),
 		aes_gcm_iv,
@@ -344,13 +304,13 @@ extern "C" sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const 
 		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
 	}
 
-	RAKeyManager& nodeKeyMgr = nodeIt->second;
+	DecentNodeContext& nodeCTX = nodeIt->second;
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 
 	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
 	sgx_ec256_private_t priKey;
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(inPriKey),
 		sizeof(sgx_ec256_private_t),
 		reinterpret_cast<uint8_t*>(&priKey),
@@ -365,7 +325,7 @@ extern "C" sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const 
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 	sgx_ec256_public_t pubKey;
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(inPubKey),
 		sizeof(sgx_ec256_public_t),
 		reinterpret_cast<uint8_t*>(&pubKey),
@@ -387,92 +347,11 @@ extern "C" sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const 
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 
-	sgx_ec256_signature_t encrSign;
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t), &priKey, &encrSign, cryptoMgr.GetECC());
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
 	cryptoMgr.SetSignPriKey(priKey);
 	cryptoMgr.SetSignPubKey(pubKey);
 	cryptoMgr.SetProtoSignPubKey(pubKey);
-	cryptoMgr.SetSignKeySign(signSign);
-	cryptoMgr.SetEncrKeySign(encrSign);
 
 	ocall_printf("New Public Sign Key: %s\n", SerializePubKey(cryptoMgr.GetSignPubKey()).c_str());
-
-	return SGX_SUCCESS;
-}
-
-extern "C" sgx_status_t ecall_set_protocol_encr_key(const char* clientID, const sgx_ec256_private_t* inPriKey, const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, const sgx_ec256_public_t* inPubKey, const sgx_aes_gcm_128bit_tag_t* inPubKeyMac)
-{
-	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
-	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("This decent node is not a Root Server!");
-	}
-
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
-	if ((!clientID || !inPriKey || !inPriKeyMac || !inPubKey || !inPubKeyMac))
-	{
-		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
-	}
-	auto nodeIt = g_decentNodesMap.find(clientID);
-	if (nodeIt == g_decentNodesMap.end())
-	{
-		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
-	}
-
-	RAKeyManager& nodeKeyMgr = nodeIt->second;
-
-	sgx_status_t enclaveRes = SGX_SUCCESS;
-
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	sgx_ec256_private_t priKey;
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeKeyMgr.GetSK(),
-		reinterpret_cast<const uint8_t*>(inPriKey),
-		sizeof(sgx_ec256_private_t),
-		reinterpret_cast<uint8_t*>(&priKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		inPriKeyMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	sgx_ec256_public_t pubKey;
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeKeyMgr.GetSK(),
-		reinterpret_cast<const uint8_t*>(inPubKey),
-		sizeof(sgx_ec256_public_t),
-		reinterpret_cast<uint8_t*>(&pubKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		inPubKeyMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	sgx_ec256_signature_t encrSign;
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&encrSign), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&cryptoMgr.GetSignPriKey()), &encrSign, cryptoMgr.GetECC());
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	cryptoMgr.SetEncrPriKey(priKey);
-	cryptoMgr.SetEncrPubKey(pubKey);
-	cryptoMgr.SetEncrKeySign(encrSign);
-
-	ocall_printf("New Public Encr Key: %s\n", SerializePubKey(cryptoMgr.GetEncrPubKey()).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -497,7 +376,7 @@ extern "C" sgx_status_t ecall_get_protocol_key_signed(const char* clientID, cons
 		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
 	}
 
-	RAKeyManager& nodeKeyMgr = nodeIt->second;
+	DecentNodeContext& nodeCTX = nodeIt->second;
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	sgx_ec256_signature_t signSign;
@@ -515,7 +394,7 @@ extern "C" sgx_status_t ecall_get_protocol_key_signed(const char* clientID, cons
 	}
 
 	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(&signSign),
 		sizeof(sgx_ec256_signature_t),
 		reinterpret_cast<uint8_t*>(outSignSign),
@@ -530,7 +409,7 @@ extern "C" sgx_status_t ecall_get_protocol_key_signed(const char* clientID, cons
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(&encrSign),
 		sizeof(sgx_ec256_signature_t),
 		reinterpret_cast<uint8_t*>(outEncrSign),
@@ -563,14 +442,14 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
 	}
 
-	RAKeyManager& nodeKeyMgr = nodeIt->second;
+	DecentNodeContext& nodeCTX = nodeIt->second;
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	sgx_ec256_signature_t signSign;
 	sgx_ec256_signature_t encrSign;
 
 	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(inSignSign),
 		sizeof(sgx_ec256_signature_t),
 		reinterpret_cast<uint8_t*>(&signSign),
@@ -584,7 +463,7 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 	{
 		return enclaveRes; //Error return. (Error from SGX)
 	}
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeKeyMgr.GetSK(),
+	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
 		reinterpret_cast<const uint8_t*>(inEncrSign),
 		sizeof(sgx_ec256_signature_t),
 		reinterpret_cast<uint8_t*>(&encrSign),
@@ -599,26 +478,14 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 
-	cryptoMgr.SetSignKeySign(signSign);
-	cryptoMgr.SetEncrKeySign(encrSign);
+	//cryptoMgr.SetSignKeySign(signSign);
 
-	cryptoMgr.SetProtoSignPubKey(nodeKeyMgr.GetSignKey());
+	//cryptoMgr.SetProtoSignPubKey(nodeKeyMgr.GetSignKey());
 	ocall_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(cryptoMgr.GetProtoSignPubKey()).c_str());
 	ocall_printf("The Signature of Sign Pub Key is: %s\n", SerializeSignature(signSign).c_str());
 	ocall_printf("The Signature of Encr Pub Key is: %s\n", SerializeSignature(encrSign).c_str());
 
 	return SGX_SUCCESS;
-}
-
-extern "C" void ecall_get_key_signs(sgx_ec256_signature_t* outSignSign, sgx_ec256_signature_t* outEncrSign)
-{
-	if (!outSignSign || !outEncrSign)
-	{
-		return;
-	}
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
-	std::memcpy(outSignSign, &cryptoMgr.GetSignKeySign(), sizeof(sgx_ec256_signature_t));
-	std::memcpy(outEncrSign, &cryptoMgr.GetEncrKeySign(), sizeof(sgx_ec256_signature_t));
 }
 
 extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public_t* inSignKey, const sgx_ec256_signature_t* inSignSign, const sgx_ec256_public_t* inEncrKey, const sgx_ec256_signature_t* inEncrSign)
@@ -673,19 +540,19 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 		FUNC_ERR("The signature of Attestee's Encr key is invalid.");
 	}
 
-	auto insertRes = g_decentNodesMap.insert(std::make_pair<std::string, RAKeyManager>(clientID, RAKeyManager(*inSignKey)));
-	ocall_printf("Accepted new app server: %s\n", clientID);
+	//auto insertRes = g_decentNodesMap.insert(std::make_pair<std::string, RAKeyManager>(clientID, RAKeyManager(*inSignKey)));
+	//ocall_printf("Accepted new app server: %s\n", clientID);
 
-	RAKeyManager& nodeKeyMgr = insertRes.first->second;
+	//RAKeyManager& nodeKeyMgr = insertRes.first->second;
 
-	nodeKeyMgr.SetEncryptKey(*inEncrKey);
+	//nodeKeyMgr.SetEncryptKey(*inEncrKey);
 
-	enclaveRes = nodeKeyMgr.GenerateSharedKeySet(cryptoMgr.GetEncrPriKey(), cryptoMgr.GetECC());
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		g_decentNodesMap.erase(insertRes.first);
-		return enclaveRes; //Error return. (Error from SGX)
-	}
+	//enclaveRes = nodeKeyMgr.GenerateSharedKeySet(cryptoMgr.GetEncrPriKey(), cryptoMgr.GetECC());
+	//if (enclaveRes != SGX_SUCCESS)
+	//{
+	//	g_decentNodesMap.erase(insertRes.first);
+	//	return enclaveRes; //Error return. (Error from SGX)
+	//}
 
 	return SGX_SUCCESS;
 }

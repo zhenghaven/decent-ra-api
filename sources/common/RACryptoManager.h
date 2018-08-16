@@ -14,8 +14,6 @@ public:
 	RACryptoManager();
 	virtual ~RACryptoManager();
 
-	virtual void SetSignKeySign(const sgx_ec256_signature_t& sign);
-
 	virtual const sgx_ecc_state_handle_t& GetECC() const;
 
 	virtual const sgx_ec256_private_t& GetSignPriKey() const;

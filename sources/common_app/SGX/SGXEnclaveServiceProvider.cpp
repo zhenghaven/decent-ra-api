@@ -10,22 +10,38 @@ SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclave
 	SGXEnclave(enclavePath, tokenPath),
 	SGXServiceProvider(ias)
 {
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+	enclaveRet = ecall_sgx_ra_sp_init(GetEnclaveId(), &retval);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_sp_environment);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
 }
 
 SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const fs::path tokenPath, IASConnector ias) :
 	SGXEnclave(enclavePath, tokenPath),
 	SGXServiceProvider(ias)
 {
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+	enclaveRet = ecall_sgx_ra_sp_init(GetEnclaveId(), &retval);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_sp_environment);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
 }
 
 SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName, IASConnector ias) :
 	SGXEnclave(enclavePath, tokenLocType, tokenFileName),
 	SGXServiceProvider(ias)
 {
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+	enclaveRet = ecall_sgx_ra_sp_init(GetEnclaveId(), &retval);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_sp_environment);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
 }
 
 SGXEnclaveServiceProvider::~SGXEnclaveServiceProvider()
 {
+	ecall_sgx_ra_sp_terminate(GetEnclaveId());
 }
 
 void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey)
@@ -34,25 +50,6 @@ void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey)
 
 	sgx_status_t enclaveRet = ecall_get_ra_sp_pub_sig_key(GetEnclaveId(), &retval, &outKey);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_sp_pub_sig_key);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
-}
-
-//sgx_status_t SGXEnclaveServiceProvider::GetRASPEncrPubKey(sgx_ec256_public_t & outKey)
-//{
-//	sgx_status_t retval = SGX_SUCCESS;
-//
-//	sgx_status_t enclaveRet = ecall_get_ra_sp_pub_enc_key(GetEnclaveId(), &retval, 0, &outKey);
-//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_sp_pub_enc_key);
-//
-//	return retval;
-//}
-
-void SGXEnclaveServiceProvider::InitSPRAEnvironment()
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_init_ra_sp_environment(GetEnclaveId(), &retval);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_sp_environment);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
 }
 
