@@ -1,8 +1,9 @@
 #include "RACryptoManager.h"
 
-#include <cstring>
+#include "EnclaveAsyKeyContainer.h"
 
 RACryptoManager::RACryptoManager() :
+	m_keyContainer(EnclaveAsyKeyContainer::GetInstance()),
 	m_eccContext(nullptr),
 	m_status(SGX_SUCCESS)
 {
@@ -11,19 +12,13 @@ RACryptoManager::RACryptoManager() :
 	{
 		return;
 	}
-
-	m_status = sgx_ecc256_create_key_pair(&m_signPriKey, &m_signPubKey, m_eccContext);
-	if (m_status != SGX_SUCCESS)
-	{
-		return;
-	}
+	m_status = m_keyContainer.m_status;
 }
 
 RACryptoManager::~RACryptoManager()
 {
 	sgx_ecc256_close_context(m_eccContext);
 	m_eccContext = nullptr;
-	std::memset(&m_signPriKey, 0, sizeof(sgx_ec256_private_t));
 }
 
 const sgx_ecc_state_handle_t & RACryptoManager::GetECC() const
@@ -33,12 +28,12 @@ const sgx_ecc_state_handle_t & RACryptoManager::GetECC() const
 
 const sgx_ec256_private_t & RACryptoManager::GetSignPriKey() const
 {
-	return m_signPriKey;
+	return m_keyContainer.m_signPriKey;
 }
 
 const sgx_ec256_public_t & RACryptoManager::GetSignPubKey() const
 {
-	return m_signPubKey;
+	return m_keyContainer.m_signPubKey;
 }
 
 sgx_status_t RACryptoManager::GetStatus() const

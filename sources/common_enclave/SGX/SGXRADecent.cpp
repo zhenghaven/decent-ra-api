@@ -10,16 +10,16 @@
 
 #include "../common_enclave/DecentError.h"
 
-#include "../common/CommonTool.h"
-#include "../common/EnclaveRAState.h"
-#include "../common/CryptoTools.h"
 #include "../common/Decent.h"
-#include "../common/RAKeyManager.h"
+#include "../common/CommonTool.h"
+#include "../common/CryptoTools.h"
+#include "../common/OpenSSLTools.h"
+#include "../common/EnclaveRAState.h"
+#include "../common/DecentCryptoManager.h"
 #include "../common/SGX/sgx_constants.h"
 #include "../common/SGX/sgx_crypto_tools.h"
 #include "../common/SGX/SGXRAServiceProvider.h"
 #include "../common/SGX/SGXOpenSSLConversions.h"
-#include "../common/OpenSSLTools.h"
 
 #include "sgx_ra_tools.h"
 #include "SGXRAClient.h"
@@ -240,7 +240,6 @@ extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec
 		FUNC_ERR("This decent node is not a Root Server!");
 	}
 
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if ((!clientID || !outPriKey || !outPriKeyMac || !outPubKey || !outPubKeyMac))
 	{
 		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
@@ -257,7 +256,7 @@ extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec
 
 	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
 	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(&cryptoMgr.GetSignPriKey()),
+		reinterpret_cast<const uint8_t*>(&g_cryptoMgr->GetSignPriKey()),
 		sizeof(sgx_ec256_private_t),
 		reinterpret_cast<uint8_t*>(outPriKey),
 		aes_gcm_iv,
@@ -272,7 +271,7 @@ extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec
 	}
 
 	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(&cryptoMgr.GetSignPubKey()),
+		reinterpret_cast<const uint8_t*>(&g_cryptoMgr->GetSignPubKey()),
 		sizeof(sgx_ec256_public_t),
 		reinterpret_cast<uint8_t*>(outPubKey),
 		aes_gcm_iv,
@@ -293,7 +292,6 @@ extern "C" sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const 
 		FUNC_ERR("This decent node is not a Root Server!");
 	}
 
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if ((!clientID || !inPriKey || !inPriKeyMac || !inPubKey || !inPubKeyMac))
 	{
 		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
@@ -341,17 +339,17 @@ extern "C" sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const 
 	}
 
 	sgx_ec256_signature_t signSign;
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&pubKey), sizeof(sgx_ec256_public_t), &priKey, &signSign, cryptoMgr.GetECC());
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&pubKey), sizeof(sgx_ec256_public_t), &priKey, &signSign, g_cryptoMgr->GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 
-	cryptoMgr.SetSignPriKey(priKey);
-	cryptoMgr.SetSignPubKey(pubKey);
-	cryptoMgr.SetProtoSignPubKey(pubKey);
+	g_cryptoMgr->SetSignPriKey(priKey);
+	g_cryptoMgr->SetSignPubKey(pubKey);
+	g_cryptoMgr->SetProtoSignPubKey(pubKey);
 
-	ocall_printf("New Public Sign Key: %s\n", SerializePubKey(cryptoMgr.GetSignPubKey()).c_str());
+	ocall_printf("New Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr->GetSignPubKey()).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -365,7 +363,6 @@ extern "C" sgx_status_t ecall_get_protocol_key_signed(const char* clientID, cons
 		FUNC_ERR("This decent node is not a Root Server!");
 	}
 
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if ((!clientID || !inSignKey || !inEncrKey || !outSignSign || !outSignSignMac || !outEncrSign || !outEncrSignMac))
 	{
 		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
@@ -382,12 +379,12 @@ extern "C" sgx_status_t ecall_get_protocol_key_signed(const char* clientID, cons
 	sgx_ec256_signature_t signSign;
 	sgx_ec256_signature_t encrSign;
 
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&cryptoMgr.GetSignPriKey()), &signSign, cryptoMgr.GetECC());
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr->GetSignPriKey()), &signSign, g_cryptoMgr->GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
 	}
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&cryptoMgr.GetSignPriKey()), &encrSign, cryptoMgr.GetECC());
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr->GetSignPriKey()), &encrSign, g_cryptoMgr->GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -431,7 +428,6 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 		FUNC_ERR("This decent node is not a Root Server!");
 	}
 
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	if ((!clientID || !inSignSign || !inSignSignMac || !inEncrSign || !inEncrSignMac))
 	{
 		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
@@ -481,7 +477,7 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 	//cryptoMgr.SetSignKeySign(signSign);
 
 	//cryptoMgr.SetProtoSignPubKey(nodeKeyMgr.GetSignKey());
-	ocall_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(cryptoMgr.GetProtoSignPubKey()).c_str());
+	ocall_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(g_cryptoMgr->GetProtoSignPubKey()).c_str());
 	ocall_printf("The Signature of Sign Pub Key is: %s\n", SerializeSignature(signSign).c_str());
 	ocall_printf("The Signature of Encr Pub Key is: %s\n", SerializeSignature(encrSign).c_str());
 
@@ -490,7 +486,6 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 
 extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public_t* inSignKey, const sgx_ec256_signature_t* inSignSign, const sgx_ec256_public_t* inEncrKey, const sgx_ec256_signature_t* inEncrSign)
 {
-	DecentCryptoManager& cryptoMgr = EnclaveState::GetInstance().GetCryptoMgr();
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	int isPointValid = 0;
 	if ((!clientID || !inSignKey || !inSignSign || !inEncrKey || !inEncrSign) ||
@@ -498,7 +493,7 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 	{
 		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
 	}
-	enclaveRes = sgx_ecc256_check_point(inSignKey, cryptoMgr.GetECC(), &isPointValid);
+	enclaveRes = sgx_ecc256_check_point(inSignKey, g_cryptoMgr->GetECC(), &isPointValid);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -507,7 +502,7 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 	{
 		FUNC_ERR_Y("Invalid Signing Key!", SGX_ERROR_INVALID_PARAMETER);
 	}
-	enclaveRes = sgx_ecc256_check_point(inEncrKey, cryptoMgr.GetECC(), &isPointValid);
+	enclaveRes = sgx_ecc256_check_point(inEncrKey, g_cryptoMgr->GetECC(), &isPointValid);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -518,7 +513,7 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 	}
 
 	uint8_t verifyRes = 0;
-	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), &cryptoMgr.GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inSignSign), &verifyRes, cryptoMgr.GetECC());
+	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), &g_cryptoMgr->GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inSignSign), &verifyRes, g_cryptoMgr->GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -529,7 +524,7 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 		FUNC_ERR("The signature of Attestee's Sign key is invalid.");
 	}
 
-	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), &cryptoMgr.GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inEncrSign), &verifyRes, cryptoMgr.GetECC());
+	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), &g_cryptoMgr->GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inEncrSign), &verifyRes, g_cryptoMgr->GetECC());
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)

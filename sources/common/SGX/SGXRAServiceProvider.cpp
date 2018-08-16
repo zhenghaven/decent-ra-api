@@ -19,7 +19,7 @@
 #include "../../common/CryptoTools.h"
 #include "../../common/NonceGenerator.h"
 #include "../../common/EnclaveRAState.h"
-#include "../../common/RAKeyManager.h"
+#include "../../common/RACryptoManager.h"
 #include "../../common/SGX/ias_report_cert.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
 #include "../../common/SGX/sgx_constants.h"

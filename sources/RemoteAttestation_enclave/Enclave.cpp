@@ -12,13 +12,7 @@
 #include "../common/CryptoTools.h"
 #include "../common/Decent.h"
 #include "../common/EnclaveRAState.h"
-#include "../common/RAKeyManager.h"
 #include "../common/SGX/sgx_constants.h"
-
-void ecall_termination_clean()
-{
-	EnclaveState::GetInstance().Clear();
-}
 
 sgx_status_t ecall_get_simple_secret(const char* clientID, uint64_t* secret, sgx_aes_gcm_128bit_tag_t* outSecretMac)
 {

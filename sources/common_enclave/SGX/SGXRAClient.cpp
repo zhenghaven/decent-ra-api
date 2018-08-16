@@ -2,6 +2,7 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 //#include <sgx_tkey_exchange.h>
 
@@ -12,7 +13,7 @@
 
 #include "../../common/CryptoTools.h"
 #include "../../common/EnclaveRAState.h"
-#include "../../common/RAKeyManager.h"
+#include "../../common/RACryptoManager.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 
 struct RAClientContext
@@ -34,8 +35,8 @@ struct RAClientContext
 
 namespace
 {
-	static std::map<std::string, RAClientContext> g_serversMap;
-	static const std::map<std::string, RAClientContext>& k_serversMap = g_serversMap;
+	static std::map<std::string, std::unique_ptr<RAClientContext> > g_serversMap;
+	static const std::map<std::string, std::unique_ptr<RAClientContext> >& k_serversMap = g_serversMap;
 
 	//Shared objects:
 	static std::shared_ptr<RACryptoManager> g_cryptoMgr = std::make_shared<RACryptoManager>();
@@ -54,7 +55,7 @@ bool SGXRAEnclave::AddNewServerRAState(const std::string& ServerID, const sgx_ec
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR_Y("Processing msg0, but client ID already exist.", false);
 	}
-	g_serversMap.insert(std::make_pair<const std::string&, RAClientContext>(ServerID, RAClientContext(inPubKey)));
+	g_serversMap.insert(std::make_pair<const std::string&, std::unique_ptr<RAClientContext>>(ServerID, std::unique_ptr<RAClientContext>(new RAClientContext(inPubKey))));
 
 	return true;
 }
@@ -71,7 +72,7 @@ void SGXRAEnclave::DropServerRAState(const std::string& serverID)
 bool SGXRAEnclave::IsServerAttested(const std::string & serverID)
 {
 	auto it = k_serversMap.find(serverID);
-	return it == k_serversMap.cend() ? false : (it->second.m_state == ServerRAState::ATTESTED);
+	return it == k_serversMap.cend() ? false : (it->second->m_state == ServerRAState::ATTESTED);
 }
 
 bool SGXRAEnclave::GetServerKeys(const std::string & serverID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
@@ -86,7 +87,7 @@ bool SGXRAEnclave::GetServerKeys(const std::string & serverID, sgx_ec256_public_
 		return false;
 	}
 
-	RAClientContext& clientCTX = it->second;
+	RAClientContext& clientCTX = *(it->second);
 
 	if (outSK)
 	{
@@ -188,14 +189,14 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 
 	auto it = g_serversMap.find(ServerID);
 	if (it == g_serversMap.end()
-		|| it->second.m_state != ServerRAState::MSG0_DONE)
+		|| it->second->m_state != ServerRAState::MSG0_DONE)
 	{
 		SGXRAEnclave::DropServerRAState(ServerID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg2, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RAClientContext& clientCTX = it->second;
+	RAClientContext& clientCTX = *(it->second);
 
 	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_SK, &clientCTX.m_sk);
 	if (res != SGX_SUCCESS)
@@ -210,7 +211,7 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 		return res; //Error return. (Error from SGX)	
 	}
 
-	it->second.m_state = ServerRAState::MSG2_DONE;
+	clientCTX.m_state = ServerRAState::MSG2_DONE;
 
 	return SGX_SUCCESS;
 }
@@ -219,14 +220,14 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 {
 	auto it = g_serversMap.find(ServerID);
 	if (it == g_serversMap.end()
-		|| it->second.m_state != ServerRAState::MSG2_DONE)
+		|| it->second->m_state != ServerRAState::MSG2_DONE)
 	{
 		SGXRAEnclave::DropServerRAState(ServerID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg4, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RAClientContext& clientCTX = it->second;
+	RAClientContext& clientCTX = *(it->second);
 
 	sgx_status_t res = SGX_SUCCESS;
 
@@ -245,7 +246,7 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 		FUNC_ERR("Processing msg4, but the quote is rejected by the IAS.");
 	}
 
-	it->second.m_state = ServerRAState::ATTESTED;
+	clientCTX.m_state = ServerRAState::ATTESTED;
 
 	decent_ra_close(inContextID);
 

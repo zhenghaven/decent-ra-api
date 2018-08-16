@@ -185,15 +185,6 @@ sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_r
 	return retval;
 }
 
-sgx_status_t SGXEnclave::TerminationClean()
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	enclaveRet = ecall_termination_clean(GetEnclaveId());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_termination_clean);
-
-	return SGX_SUCCESS;
-}
-
 sgx_enclave_id_t SGXEnclave::GetEnclaveId() const
 {
 	return m_eid;
