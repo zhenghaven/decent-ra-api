@@ -122,6 +122,7 @@ bool ECKeyPubOpenSSL2SGX(const EC_POINT *inPub, sgx_ec256_public_t *outPub, sgx_
 
 	if (!eccCtx || !inPub || !outPub)
 	{
+		CloseTempContext(inCtx, eccCtx);
 		return false;
 	}
 
@@ -187,6 +188,7 @@ bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_POINT *outPub, sgx_
 
 	if (!eccCtx || !inPub || !outPub)
 	{
+		CloseTempContext(inCtx, eccCtx);
 		return false;
 	}
 
@@ -232,6 +234,7 @@ bool ECKeyGetPubFromPrv(const BIGNUM* inPrv, EC_POINT* outPub, sgx_ecc_state_han
 
 	if (!eccCtx || !inPrv || !outPub)
 	{
+		CloseTempContext(inCtx, eccCtx);
 		return false;
 	}
 
@@ -253,34 +256,41 @@ bool ECKeyPairOpenSSL2SGX(const EC_KEY *inKeyPair, sgx_ec256_private_t *outPrv, 
 {
 	DecentEccContext* eccCtx = (inCtx == nullptr) ? OpenTempContext() : reinterpret_cast<DecentEccContext*>(inCtx);
 
-	if (!eccCtx || !inKeyPair || !outPrv || !outPub)
-	{
-		return false;
-	}
-
-	const BIGNUM *prv = EC_KEY_get0_private_key(inKeyPair);
-	if (prv == nullptr)
+	if (!eccCtx || !inKeyPair || 
+		(!outPrv && !outPub))
 	{
 		CloseTempContext(inCtx, eccCtx);
 		return false;
 	}
 
-	const EC_POINT *pub = EC_KEY_get0_public_key(inKeyPair);
-	if (pub == nullptr)
+	if (outPrv)
 	{
-		CloseTempContext(inCtx, eccCtx);
-		return false;
+		const BIGNUM *prv = EC_KEY_get0_private_key(inKeyPair);
+		if (prv == nullptr)
+		{
+			CloseTempContext(inCtx, eccCtx);
+			return false;
+		}
+		if (!ECKeyPrvOpenSSL2SGX(prv, outPrv))
+		{
+			CloseTempContext(inCtx, eccCtx);
+			return false;
+		}
 	}
 
-	if (!ECKeyPrvOpenSSL2SGX(prv, outPrv))
+	if (outPub)
 	{
-		CloseTempContext(inCtx, eccCtx);
-		return false;
-	}
-	if (!ECKeyPubOpenSSL2SGX(pub, outPub, eccCtx))
-	{
-		CloseTempContext(inCtx, eccCtx);
-		return false;
+		const EC_POINT *pub = EC_KEY_get0_public_key(inKeyPair);
+		if (pub == nullptr)
+		{
+			CloseTempContext(inCtx, eccCtx);
+			return false;
+		}
+		if (!ECKeyPubOpenSSL2SGX(pub, outPub, eccCtx))
+		{
+			CloseTempContext(inCtx, eccCtx);
+			return false;
+		}
 	}
 
 	CloseTempContext(inCtx, eccCtx);
@@ -295,6 +305,7 @@ bool ECKeyPairSGX2OpenSSL(const sgx_ec256_private_t *inPrv, const sgx_ec256_publ
 
 	if (!eccCtx || !inPrv || !inPub || !outKeyPair)
 	{
+		CloseTempContext(inCtx, eccCtx);
 		return false;
 	}
 
@@ -358,6 +369,7 @@ bool ECKeyPairSGX2OpenSSL(const sgx_ec256_private_t *inPrv, EC_KEY *outKeyPair, 
 
 	if (!eccCtx || !inPrv || !outKeyPair)
 	{
+		CloseTempContext(inCtx, eccCtx);
 		return false;
 	}
 
@@ -427,6 +439,7 @@ bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_KEY *outKeyPair, sg
 
 	if (!eccCtx || !inPub || !outKeyPair)
 	{
+		CloseTempContext(inCtx, eccCtx);
 		return false;
 	}
 

@@ -17,6 +17,8 @@ enclave {
 
 		public DecentNodeMode ecall_get_decent_mode();
 		
+		public int ecall_decent_process_ias_ra_report([in, string] const char* reportStr);
+		
 		public sgx_status_t ecall_transit_to_decent_node([in, string] const char* id, int is_server);
 		
 		public sgx_status_t ecall_process_ra_msg0_send_decent([in, string] const char* clientID);

@@ -193,6 +193,11 @@ void SGXRAEnclave::SetSPID(const sgx_spid_t & spid)
 	std::memcpy(&g_sgxSPID, &spid, sizeof(sgx_spid_t));
 }
 
+std::string SGXRAEnclave::GetSelfHash()
+{
+	return g_selfHash;
+}
+
 sgx_status_t SGXRAEnclave::ServiceProviderInit()
 {
 	sgx_status_t res = SGX_SUCCESS;
@@ -364,7 +369,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 
 	std::memcpy(&spCTX.m_secProp, &msg3->ps_sec_prop, sizeof(sgx_ps_sec_prop_desc_t));
 
-	const sgx_quote_t* p_quote = reinterpret_cast<const sgx_quote_t *>(msg3->quote);
+	//const sgx_quote_t* p_quote = reinterpret_cast<const sgx_quote_t *>(msg3->quote);
 
 	sgx_sha_state_handle_t sha_handle = nullptr;
 	sgx_report_data_t report_data = { 0 };
@@ -411,22 +416,6 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 		std::memcpy(outOriRD, &report_data, sizeof(sgx_report_data_t));
 	}
 
-	if (spCTX.m_reportDataVerifier(report_data.d, std::vector<uint8_t>(p_quote->report_body.report_data.d, p_quote->report_body.report_data.d + sizeof(report_data))))
-	{
-		SGXRAEnclave::DropClientRAState(clientID);
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg3, report_data doesn't match!");
-	}
-
-	const sgx_measurement_t& enclaveHash = p_quote->report_body.mr_enclave;
-	COMMON_PRINTF("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
-	if (SerializeStruct(enclaveHash) != g_selfHash)
-	{
-		SGXRAEnclave::DropClientRAState(clientID);
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg3, enclave program hash doesn't match!");
-	}
-
 	//TODO: Verify quote report here.
 #ifdef SIMULATING_ENCLAVE
 	COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", "Simulated!");
@@ -435,55 +424,13 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 	//outMsg4->id = 222;
 
 #else
-	std::vector<X509*> certs;
-	LoadX509CertsFromStr(certs, IAS_REPORT_CERT);
-	X509* iasCert = certs[0];
 
-	LoadX509CertsFromStr(certs, reportCert);
-
-	bool certVerRes = VerifyIasReportCert(iasCert, certs);
-
-	std::vector<uint8_t> buffer1 = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
-
-	bool signVerRes = VerifyIasReportSignature(iasReport, buffer1, certs[0]);
-
-	FreeX509Cert(&iasCert);
-	FreeX509Cert(certs);
-
-	COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
-	COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
-	if (!certVerRes || !signVerRes)
+	bool iasVerifyRes = SGXRAEnclave::VerifyIASReport(&outMsg4->status, iasReport, reportCert, reportSign, g_selfHash, report_data, spCTX.m_reportDataVerifier, spCTX.m_nonce.c_str());
+	if (!iasVerifyRes)
 	{
 		SGXRAEnclave::DropClientRAState(clientID);
 		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg3, IAS report signature invalid!");
-	}
-
-	rapidjson::Document jsonDoc;
-	jsonDoc.Parse(iasReport);
-	outMsg4->status = ParseIASQuoteStatus(jsonDoc["isvEnclaveQuoteStatus"].GetString());
-	COMMON_PRINTF("IAS Report Verify Result:           %s \n", outMsg4->status == ias_quote_status_t::IAS_QUOTE_OK ? "Success!" : "Failed!");
-
-	std::string msg3QuoteBody = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(p_quote), sizeof(sgx_quote_t) - sizeof(p_quote->signature_len));
-	std::string reportQuoteBody = jsonDoc["isvEnclaveQuoteBody"].GetString();
-	bool isQuoteBodyMatch = (msg3QuoteBody == reportQuoteBody);
-	COMMON_PRINTF("IAS Report Is Quote Match:          %s \n", isQuoteBodyMatch ? "Yes!" : "No!");
-	if (!isQuoteBodyMatch)
-	{
-		SGXRAEnclave::DropClientRAState(clientID);
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg3, quote body doesn't match!");
-	}
-
-	std::string iasNonceReport(jsonDoc["nonce"].GetString());
-	const std::string& iasNonceLocal = spCTX.m_nonce;
-	bool isNonceMatch = (iasNonceReport == iasNonceLocal);
-	COMMON_PRINTF("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
-	if (!isNonceMatch)
-	{
-		SGXRAEnclave::DropClientRAState(clientID);
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg3, nonce doesn't match!");
+		FUNC_ERR("Processing msg3, IAS report got rejected!");
 	}
 
 #endif // SIMULATING_ENCLAVE
@@ -511,4 +458,59 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 	}
 
 	return SGX_SUCCESS;
+}
+
+bool SGXRAEnclave::VerifyIASReport(ias_quote_status_t* outStatus,const std::string& iasReport, const std::string& reportCert, const std::string& reportSign, const std::string& progHash, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce)
+{
+	std::vector<X509*> certs;
+	LoadX509CertsFromStr(certs, IAS_REPORT_CERT);
+	X509* iasCert = certs[0];
+
+	LoadX509CertsFromStr(certs, reportCert);
+
+	bool certVerRes = VerifyIasReportCert(iasCert, certs);
+
+	std::vector<uint8_t> buffer1 = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
+
+	bool signVerRes = VerifyIasReportSignature(iasReport, buffer1, certs[0]);
+
+	FreeX509Cert(&iasCert);
+	FreeX509Cert(certs);
+
+	COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
+	COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
+
+	if (!certVerRes || !signVerRes)
+	{
+		return false;
+	}
+
+	rapidjson::Document jsonDoc;
+	jsonDoc.Parse(iasReport.c_str());
+	*outStatus = ParseIASQuoteStatus(jsonDoc["isvEnclaveQuoteStatus"].GetString());
+	//COMMON_PRINTF("IAS Report Verify Result:           %s \n", quoteStatus == ias_quote_status_t::IAS_QUOTE_OK ? "Success!" : "Failed!");
+
+	if (nonce)
+	{
+		bool isNonceMatch = (std::memcmp(jsonDoc["nonce"].GetString(), nonce, std::strlen(nonce)) == 0);
+		COMMON_PRINTF("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
+		if (!isNonceMatch)
+		{
+			return false;
+		}
+	}
+
+	std::string quoteBodyB64 = jsonDoc["isvEnclaveQuoteBody"].GetString();
+	sgx_quote_t quoteBody;
+	DeserializeStruct(quoteBody, quoteBodyB64);
+
+	const sgx_measurement_t& enclaveHash = quoteBody.report_body.mr_enclave;
+	bool isProgHashMatch = (SerializeStruct(enclaveHash) == progHash);
+	COMMON_PRINTF("IAS Report Is Program Hash Match:   %s \n", isProgHashMatch ? "Yes!" : "No!");
+
+	const sgx_report_data_t& reportData = quoteBody.report_body.report_data;
+	bool isReportDataMatch = rdVerifier(oriRD.d, std::vector<uint8_t>(reportData.d, reportData.d + sizeof(sgx_report_data_t)));
+	COMMON_PRINTF("IAS Report Is Report Data Match:    %s \n", isReportDataMatch ? "Yes!" : "No!");
+
+	return certVerRes && signVerRes && isProgHashMatch && isReportDataMatch;
 }

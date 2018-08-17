@@ -8,6 +8,8 @@
 
 #include <sgx_utils.h>
 
+#include <rapidjson/document.h>
+
 #include "../common_enclave/DecentError.h"
 
 #include "../common/Decent.h"
@@ -15,6 +17,7 @@
 #include "../common/DataCoding.h"
 #include "../common/OpenSSLTools.h"
 #include "../common/EnclaveRAState.h"
+#include "../common/DecentRAReport.h"
 #include "../common/DecentCryptoManager.h"
 #include "../common/SGX/sgx_constants.h"
 #include "../common/SGX/sgx_crypto_tools.h"
@@ -36,6 +39,7 @@ namespace
 {
 	static DecentNodeMode g_decentMode = DecentNodeMode::ROOT_SERVER;
 	static std::map<std::string, DecentNodeContext> g_decentNodesMap;
+	static std::map<std::string, std::string> g_pendingDecentNode;
 
 	//Shared objects:
 	static std::shared_ptr<DecentCryptoManager> g_cryptoMgr = std::make_shared<DecentCryptoManager>();
@@ -47,6 +51,44 @@ static bool IsBothWayAttested(const std::string& id)
 	bool isServerAttested = SGXRAEnclave::IsServerAttested(id);
 
 	return isClientAttested && isServerAttested;
+}
+
+static inline bool DecentReportDataVerifier(const std::string& pubSignKey, const uint8_t* initData, const std::vector<uint8_t>& inData)
+{
+	if (pubSignKey.size() == 0)
+	{
+		return false;
+	}
+
+	//COMMON_PRINTF("Verifying report data with Public Key:\n%s\n", pubSignKey.c_str());
+	sgx_sha_state_handle_t shaState;
+	sgx_sha256_hash_t tmpHash;
+	sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		return false;
+	}
+	enclaveRet = sgx_sha256_update(initData, SGX_SHA256_HASH_SIZE / 2, shaState);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		sgx_sha256_close(shaState);
+		return false;
+	}
+	enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubSignKey.data()), static_cast<uint32_t>(pubSignKey.size()), shaState);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		sgx_sha256_close(shaState);
+		return false;
+	}
+	enclaveRet = sgx_sha256_get_hash(shaState, &tmpHash);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		sgx_sha256_close(shaState);
+		return false;
+	}
+	sgx_sha256_close(shaState);
+
+	return std::memcmp(tmpHash, inData.data(), sizeof(sgx_sha256_hash_t)) == 0;
 }
 
 bool DecentEnclave::IsAttested(const std::string& id)
@@ -77,6 +119,57 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 extern "C" void ecall_decent_terminate()
 {
 
+}
+
+extern "C" int ecall_decent_process_ias_ra_report(const char* reportStr)
+{
+	rapidjson::Document jsonDoc;
+	jsonDoc.Parse(reportStr);
+
+	if (!jsonDoc.HasMember(Decent::RAReport::LABEL_ROOT))
+	{
+		return 0;
+	}
+	rapidjson::Value& jsonRoot = jsonDoc[Decent::RAReport::LABEL_ROOT];
+
+	if (!jsonRoot.HasMember(Decent::RAReport::LABEL_TYPE) || !(std::string(jsonRoot[Decent::RAReport::LABEL_TYPE].GetString()) == Decent::RAReport::VALUE_REPORT_TYPE))
+	{
+		return 0;
+	}
+
+	std::string selfHash = SGXRAEnclave::GetSelfHash();
+	std::string pubKey = jsonRoot[Decent::RAReport::LABEL_PUB_KEY].GetString();
+	std::string iasReport = jsonRoot[Decent::RAReport::LABEL_IAS_REPORT].GetString();
+	std::string iasSign = jsonRoot[Decent::RAReport::LABEL_IAS_SIGN].GetString();
+	std::string iasCertChain = jsonRoot[Decent::RAReport::LABEL_IAS_CERT_CHAIN].GetString();
+	std::string oriRDB64 = jsonRoot[Decent::RAReport::LABEL_ORI_REP_DATA].GetString();
+	sgx_report_data_t oriReportData;
+	DeserializeStruct(oriReportData, oriRDB64);
+
+	ReportDataVerifier reportDataVerifier = [pubKey](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
+	{
+		return DecentReportDataVerifier(pubKey, initData, inData);
+	};
+
+	ias_quote_status_t quoteStatus = ias_quote_status_t::IAS_QUOTE_SIGNATURE_INVALID;
+	bool reportVerifyRes = SGXRAEnclave::VerifyIASReport(&quoteStatus, iasReport, iasCertChain, iasSign, selfHash, oriReportData, reportDataVerifier, nullptr);
+
+	if (reportVerifyRes)
+	{
+		EC_KEY* pubECKey = ECKeyPubFromPEMStr(pubKey);
+		if (!pubECKey)
+		{
+			return 0;
+		}
+		sgx_ec256_public_t sgxPubKey;
+		if (!ECKeyPairOpenSSL2SGX(pubECKey, nullptr, &sgxPubKey, nullptr))
+		{
+			return 0;
+		}
+		g_pendingDecentNode[SerializePubKey(sgxPubKey)] = pubKey;
+	}
+
+	return reportVerifyRes ? 1 : 0;
 }
 
 extern "C" sgx_status_t ecall_transit_to_decent_node(const char* id, int is_server)
@@ -134,40 +227,7 @@ extern "C" sgx_status_t ecall_process_ra_msg0_send_decent(const char* clientID)
 		}
 		std::string pubKeyPem = ECKeyPubGetPEMStr(pubKey);
 		EC_KEY_free(pubKey);
-		if (pubKeyPem.size() == 0)
-		{
-			return false;
-		}
-
-		COMMON_PRINTF("Verifying report data with Public Key:\n%s\n", pubKeyPem.c_str());
-		sgx_sha_state_handle_t shaState;
-		sgx_sha256_hash_t tmpHash;
-		sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return false;
-		}
-		enclaveRet = sgx_sha256_update(initData, SGX_SHA256_HASH_SIZE / 2, shaState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			sgx_sha256_close(shaState);
-			return false;
-		}
-		enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubKeyPem.data()), static_cast<uint32_t>(pubKeyPem.size()), shaState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			sgx_sha256_close(shaState);
-			return false;
-		}
-		enclaveRet = sgx_sha256_get_hash(shaState, &tmpHash);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			sgx_sha256_close(shaState);
-			return false;
-		}
-		sgx_sha256_close(shaState);
-
-		return std::memcmp(tmpHash, inData.data(), inData.size()) == 0;
+		return DecentReportDataVerifier(pubKeyPem, initData, inData);
 	};
 
 	SGXRAEnclave::SetReportDataVerifier(clientID, reportDataVerifier); //Imposible to return false on this call.

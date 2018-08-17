@@ -14,6 +14,7 @@
 #include "../common/OpenSSLTools.h"
 #include "../common/SGX/sgx_ra_msg4.h"
 #include "../common/SGX/SGXOpenSSLConversions.h"
+#include "../common/DecentRAReport.h"
 
 #include "SGXEnclaveRuntimeException.h"
 
@@ -189,16 +190,27 @@ bool SGXDecentEnclave::CreateDecentSelfRAReport(std::string & outReport)
 	bool opensslRet = ECKeyPubSGX2OpenSSL(&pubKey, pubECKey, nullptr);
 
 	Json::Value root;
-	Json::Value& decentReportBody = root["DecentSelfRAReport"];
-	decentReportBody["Type"] = "IAS";
-	decentReportBody["PublicKey"] = ECKeyPubGetPEMStr(pubECKey);
-	decentReportBody["IASReport"] = iasReport;
-	decentReportBody["IASSignature"] = reportSign;
-	decentReportBody["IASCertChain"] = reportCertChain;
-	decentReportBody["OriReportData"] = SerializeStruct(oriReportData);
+	Json::Value& decentReportBody = root[Decent::RAReport::LABEL_ROOT];
+	decentReportBody[Decent::RAReport::LABEL_TYPE] = Decent::RAReport::VALUE_REPORT_TYPE;
+	decentReportBody[Decent::RAReport::LABEL_PUB_KEY] = ECKeyPubGetPEMStr(pubECKey);
+	decentReportBody[Decent::RAReport::LABEL_IAS_REPORT] = iasReport;
+	decentReportBody[Decent::RAReport::LABEL_IAS_SIGN] = reportSign;
+	decentReportBody[Decent::RAReport::LABEL_IAS_CERT_CHAIN] = reportCertChain;
+	decentReportBody[Decent::RAReport::LABEL_ORI_REP_DATA] = SerializeStruct(oriReportData);
 
 	outReport = root.toStyledString();
 	return true;
+}
+
+bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_decent_process_ias_ra_report(GetEnclaveId(), &retval, inReport.c_str());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ias_ra_report);
+
+	return retval != 0;
 }
 
 sgx_status_t SGXDecentEnclave::TransitToDecentNode(const std::string & id, bool isSP)

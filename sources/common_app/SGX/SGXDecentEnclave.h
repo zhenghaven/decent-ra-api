@@ -25,7 +25,8 @@ public:
 	virtual void SetDecentMode(DecentNodeMode inDecentMode) override;
 	virtual DecentNodeMode GetDecentMode() override;
 
-	virtual bool CreateDecentSelfRAReport(std::string& outReport) override;
+	virtual bool CreateDecentSelfRAReport(std::string& outReport) override; 
+	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
 
 	virtual sgx_status_t TransitToDecentNode(const std::string& id, bool isSP) override;
 

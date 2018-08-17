@@ -78,6 +78,7 @@ int main(int argc, char ** argv)
 
 	std::string decentSelfRaReport;
 	expEnc.CreateDecentSelfRAReport(decentSelfRaReport);
+	expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
 
 	sgx_ec256_public_t signPubKey;
 	expEnc.GetRASPSignPubKey(signPubKey);

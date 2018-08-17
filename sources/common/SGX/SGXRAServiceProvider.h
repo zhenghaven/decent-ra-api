@@ -7,10 +7,12 @@
 
 #include <sgx_error.h>
 
+#include "sgx_ra_msg4.h"
+
 #include <functional>
 #include <vector>
-
 typedef std::function<bool(const uint8_t* initData, const std::vector<uint8_t>& inData)> ReportDataVerifier;
+
 
 typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
@@ -35,6 +37,8 @@ namespace SGXRAEnclave
 	bool GetClientKeys(const std::string& clientID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t* outSK, sgx_ec_key_128bit_t* outMK);
 	void SetTargetEnclaveHash(const std::string& hashBase64);
 	void SetSPID(const sgx_spid_t& spid);
+	std::string GetSelfHash();
+	bool VerifyIASReport(ias_quote_status_t* outStatus, const std::string& iasReport, const std::string& reportCert, const std::string& reportSign, const std::string& progHash, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce);
 
 	sgx_status_t ServiceProviderInit();
 	void ServiceProviderTerminate();
