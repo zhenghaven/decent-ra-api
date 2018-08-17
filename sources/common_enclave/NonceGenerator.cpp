@@ -6,7 +6,7 @@
 #include <sgx_trts.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
-//#include "../common/CryptoTools.h"
+//#include "../common/DataCoding.h"
 
 namespace
 {

@@ -11,7 +11,7 @@
 
 #include "../DecentError.h"
 
-#include "../../common/CryptoTools.h"
+#include "../../common/DataCoding.h"
 #include "../../common/EnclaveRAState.h"
 #include "../../common/RACryptoManager.h"
 #include "../../common/SGX/sgx_ra_msg4.h"

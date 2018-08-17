@@ -6,29 +6,20 @@
 
 #include <sgx_key_exchange.h>
 
-#include <cppcodec/base64_rfc4648.hpp>
-
 #include "../IAS/IASUtil.h"
-//#include "../../common/CryptoTools.h"
+#include "../../../common/DataCoding.h"
 
-SGXRAMessage3::SGXRAMessage3(const std::string& senderID, sgx_ra_msg3_t& msg3Data, const std::vector<uint8_t>& quoteData) :
+SGXRAMessage3::SGXRAMessage3(const std::string& senderID, const std::vector<uint8_t>& msg3Data) :
 	SGXRAMessage(senderID),
-	m_msg3Data(nullptr)
+	m_msg3Data(msg3Data)
 {
-	m_msg3Data = reinterpret_cast<sgx_ra_msg3_t*>(std::malloc(sizeof(sgx_ra_msg3_t) + quoteData.size()));
-
-	std::memcpy(m_msg3Data, &msg3Data, sizeof(sgx_ra_msg3_t));
-
-	std::memcpy(m_msg3Data->quote, quoteData.data(), quoteData.size());
-
-	m_isQuoteValid = (quoteData.size() > 0);
-
-	m_isValid = m_isQuoteValid;
+	const sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<const sgx_ra_msg3_t*>(m_msg3Data.data());
+	const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(msg3Ref.quote);
+	m_isValid = m_msg3Data.size() == (sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len);
 }
 
 SGXRAMessage3::SGXRAMessage3(Json::Value& msg) :
-	SGXRAMessage(msg),
-	m_msg3Data(nullptr)
+	SGXRAMessage(msg)
 {
 	if (!IsValid())
 	{
@@ -49,37 +40,21 @@ SGXRAMessage3::SGXRAMessage3(Json::Value& msg) :
 	if (root.isMember("MsgType")
 		&& root["MsgType"].asString() == SGXRAMessage::GetMessageTypeStr(GetType())
 		&& root.isMember("Untrusted")
-		&& root["Untrusted"].isMember("msg3Data")
-		&& root["Untrusted"].isMember("quoteData"))
+		&& root["Untrusted"].isMember("msg3Data"))
 	{
-		std::string quoteB64 = root["Untrusted"]["quoteData"].asString();
-		std::vector<uint8_t> buffer1;
-		cppcodec::base64_rfc4648::decode(buffer1, quoteB64);
-
-		m_msg3Data = reinterpret_cast<sgx_ra_msg3_t*>(std::malloc(sizeof(sgx_ra_msg3_t) + buffer1.size()));
-
-		//Get message 3 normal data.
-		std::string msg3B64Str = root["Untrusted"]["msg3Data"].asString();
-		std::vector<uint8_t> buffer2(sizeof(sgx_ra_msg3_t), 0);
-		cppcodec::base64_rfc4648::decode(buffer2, msg3B64Str);
-		memcpy(m_msg3Data, buffer2.data(), sizeof(sgx_ra_msg3_t));
-
-		std::memcpy(m_msg3Data->quote, buffer1.data(), buffer1.size());
-		
-		//Check if valid.
-		m_isQuoteValid = (buffer1.size() > 0);
-		m_isValid = m_isQuoteValid;
+		DeserializeStruct(m_msg3Data, root["Untrusted"]["msg3Data"].asString());
+		const sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<const sgx_ra_msg3_t*>(m_msg3Data.data());
+		const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(msg3Ref.quote);
+		m_isValid = m_msg3Data.size() == (sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len);
 	}
 	else
 	{
-		m_msg3Data = reinterpret_cast<sgx_ra_msg3_t*>(std::malloc(sizeof(sgx_ra_msg3_t)));
 		m_isValid = false;
 	}
 }
 
 SGXRAMessage3::~SGXRAMessage3()
 {
-	std::free(m_msg3Data);
 }
 
 std::string SGXRAMessage3::GetMessgaeSubTypeStr() const
@@ -97,27 +72,26 @@ bool SGXRAMessage3::IsResp() const
 	return false;
 }
 
-const sgx_ra_msg3_t& SGXRAMessage3::GetMsg3Data() const
+const sgx_ra_msg3_t & SGXRAMessage3::GetMsg3() const
 {
-	return *m_msg3Data;
+	return *reinterpret_cast<const sgx_ra_msg3_t*>(m_msg3Data.data());
+}
+
+const std::vector<uint8_t>& SGXRAMessage3::GetMsg3Data() const
+{
+	return m_msg3Data;
 }
 
 const uint32_t SGXRAMessage3::GetMsg3DataSize() const
 {
-	const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(m_msg3Data->quote);
-	return sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len;
+	return static_cast<uint32_t>(m_msg3Data.size());
 }
 
 std::string SGXRAMessage3::GetQuoteBase64() const
 {
-	sgx_quote_t* quotePtr = reinterpret_cast<sgx_quote_t*>(m_msg3Data->quote);
-	std::string quoteB64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(quotePtr), sizeof(sgx_quote_t) + quotePtr->signature_len);
-	return quoteB64Str;
-}
-
-bool SGXRAMessage3::IsQuoteValid() const
-{
-	return m_isQuoteValid;
+	const sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<const sgx_ra_msg3_t*>(m_msg3Data.data());
+	const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(msg3Ref.quote);
+	return SerializeStruct(quotePtr, sizeof(sgx_quote_t) + quotePtr->signature_len);
 }
 
 Json::Value & SGXRAMessage3::GetJsonMsg(Json::Value & outJson) const
@@ -129,10 +103,7 @@ Json::Value & SGXRAMessage3::GetJsonMsg(Json::Value & outJson) const
 
 	Json::Value jsonUntrusted;
 
-	std::string msg3B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(m_msg3Data), sizeof(sgx_ra_msg3_t));
-	jsonUntrusted["msg3Data"] = msg3B64Str;
-
-	jsonUntrusted["quoteData"] = GetQuoteBase64();
+	jsonUntrusted["msg3Data"] = SerializeStruct(m_msg3Data.data(), m_msg3Data.size());
 
 	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
 	child["Untrusted"] = jsonUntrusted;

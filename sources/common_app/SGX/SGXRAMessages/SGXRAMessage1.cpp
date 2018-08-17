@@ -6,7 +6,7 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
-//#include "../../common/CryptoTools.h"
+//#include "../../common/DataCoding.h"
 
 SGXRAMessage1::SGXRAMessage1(const std::string& senderID, sgx_ra_msg1_t& msg1Data) :
 	SGXRAMessage(senderID),

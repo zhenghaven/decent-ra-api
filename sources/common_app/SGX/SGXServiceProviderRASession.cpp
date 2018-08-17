@@ -3,6 +3,7 @@
 #include <json/json.h>
 
 #include "../../common/SGX/sgx_ra_msg4.h"
+#include "../../common/DataCoding.h"
 
 #include "../Common.h"
 
@@ -165,16 +166,6 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		return false;
 	}
 
-	sgx_ra_msg2_t msg2Data;
-	enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Data);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		SGXRAMessageErr errMsg(msgSenderID, "Extended Group ID is not accepted!");
-		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
-		return false;
-	}
-
 	std::string sigRlStr;
 	int32_t respCode = 0;
 
@@ -191,7 +182,24 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		delete reqs;
 		return false;
 	}
-	resp = new SGXRAMessage2(msgSenderID, msg2Data, sigRlStr);
+
+	std::vector<uint8_t> sigRLData;
+	DeserializeStruct(sigRLData, sigRlStr);
+	std::vector<uint8_t> msg2Data;
+	msg2Data.resize(sizeof(sgx_ra_msg2_t) + sigRLData.size());
+	sgx_ra_msg2_t& msg2Ref = *reinterpret_cast<sgx_ra_msg2_t*>(msg2Data.data());
+
+	enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Ref);
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		SGXRAMessageErr errMsg(msgSenderID, "Extended Group ID is not accepted!");
+		m_connection->Send(errMsg.ToJsonString());
+		delete reqs;
+		return false;
+	}
+	msg2Ref.sig_rl_size = static_cast<uint32_t>(sigRLData.size());
+	std::memcpy(msg2Data.data() + sizeof(sgx_ra_msg2_t), sigRLData.data(), sigRLData.size());
+	resp = new SGXRAMessage2(msgSenderID, msg2Data);
 
 	m_connection->Send(resp->ToJsonString());
 	delete resp;
@@ -204,7 +212,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	reqs = JsonMessageParser(msgBuffer);
 
 	SGXRAMessage3* msg3 = dynamic_cast<SGXRAMessage3*>(reqs);
-	if (!reqs || !msg3 || !msg3->IsValid() || !msg3->IsQuoteValid())
+	if (!reqs || !msg3 || !msg3->IsValid())
 	{
 		SGXRAMessageErr errMsg(msgSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
@@ -232,7 +240,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	std::string iasReportSign;
 	std::string iasCert;
 	m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert);
-	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), msg3->GetMsg3DataSize(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
+	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");

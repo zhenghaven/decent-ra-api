@@ -17,8 +17,8 @@
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include "../common_app/SGX/IAS/IASUtil.h"
-#include "../common/ias_report_cert.h"
-#include "../common/CryptoTools.h"
+#include "../common/SGX/ias_report_cert.h"
+#include "../common/OpenSSLTools.h"
 
 #ifdef _MSC_VER
 

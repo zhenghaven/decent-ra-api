@@ -10,7 +10,7 @@
 
 #include <sgx_tcrypto.h>
 
-#include "../common/CryptoTools.h"
+#include "../common/DataCoding.h"
 #include "../common/OpenSSLTools.h"
 #include "../common/SGX/SGXOpenSSLConversions.h"
 
@@ -75,7 +75,9 @@ int main(int argc, char ** argv)
 
 	IASConnector iasConnector;
 	ExampleEnclave expEnc(g_sgxSPID, ENCLAVE_FILENAME, iasConnector, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
-	//expEnc.InitRAEnvironment();
+
+	std::string decentSelfRaReport;
+	expEnc.CreateDecentSelfRAReport(decentSelfRaReport);
 
 	sgx_ec256_public_t signPubKey;
 	expEnc.GetRASPSignPubKey(signPubKey);

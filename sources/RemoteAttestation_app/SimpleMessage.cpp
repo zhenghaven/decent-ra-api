@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "../common/CryptoTools.h"
+#include "../common/DataCoding.h"
 
 SimpleMessage::SimpleMessage(const std::string & senderID, const uint64_t& secret, const sgx_aes_gcm_128bit_tag_t& inSecretMac) :
 	EnclaveMessages(senderID),
@@ -38,8 +38,8 @@ SimpleMessage::SimpleMessage(Json::Value & msg) :
 		&& root["Trusted"]["Secret"].isString()
 		&& root["Trusted"]["SecretMac"].isString())
 	{
-		DeserializeStruct(root["Trusted"]["Secret"].asString(), m_secret);
-		DeserializeStruct(root["Trusted"]["SecretMac"].asString(), m_secretMac);
+		DeserializeStruct(m_secret, root["Trusted"]["Secret"].asString());
+		DeserializeStruct(m_secretMac, root["Trusted"]["SecretMac"].asString());
 		m_isValid = true;
 	}
 	else

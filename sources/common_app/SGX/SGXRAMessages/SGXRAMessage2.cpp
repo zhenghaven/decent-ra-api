@@ -6,44 +6,18 @@
 
 #include <sgx_key_exchange.h>
 
-#include <cppcodec/base64_rfc4648.hpp>
-
 #include "../IAS/IASUtil.h"
-//#include "../../common/CryptoTools.h"
+#include "../../../common/DataCoding.h"
 
-SGXRAMessage2::SGXRAMessage2(const std::string& senderID, sgx_ra_msg2_t& msg2Data, const std::string& sigRL) :
+SGXRAMessage2::SGXRAMessage2(const std::string& senderID, const std::vector<uint8_t>& msg2Data) :
 	SGXRAMessage(senderID),
-	m_msg2Data(nullptr),
-	m_rl(sigRL)
+	m_msg2Data(msg2Data)
 {
-	//std::cout << "Signature: " << std::endl;
-	//size_t xSize = sizeof(msg2Data.sign_gb_ga.x) / sizeof(uint32_t);
-	//size_t ySize = sizeof(msg2Data.sign_gb_ga.y) / sizeof(uint32_t);
-	//for (int i = 0; i < xSize; ++i)
-	//{
-	//	std::cout << msg2Data.sign_gb_ga.x[i] << " ";
-	//}
-	//std::cout << std::endl;
-	//for (int i = 0; i < ySize; ++i)
-	//{
-	//	std::cout << msg2Data.sign_gb_ga.y[i] << " ";
-	//}
-	//std::cout << std::endl;
-
-	//std::cout << "g_b: " << std::endl << SerializePubKey(msg2Data.g_b) << std::endl;
-
-	m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + sigRL.size()));
-	std::memcpy(m_msg2Data, &msg2Data, sizeof(sgx_ra_msg2_t));
-	m_msg2Data->sig_rl_size = static_cast<uint32_t>(sigRL.size());
-
-	std::memcpy(m_msg2Data->sig_rl, sigRL.data(), sigRL.size());
-
 	m_isValid = true;
 }
 
 SGXRAMessage2::SGXRAMessage2(Json::Value& msg) :
-	SGXRAMessage(msg),
-	m_msg2Data(nullptr)
+	SGXRAMessage(msg)
 {
 	if (!IsValid())
 	{
@@ -64,49 +38,22 @@ SGXRAMessage2::SGXRAMessage2(Json::Value& msg) :
 	if (root.isMember("MsgType")
 		&& root["MsgType"].asString() == SGXRAMessage::GetMessageTypeStr(GetType())
 		&& root.isMember("Untrusted")
-		&& root["Untrusted"].isMember("msg2Data")
-		&& root["Untrusted"].isMember("rl"))
+		&& root["Untrusted"].isMember("msg2Data"))
 	{
-		//Get data in revocation list.
-		m_rl = root["Untrusted"]["rl"].asString();
-
-		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t) + m_rl.size()));
-
-		//Get message 2 normal data.
-		std::string msg2B64Str = root["Untrusted"]["msg2Data"].asString();
-		std::vector<uint8_t> buffer2(sizeof(sgx_ra_msg2_t), 0);
-		cppcodec::base64_rfc4648::decode(buffer2, msg2B64Str);
-		memcpy(m_msg2Data, buffer2.data(), sizeof(sgx_ra_msg2_t));
+		DeserializeStruct(m_msg2Data, root["Untrusted"]["msg2Data"].asString());
+		sgx_ra_msg2_t& msg2Ref = *reinterpret_cast<sgx_ra_msg2_t*>(m_msg2Data.data());
 		
 		//Check if valid.
-		m_isValid = (m_msg2Data->sig_rl_size == m_rl.size());
-		//Copy the revocation list data anyway.
-		std::memcpy(m_msg2Data->sig_rl, m_rl.data(), m_rl.size());
+		m_isValid = (msg2Ref.sig_rl_size + sizeof(sgx_ra_msg2_t) == m_msg2Data.size());
 	}
 	else
 	{
-		m_msg2Data = reinterpret_cast<sgx_ra_msg2_t*>(std::malloc(sizeof(sgx_ra_msg2_t)));
 		m_isValid = false;
 	}
-
-	//std::cout << "Signature: " << std::endl;
-	//size_t xSize = sizeof(m_msg2Data->sign_gb_ga.x) / sizeof(uint32_t);
-	//size_t ySize = sizeof(m_msg2Data->sign_gb_ga.y) / sizeof(uint32_t);
-	//for (int i = 0; i < xSize; ++i)
-	//{
-	//	std::cout << m_msg2Data->sign_gb_ga.x[i] << " ";
-	//}
-	//std::cout << std::endl;
-	//for (int i = 0; i < ySize; ++i)
-	//{
-	//	std::cout << m_msg2Data->sign_gb_ga.y[i] << " ";
-	//}
-	//std::cout << std::endl;
 }
 
 SGXRAMessage2::~SGXRAMessage2()
 {
-	std::free(m_msg2Data);
 }
 
 std::string SGXRAMessage2::GetMessgaeSubTypeStr() const
@@ -124,9 +71,14 @@ bool SGXRAMessage2::IsResp() const
 	return true;
 }
 
-const sgx_ra_msg2_t& SGXRAMessage2::GetMsg2Data() const
+const sgx_ra_msg2_t & SGXRAMessage2::GetMsg2() const
 {
-	return *m_msg2Data;
+	return *reinterpret_cast<const sgx_ra_msg2_t*>(m_msg2Data.data());
+}
+
+const std::vector<uint8_t>& SGXRAMessage2::GetMsg2Data() const
+{
+	return m_msg2Data;
 }
 
 Json::Value & SGXRAMessage2::GetJsonMsg(Json::Value & outJson) const
@@ -138,10 +90,7 @@ Json::Value & SGXRAMessage2::GetJsonMsg(Json::Value & outJson) const
 
 	Json::Value jsonUntrusted;
 
-	std::string msg2B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(m_msg2Data), sizeof(sgx_ra_msg2_t));
-
-	jsonUntrusted["msg2Data"] = msg2B64Str;
-	jsonUntrusted["rl"] = m_rl;
+	jsonUntrusted["msg2Data"] = SerializeStruct(m_msg2Data.data(), m_msg2Data.size());
 
 	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
 	child["Untrusted"] = jsonUntrusted;

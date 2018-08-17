@@ -4,9 +4,16 @@
 
 #include <sgx_ukey_exchange.h>
 
+#include <json/json.h>
+
+#include <openssl/ec.h>
+
 #include <Enclave_u.h>
 
+#include "../common/DataCoding.h"
+#include "../common/OpenSSLTools.h"
 #include "../common/SGX/sgx_ra_msg4.h"
+#include "../common/SGX/SGXOpenSSLConversions.h"
 
 #include "SGXEnclaveRuntimeException.h"
 
@@ -74,14 +81,14 @@ sgx_status_t SGXDecentEnclave::ProcessRAMsg0Send(const std::string & clientID)
 	return retval;
 }
 
-sgx_status_t SGXDecentEnclave::ProcessRAMsg2(const std::string & ServerID, const sgx_ra_msg2_t & inMsg2, const uint32_t & msg2Size, sgx_ra_msg3_t & outMsg3, std::vector<uint8_t>& outQuote, sgx_ra_context_t & inContextID)
+sgx_status_t SGXDecentEnclave::ProcessRAMsg2(const std::string & ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t & inContextID)
 {
-	return SGXEnclave::ProcessRAMsg2(ServerID, inMsg2, msg2Size, outMsg3, outQuote, inContextID, decent_ra_proc_msg2_trusted, decent_ra_get_msg3_trusted);
+	return SGXEnclave::ProcessRAMsg2(ServerID, inMsg2, outMsg3, inContextID, decent_ra_proc_msg2_trusted, decent_ra_get_msg3_trusted);
 }
 
-sgx_status_t SGXDecentEnclave::ProcessRAMsg3(const std::string & clientID, const sgx_ra_msg3_t & inMsg3, const uint32_t msg3Len, const std::string & iasReport, const std::string & reportSign, const std::string& reportCertChain, sgx_ra_msg4_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign)
+sgx_status_t SGXDecentEnclave::ProcessRAMsg3(const std::string & clientID, const std::vector<uint8_t> & inMsg3, const std::string & iasReport, const std::string & reportSign, const std::string& reportCertChain, sgx_ra_msg4_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign, sgx_report_data_t* outOriRD)
 {
-	sgx_status_t retval = SGXEnclaveServiceProvider::ProcessRAMsg3(clientID, inMsg3, msg3Len, iasReport, reportSign, reportCertChain, outMsg4, outMsg4Sign);
+	sgx_status_t retval = SGXEnclaveServiceProvider::ProcessRAMsg3(clientID, inMsg3, iasReport, reportSign, reportCertChain, outMsg4, outMsg4Sign, outOriRD);
 	if (retval != SGX_SUCCESS)
 	{
 		return retval;
@@ -119,6 +126,79 @@ DecentNodeMode SGXDecentEnclave::GetDecentMode()
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_decent_mode);
 
 	return res;
+}
+
+bool SGXDecentEnclave::CreateDecentSelfRAReport(std::string & outReport)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_ec256_public_t pubKey;
+	GetRAClientSignPubKey(pubKey);
+	std::string senderID = SerializeStruct(pubKey);
+
+	sgx_ra_context_t raCtx;
+	sgx_ra_msg1_t msg1;
+	std::vector<uint8_t> msg2;
+	std::string sigRL;
+	std::vector<uint8_t> msg3;
+	sgx_ra_msg4_t msg4;
+	sgx_ec256_signature_t msg4Sign;
+	sgx_report_data_t oriReportData;
+
+	std::string iasNonce;
+	std::string iasReport;
+	std::string reportSign;
+	std::string reportCertChain;
+
+	enclaveRet = ProcessRAMsg0Send(senderID);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg0Send);
+	enclaveRet = ProcessRAMsg0Resp(senderID, pubKey, false, raCtx, msg1);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg0Resp);
+
+	/*TODO: Safety check here: */
+	int16_t webRet = m_ias.GetRevocationList(msg1.gid, sigRL);
+	std::vector<uint8_t> sigRLData;
+	DeserializeStruct(sigRLData, sigRL);
+	msg2.resize(sizeof(sgx_ra_msg2_t) + sigRLData.size());
+	sgx_ra_msg2_t& msg2Ref = *reinterpret_cast<sgx_ra_msg2_t*>(msg2.data());
+
+	enclaveRet = ProcessRAMsg1(senderID, msg1, msg2Ref);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg1);
+
+	msg2Ref.sig_rl_size = static_cast<uint32_t>(sigRLData.size());
+	std::memcpy(msg2.data() + sizeof(sgx_ra_msg2_t), sigRLData.data(), sigRLData.size());
+	
+	enclaveRet = ProcessRAMsg2(senderID, msg2, msg3, raCtx);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg2);
+	enclaveRet = GetIasReportNonce(senderID, iasNonce);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::GetIasReportNonce);
+
+	sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<sgx_ra_msg3_t*>(msg3.data());
+	Json::Value iasReqRoot;
+	iasReqRoot["isvEnclaveQuote"] = static_cast<std::string>(SerializeStruct(msg3Ref.quote, msg3.size() - sizeof(sgx_ra_msg3_t)));
+	iasReqRoot["nonce"] = iasNonce;
+	/*TODO: Safety check here: */
+	webRet = m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, reportSign, reportCertChain);
+
+	enclaveRet = ProcessRAMsg3(senderID, msg3, iasReport, reportSign, reportCertChain, msg4, msg4Sign, &oriReportData);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg3);
+	enclaveRet = ProcessRAMsg4(senderID, msg4, msg4Sign, raCtx);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg4);
+
+	/*TODO: Safety check here: */
+	EC_KEY* pubECKey = EC_KEY_new();
+	bool opensslRet = ECKeyPubSGX2OpenSSL(&pubKey, pubECKey, nullptr);
+
+	Json::Value root;
+	Json::Value& decentReportBody = root["DecentSelfRAReport"];
+	decentReportBody["Type"] = "IAS";
+	decentReportBody["PublicKey"] = ECKeyPubGetPEMStr(pubECKey);
+	decentReportBody["IASReport"] = iasReport;
+	decentReportBody["IASSignature"] = reportSign;
+	decentReportBody["IASCertChain"] = reportCertChain;
+	decentReportBody["OriReportData"] = SerializeStruct(oriReportData);
+
+	outReport = root.toStyledString();
+	return true;
 }
 
 sgx_status_t SGXDecentEnclave::TransitToDecentNode(const std::string & id, bool isSP)

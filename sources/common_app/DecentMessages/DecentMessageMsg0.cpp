@@ -1,6 +1,6 @@
 #include "DecentMessageMsg0.h"
 
-#include "../../common/CryptoTools.h"
+#include "../../common/DataCoding.h"
 
 DecentMessageMsg0::DecentMessageMsg0(const std::string & senderID, const sgx_ec256_public_t& inSignKey, const sgx_ec256_signature_t& inSignSign, const sgx_ec256_public_t& inEncrKey, const sgx_ec256_signature_t& inEncrSign) :
 	DecentMessage(senderID),
@@ -44,10 +44,10 @@ DecentMessageMsg0::DecentMessageMsg0(Json::Value & msg) :
 		&& root["Untrusted"]["EncrKey"].isString()
 		&& root["Untrusted"]["EncrSign"].isString())
 	{
-		DeserializeStruct(root["Untrusted"]["SignKey"].asString(), m_signKey);
-		DeserializeStruct(root["Untrusted"]["SignSign"].asString(), m_signSign);
-		DeserializeStruct(root["Untrusted"]["EncrKey"].asString(), m_encrKey);
-		DeserializeStruct(root["Untrusted"]["EncrSign"].asString(), m_encrSign);
+		DeserializeStruct(m_signKey, root["Untrusted"]["SignKey"].asString());
+		DeserializeStruct(m_signSign, root["Untrusted"]["SignSign"].asString());
+		DeserializeStruct(m_encrKey, root["Untrusted"]["EncrKey"].asString());
+		DeserializeStruct(m_encrSign, root["Untrusted"]["EncrSign"].asString());
 		m_isValid = true;
 	}
 	else

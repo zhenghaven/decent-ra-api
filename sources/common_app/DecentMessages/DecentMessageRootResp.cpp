@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "../../common/CryptoTools.h"
+#include "../../common/DataCoding.h"
 
 DecentMessageRootResp::DecentMessageRootResp(const std::string& senderID,
 	const sgx_ec256_private_t& inPriSignKey, const sgx_aes_gcm_128bit_tag_t& inPriSignKeyMac,
@@ -64,15 +64,15 @@ DecentMessageRootResp::DecentMessageRootResp(Json::Value & msg) :
 		&& root["Untrusted"]["PubEncrKeyMac"].isString()
 		)
 	{
-		DeserializeStruct(root["Untrusted"]["PriSignKey"].asString(), m_priSignKey);
-		DeserializeStruct(root["Untrusted"]["PriSignKeyMac"].asString(), m_priSignKeyMac);
-		DeserializeStruct(root["Untrusted"]["PubSignKey"].asString(), m_pubSignKey);
-		DeserializeStruct(root["Untrusted"]["PubSignKeyMac"].asString(), m_pubSignKeyMac);
+		DeserializeStruct(m_priSignKey, root["Untrusted"]["PriSignKey"].asString());
+		DeserializeStruct(m_priSignKeyMac, root["Untrusted"]["PriSignKeyMac"].asString());
+		DeserializeStruct(m_pubSignKey, root["Untrusted"]["PubSignKey"].asString());
+		DeserializeStruct(m_pubSignKeyMac,root["Untrusted"]["PubSignKeyMac"].asString());
 
-		DeserializeStruct(root["Untrusted"]["PriEncrKey"].asString(), m_priEncrKey);
-		DeserializeStruct(root["Untrusted"]["PriEncrKeyMac"].asString(), m_priEncrKeyMac);
-		DeserializeStruct(root["Untrusted"]["PubEncrKey"].asString(), m_pubEncrKey);
-		DeserializeStruct(root["Untrusted"]["PubEncrKeyMac"].asString(), m_pubEncrKeyMac);
+		DeserializeStruct(m_priEncrKey,root["Untrusted"]["PriEncrKey"].asString());
+		DeserializeStruct(m_priEncrKeyMac,root["Untrusted"]["PriEncrKeyMac"].asString());
+		DeserializeStruct(m_pubEncrKey,root["Untrusted"]["PubEncrKey"].asString());
+		DeserializeStruct(m_pubEncrKeyMac,root["Untrusted"]["PubEncrKeyMac"].asString());
 		m_isValid = true;
 	}
 	else

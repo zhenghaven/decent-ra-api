@@ -16,7 +16,8 @@
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include "../../common/CommonTool.h"
-#include "../../common/CryptoTools.h"
+#include "../../common/DataCoding.h"
+#include "../../common/OpenSSLTools.h"
 #include "../../common/NonceGenerator.h"
 #include "../../common/EnclaveRAState.h"
 #include "../../common/RACryptoManager.h"
@@ -323,7 +324,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 	return res; //Error return. (Error from SGX)
 }
 
-sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign)
+sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign, sgx_report_data_t* outOriRD)
 {
 	auto it = g_clientsMap.find(clientID);
 	if (it == g_clientsMap.end()
@@ -405,6 +406,11 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 		return res; //Error return. (Error from SGX)
 	}
 	
+	if (outOriRD)
+	{
+		std::memcpy(outOriRD, &report_data, sizeof(sgx_report_data_t));
+	}
+
 	if (spCTX.m_reportDataVerifier(report_data.d, std::vector<uint8_t>(p_quote->report_body.report_data.d, p_quote->report_body.report_data.d + sizeof(report_data))))
 	{
 		SGXRAEnclave::DropClientRAState(clientID);

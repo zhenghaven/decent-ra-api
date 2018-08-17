@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "../../common/CryptoTools.h"
+#include "../../common/DataCoding.h"
 
 DecentMessageApplResp::DecentMessageApplResp(const std::string & senderID, const sgx_ec256_signature_t& signSign, const sgx_aes_gcm_128bit_tag_t& signMac, const sgx_ec256_signature_t& encrSign, const sgx_aes_gcm_128bit_tag_t& encrMac) :
 	DecentMessage(senderID),
@@ -47,10 +47,10 @@ DecentMessageApplResp::DecentMessageApplResp(Json::Value & msg) :
 		&& root["Untrusted"]["SignMac"].isString()
 		&& root["Untrusted"]["EncrMac"].isString())
 	{
-		DeserializeStruct(root["Untrusted"]["SignSign"].asString(), m_signSign);
-		DeserializeStruct(root["Untrusted"]["EncrSign"].asString(), m_encrSign);
-		DeserializeStruct(root["Untrusted"]["SignMac"].asString(), m_signMac);
-		DeserializeStruct(root["Untrusted"]["EncrMac"].asString(), m_encrMac);
+		DeserializeStruct(m_signSign, root["Untrusted"]["SignSign"].asString());
+		DeserializeStruct(m_encrSign, root["Untrusted"]["EncrSign"].asString());
+		DeserializeStruct(m_signMac, root["Untrusted"]["SignMac"].asString());
+		DeserializeStruct(m_encrMac, root["Untrusted"]["EncrMac"].asString());
 		m_isValid = true;
 	}
 	else

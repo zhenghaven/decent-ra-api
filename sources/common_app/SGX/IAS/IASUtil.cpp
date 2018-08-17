@@ -73,9 +73,8 @@ static inline std::string& ParseHeaderLine(std::string& s)
 
 static std::string GetGIDBigEndianStr(const sgx_epid_group_id_t& gid)
 {
-	std::vector<uint8_t> gidcpy(sizeof(sgx_epid_group_id_t), 0);
-	std::memcpy(&gidcpy[0], &gid, gidcpy.size());
-	std::reverse(gidcpy.begin(), gidcpy.end());
+	const uint8_t(&gidRef)[4] = gid;
+	std::vector<uint8_t> gidcpy(std::rbegin(gidRef), std::rend(gidRef));
 
 	return cppcodec::hex_lower::encode(gidcpy);
 }

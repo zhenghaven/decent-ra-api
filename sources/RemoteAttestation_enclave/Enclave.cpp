@@ -9,7 +9,7 @@
 #include "../common_enclave/SGX/SGXRADecent.h"
 #include "../common_enclave/DecentError.h"
 
-#include "../common/CryptoTools.h"
+#include "../common/DataCoding.h"
 #include "../common/Decent.h"
 #include "../common/EnclaveRAState.h"
 #include "../common/SGX/sgx_constants.h"

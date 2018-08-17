@@ -14,7 +14,7 @@
 #include "DecentMessages/DecentMessage.h"
 
 #include "Networking/Connection.h"
-#include "../common/CryptoTools.h"
+#include "../common/DataCoding.h"
 
 #include "DecentMessages/DecentMessageMsg0.h"
 #include "DecentMessages/DecentMessageKeyReq.h"

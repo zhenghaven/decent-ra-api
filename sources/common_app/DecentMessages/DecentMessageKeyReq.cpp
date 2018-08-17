@@ -1,6 +1,6 @@
 #include "DecentMessageKeyReq.h"
 
-#include "../../common/CryptoTools.h"
+#include "../../common/DataCoding.h"
 
 DecentMessageKeyReq::DecentMessageKeyReq(const std::string & senderID, DecentNodeMode mode, sgx_ec256_public_t& signKey, sgx_ec256_public_t& encrKey) :
 	DecentMessage(senderID),

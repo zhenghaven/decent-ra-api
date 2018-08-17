@@ -2,7 +2,7 @@
 
 #include <sgx_tcrypto.h>
 
-#include "../common/CryptoTools.h"
+#include "../common/DataCoding.h"
 
 #include "Networking/Connection.h"
 

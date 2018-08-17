@@ -12,7 +12,7 @@
 
 #include "../common/Decent.h"
 #include "../common/CommonTool.h"
-#include "../common/CryptoTools.h"
+#include "../common/DataCoding.h"
 #include "../common/OpenSSLTools.h"
 #include "../common/EnclaveRAState.h"
 #include "../common/DecentCryptoManager.h"
@@ -478,8 +478,8 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 
 	//cryptoMgr.SetProtoSignPubKey(nodeKeyMgr.GetSignKey());
 	ocall_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(g_cryptoMgr->GetProtoSignPubKey()).c_str());
-	ocall_printf("The Signature of Sign Pub Key is: %s\n", SerializeSignature(signSign).c_str());
-	ocall_printf("The Signature of Encr Pub Key is: %s\n", SerializeSignature(encrSign).c_str());
+	ocall_printf("The Signature of Sign Pub Key is: %s\n", SerializeStruct(signSign).c_str());
+	ocall_printf("The Signature of Encr Pub Key is: %s\n", SerializeStruct(encrSign).c_str());
 
 	return SGX_SUCCESS;
 }

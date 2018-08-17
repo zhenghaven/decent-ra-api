@@ -4,7 +4,7 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
-#include "../../../common/CryptoTools.h"
+#include "../../../common/DataCoding.h"
 #include "../../../common/SGX/sgx_ra_msg4.h"
 
 SGXRAMessage4::SGXRAMessage4(const std::string& senderID, const sgx_ra_msg4_t& msg4Data, const sgx_ec256_signature_t& signature) :
@@ -48,8 +48,7 @@ SGXRAMessage4::SGXRAMessage4(Json::Value& msg) :
 		cppcodec::base64_rfc4648::decode(buffer1, msg4B64);
 		std::memcpy(m_msg4Data, buffer1.data(), sizeof(sgx_ra_msg4_t));
 
-		std::string signB64Str = root["Untrusted"]["msg4Sign"].asString();
-		DeserializeSignature(signB64Str, *m_signature);
+		DeserializeStruct(m_signature, root["Untrusted"]["msg4Sign"].asString());
 		
 		m_isValid = true;
 	}
@@ -102,7 +101,7 @@ Json::Value & SGXRAMessage4::GetJsonMsg(Json::Value & outJson) const
 	std::string msg4B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const char*>(m_msg4Data), sizeof(sgx_ra_msg4_t));
 	jsonUntrusted["msg4Data"] = msg4B64Str;
 
-	jsonUntrusted["msg4Sign"] = SerializeSignature(*m_signature);
+	jsonUntrusted["msg4Sign"] = SerializeStruct(m_signature);
 
 	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
 	child["Untrusted"] = jsonUntrusted;

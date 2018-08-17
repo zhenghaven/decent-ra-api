@@ -17,6 +17,7 @@ typedef struct _ra_msg2_t sgx_ra_msg2_t;
 typedef struct _ra_msg4_t sgx_ra_msg4_t;
 typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
+typedef struct _sgx_report_data_t sgx_report_data_t;
 typedef struct _spid_t sgx_spid_t;
 typedef uint32_t sgx_ra_context_t;
 #define SGX_CMAC_KEY_SIZE               16
@@ -42,5 +43,5 @@ namespace SGXRAEnclave
 	sgx_status_t GetRASPSignPubKey(sgx_ec256_public_t* outKey);
 	sgx_status_t ProcessRaMsg0Send(const char* clientID);
 	sgx_status_t ProcessRaMsg1(const char* clientID, const sgx_ra_msg1_t *inMsg1, sgx_ra_msg2_t *outMsg2);
-	sgx_status_t ProcessRaMsg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign);
+	sgx_status_t ProcessRaMsg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign, sgx_report_data_t* outOriRD = nullptr);
 }

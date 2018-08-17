@@ -16,7 +16,7 @@
 #include "SGXRAMessages/SGXRAMessageErr.h"
 
 #include "../Networking/Connection.h"
-#include "../../common/CryptoTools.h"
+#include "../../common/DataCoding.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 #include "IAS/IASConnector.h"
 
@@ -151,9 +151,8 @@ bool SGXClientRASession::ProcessClientSideRA()
 		return false;
 	}
 
-	sgx_ra_msg3_t msg3Data;
-	std::vector<uint8_t> quote;
-	enclaveRes = m_sgxEnclave.ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), sizeof(sgx_ra_msg2_t) + msg2->GetMsg2Data().sig_rl_size, msg3Data, quote, raContextID);
+	std::vector<uint8_t> msg3Data;
+	enclaveRes = m_sgxEnclave.ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), msg3Data, raContextID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
@@ -167,7 +166,7 @@ bool SGXClientRASession::ProcessClientSideRA()
 	resp = nullptr;
 	msg2 = nullptr;
 
-	SGXRAMessage3 msg3(msgSenderID, msg3Data, quote);
+	SGXRAMessage3 msg3(msgSenderID, msg3Data);
 
 	m_connection->Send(msg3.ToJsonString());
 	m_connection->Receive(msgBuffer);
