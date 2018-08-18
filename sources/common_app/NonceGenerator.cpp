@@ -16,7 +16,7 @@ std::string GenNonceForIASJson(const size_t len)
 	//std::default_random_engine generator(std::random_device{}());
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(0, jsonStrAlphabet.size() - 1);
+	std::uniform_int_distribution<> dis(0, static_cast<int>(jsonStrAlphabet.size() - 1));
 
 	std::string randRes;
 	for (size_t i = 0; i < len; ++i)

@@ -16,8 +16,8 @@ public:
 
 	virtual ~DecentCryptoManager();
 
-	virtual void SetSignPriKey(const sgx_ec256_private_t& inKey);
-	virtual void SetSignPubKey(const sgx_ec256_public_t& inKey);
+	//virtual void SetSignPriKey(const sgx_ec256_private_t& inKey);
+	//virtual void SetSignPubKey(const sgx_ec256_public_t& inKey);
 
 	virtual void SetProtoSignPubKey(const sgx_ec256_public_t& inKey);
 	virtual const sgx_ec256_public_t& GetProtoSignPubKey();

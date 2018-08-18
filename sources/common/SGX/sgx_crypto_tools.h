@@ -4,8 +4,7 @@
 
 #include <stdint.h>
 #include <sgx_error.h>
-
-typedef struct _sgx_ec256_dh_shared_t sgx_ec256_dh_shared_t;
+#include <sgx_tcrypto.h>
 
 #define SGX_CMAC_KEY_SIZE               16
 typedef uint8_t sgx_ec_key_128bit_t[SGX_CMAC_KEY_SIZE];
@@ -26,6 +25,23 @@ constexpr char SGX_SMK_KEY_LABEL_STR[] = "SMK";
 constexpr char SGX_SK_KEY_LABEL_STR[] = "SK";
 constexpr char SGX_MK_KEY_LABEL_STR[] = "MK";
 constexpr char SGX_VK_KEY_LABEL_STR[] = "VK";
+
+struct SGXECCStateWrap
+{
+public:
+	SGXECCStateWrap()
+	{
+		m_status = sgx_ecc256_open_context(&m_eccState);
+	}
+
+	~SGXECCStateWrap()
+	{
+		sgx_ecc256_close_context(m_eccState);
+	}
+	
+	sgx_status_t m_status;
+	sgx_ecc_state_handle_t m_eccState;
+};
 
 #ifdef __cplusplus
 extern "C" {

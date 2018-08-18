@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.11)
 #==========================================================
 set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module." FORCE)
 set(HUNTER_BOOST_RUNTIME_STATIC ON CACHE BOOL "Switch for using boost runtime static linking." FORCE)
+#set(DECENT_CXX_STANDARD_VER c++11 CACHE STRING "C++ standard version used by decent." FORCE)
 
 #==========================================================
 #   Setup Hunter
@@ -105,7 +106,7 @@ if(MSVC)
 #	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
 #	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
 else()
-	set(COMMON_OPTIONS )
+	set(COMMON_OPTIONS -std=c++11 -pthread)
 	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
 	set(SIMULATE_OPTIONS -DSIMULATING_ENCLAVE)
 	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
@@ -120,10 +121,6 @@ add_compile_options(
 	"$<$<CONFIG:DebugSimulation>:${DEBUGSIM_OPTIONS}>"
 	"$<$<CONFIG:Release>:${RELEASE_OPTIONS}>"
 )
-
-if(UNIX)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
-endif()
 
 message(STATUS "")
 message(STATUS "==================================================")

@@ -29,7 +29,6 @@ class RACryptoManager;
 
 namespace SGXRAEnclave
 {
-	void SetServerCryptoManager(std::shared_ptr<RACryptoManager> cryptMgr);
 	bool AddNewClientRAState(const std::string& clientID, const sgx_ec256_public_t& inPubKey);
 	bool SetReportDataVerifier(const std::string& clientID, ReportDataVerifier func);
 	void DropClientRAState(const std::string& clientID);

@@ -12,7 +12,6 @@ RACryptoManager::RACryptoManager() :
 	{
 		return;
 	}
-	m_status = m_keyContainer.m_status;
 }
 
 RACryptoManager::~RACryptoManager()
@@ -24,16 +23,6 @@ RACryptoManager::~RACryptoManager()
 const sgx_ecc_state_handle_t & RACryptoManager::GetECC() const
 {
 	return m_eccContext;
-}
-
-const sgx_ec256_private_t & RACryptoManager::GetSignPriKey() const
-{
-	return m_keyContainer.m_signPriKey;
-}
-
-const sgx_ec256_public_t & RACryptoManager::GetSignPubKey() const
-{
-	return m_keyContainer.m_signPubKey;
 }
 
 sgx_status_t RACryptoManager::GetStatus() const

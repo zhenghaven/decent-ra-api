@@ -13,7 +13,8 @@
 
 #include "../../common/DataCoding.h"
 #include "../../common/EnclaveRAState.h"
-#include "../../common/RACryptoManager.h"
+//#include "../../common/RACryptoManager.h"
+#include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 
 struct RAClientContext
@@ -39,12 +40,7 @@ namespace
 	static const std::map<std::string, std::unique_ptr<RAClientContext> >& k_serversMap = g_serversMap;
 
 	//Shared objects:
-	static std::shared_ptr<RACryptoManager> g_cryptoMgr = std::make_shared<RACryptoManager>();
-}
-
-void SGXRAEnclave::SetClientCryptoManager(std::shared_ptr<RACryptoManager> cryptMgr)
-{
-	g_cryptoMgr = cryptMgr;
+	//static std::shared_ptr<RACryptoManager> g_cryptoMgr = std::make_shared<RACryptoManager>();
 }
 
 bool SGXRAEnclave::AddNewServerRAState(const std::string& ServerID, const sgx_ec256_public_t& inPubKey)
@@ -113,12 +109,13 @@ bool SGXRAEnclave::GetServerKeys(const std::string & serverID, sgx_ec256_public_
 extern "C" sgx_status_t ecall_sgx_ra_client_init()
 {
 	sgx_status_t res = SGX_SUCCESS;
-	if (g_cryptoMgr->GetStatus() != SGX_SUCCESS)
+	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
 	{
-		return g_cryptoMgr->GetStatus(); //Error return. (Error from SGX)
+		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	ocall_printf("Client's public Sign Key: %s\n", SerializePubKey(g_cryptoMgr->GetSignPubKey()).c_str());
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	ocall_printf("Client's public Sign Key: %s\n", SerializePubKey(*signPub).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -145,12 +142,13 @@ extern "C" sgx_status_t ecall_get_ra_client_pub_sig_key(sgx_ec256_public_t* outK
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	if (g_cryptoMgr->GetStatus() != SGX_SUCCESS)
+	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
 	{
-		return g_cryptoMgr->GetStatus();
+		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	std::memcpy(outKey, &(g_cryptoMgr->GetSignPubKey()), sizeof(sgx_ec256_public_t));
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::memcpy(outKey, signPub.get(), sizeof(sgx_ec256_public_t));
 	return SGX_SUCCESS;
 }
 
@@ -175,12 +173,26 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 		SGXRAEnclave::DropServerRAState(ServerID);
 		FUNC_ERR_Y("Processing msg2, but g_b is nullptr.", SGX_ERROR_INVALID_PARAMETER);
 	}
-	res = sgx_ecc256_check_point(p_g_b, g_cryptoMgr->GetECC(), &isGbValid);
-	if (res != SGX_SUCCESS)
+
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
-		return res; //Error return. (Error from SGX)
+		sgx_ecc_state_handle_t eccState;
+		res = sgx_ecc256_open_context(&eccState);
+		if (res != SGX_SUCCESS)
+		{
+			SGXRAEnclave::DropServerRAState(ServerID);
+			return res; //Error return. (Error from SGX)
+		}
+
+		res = sgx_ecc256_check_point(p_g_b, eccState, &isGbValid);
+		if (res != SGX_SUCCESS)
+		{
+			SGXRAEnclave::DropServerRAState(ServerID);
+			return res; //Error return. (Error from SGX)
+		}
+
+		sgx_ecc256_close_context(eccState);
 	}
+
 	if (isGbValid == 0)
 	{
 		SGXRAEnclave::DropServerRAState(ServerID);
@@ -230,15 +242,28 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 	RAClientContext& clientCTX = *(it->second);
 
 	sgx_status_t res = SGX_SUCCESS;
-
-	uint8_t signVerifyRes = 0;
-	res = sgx_ecdsa_verify((uint8_t *)inMsg4, sizeof(sgx_ra_msg4_t), &(clientCTX.m_peerSignKey), inMsg4Sign, &signVerifyRes, g_cryptoMgr->GetECC());
-	if (signVerifyRes != SGX_EC_VALID)
+	
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg4, but the signature of msg 4 is invalid.");
+		sgx_ecc_state_handle_t eccState;
+		res = sgx_ecc256_open_context(&eccState);
+		if (res != SGX_SUCCESS)
+		{
+			SGXRAEnclave::DropServerRAState(ServerID);
+			return res; //Error return. (Error from SGX)
+		}
+
+		uint8_t signVerifyRes = 0;
+		res = sgx_ecdsa_verify((uint8_t *)inMsg4, sizeof(sgx_ra_msg4_t), &(clientCTX.m_peerSignKey), inMsg4Sign, &signVerifyRes, eccState);
+		if (signVerifyRes != SGX_EC_VALID)
+		{
+			SGXRAEnclave::DropServerRAState(ServerID);
+			//Error return. (Error caused by invalid input.)
+			FUNC_ERR("Processing msg4, but the signature of msg 4 is invalid.");
+		}
+
+		sgx_ecc256_close_context(eccState);
 	}
+
 	if (inMsg4->status != ias_quote_status_t::IAS_QUOTE_OK)
 	{
 		SGXRAEnclave::DropServerRAState(ServerID);

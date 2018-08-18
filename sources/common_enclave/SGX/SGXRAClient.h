@@ -11,7 +11,6 @@ typedef uint8_t sgx_ec_key_128bit_t[SGX_CMAC_KEY_SIZE];
 
 namespace SGXRAEnclave
 {
-	void SetClientCryptoManager(std::shared_ptr<RACryptoManager> cryptMgr);
 	bool AddNewServerRAState(const std::string& ServerID, const sgx_ec256_public_t& inPubKey);
 	void DropServerRAState(const std::string& serverID);
 	bool IsServerAttested(const std::string& serverID);

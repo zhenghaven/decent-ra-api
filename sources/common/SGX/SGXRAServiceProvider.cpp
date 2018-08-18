@@ -20,7 +20,8 @@
 #include "../../common/OpenSSLTools.h"
 #include "../../common/NonceGenerator.h"
 #include "../../common/EnclaveRAState.h"
-#include "../../common/RACryptoManager.h"
+//#include "../../common/RACryptoManager.h"
+#include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/SGX/ias_report_cert.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
 #include "../../common/SGX/sgx_constants.h"
@@ -28,6 +29,8 @@
 
 struct RASPContext
 {
+	std::shared_ptr<const sgx_ec256_public_t> m_mySignPub;
+	std::shared_ptr<const PrivateKeyWrap> m_mySignPrv;
 	sgx_ec256_private_t m_prvKey;
 	sgx_ec256_public_t m_pubKey;
 	ClientRAState m_state;
@@ -43,6 +46,8 @@ struct RASPContext
 	sgx_ps_sec_prop_desc_t m_secProp;
 
 	RASPContext(const sgx_ec256_public_t& inSignPubKey) :
+		m_mySignPub(EnclaveAsyKeyContainer::GetInstance().GetSignPubKey()),
+		m_mySignPrv(EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey()),
 		m_prvKey(),
 		m_pubKey(),
 		m_peerSignKey(inSignPubKey),
@@ -83,17 +88,12 @@ struct RASPContext
 namespace
 {
 	static std::mutex m_sgxSPIDMutex;
-	static sgx_spid_t g_sgxSPID = { { 0	} };
-
+	static std::shared_ptr<const sgx_spid_t> g_sgxSPID = std::make_shared<const sgx_spid_t>();
 	static std::string g_selfHash = "";
+
 	static std::map<std::string, std::unique_ptr<RASPContext>> g_clientsMap;
 
-	static std::shared_ptr<RACryptoManager> g_cryptoMgr = std::make_shared<RACryptoManager>();
-}
-
-void SGXRAEnclave::SetServerCryptoManager(std::shared_ptr<RACryptoManager> cryptMgr)
-{
-	g_cryptoMgr = cryptMgr;
+	//static std::shared_ptr<RACryptoManager> g_cryptoMgr = std::make_shared<RACryptoManager>();
 }
 
 bool SGXRAEnclave::AddNewClientRAState(const std::string& clientID, const sgx_ec256_public_t& inPubKey)
@@ -190,7 +190,8 @@ void SGXRAEnclave::SetTargetEnclaveHash(const std::string & hashBase64)
 void SGXRAEnclave::SetSPID(const sgx_spid_t & spid)
 {
 	std::lock_guard<std::mutex> lock(m_sgxSPIDMutex);
-	std::memcpy(&g_sgxSPID, &spid, sizeof(sgx_spid_t));
+	std::shared_ptr<const sgx_spid_t> tmpSPID = std::make_shared<const sgx_spid_t>(spid);
+	g_sgxSPID = tmpSPID;
 }
 
 std::string SGXRAEnclave::GetSelfHash()
@@ -201,12 +202,13 @@ std::string SGXRAEnclave::GetSelfHash()
 sgx_status_t SGXRAEnclave::ServiceProviderInit()
 {
 	sgx_status_t res = SGX_SUCCESS;
-	if (g_cryptoMgr->GetStatus() != SGX_SUCCESS)
+	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
 	{
-		return g_cryptoMgr->GetStatus(); //Error return. (Error from SGX)
+		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	COMMON_PRINTF("SP's public Sign Key: %s\n", SerializePubKey(g_cryptoMgr->GetSignPubKey()).c_str());
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	COMMON_PRINTF("SP's public Sign Key: %s\n", SerializePubKey(*signPub).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -253,12 +255,13 @@ sgx_status_t SGXRAEnclave::GetRASPSignPubKey(sgx_ec256_public_t * outKey)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	if (g_cryptoMgr->GetStatus() != SGX_SUCCESS)
+	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
 	{
-		return g_cryptoMgr->GetStatus();
+		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	std::memcpy(outKey, &(g_cryptoMgr->GetSignPubKey()), sizeof(sgx_ec256_public_t));
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::memcpy(outKey, signPub.get(), sizeof(sgx_ec256_public_t));
 	return SGX_SUCCESS;
 }
 
@@ -302,7 +305,8 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 	}
 
 	memcpy(&(outMsg2->g_b), &(spCTX.m_pubKey), sizeof(sgx_ec256_public_t));
-	memcpy(&(outMsg2->spid), &g_sgxSPID, sizeof(g_sgxSPID));
+	std::shared_ptr<const sgx_spid_t> tmpSPID = g_sgxSPID;
+	memcpy(&(outMsg2->spid), tmpSPID.get(), sizeof(sgx_spid_t));
 	outMsg2->quote_type = SGX_QUOTE_LINKABLE_SIGNATURE;
 
 	outMsg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
@@ -311,12 +315,23 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 	memcpy(&gb_ga[0], &(spCTX.m_pubKey), sizeof(sgx_ec256_public_t));
 	memcpy(&gb_ga[1], &(spCTX.m_peerEncrKey), sizeof(sgx_ec256_public_t));
 
-	res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), const_cast<sgx_ec256_private_t*>(&(g_cryptoMgr->GetSignPriKey())), &(outMsg2->sign_gb_ga), g_cryptoMgr->GetECC());
-	if (res != SGX_SUCCESS)
 	{
-		SGXRAEnclave::DropClientRAState(clientID);
-		return res; //Error return. (Error from SGX)
+		sgx_ecc_state_handle_t eccState;
+		res = sgx_ecc256_open_context(&eccState);
+		if (res != SGX_SUCCESS)
+		{
+			SGXRAEnclave::DropClientRAState(clientID);
+			return res; //Error return. (Error from SGX)
+		}
+		res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), const_cast<sgx_ec256_private_t*>(&(spCTX.m_mySignPrv->m_prvKey)), &(outMsg2->sign_gb_ga), eccState);
+		if (res != SGX_SUCCESS)
+		{
+			SGXRAEnclave::DropClientRAState(clientID);
+			return res; //Error return. (Error from SGX)
+		}
+		sgx_ecc256_close_context(eccState);
 	}
+
 	uint8_t mac[SAMPLE_EC_MAC_SIZE] = { 0 };
 	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
 	res = sgx_rijndael128_cmac_msg(reinterpret_cast<sgx_cmac_128bit_key_t*>(&(spCTX.m_smk)), (uint8_t *)&(outMsg2->g_b), cmac_size, &mac);
@@ -439,11 +454,21 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 	//Temporary code here:
 	outMsg4->pse_status = ias_pse_status_t::IAS_PSE_OK;
 
-	res = sgx_ecdsa_sign((uint8_t *)outMsg4, sizeof(sgx_ra_msg4_t), const_cast<sgx_ec256_private_t*>(&(g_cryptoMgr->GetSignPriKey())), outMsg4Sign, g_cryptoMgr->GetECC());
-	if (res != SGX_SUCCESS)
 	{
-		SGXRAEnclave::DropClientRAState(clientID);
-		return res; //Error return. (Error from SGX)
+		sgx_ecc_state_handle_t eccState;
+		res = sgx_ecc256_open_context(&eccState);
+		if (res != SGX_SUCCESS)
+		{
+			SGXRAEnclave::DropClientRAState(clientID);
+			return res; //Error return. (Error from SGX)
+		}
+		res = sgx_ecdsa_sign((uint8_t *)outMsg4, sizeof(sgx_ra_msg4_t), const_cast<sgx_ec256_private_t*>(&(spCTX.m_mySignPrv->m_prvKey)), outMsg4Sign, eccState);
+		if (res != SGX_SUCCESS)
+		{
+			SGXRAEnclave::DropClientRAState(clientID);
+			return res; //Error return. (Error from SGX)
+		}
+		sgx_ecc256_close_context(eccState);
 	}
 
 	if (outMsg4->status == ias_quote_status_t::IAS_QUOTE_OK)

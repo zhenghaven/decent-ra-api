@@ -18,7 +18,8 @@
 #include "../common/OpenSSLTools.h"
 #include "../common/EnclaveRAState.h"
 #include "../common/DecentRAReport.h"
-#include "../common/DecentCryptoManager.h"
+//#include "../common/DecentCryptoManager.h"
+#include "../common/EnclaveAsyKeyContainer.h"
 #include "../common/SGX/sgx_constants.h"
 #include "../common/SGX/sgx_crypto_tools.h"
 #include "../common/SGX/SGXRAServiceProvider.h"
@@ -42,7 +43,7 @@ namespace
 	static std::map<std::string, std::string> g_pendingDecentNode;
 
 	//Shared objects:
-	static std::shared_ptr<DecentCryptoManager> g_cryptoMgr = std::make_shared<DecentCryptoManager>();
+	//static std::shared_ptr<DecentCryptoManager> g_cryptoMgr = std::make_shared<DecentCryptoManager>();
 }
 
 static bool IsBothWayAttested(const std::string& id)
@@ -109,9 +110,8 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	sgx_measurement_t& enclaveHash = selfReport.body.mr_enclave;
 	ocall_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
 	SGXRAEnclave::SetTargetEnclaveHash(SerializeStruct(enclaveHash));
-	ocall_printf("Enclave Public Sign key: %s\n", SerializeStruct(g_cryptoMgr->GetSignPubKey()).c_str());
-	SGXRAEnclave::SetClientCryptoManager(g_cryptoMgr);
-	SGXRAEnclave::SetServerCryptoManager(g_cryptoMgr);
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	ocall_printf("Enclave Public Sign key: %s\n", SerializeStruct(*signPub).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -246,7 +246,8 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* ServerID, 
 	ReportDataGenerator rdGenerator = [](const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen) -> bool
 	{
 		EC_KEY* pubKey = EC_KEY_new();
-		if (!pubKey || !ECKeyPubSGX2OpenSSL(&g_cryptoMgr->GetSignPubKey(), pubKey, nullptr))
+		std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+		if (!pubKey || !ECKeyPubSGX2OpenSSL(signPub.get(), pubKey, nullptr))
 		{
 			EC_KEY_free(pubKey);
 			return false;
@@ -312,11 +313,13 @@ extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec
 
 	DecentNodeContext& nodeCTX = nodeIt->second;
 
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::shared_ptr<const PrivateKeyWrap> signPrv = EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey();
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 
 	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
 	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(&g_cryptoMgr->GetSignPriKey()),
+		reinterpret_cast<const uint8_t*>(&signPrv->m_prvKey),
 		sizeof(sgx_ec256_private_t),
 		reinterpret_cast<uint8_t*>(outPriKey),
 		aes_gcm_iv,
@@ -331,7 +334,7 @@ extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec
 	}
 
 	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(&g_cryptoMgr->GetSignPubKey()),
+		reinterpret_cast<const uint8_t*>(signPub.get()),
 		sizeof(sgx_ec256_public_t),
 		reinterpret_cast<uint8_t*>(outPubKey),
 		aes_gcm_iv,
@@ -398,18 +401,23 @@ extern "C" sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const 
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 
+	SGXECCStateWrap eccState;
+	if (eccState.m_status != SGX_SUCCESS)
+	{
+		return eccState.m_status; //Error return. (Error from SGX)
+	}
 	sgx_ec256_signature_t signSign;
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&pubKey), sizeof(sgx_ec256_public_t), &priKey, &signSign, g_cryptoMgr->GetECC());
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&pubKey), sizeof(sgx_ec256_public_t), &priKey, &signSign, eccState.m_eccState);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
 	}
 
-	g_cryptoMgr->SetSignPriKey(priKey);
-	g_cryptoMgr->SetSignPubKey(pubKey);
-	g_cryptoMgr->SetProtoSignPubKey(pubKey);
+	//g_cryptoMgr->SetSignPriKey(priKey);
+	//g_cryptoMgr->SetSignPubKey(pubKey);
+	//g_cryptoMgr->SetProtoSignPubKey(pubKey);
 
-	ocall_printf("New Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr->GetSignPubKey()).c_str());
+	//ocall_printf("New Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr->GetSignPubKey()).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -438,13 +446,19 @@ extern "C" sgx_status_t ecall_get_protocol_key_signed(const char* clientID, cons
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	sgx_ec256_signature_t signSign;
 	sgx_ec256_signature_t encrSign;
+	std::shared_ptr<const PrivateKeyWrap> signPrv = EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey();
 
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr->GetSignPriKey()), &signSign, g_cryptoMgr->GetECC());
+	SGXECCStateWrap eccState;
+	if (eccState.m_status != SGX_SUCCESS)
+	{
+		return eccState.m_status; //Error return. (Error from SGX)
+	}
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&signPrv->m_prvKey), &signSign, eccState.m_eccState);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
 	}
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&g_cryptoMgr->GetSignPriKey()), &encrSign, g_cryptoMgr->GetECC());
+	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&signPrv->m_prvKey), &encrSign, eccState.m_eccState);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -537,7 +551,8 @@ extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec25
 	//cryptoMgr.SetSignKeySign(signSign);
 
 	//cryptoMgr.SetProtoSignPubKey(nodeKeyMgr.GetSignKey());
-	ocall_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(g_cryptoMgr->GetProtoSignPubKey()).c_str());
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	ocall_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(*signPub).c_str());
 	ocall_printf("The Signature of Sign Pub Key is: %s\n", SerializeStruct(signSign).c_str());
 	ocall_printf("The Signature of Encr Pub Key is: %s\n", SerializeStruct(encrSign).c_str());
 
@@ -553,7 +568,12 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 	{
 		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
 	}
-	enclaveRes = sgx_ecc256_check_point(inSignKey, g_cryptoMgr->GetECC(), &isPointValid);
+	SGXECCStateWrap eccState;
+	if (eccState.m_status != SGX_SUCCESS)
+	{
+		return eccState.m_status; //Error return. (Error from SGX)
+	}
+	enclaveRes = sgx_ecc256_check_point(inSignKey, eccState.m_eccState, &isPointValid);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -562,7 +582,7 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 	{
 		FUNC_ERR_Y("Invalid Signing Key!", SGX_ERROR_INVALID_PARAMETER);
 	}
-	enclaveRes = sgx_ecc256_check_point(inEncrKey, g_cryptoMgr->GetECC(), &isPointValid);
+	enclaveRes = sgx_ecc256_check_point(inEncrKey, eccState.m_eccState, &isPointValid);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -572,8 +592,9 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 		FUNC_ERR_Y("Invalid Encryption key!", SGX_ERROR_INVALID_PARAMETER);
 	}
 
+	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
 	uint8_t verifyRes = 0;
-	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), &g_cryptoMgr->GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inSignSign), &verifyRes, g_cryptoMgr->GetECC());
+	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), signPub.get(), const_cast<sgx_ec256_signature_t*>(inSignSign), &verifyRes, eccState.m_eccState);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -584,7 +605,7 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 		FUNC_ERR("The signature of Attestee's Sign key is invalid.");
 	}
 
-	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), &g_cryptoMgr->GetProtoSignPubKey(), const_cast<sgx_ec256_signature_t*>(inEncrSign), &verifyRes, g_cryptoMgr->GetECC());
+	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), signPub.get(), const_cast<sgx_ec256_signature_t*>(inEncrSign), &verifyRes, eccState.m_eccState);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		return enclaveRes; //Error return. (Error from SGX)
@@ -594,20 +615,6 @@ extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_e
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("The signature of Attestee's Encr key is invalid.");
 	}
-
-	//auto insertRes = g_decentNodesMap.insert(std::make_pair<std::string, RAKeyManager>(clientID, RAKeyManager(*inSignKey)));
-	//ocall_printf("Accepted new app server: %s\n", clientID);
-
-	//RAKeyManager& nodeKeyMgr = insertRes.first->second;
-
-	//nodeKeyMgr.SetEncryptKey(*inEncrKey);
-
-	//enclaveRes = nodeKeyMgr.GenerateSharedKeySet(cryptoMgr.GetEncrPriKey(), cryptoMgr.GetECC());
-	//if (enclaveRes != SGX_SUCCESS)
-	//{
-	//	g_decentNodesMap.erase(insertRes.first);
-	//	return enclaveRes; //Error return. (Error from SGX)
-	//}
 
 	return SGX_SUCCESS;
 }
