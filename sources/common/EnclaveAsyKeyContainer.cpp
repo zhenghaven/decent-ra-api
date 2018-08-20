@@ -1,6 +1,7 @@
 #include "EnclaveAsyKeyContainer.h"
 
 #include <cstring>
+#include <atomic>
 
 EnclaveAsyKeyContainer & EnclaveAsyKeyContainer::GetInstance()
 {
@@ -25,9 +26,14 @@ EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
 		m_isValid = false;
 		return;
 	}
-	
-	m_signPriKey.store(new std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(tmpPrv)));
-	m_signPubKey.store(new std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(tmpPub)));
+
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&m_signPriKey, std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(tmpPrv)));
+	std::atomic_store(&m_signPubKey, std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(tmpPub)));
+#else
+	m_signPriKey = std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(tmpPrv));
+	m_signPubKey = std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(tmpPub));
+#endif // DECENT_THREAD_SAFETY_HIGH
 
 	sgx_ecc256_close_context(eccContext);
 	m_isValid = true;
@@ -44,17 +50,29 @@ bool EnclaveAsyKeyContainer::IsValid() const
 
 std::shared_ptr<const PrivateKeyWrap> EnclaveAsyKeyContainer::GetSignPrvKey() const
 {
-	return *(m_signPriKey.load());
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	return std::atomic_load(&m_signPriKey);
+#else
+	return m_signPriKey;
+#endif // !DECENT_THREAD_SAFETY_HIGH
 }
 
 std::shared_ptr<const sgx_ec256_public_t> EnclaveAsyKeyContainer::GetSignPubKey() const
 {
-	return *(m_signPubKey.load());
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	return std::atomic_load(&m_signPubKey);
+#else
+	return m_signPubKey;
+#endif // !DECENT_THREAD_SAFETY_HIGH
 }
 
 void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const sgx_ec256_public_t> pub)
 {
-	//std::lock_guard<std::mutex> lock(m_updateLock);
-	m_signPriKey.store(new std::shared_ptr<const PrivateKeyWrap>(prv));
-	m_signPubKey.store(new std::shared_ptr<const sgx_ec256_public_t>(pub));
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&m_signPriKey, prv);
+	std::atomic_store(&m_signPubKey, pub);
+#else
+	m_signPriKey = prv;
+	m_signPubKey = pub;
+#endif // !DECENT_THREAD_SAFETY_HIGH
 }

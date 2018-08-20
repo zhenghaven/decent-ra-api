@@ -41,38 +41,30 @@ class SGXEnclave : public EnclaveBase
 public:
 	SGXEnclave() = delete;
 	SGXEnclave(const std::string& enclavePath, const std::string& tokenPath);
-	SGXEnclave(const std::string& enclavePath, const fs::path tokenPath);
+	SGXEnclave(const fs::path& enclavePath, const fs::path& tokenPath);
 	SGXEnclave(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	virtual ~SGXEnclave();
 
-	virtual void Launch() override; 
-	//virtual std::string GetRASenderID() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) override;
-	//virtual sgx_status_t GetRAClientEncrPubKey(sgx_ec256_public_t& outKey) override;
 	virtual std::shared_ptr<ClientRASession> GetRASession(std::unique_ptr<Connection>& connection) override;
 
 	virtual uint32_t GetExGroupID();
 
-	//virtual void InitClientRAEnvironment();
 	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID, sgx_ecall_proc_msg2_trusted_t proc_msg2_func, sgx_ecall_get_msg3_trusted_t get_msg3_func);
 	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID);
 
-	//sgx_status_t GetLastStatus() const;
-
 protected:
-	sgx_enclave_id_t GetEnclaveId() const;
-	bool LoadToken(std::vector<uint8_t>& outToken);
-	bool UpdateToken(const std::vector<uint8_t>& inToken);
-
-	//std::string m_raSenderID;
+	const sgx_enclave_id_t GetEnclaveId() const;
+	static bool LoadToken(const fs::path& tokenPath, std::vector<uint8_t>& outToken);
+	static bool UpdateToken(const fs::path& tokenPath, const std::vector<uint8_t>& inToken);
+	static sgx_enclave_id_t LaunchEnclave(const fs::path& enclavePath, const fs::path& tokenPath);
 
 private:
-	sgx_enclave_id_t m_eid;
-
-	const std::string m_enclavePath;
+	const sgx_enclave_id_t m_eid;
+	const fs::path m_enclavePath;
 	const fs::path m_tokenPath;
 
 };

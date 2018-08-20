@@ -14,9 +14,7 @@ public:
 
 	virtual ~SGXEnclaveServiceProvider();
 
-	//virtual std::string GetRASenderID() const override;
 	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) override;
-	//virtual sgx_status_t GetRASPEncrPubKey(sgx_ec256_public_t& outKey) override;
 
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce) override;
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) override;
@@ -24,4 +22,5 @@ public:
 	virtual sgx_status_t ProcessRAMsg3(const std::string& clientID, const std::vector<uint8_t> & inMsg3, const std::string& iasReport, const std::string& reportSign, const std::string& reportCertChain, sgx_ra_msg4_t& outMsg4, sgx_ec256_signature_t& outMsg4Sign, sgx_report_data_t* outOriRD = nullptr) override;
 
 private:
+
 };

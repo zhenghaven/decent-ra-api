@@ -2,7 +2,6 @@
 
 #include <sgx_tcrypto.h>
 #include <memory>
-#include <atomic>
 
 struct PrivateKeyWrap
 {
@@ -40,11 +39,9 @@ public:
 	virtual void UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const sgx_ec256_public_t> pub);
 
 private:
-	std::atomic<std::shared_ptr<const sgx_ec256_public_t>* > m_signPubKey;
+	std::shared_ptr<const sgx_ec256_public_t> m_signPubKey;
 
-	std::atomic<std::shared_ptr<const PrivateKeyWrap>* > m_signPriKey;
-
-	//std::mutex m_updateLock;
+	std::shared_ptr<const PrivateKeyWrap> m_signPriKey;
 
 	bool m_isValid;
 };

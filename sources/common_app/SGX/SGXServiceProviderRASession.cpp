@@ -87,7 +87,7 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	}
 }
 
-SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, IASConnector & ias) :
+SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias) :
 	ServiceProviderRASession(connection, serviceProviderBase),
 	m_sgxSP(serviceProviderBase),
 	m_ias(ias)

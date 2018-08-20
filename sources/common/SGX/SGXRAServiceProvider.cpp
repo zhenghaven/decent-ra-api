@@ -87,13 +87,12 @@ struct RASPContext
 
 namespace
 {
-	static std::mutex m_sgxSPIDMutex;
+	//Assume this is set correctly during init and no change afterwards.
 	static std::shared_ptr<const sgx_spid_t> g_sgxSPID = std::make_shared<const sgx_spid_t>();
+	//Assume this is set correctly during init and no change afterwards.
 	static std::string g_selfHash = "";
 
 	static std::map<std::string, std::unique_ptr<RASPContext>> g_clientsMap;
-
-	//static std::shared_ptr<RACryptoManager> g_cryptoMgr = std::make_shared<RACryptoManager>();
 }
 
 bool SGXRAEnclave::AddNewClientRAState(const std::string& clientID, const sgx_ec256_public_t& inPubKey)
@@ -189,7 +188,6 @@ void SGXRAEnclave::SetTargetEnclaveHash(const std::string & hashBase64)
 
 void SGXRAEnclave::SetSPID(const sgx_spid_t & spid)
 {
-	std::lock_guard<std::mutex> lock(m_sgxSPIDMutex);
 	std::shared_ptr<const sgx_spid_t> tmpSPID = std::make_shared<const sgx_spid_t>(spid);
 	g_sgxSPID = tmpSPID;
 }

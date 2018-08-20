@@ -9,12 +9,12 @@ class SGXServiceProviderRASession : public ServiceProviderRASession
 {
 public:
 	SGXServiceProviderRASession() = delete;
-	SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider& serviceProviderBase, IASConnector& ias);
+	SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider& serviceProviderBase, const IASConnector& ias);
 	virtual ~SGXServiceProviderRASession();
 
 	virtual bool ProcessServerSideRA() override;
 
 protected:
 	SGXServiceProvider& m_sgxSP;
-	IASConnector& m_ias;
+	const IASConnector& m_ias;
 };
