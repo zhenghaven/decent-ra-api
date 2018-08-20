@@ -38,9 +38,6 @@ namespace
 {
 	static std::map<std::string, std::unique_ptr<RAClientContext> > g_serversMap;
 	static const std::map<std::string, std::unique_ptr<RAClientContext> >& k_serversMap = g_serversMap;
-
-	//Shared objects:
-	//static std::shared_ptr<RACryptoManager> g_cryptoMgr = std::make_shared<RACryptoManager>();
 }
 
 bool SGXRAEnclave::AddNewServerRAState(const std::string& ServerID, const sgx_ec256_public_t& inPubKey)

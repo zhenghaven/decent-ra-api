@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <string>
 #include <map>
-#include <mutex>
 #include <memory>
+#include <atomic>
 
 #include <openssl/x509.h>
 
@@ -87,10 +87,11 @@ struct RASPContext
 
 namespace
 {
+
 	//Assume this is set correctly during init and no change afterwards.
 	static std::shared_ptr<const sgx_spid_t> g_sgxSPID = std::make_shared<const sgx_spid_t>();
 	//Assume this is set correctly during init and no change afterwards.
-	static std::string g_selfHash = "";
+	static std::shared_ptr<const std::string> g_selfHash = std::make_shared<const std::string>("");
 
 	static std::map<std::string, std::unique_ptr<RASPContext>> g_clientsMap;
 }
@@ -183,18 +184,31 @@ bool SGXRAEnclave::GetClientKeys(const std::string & clientID, sgx_ec256_public_
 
 void SGXRAEnclave::SetTargetEnclaveHash(const std::string & hashBase64)
 {
-	g_selfHash = hashBase64;
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&g_selfHash, std::make_shared<const std::string>(hashBase64));
+#else
+	g_selfHash = std::make_shared<const std::string>(hashBase64);
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
 
 void SGXRAEnclave::SetSPID(const sgx_spid_t & spid)
 {
 	std::shared_ptr<const sgx_spid_t> tmpSPID = std::make_shared<const sgx_spid_t>(spid);
+
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&g_sgxSPID, tmpSPID);
+#else
 	g_sgxSPID = tmpSPID;
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
 
 std::string SGXRAEnclave::GetSelfHash()
 {
-	return g_selfHash;
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	return *std::atomic_load(&g_selfHash);
+#else
+	return *g_selfHash;
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
 
 sgx_status_t SGXRAEnclave::ServiceProviderInit()
@@ -303,7 +317,11 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 	}
 
 	memcpy(&(outMsg2->g_b), &(spCTX.m_pubKey), sizeof(sgx_ec256_public_t));
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::shared_ptr<const sgx_spid_t> tmpSPID = std::atomic_load(&g_sgxSPID);
+#else
 	std::shared_ptr<const sgx_spid_t> tmpSPID = g_sgxSPID;
+#endif // DECENT_THREAD_SAFETY_HIGH
 	memcpy(&(outMsg2->spid), tmpSPID.get(), sizeof(sgx_spid_t));
 	outMsg2->quote_type = SGX_QUOTE_LINKABLE_SIGNATURE;
 
@@ -438,7 +456,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 
 #else
 
-	bool iasVerifyRes = SGXRAEnclave::VerifyIASReport(&outMsg4->status, iasReport, reportCert, reportSign, g_selfHash, report_data, spCTX.m_reportDataVerifier, spCTX.m_nonce.c_str());
+	bool iasVerifyRes = SGXRAEnclave::VerifyIASReport(&outMsg4->status, iasReport, reportCert, reportSign, SGXRAEnclave::GetSelfHash(), report_data, spCTX.m_reportDataVerifier, spCTX.m_nonce.c_str());
 	if (!iasVerifyRes)
 	{
 		SGXRAEnclave::DropClientRAState(clientID);
