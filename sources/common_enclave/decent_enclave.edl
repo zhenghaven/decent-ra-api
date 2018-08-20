@@ -5,6 +5,11 @@ enclave {
 	
 	from "decent_tkey_exchange.edl" import *;
 	
+	untrusted 
+	{
+		int ocall_send_decent_trusted_msg([user_check] void* connectionPtr, [in, string] const char *msg);
+	};
+	
 	trusted 
 	{
 		
@@ -24,6 +29,8 @@ enclave {
 		public sgx_status_t ecall_process_ra_msg0_send_decent([in, string] const char* clientID);
 		
 		public sgx_status_t ecall_process_ra_msg0_resp_decent([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
+		
+		public int ecall_proc_decent_trusted_msg([in, string] const char* nodeID, [user_check] void* connectionPtr, [in, string] const char* jsonMsg);
 
 		public sgx_status_t ecall_get_protocol_sign_key([in, string] const char* clientID, [out] sgx_ec256_private_t* outPriKey, [out] sgx_aes_gcm_128bit_tag_t* outPriKeyMac, [out] sgx_ec256_public_t* outPubKey, [out] sgx_aes_gcm_128bit_tag_t* outPubKeyMac);
 		

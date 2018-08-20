@@ -28,6 +28,8 @@
 #include "sgx_ra_tools.h"
 #include "SGXRAClient.h"
 
+class Connection;
+
 struct DecentNodeContext
 {
 	sgx_ec256_public_t m_peerSignKey = { {0},{0} };
@@ -291,6 +293,12 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* ServerID, 
 	};
 
 	return enclave_init_decent_ra(inPubKey, enablePSE, rdGenerator, nullptr, outContextID); //Error return. (Error from SGX)
+}
+
+extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const connectionPtr, const char* jsonMsg)
+{
+
+	return true;
 }
 
 extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec256_private_t* outPriKey, sgx_aes_gcm_128bit_tag_t* outPriKeyMac, sgx_ec256_public_t* outPubKey, sgx_aes_gcm_128bit_tag_t* outPubKeyMac)

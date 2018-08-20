@@ -213,6 +213,17 @@ bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
 	return retval != 0;
 }
 
+bool SGXDecentEnclave::ProcessDecentTrustedMsg(const std::string & nodeID, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_proc_decent_trusted_msg(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), jsonMsg.c_str());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_trusted_msg);
+
+	return retval != 0;
+}
+
 sgx_status_t SGXDecentEnclave::TransitToDecentNode(const std::string & id, bool isSP)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;

@@ -27,6 +27,7 @@ public:
 
 	virtual bool CreateDecentSelfRAReport(std::string& outReport) override; 
 	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
+	virtual bool ProcessDecentTrustedMsg(const std::string& nodeID, const std::unique_ptr<Connection>& connection, const std::string& jsonMsg) override;
 
 	virtual sgx_status_t TransitToDecentNode(const std::string& id, bool isSP) override;
 
