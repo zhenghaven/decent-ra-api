@@ -125,7 +125,7 @@ Json::Value & SGXRAClientErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRAClientMessage::GetJsonMsg(outJson);
 
-	parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
 	parent[LABEL_ERR_MSG] = m_errStr;
 
 	return parent;
@@ -170,7 +170,7 @@ Json::Value & SGXRASPErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
 	parent[LABEL_ERR_MSG] = m_errStr;
 
 	return parent;

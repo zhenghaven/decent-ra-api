@@ -53,5 +53,5 @@ Json::Value& Messages::GetJsonMsg(Json::Value& outJson) const
 	outJson[LABEL_ROOT][LABEL_SENDER] = m_senderID;
 	outJson[LABEL_ROOT][LABEL_CATEGORY] = GetMessageCategoryStr();
 
-	return outJson;
+	return outJson[LABEL_ROOT];
 }

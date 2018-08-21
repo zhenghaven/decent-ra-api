@@ -1,17 +1,59 @@
 #include "DecentralizedRASession.h"
 
+#include <json/json.h>
+
 #include "Common.h"
 #include "ClientRASession.h"
 #include "ServiceProviderRASession.h"
 #include "DecentralizedEnclave.h"
 #include "EnclaveBase.h"
 #include "ServiceProviderBase.h"
-#include "RAMessageRevRAReq.h"
+#include "DecentralizedMessage.h"
+#include "MessageException.h"
 
 #include "Networking/Connection.h"
 
-static RAMessages * JsonMessageParser(const std::string& jsonStr)
+template<class T>
+static T*  ParseMessageExpected(const Json::Value& json)
 {
+	static_assert(std::is_base_of<DecentralizedMessage, T>::value, "Class type must be a child class of DecentralizedMessage.");
+	try
+	{
+		std::string cat = DecentralizedMessage::ParseCat(json);
+		if (cat != DecentralizedMessage::VALUE_CAT)
+		{
+			return nullptr;
+		}
+
+		std::string type = DecentralizedMessage::ParseType(json[Messages::LABEL_ROOT]);
+
+		if (type == DecentralizedErrMsg::VALUE_TYPE)
+		{
+			throw ReceivedErrorMessageException();
+		}
+
+		if (type == T::VALUE_TYPE)
+		{
+			T* msgPtr = new T(json);
+			return msgPtr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+	catch (const MessageParseException& e)
+	{
+		LOGI("Caught Exception: %s\n", e.what());
+		return nullptr;
+	}
+}
+
+template<class T>
+static T* ParseMessageExpected(const std::string& jsonStr)
+{
+	static_assert(std::is_base_of<DecentralizedMessage, T>::value, "Class type must be a child class of DecentralizedMessage.");
+
 	Json::Value jsonRoot;
 	Json::CharReaderBuilder rbuilder;
 	rbuilder["collectComments"] = false;
@@ -20,20 +62,7 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
 	bool isValid = reader->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.size(), &jsonRoot, &errStr);
 
-	if (!isValid
-		|| !jsonRoot.isMember("MsgSubType")
-		|| !jsonRoot["MsgSubType"].isString())
-	{
-		LOGI("Recv INVALID MESSAGE!");
-		return nullptr;
-	}
-
-	if (jsonRoot["MsgSubType"].asString() == "ReverseRARequest")
-	{
-		return new RAMessageRevRAReq(jsonRoot);
-	}
-
-	return nullptr;
+	return ParseMessageExpected<T>(jsonRoot);
 }
 
 DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentralizedEnclave& enclave) :
@@ -135,7 +164,7 @@ bool DecentralizedRASession::SendReverseRARequest(const std::string & senderID)
 		return false;
 	}
 
-	RAMessageRevRAReq msg(senderID);
+	DecentralizedReverseReq msg(senderID);
 	m_connection->Send(msg.ToJsonString());
 
 	return true;
@@ -148,21 +177,11 @@ bool DecentralizedRASession::RecvReverseRARequest()
 		return false;
 	}
 
-	RAMessages* resp = nullptr;
 	std::string msgBuffer;
 	m_connection->Receive(msgBuffer);
-	resp = JsonMessageParser(msgBuffer);
 
-	RAMessageRevRAReq* revReq = dynamic_cast<RAMessageRevRAReq*>(resp);
-	if (!resp || !revReq || !revReq->IsValid())
-	{
-		delete resp;
-		return false;
-	}
-
-	delete resp;
-	resp = nullptr;
-	revReq = nullptr;
+	auto reqMsg = ParseMessageExpected<DecentralizedReverseReq>(msgBuffer);
+	delete reqMsg;
 
 	return true;
 }
