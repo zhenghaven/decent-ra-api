@@ -1,76 +1,41 @@
 #include "SGXRAMessage1.h"
 
-#include <memory>
-#include <climits>
-//#include <iostream>
+#include <json/json.h>
 
-#include <cppcodec/base64_rfc4648.hpp>
+#include "../../MessageException.h"
 
-//#include "../../common/DataCoding.h"
+#include "../../../common/DataCoding.h"
 
-SGXRAMessage1::SGXRAMessage1(const std::string& senderID, sgx_ra_msg1_t& msg1Data) :
-	SGXRAMessage(senderID),
-	m_msg1Data(msg1Data)
+sgx_ra_msg1_t SGXRAMessage1::ParseMsg1Data(const Json::Value & SGXRASPRoot)
 {
-	m_isValid = true;
-
-	//std::cout << "g_a: " << std::endl << SerializePubKey(msg1Data.g_a) << std::endl;
+	if (SGXRASPRoot.isMember(SGXRAMessage1::LABEL_DATA) && SGXRASPRoot[SGXRAMessage1::LABEL_DATA].isString())
+	{
+		sgx_ra_msg1_t res;
+		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage1::LABEL_DATA].asString());
+		return res;
+	}
+	throw MessageParseException();
 }
 
-SGXRAMessage1::SGXRAMessage1(Json::Value& msg) :
-	SGXRAMessage(msg),
-	m_msg1Data({ 0 })
+SGXRAMessage1::SGXRAMessage1(const std::string& senderID, const sgx_ra_msg1_t& msg1Data) :
+	SGXRASPMessage(senderID),
+	m_msg1Data(msg1Data)
 {
-	if (!IsValid())
-	{
-		return;
-	}
+}
 
-	Json::Value& parent = msg["child"];
-
-	if (!parent.isMember("child")
-		|| !parent["child"].isObject())
-	{
-		m_isValid = false;
-		return;
-	}
-
-	Json::Value& root = parent["child"];
-
-	if (root.isMember("MsgType")
-		&& root["MsgType"].asString().compare(SGXRAMessage::GetMessageTypeStr(GetType())) == 0
-		&& root.isMember("Untrusted")
-		&& root["Untrusted"].isMember("msg1Data"))
-	{
-		std::string msg1B64Str = root["Untrusted"]["msg1Data"].asString();
-		std::vector<uint8_t> buffer(sizeof(sgx_ra_msg1_t), 0);
-		cppcodec::base64_rfc4648::decode(buffer, msg1B64Str);
-		memcpy(&m_msg1Data, buffer.data(), sizeof(sgx_ra_msg1_t));
-		m_isValid = true;
-	}
-	else
-	{
-		m_isValid = false;
-	}
+SGXRAMessage1::SGXRAMessage1(const Json::Value& msg) :
+	SGXRASPMessage(msg),
+	m_msg1Data(ParseMsg1Data(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
+{
 }
 
 SGXRAMessage1::~SGXRAMessage1()
 {
 }
 
-std::string SGXRAMessage1::GetMessgaeSubTypeStr() const
+std::string SGXRAMessage1::GetMessageTypeStr() const
 {
-	return SGXRAMessage::GetMessageTypeStr(GetType());
-}
-
-SGXRAMessage::Type SGXRAMessage1::GetType() const
-{
-	return SGXRAMessage::Type::MSG1_SEND;
-}
-
-bool SGXRAMessage1::IsResp() const
-{
-	return false;
+	return VALUE_TYPE;
 }
 
 const sgx_ra_msg1_t& SGXRAMessage1::GetMsg1Data() const
@@ -80,19 +45,10 @@ const sgx_ra_msg1_t& SGXRAMessage1::GetMsg1Data() const
 
 Json::Value & SGXRAMessage1::GetJsonMsg(Json::Value & outJson) const
 {
-	Json::Value& parent = SGXRAMessage::GetJsonMsg(outJson);
+	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	parent["child"] = Json::objectValue;
-	Json::Value& child = parent["child"];
+	parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_DATA] = SerializeStruct(m_msg1Data);
 
-	Json::Value jsonUntrusted;
-
-	std::string msg1B64Str = cppcodec::base64_rfc4648::encode(reinterpret_cast<const uint8_t*>(&m_msg1Data), sizeof(sgx_ra_msg1_t));
-	jsonUntrusted["msg1Data"] = msg1B64Str;
-
-	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
-	child["Untrusted"] = jsonUntrusted;
-	child["Trusted"] = Json::nullValue;
-
-	return child;
+	return parent;
 }

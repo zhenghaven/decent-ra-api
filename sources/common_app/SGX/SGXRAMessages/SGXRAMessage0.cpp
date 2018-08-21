@@ -1,73 +1,37 @@
 #include "SGXRAMessage0.h"
 
-#include <memory>
-#include <climits>
+#include <json/json.h>
 
-SGXRAMessage0Send::SGXRAMessage0Send(const std::string& senderID, uint32_t exGrpID) :
-	SGXRAMessage(senderID),
-	m_exGrpID(exGrpID)
+#include "../../MessageException.h"
+
+uint32_t SGXRAMessage0Send::ParseExGroupID(const Json::Value & SGXRASPRoot)
 {
-	m_isValid = true;
+	if (SGXRASPRoot.isMember(SGXRAMessage0Send::LABEL_EX_GROUP_ID) && SGXRASPRoot[SGXRAMessage0Send::LABEL_EX_GROUP_ID].isUInt())
+	{
+		return SGXRASPRoot[SGXRAMessage0Send::LABEL_EX_GROUP_ID].asUInt();
+	}
+	throw MessageParseException();
 }
 
-SGXRAMessage0Send::SGXRAMessage0Send(Json::Value& msg) :
-	SGXRAMessage(msg)
+SGXRAMessage0Send::SGXRAMessage0Send(const std::string& senderID, uint32_t exGrpID) :
+	SGXRASPMessage(senderID),
+	m_exGrpID(exGrpID)
 {
-	if (!IsValid())
-	{
-		return;
-	}
+}
 
-	Json::Value& parent = msg["child"];
-
-	if (!parent.isMember("child")
-		|| !parent["child"].isObject())
-	{
-		m_isValid = false;
-		return;
-	}
-
-	Json::Value& root = parent["child"];
-
-	if (root.isMember("MsgType")
-		&& root["MsgType"].asString() == SGXRAMessage::GetMessageTypeStr(GetType())
-		&& root.isMember("Untrusted")
-		&& root["Untrusted"].isMember("ExGroupID"))
-	{
-		int64_t tmp = root["Untrusted"]["ExGroupID"].asInt64();
-		if (0 <= tmp && tmp <= UINT32_MAX)
-		{
-			m_exGrpID = static_cast<uint32_t>(tmp);
-			m_isValid = true;
-		}
-		else
-		{
-			m_isValid = false;
-		}
-	}
-	else
-	{
-		m_isValid = false;
-	}
+SGXRAMessage0Send::SGXRAMessage0Send(const Json::Value& msg) :
+	SGXRASPMessage(msg),
+	m_exGrpID(ParseExGroupID(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
+{
 }
 
 SGXRAMessage0Send::~SGXRAMessage0Send()
 {
 }
 
-std::string SGXRAMessage0Send::GetMessgaeSubTypeStr() const
+std::string SGXRAMessage0Send::GetMessageTypeStr() const
 {
-	return SGXRAMessage::GetMessageTypeStr(GetType());
-}
-
-SGXRAMessage::Type SGXRAMessage0Send::GetType() const
-{
-	return SGXRAMessage::Type::MSG0_SEND;
-}
-
-bool SGXRAMessage0Send::IsResp() const
-{
-	return false;
+	return VALUE_TYPE;
 }
 
 uint32_t SGXRAMessage0Send::GetExtendedGroupID() const
@@ -77,79 +41,42 @@ uint32_t SGXRAMessage0Send::GetExtendedGroupID() const
 
 Json::Value& SGXRAMessage0Send::GetJsonMsg(Json::Value & outJson) const
 {
-	Json::Value& parent = SGXRAMessage::GetJsonMsg(outJson);
+	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	parent["child"] = Json::objectValue;
-	Json::Value& child = parent["child"];
+	parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_EX_GROUP_ID] = m_exGrpID;
 
-	Json::Value jsonUntrusted;
+	return parent;
+}
 
-	jsonUntrusted["ExGroupID"] = m_exGrpID;
-
-	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
-	child["Untrusted"] = jsonUntrusted;
-	child["Trusted"] = Json::nullValue;
-
-	return child;
+std::string SGXRAMessage0Resp::ParsePublicKey(const Json::Value & SGXRAClientRoot)
+{
+	if (SGXRAClientRoot.isMember(SGXRAMessage0Resp::LABEL_PUB_KEY) && SGXRAClientRoot[SGXRAMessage0Resp::LABEL_PUB_KEY].isString())
+	{
+		return SGXRAClientRoot[SGXRAMessage0Resp::LABEL_PUB_KEY].asString();
+	}
+	throw MessageParseException();
 }
 
 SGXRAMessage0Resp::SGXRAMessage0Resp(const std::string& senderID, const std::string& pubKeyBase64) :
-	SGXRAMessage(senderID),
+	SGXRAClientMessage(senderID),
 	m_pubKey(pubKeyBase64)
 {
-	m_isValid = true;
 }
 
-SGXRAMessage0Resp::SGXRAMessage0Resp(Json::Value& msg) :
-	SGXRAMessage(msg)
+SGXRAMessage0Resp::SGXRAMessage0Resp(const Json::Value& msg) :
+	SGXRAClientMessage(msg),
+	m_pubKey(ParsePublicKey(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
 {
-	if (!IsValid())
-	{
-		return;
-	}
-
-	Json::Value& parent = msg["child"];
-
-	if (!parent.isMember("child")
-		|| !parent["child"].isObject())
-	{
-		m_isValid = false;
-		return;
-	}
-
-	Json::Value& root = parent["child"];
-
-	if (root.isMember("MsgType")
-		&& root["MsgType"].asString() == SGXRAMessage::GetMessageTypeStr(GetType())
-		&& root.isMember("Untrusted")
-		&& root["Untrusted"].isMember("RAPubKey"))
-	{
-		m_pubKey = root["Untrusted"]["RAPubKey"].asString();
-		m_isValid = true;
-	}
-	else
-	{
-		m_isValid = false;
-	}
 }
 
 SGXRAMessage0Resp::~SGXRAMessage0Resp()
 {
 }
 
-std::string SGXRAMessage0Resp::GetMessgaeSubTypeStr() const
+std::string SGXRAMessage0Resp::GetMessageTypeStr() const
 {
-	return SGXRAMessage::GetMessageTypeStr(GetType());
-}
-
-SGXRAMessage::Type SGXRAMessage0Resp::GetType() const
-{
-	return SGXRAMessage::Type::MSG0_RESP;
-}
-
-bool SGXRAMessage0Resp::IsResp() const
-{
-	return true;
+	return VALUE_TYPE;
 }
 
 std::string SGXRAMessage0Resp::GetRAPubKey() const
@@ -159,18 +86,10 @@ std::string SGXRAMessage0Resp::GetRAPubKey() const
 
 Json::Value & SGXRAMessage0Resp::GetJsonMsg(Json::Value & outJson) const
 {
-	Json::Value& parent = SGXRAMessage::GetJsonMsg(outJson);
+	Json::Value& parent = SGXRAClientMessage::GetJsonMsg(outJson);
 
-	parent["child"] = Json::objectValue;
-	Json::Value& child = parent["child"];
+	parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_PUB_KEY] = m_pubKey;
 
-	Json::Value jsonUntrusted;
-
-	jsonUntrusted["RAPubKey"] = m_pubKey;
-
-	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
-	child["Untrusted"] = jsonUntrusted;
-	child["Trusted"] = Json::nullValue;
-
-	return child;
+	return parent;
 }

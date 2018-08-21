@@ -1,75 +1,55 @@
 #include "SGXRAMessage3.h"
 
-#include <memory>
-#include <climits>
-//#include <iostream>
+#include <json/json.h>
 
 #include <sgx_key_exchange.h>
 
-#include "../IAS/IASUtil.h"
+#include "../../MessageException.h"
 #include "../../../common/DataCoding.h"
 
+std::vector<uint8_t> SGXRAMessage3::ParseMsg3Data(const Json::Value & SGXRASPRoot)
+{
+	if (SGXRASPRoot.isMember(SGXRAMessage3::LABEL_DATA) && SGXRASPRoot[SGXRAMessage3::LABEL_DATA].isString())
+	{
+		std::vector<uint8_t> res;
+		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage3::LABEL_DATA].asString());
+
+		const sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<const sgx_ra_msg3_t*>(res.data());
+		const sgx_quote_t& quotePtr = *reinterpret_cast<const sgx_quote_t*>(msg3Ref.quote);
+
+		if (res.size() == (sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr.signature_len))
+		{
+			return res;
+		}
+	}
+	throw MessageParseException();
+}
+
 SGXRAMessage3::SGXRAMessage3(const std::string& senderID, const std::vector<uint8_t>& msg3Data) :
-	SGXRAMessage(senderID),
+	SGXRASPMessage(senderID),
 	m_msg3Data(msg3Data)
 {
 	const sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<const sgx_ra_msg3_t*>(m_msg3Data.data());
 	const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(msg3Ref.quote);
-	m_isValid = m_msg3Data.size() == (sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len);
+	if (m_msg3Data.size() != (sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len))
+	{
+		throw MessageInvalidException();
+	}
 }
 
-SGXRAMessage3::SGXRAMessage3(Json::Value& msg) :
-	SGXRAMessage(msg)
+SGXRAMessage3::SGXRAMessage3(const Json::Value& msg) :
+	SGXRASPMessage(msg),
+	m_msg3Data(ParseMsg3Data(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
 {
-	if (!IsValid())
-	{
-		return;
-	}
-
-	Json::Value& parent = msg["child"];
-
-	if (!parent.isMember("child")
-		|| !parent["child"].isObject())
-	{
-		m_isValid = false;
-		return;
-	}
-
-	Json::Value& root = parent["child"];
-
-	if (root.isMember("MsgType")
-		&& root["MsgType"].asString() == SGXRAMessage::GetMessageTypeStr(GetType())
-		&& root.isMember("Untrusted")
-		&& root["Untrusted"].isMember("msg3Data"))
-	{
-		DeserializeStruct(m_msg3Data, root["Untrusted"]["msg3Data"].asString());
-		const sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<const sgx_ra_msg3_t*>(m_msg3Data.data());
-		const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(msg3Ref.quote);
-		m_isValid = m_msg3Data.size() == (sizeof(sgx_ra_msg3_t) + sizeof(sgx_quote_t) + quotePtr->signature_len);
-	}
-	else
-	{
-		m_isValid = false;
-	}
 }
 
 SGXRAMessage3::~SGXRAMessage3()
 {
 }
 
-std::string SGXRAMessage3::GetMessgaeSubTypeStr() const
+std::string SGXRAMessage3::GetMessageTypeStr() const
 {
-	return SGXRAMessage::GetMessageTypeStr(GetType());
-}
-
-SGXRAMessage::Type SGXRAMessage3::GetType() const
-{
-	return SGXRAMessage::Type::MSG3_SEND;
-}
-
-bool SGXRAMessage3::IsResp() const
-{
-	return false;
+	return VALUE_TYPE;
 }
 
 const sgx_ra_msg3_t & SGXRAMessage3::GetMsg3() const
@@ -96,18 +76,10 @@ std::string SGXRAMessage3::GetQuoteBase64() const
 
 Json::Value & SGXRAMessage3::GetJsonMsg(Json::Value & outJson) const
 {
-	Json::Value& parent = SGXRAMessage::GetJsonMsg(outJson);
+	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	parent["child"] = Json::objectValue;
-	Json::Value& child = parent["child"];
+	parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_DATA] = SerializeStruct(m_msg3Data.data(), m_msg3Data.size());
 
-	Json::Value jsonUntrusted;
-
-	jsonUntrusted["msg3Data"] = SerializeStruct(m_msg3Data.data(), m_msg3Data.size());
-
-	child["MsgType"] = SGXRAMessage::GetMessageTypeStr(GetType());
-	child["Untrusted"] = jsonUntrusted;
-	child["Trusted"] = Json::nullValue;
-
-	return child;
+	return parent;
 }

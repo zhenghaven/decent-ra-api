@@ -1,102 +1,161 @@
 #include "SGXRAMessage.h"
 
-const std::string SGXRAMessage::sk_MessageClass = "SGX_RA";
+#include <json/json.h>
 
-SGXRAMessage::SGXRAMessage(const std::string& senderID) :
-	RAMessages(senderID)
+#include "../../MessageException.h"
+
+SGXRAClientMessage::SGXRAClientMessage(const std::string & senderID) :
+	Messages(senderID)
 {
 }
 
-SGXRAMessage::SGXRAMessage(Json::Value & msg) :
-	RAMessages(msg)
+SGXRAClientMessage::SGXRAClientMessage(const Json::Value & msg) :
+	Messages(msg)
 {
-	if (IsValid())
+	if (!(msg[Messages::LABEL_ROOT].isMember(SGXRAClientMessage::LABEL_ROOT) &&
+		msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT].isObject()))
 	{
-		if (msg.isMember("child")
-			&& msg["child"].isObject())
-		{
-			Json::Value& root = msg["child"];
-			if (root.isMember("Type")
-				&& root["Type"].isString()
-				&& root["Type"].asString() == "SGX_RA_Classic")
-			{
-				m_isValid = true;
-			}
-			else
-			{
-				m_isValid = false;
-			}
-		}
-		else
-		{
-			m_isValid = false;
-		}
+		throw MessageParseException();
 	}
 }
 
-SGXRAMessage::~SGXRAMessage()
+SGXRAClientMessage::~SGXRAClientMessage()
 {
 }
 
-void SGXRAMessage::SerializedMessage(std::vector<uint8_t>& outData) const
+std::string SGXRAClientMessage::GetMessageCategoryStr() const
 {
-	std::string msg = ToJsonString();
-	outData.resize(msg.size());
-	memcpy(&outData[0], msg.data(), msg.size());
+	return SGXRAClientMessage::VALUE_CAT;
 }
 
-std::string SGXRAMessage::ToJsonString() const
+Json::Value & SGXRAClientMessage::GetJsonMsg(Json::Value & outJson) const
 {
-	Json::Value jsonRoot;
+	Json::Value& parent = Messages::GetJsonMsg(outJson);
 
-	GetJsonMsg(jsonRoot);
+	parent[SGXRAClientMessage::LABEL_ROOT] = Json::objectValue;
 
-	return jsonRoot.toStyledString();
+	return parent[SGXRAClientMessage::LABEL_ROOT];
 }
 
-std::string SGXRAMessage::GetMessgaeSubTypeStr() const
+SGXRASPMessage::SGXRASPMessage(const std::string & senderID) :
+	Messages(senderID)
 {
-	return sk_MessageClass;
 }
 
-std::string SGXRAMessage::GetMessageTypeStr(const SGXRAMessage::Type t)
+SGXRASPMessage::SGXRASPMessage(const Json::Value & msg) :
+	Messages(msg)
 {
-	switch (t)
+	if (!(msg[Messages::LABEL_ROOT].isMember(SGXRAClientMessage::LABEL_ROOT) &&
+		msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT].isObject()))
 	{
-	case SGXRAMessage::Type::MSG0_SEND:
-		return "MSG0_SEND";
-	case SGXRAMessage::Type::MSG0_RESP:
-		return "MSG0_RESP";
-	case SGXRAMessage::Type::MSG1_SEND:
-		return "MSG1_SEND";
-	//case SGXRAMessage::Type::MSG1_RESP:
-	//	return "MSG1_RESP";
-	//case SGXRAMessage::Type::MSG2_SEND:
-	//	return "MSG2_SEND";
-	case SGXRAMessage::Type::MSG2_RESP:
-		return "MSG2_RESP";
-	case SGXRAMessage::Type::MSG3_SEND:
-		return "MSG3_SEND";
-	//case SGXRAMessage::Type::MSG3_RESP:
-	//	return "MSG3_RESP";
-	//case SGXRAMessage::Type::MSG4_SEND:
-	//	return "MSG4_SEND";
-	case SGXRAMessage::Type::MSG4_RESP:
-		return "MSG4_RESP";
-	case SGXRAMessage::Type::ERRO_RESP:
-		return "ERRO_RESP";
-	default:
-		return "OTHER";
+		throw MessageParseException();
 	}
 }
 
-Json::Value& SGXRAMessage::GetJsonMsg(Json::Value & outJson) const
+SGXRASPMessage::~SGXRASPMessage()
 {
-	Json::Value& parent = RAMessages::GetJsonMsg(outJson);
-	
-	parent["child"] = Json::objectValue;
-	Json::Value& child = parent["child"];
-	child["Type"] = "SGX_RA_Classic";
+}
 
-	return child;
+std::string SGXRASPMessage::GetMessageCategoryStr() const
+{
+	return SGXRASPMessage::VALUE_CAT;
+}
+
+Json::Value & SGXRASPMessage::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = Messages::GetJsonMsg(outJson);
+
+	parent[SGXRASPMessage::LABEL_ROOT] = Json::objectValue;
+
+	return parent[SGXRASPMessage::LABEL_ROOT];
+}
+
+std::string SGXRAClientErrMsg::ParseErrorMsg(const Json::Value & SGXRAClientRoot)
+{
+	if (SGXRAClientRoot.isMember(SGXRAClientErrMsg::LABEL_ERR_MSG) && SGXRAClientRoot[SGXRAClientErrMsg::LABEL_ERR_MSG].isString())
+	{
+		return SGXRAClientRoot[SGXRAClientErrMsg::LABEL_ERR_MSG].asString();
+	}
+	throw MessageParseException();
+}
+
+SGXRAClientErrMsg::SGXRAClientErrMsg(const std::string & senderID, const std::string & errStr) :
+	SGXRAClientMessage(senderID),
+	m_errStr(errStr)
+{
+}
+
+SGXRAClientErrMsg::SGXRAClientErrMsg(const Json::Value & msg) :
+	SGXRAClientMessage(msg),
+	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
+{
+}
+
+SGXRAClientErrMsg::~SGXRAClientErrMsg()
+{
+}
+
+std::string SGXRAClientErrMsg::GetMessageTypeStr() const
+{
+	return VALUE_TYPE;
+}
+
+const std::string & SGXRAClientErrMsg::GetErrStr() const
+{
+	return m_errStr;
+}
+
+Json::Value & SGXRAClientErrMsg::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = SGXRAClientMessage::GetJsonMsg(outJson);
+
+	parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_ERR_MSG] = m_errStr;
+
+	return parent;
+}
+
+std::string SGXRASPErrMsg::ParseErrorMsg(const Json::Value & SGXRASPRoot)
+{
+	if (SGXRASPRoot.isMember(SGXRASPErrMsg::LABEL_ERR_MSG) && SGXRASPRoot[SGXRASPErrMsg::LABEL_ERR_MSG].isString())
+	{
+		return SGXRASPRoot[SGXRASPErrMsg::LABEL_ERR_MSG].asString();
+	}
+	throw MessageParseException();
+}
+
+SGXRASPErrMsg::SGXRASPErrMsg(const std::string & senderID, const std::string & errStr) :
+	SGXRASPMessage(senderID),
+	m_errStr(errStr)
+{
+}
+
+SGXRASPErrMsg::SGXRASPErrMsg(const Json::Value & msg) :
+	SGXRASPMessage(msg),
+	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
+{
+}
+
+SGXRASPErrMsg::~SGXRASPErrMsg()
+{
+}
+
+std::string SGXRASPErrMsg::GetMessageTypeStr() const
+{
+	return VALUE_TYPE;
+}
+
+const std::string & SGXRASPErrMsg::GetErrStr() const
+{
+	m_errStr;
+}
+
+Json::Value & SGXRASPErrMsg::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
+
+	parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_ERR_MSG] = m_errStr;
+
+	return parent;
 }

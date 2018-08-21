@@ -13,7 +13,6 @@
 #include "SGXRAMessages/SGXRAMessage2.h"
 #include "SGXRAMessages/SGXRAMessage3.h"
 #include "SGXRAMessages/SGXRAMessage4.h"
-#include "SGXRAMessages/SGXRAMessageErr.h"
 
 #include "../Networking/Connection.h"
 #include "../../common/DataCoding.h"
@@ -109,9 +108,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	m_connection->Receive(msgBuffer);
 	resp = JsonMessageParser(msgBuffer);
 	SGXRAMessage0Resp* msg0r = dynamic_cast<SGXRAMessage0Resp*>(resp);
-	if (!resp || !msg0r || !msg0r->IsValid())
+	if (!resp || !msg0r)
 	{
-		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
+		SGXRASPErrMsg errMsg(msgSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete resp;
 		return false;
@@ -126,7 +125,7 @@ bool SGXClientRASession::ProcessClientSideRA()
 	enclaveRes = m_sgxEnclave.ProcessRAMsg0Resp(msg0r->GetSenderID(), spRAPubKey, false, raContextID, msg1Data);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
+		SGXRASPErrMsg errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete resp;
 		return false;
@@ -143,9 +142,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	m_connection->Receive(msgBuffer);
 	resp = JsonMessageParser(msgBuffer);
 	SGXRAMessage2* msg2 = dynamic_cast<SGXRAMessage2*>(resp);
-	if (!resp || !msg2 || !msg2->IsValid())
+	if (!resp || !msg2)
 	{
-		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
+		SGXRASPErrMsg errMsg(msgSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete resp;
 		return false;
@@ -155,7 +154,7 @@ bool SGXClientRASession::ProcessClientSideRA()
 	enclaveRes = m_sgxEnclave.ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), msg3Data, raContextID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRAMessageErr errMsg(msgSenderID, "Enclave process error!");
+		SGXRASPErrMsg errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete resp;
 		return false;
@@ -172,9 +171,9 @@ bool SGXClientRASession::ProcessClientSideRA()
 	m_connection->Receive(msgBuffer);
 	resp = JsonMessageParser(msgBuffer);
 	SGXRAMessage4* msg4 = dynamic_cast<SGXRAMessage4*>(resp);
-	if (!resp || !msg4 || !msg4->IsValid())
+	if (!resp || !msg4)
 	{
-		SGXRAMessageErr errMsg(msgSenderID, "Wrong response message!");
+		SGXRASPErrMsg errMsg(msgSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete resp;
 		return false;

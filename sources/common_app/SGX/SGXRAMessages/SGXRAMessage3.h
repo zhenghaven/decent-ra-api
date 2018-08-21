@@ -2,24 +2,26 @@
 
 #include "SGXRAMessage.h"
 
-#include <json/json.h>
-
 //Forward Declarations:
 struct _ra_msg3_t;
 typedef _ra_msg3_t sgx_ra_msg3_t;
 
-class SGXRAMessage3 : public SGXRAMessage
+class SGXRAMessage3 : public SGXRASPMessage
 {
+public:
+	static constexpr char* LABEL_DATA = "Msg3Data";
+
+	static constexpr char* VALUE_TYPE = "MSG3_SEND";
+
+	static std::vector<uint8_t> ParseMsg3Data(const Json::Value& SGXRASPRoot);
+
 public:
 	SGXRAMessage3() = delete;
 	SGXRAMessage3(const std::string& senderID, const std::vector<uint8_t>& msg3Data);
-	SGXRAMessage3(Json::Value& msg);
+	SGXRAMessage3(const Json::Value& msg);
 	~SGXRAMessage3();
 
-	virtual std::string GetMessgaeSubTypeStr() const override;
-
-	virtual Type GetType() const override;
-	virtual bool IsResp() const override;
+	virtual std::string GetMessageTypeStr() const override;
 
 	const sgx_ra_msg3_t& GetMsg3() const;
 
@@ -33,5 +35,5 @@ protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 
 private:
-	std::vector<uint8_t> m_msg3Data;
+	const std::vector<uint8_t> m_msg3Data;
 };

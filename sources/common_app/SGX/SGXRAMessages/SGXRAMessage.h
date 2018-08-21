@@ -1,57 +1,108 @@
 #pragma once
 
-#include <vector>
-#include <cstdint>
+#include "../../Messages.h"
 
-#include <json/json.h>
+namespace Json
+{
+	class Value;
+}
 
-#include "../../RAMessages.h"
-
-class SGXRAMessage : public RAMessages
+class SGXRAClientMessage :  public Messages
 {
 public:
-	enum class Type 
-	{
-		MSG0_SEND = 0,
-		MSG0_RESP,
-		MSG1_SEND,
-		//MSG1_RESP,
-		//MSG2_SEND,
-		MSG2_RESP,
-		MSG3_SEND,
-		//MSG3_RESP,
-		//MSG4_SEND,
-		MSG4_RESP,
-		ERRO_RESP,
-		OTHER,
-	};
+	static constexpr char* LABEL_ROOT = "SGXRAClient";
+	static constexpr char* LABEL_TYPE = "Type";
+
+	static constexpr char* VALUE_CAT  = LABEL_ROOT;
 
 public:
-	SGXRAMessage() = delete;
-	SGXRAMessage(const std::string& senderID);
-	SGXRAMessage(Json::Value& msg);
-	~SGXRAMessage();
+	SGXRAClientMessage() = delete;
+	SGXRAClientMessage(const std::string& senderID);
+	SGXRAClientMessage(const Json::Value& msg);
+	virtual ~SGXRAClientMessage();
 
-	virtual void SerializedMessage(std::vector<uint8_t>& outData) const;
-
-	virtual std::string ToJsonString() const;
-
-	virtual Type GetType() const = 0;
-
-	virtual bool IsResp() const = 0;
-
-	virtual std::string GetMessgaeSubTypeStr() const override;
-
-	static Type GetTypeFromMessage(const std::string& msg);
-
-	static const std::string sk_MessageClass;
+	virtual std::string GetMessageCategoryStr() const override;
+	virtual std::string GetMessageTypeStr() const = 0;
 
 protected:
-
-	static std::string GetMessageTypeStr(const Type t);
-
-	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const;
 
 private:
 
+};
+
+class SGXRASPMessage : public Messages
+{
+public:
+	static constexpr char* LABEL_ROOT = "SGXRASP";
+	static constexpr char* LABEL_TYPE = "Type";
+
+	static constexpr char* VALUE_CAT = LABEL_ROOT;
+
+public:
+	SGXRASPMessage() = delete;
+	SGXRASPMessage(const std::string& senderID);
+	SGXRASPMessage(const Json::Value& msg);
+	virtual ~SGXRASPMessage();
+
+	virtual std::string GetMessageCategoryStr() const override;
+	virtual std::string GetMessageTypeStr() const = 0;
+
+protected:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const;
+
+private:
+
+};
+
+class SGXRAClientErrMsg : public SGXRAClientMessage
+{
+public:
+	static constexpr char* LABEL_ERR_MSG = "ErrorMsg";
+
+	static constexpr char* VALUE_TYPE = "Error";
+
+	static std::string ParseErrorMsg(const Json::Value& SGXRAClientRoot);
+
+public:
+	SGXRAClientErrMsg() = delete;
+	SGXRAClientErrMsg(const std::string& senderID, const std::string& errStr);
+	SGXRAClientErrMsg(const Json::Value& msg);
+	~SGXRAClientErrMsg();
+
+	virtual std::string GetMessageTypeStr() const override;
+
+	const std::string& GetErrStr() const;
+
+protected:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
+
+private:
+	const std::string m_errStr;
+};
+
+class SGXRASPErrMsg : public SGXRASPMessage
+{
+public:
+	static constexpr char* LABEL_ERR_MSG = "ErrorMsg";
+
+	static constexpr char* VALUE_TYPE = "Error";
+
+	static std::string ParseErrorMsg(const Json::Value& SGXRASPRoot);
+
+public:
+	SGXRASPErrMsg() = delete;
+	SGXRASPErrMsg(const std::string& senderID, const std::string& errStr);
+	SGXRASPErrMsg(const Json::Value& msg);
+	~SGXRASPErrMsg();
+
+	virtual std::string GetMessageTypeStr() const override;
+
+	const std::string& GetErrStr() const;
+
+protected:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
+
+private:
+	const std::string m_errStr;
 };
