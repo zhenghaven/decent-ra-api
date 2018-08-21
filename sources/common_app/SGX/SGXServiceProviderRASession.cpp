@@ -1,5 +1,7 @@
 #include "SGXServiceProviderRASession.h"
 
+#include <type_traits>
+
 #include <json/json.h>
 
 #include "../../common/SGX/sgx_ra_msg4.h"
@@ -20,28 +22,57 @@
 #include "SGXRAMessages/SGXRAMessage3.h"
 #include "SGXRAMessages/SGXRAMessage4.h"
 
+#include "../MessageException.h"
+
 namespace
 {
-	std::vector<uint32_t> g_acceptedExGID =
+	const std::vector<uint32_t> g_acceptedExGID =
 	{
 		0,
 	};
-
-	std::map<std::string, SGXRAMessage::Type> g_msgTypeNameMap =
-	{
-		std::pair<std::string, SGXRAMessage::Type>("MSG0_SEND", SGXRAMessage::Type::MSG0_SEND),
-		std::pair<std::string, SGXRAMessage::Type>("MSG0_RESP", SGXRAMessage::Type::MSG0_RESP),
-		std::pair<std::string, SGXRAMessage::Type>("MSG1_SEND", SGXRAMessage::Type::MSG1_SEND),
-		std::pair<std::string, SGXRAMessage::Type>("MSG2_RESP", SGXRAMessage::Type::MSG2_RESP),
-		std::pair<std::string, SGXRAMessage::Type>("MSG3_SEND", SGXRAMessage::Type::MSG3_SEND),
-		std::pair<std::string, SGXRAMessage::Type>("MSG4_RESP", SGXRAMessage::Type::MSG4_RESP),
-		std::pair<std::string, SGXRAMessage::Type>("ERRO_RESP", SGXRAMessage::Type::ERRO_RESP),
-		std::pair<std::string, SGXRAMessage::Type>("OTHER", SGXRAMessage::Type::OTHER),
-	};
 }
 
-static RAMessages * JsonMessageParser(const std::string& jsonStr)
+template<class T>
+static T*  ParseMessageExpected(const Json::Value& json)
 {
+	static_assert(std::is_base_of<SGXRASPMessage, T>::value, "Class type must be a child class of SGXRASPMessage.");
+	try
+	{
+		std::string cat = SGXRASPMessage::ParseCat(json);
+		if (cat != SGXRASPMessage::VALUE_CAT)
+		{
+			return nullptr;
+		}
+
+		std::string type = SGXRASPMessage::ParseType(json[Messages::LABEL_ROOT]);
+
+		if (type == SGXRASPErrMsg::VALUE_TYPE)
+		{
+			throw ReceivedErrorMessageException();
+		}
+		
+		if (type == T::VALUE_TYPE)
+		{
+			T* msgPtr = new T(json);
+			return msgPtr;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+	catch (MessageParseException& e)
+	{
+		LOGI("Caught Exception: %s\n", e.what());
+		return nullptr;
+	}
+}
+
+template<class T>
+static T* ParseMessageExpected(const std::string& jsonStr)
+{
+	static_assert(std::is_base_of<SGXRASPMessage, T>::value, "Class type must be a child class of SGXRASPMessage.");
+
 	Json::Value jsonRoot;
 	Json::CharReaderBuilder rbuilder;
 	rbuilder["collectComments"] = false;
@@ -50,40 +81,7 @@ static RAMessages * JsonMessageParser(const std::string& jsonStr)
 	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
 	bool isValid = reader->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.size(), &jsonRoot, &errStr);
 
-	if (!isValid
-		|| !jsonRoot.isMember("MsgSubType")
-		|| !jsonRoot["MsgSubType"].isString())
-	{
-		LOGI("Recv INVALID MESSAGE!");
-		return nullptr;
-	}
-
-	auto it = g_msgTypeNameMap.find(jsonRoot["MsgSubType"].asString());
-	if (it == g_msgTypeNameMap.end() || it->second == SGXRAMessage::Type::OTHER)
-	{
-		LOGI("Recv INVALID MESSAGE!");
-		return nullptr;
-	}
-
-	switch (it->second)
-	{
-	case SGXRAMessage::Type::MSG0_SEND:
-		return new SGXRAMessage0Send(jsonRoot);
-	case SGXRAMessage::Type::MSG0_RESP:
-		return new SGXRAMessage0Resp(jsonRoot);
-	case SGXRAMessage::Type::MSG1_SEND:
-		return new SGXRAMessage1(jsonRoot);
-	case SGXRAMessage::Type::MSG2_RESP:
-		return new SGXRAMessage2(jsonRoot);
-	case SGXRAMessage::Type::MSG3_SEND:
-		return new SGXRAMessage3(jsonRoot);
-	case SGXRAMessage::Type::MSG4_RESP:
-		return new SGXRAMessage4(jsonRoot);
-	case SGXRAMessage::Type::ERRO_RESP:
-		return new SGXRAMessageErr(jsonRoot);
-	default:
-		return nullptr;
-	}
+	return ParseMessageExpected<T>(jsonRoot);
 }
 
 SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias) :
@@ -106,62 +104,48 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 
-	RAMessages* reqs = nullptr;
-	SGXRAMessage* resp = nullptr;
 	std::string msgBuffer;
 	std::string msgSenderID = GetSenderID();
 
 	m_connection->Receive(msgBuffer);
-	reqs = JsonMessageParser(msgBuffer);
 
-	SGXRAMessage0Send* msg0s = dynamic_cast<SGXRAMessage0Send*>(reqs);
-	if (!reqs || !msg0s)
+	auto msg0s = ParseMessageExpected<SGXRAMessage0Send>(msgBuffer);
+	if (!msg0s)
 	{
 		SGXRAClientErrMsg errMsg(msgSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
 		return false;
 	}
 
-	if (std::find(g_acceptedExGID.begin(), g_acceptedExGID.end(), msg0s->GetExtendedGroupID()) != g_acceptedExGID.end())
-	{
-		enclaveRes = m_sgxSP.ProcessRAMsg0Send(msg0s->GetSenderID());
-		if (enclaveRes != SGX_SUCCESS)
-		{
-			SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
-			m_connection->Send(errMsg.ToJsonString());
-			delete reqs;
-			return false;
-		}
-		else
-		{
-			resp = new SGXRAMessage0Resp(msgSenderID, msgSenderID);
-		}
-	}
-	else
+	if (std::find(g_acceptedExGID.begin(), g_acceptedExGID.end(), msg0s->GetExtendedGroupID()) == g_acceptedExGID.end())
 	{
 		SGXRAClientErrMsg errMsg(msgSenderID, "Extended Group ID is not accepted!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
+		delete msg0s;
 		return false;
 	}
 
-	m_connection->Send(resp->ToJsonString());
-	delete resp;
-	resp = nullptr;
-	delete reqs;
-	reqs = nullptr;
+	enclaveRes = m_sgxSP.ProcessRAMsg0Send(msg0s->GetSenderID());
+	if (enclaveRes != SGX_SUCCESS)
+	{
+		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
+		m_connection->Send(errMsg.ToJsonString());
+		delete msg0s;
+		return false;
+	}
+
+	SGXRAMessage0Resp msg0r(msgSenderID, msgSenderID);
+
+	m_connection->Send(msg0r.ToJsonString());
+	delete msg0s;
 	msg0s = nullptr;
 
 	m_connection->Receive(msgBuffer);
-	reqs = JsonMessageParser(msgBuffer);
-
-	SGXRAMessage1* msg1 = dynamic_cast<SGXRAMessage1*>(reqs);
-	if (!reqs || !msg1)
+	auto msg1 = ParseMessageExpected<SGXRAMessage1>(msgBuffer);
+	if (!msg1)
 	{
 		SGXRAClientErrMsg errMsg(msgSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
 		return false;
 	}
 
@@ -178,7 +162,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	{
 		SGXRAClientErrMsg errMsg(msgSenderID, "Failed to get Revocation List!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
+		delete msg1;
 		return false;
 	}
 
@@ -191,31 +175,26 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Ref);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Extended Group ID is not accepted!");
+		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
+		delete msg1;
 		return false;
 	}
 	msg2Ref.sig_rl_size = static_cast<uint32_t>(sigRLData.size());
 	std::memcpy(msg2Data.data() + sizeof(sgx_ra_msg2_t), sigRLData.data(), sigRLData.size());
-	resp = new SGXRAMessage2(msgSenderID, msg2Data);
+	SGXRAMessage2 msg2(msgSenderID, msg2Data);
 
-	m_connection->Send(resp->ToJsonString());
-	delete resp;
-	resp = nullptr;
-	delete reqs;
-	reqs = nullptr;
+	m_connection->Send(msg2.ToJsonString());
+	delete msg1;
 	msg1 = nullptr;
 
 	m_connection->Receive(msgBuffer);
-	reqs = JsonMessageParser(msgBuffer);
+	auto msg3 = ParseMessageExpected<SGXRAMessage3>(msgBuffer);
 
-	SGXRAMessage3* msg3 = dynamic_cast<SGXRAMessage3*>(reqs);
-	if (!reqs || !msg3)
+	if (!msg3)
 	{
 		SGXRAClientErrMsg errMsg(msgSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
 		return false;
 	}
 
@@ -228,7 +207,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	{
 		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
+		delete msg3;
 		return false;
 	}
 
@@ -238,22 +217,20 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	std::string iasReport;
 	std::string iasReportSign;
 	std::string iasCert;
-	m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert);
+	/*TODO: Simulation code here: */
+	respCode = m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert);
 	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete reqs;
+		delete msg3;
 		return false;
 	}
-	resp = new SGXRAMessage4(msgSenderID, msg4Data, msg4Sign);
+	SGXRAMessage4 msg4(msgSenderID, msg4Data, msg4Sign);
 
-	m_connection->Send(resp->ToJsonString());
-	delete resp;
-	resp = nullptr;
-	delete reqs;
-	reqs = nullptr;
+	m_connection->Send(msg4.ToJsonString());
+	delete msg3;
 	msg3 = nullptr;
 
 	return true;

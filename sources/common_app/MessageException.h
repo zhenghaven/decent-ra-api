@@ -2,7 +2,7 @@
 
 #include <exception>
 
-class MessageException
+class MessageException : public std::exception
 {
 public:
 	MessageException()
@@ -18,7 +18,23 @@ private:
 
 };
 
-class MessageInvalidException
+class ReceivedErrorMessageException : public MessageException
+{
+public:
+	ReceivedErrorMessageException()
+	{}
+	~ReceivedErrorMessageException()
+	{}
+
+	virtual const char* what() const throw()
+	{
+		return "Received a error message from the remote side.";
+	}
+private:
+
+};
+
+class MessageInvalidException : public MessageException
 {
 public:
 	MessageInvalidException()
@@ -34,7 +50,7 @@ private:
 
 };
 
-class MessageParseException
+class MessageParseException : public MessageInvalidException
 {
 public:
 	MessageParseException()

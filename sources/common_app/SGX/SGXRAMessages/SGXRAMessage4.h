@@ -5,6 +5,8 @@
 #include <sgx_key_exchange.h>
 #include <sgx_tcrypto.h>
 
+#include "../../../common/SGX/sgx_ra_msg4.h"
+
 class SGXRAMessage4 : public SGXRAClientMessage
 {
 public:

@@ -15,6 +15,8 @@ public:
 
 	static constexpr char* VALUE_CAT  = LABEL_ROOT;
 
+	static std::string ParseType(const Json::Value& MsgRootContent);
+
 public:
 	SGXRAClientMessage() = delete;
 	SGXRAClientMessage(const std::string& senderID);
@@ -38,6 +40,8 @@ public:
 	static constexpr char* LABEL_TYPE = "Type";
 
 	static constexpr char* VALUE_CAT = LABEL_ROOT;
+
+	static std::string ParseType(const Json::Value& MsgRootContent);
 
 public:
 	SGXRASPMessage() = delete;

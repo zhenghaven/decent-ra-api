@@ -47,7 +47,7 @@ Json::Value & SGXRAMessage1::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
 	parent[LABEL_DATA] = SerializeStruct(m_msg1Data);
 
 	return parent;

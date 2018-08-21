@@ -43,7 +43,7 @@ Json::Value& SGXRAMessage0Send::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
 	parent[LABEL_EX_GROUP_ID] = m_exGrpID;
 
 	return parent;
@@ -88,7 +88,7 @@ Json::Value & SGXRAMessage0Resp::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRAClientMessage::GetJsonMsg(outJson);
 
-	parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
 	parent[LABEL_PUB_KEY] = m_pubKey;
 
 	return parent;

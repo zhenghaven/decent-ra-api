@@ -4,6 +4,17 @@
 
 #include "../../MessageException.h"
 
+std::string SGXRAClientMessage::ParseType(const Json::Value & MsgRootContent)
+{
+	if (MsgRootContent.isMember(SGXRAClientMessage::LABEL_ROOT) && MsgRootContent[SGXRAClientMessage::LABEL_ROOT].isObject() &&
+		MsgRootContent[SGXRAClientMessage::LABEL_ROOT].isMember(LABEL_TYPE) && MsgRootContent[SGXRAClientMessage::LABEL_ROOT][LABEL_TYPE].isString()
+		)
+	{
+		return MsgRootContent[SGXRAClientMessage::LABEL_ROOT][LABEL_TYPE].asString();
+	}
+	throw MessageParseException();
+}
+
 SGXRAClientMessage::SGXRAClientMessage(const std::string & senderID) :
 	Messages(senderID)
 {
@@ -12,11 +23,7 @@ SGXRAClientMessage::SGXRAClientMessage(const std::string & senderID) :
 SGXRAClientMessage::SGXRAClientMessage(const Json::Value & msg) :
 	Messages(msg)
 {
-	if (!(msg[Messages::LABEL_ROOT].isMember(SGXRAClientMessage::LABEL_ROOT) &&
-		msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT].isObject()))
-	{
-		throw MessageParseException();
-	}
+	ParseType(msg[Messages::LABEL_ROOT]);
 }
 
 SGXRAClientMessage::~SGXRAClientMessage()
@@ -33,8 +40,20 @@ Json::Value & SGXRAClientMessage::GetJsonMsg(Json::Value & outJson) const
 	Json::Value& parent = Messages::GetJsonMsg(outJson);
 
 	parent[SGXRAClientMessage::LABEL_ROOT] = Json::objectValue;
+	parent[SGXRAClientMessage::LABEL_ROOT][SGXRAClientMessage::LABEL_TYPE] = GetMessageTypeStr();
 
 	return parent[SGXRAClientMessage::LABEL_ROOT];
+}
+
+std::string SGXRASPMessage::ParseType(const Json::Value & MsgRootContent)
+{
+	if (MsgRootContent.isMember(SGXRASPMessage::LABEL_ROOT) && MsgRootContent[SGXRASPMessage::LABEL_ROOT].isObject() &&
+		MsgRootContent[SGXRASPMessage::LABEL_ROOT].isMember(LABEL_TYPE) && MsgRootContent[SGXRASPMessage::LABEL_ROOT][LABEL_TYPE].isString()
+		)
+	{
+		return MsgRootContent[SGXRASPMessage::LABEL_ROOT][LABEL_TYPE].asString();
+	}
+	throw MessageParseException();
 }
 
 SGXRASPMessage::SGXRASPMessage(const std::string & senderID) :
@@ -45,11 +64,7 @@ SGXRASPMessage::SGXRASPMessage(const std::string & senderID) :
 SGXRASPMessage::SGXRASPMessage(const Json::Value & msg) :
 	Messages(msg)
 {
-	if (!(msg[Messages::LABEL_ROOT].isMember(SGXRAClientMessage::LABEL_ROOT) &&
-		msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT].isObject()))
-	{
-		throw MessageParseException();
-	}
+	ParseType(msg[Messages::LABEL_ROOT]);
 }
 
 SGXRASPMessage::~SGXRASPMessage()
@@ -66,6 +81,7 @@ Json::Value & SGXRASPMessage::GetJsonMsg(Json::Value & outJson) const
 	Json::Value& parent = Messages::GetJsonMsg(outJson);
 
 	parent[SGXRASPMessage::LABEL_ROOT] = Json::objectValue;
+	parent[SGXRASPMessage::LABEL_ROOT][SGXRASPMessage::LABEL_TYPE] = GetMessageTypeStr();
 
 	return parent[SGXRASPMessage::LABEL_ROOT];
 }
