@@ -163,7 +163,7 @@ std::string SGXRASPErrMsg::GetMessageTypeStr() const
 
 const std::string & SGXRASPErrMsg::GetErrStr() const
 {
-	m_errStr;
+	return m_errStr;
 }
 
 Json::Value & SGXRASPErrMsg::GetJsonMsg(Json::Value & outJson) const

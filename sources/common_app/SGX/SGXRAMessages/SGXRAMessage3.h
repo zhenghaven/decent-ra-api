@@ -2,6 +2,9 @@
 
 #include "SGXRAMessage.h"
 
+#include <vector>
+#include <cstdint>
+
 //Forward Declarations:
 struct _ra_msg3_t;
 typedef _ra_msg3_t sgx_ra_msg3_t;

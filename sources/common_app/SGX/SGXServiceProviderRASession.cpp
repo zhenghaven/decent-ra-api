@@ -152,11 +152,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	std::string sigRlStr;
 	int32_t respCode = 0;
 
-#ifdef SIMULATING_ENCLAVE
-	respCode = 200;
-#else
 	respCode = m_ias.GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
-#endif // SIMULATING_ENCLAVE
 
 	if (respCode != 200)
 	{

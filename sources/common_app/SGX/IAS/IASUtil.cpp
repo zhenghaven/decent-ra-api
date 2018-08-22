@@ -11,6 +11,12 @@
 
 #include "../../FileSystemUtil.h"
 
+#ifdef SIMULATING_ENCLAVE
+#include <json/json.h>
+#include <sgx_report.h>
+#include "../../../common/DataCoding.h"
+#endif // SIMULATING_ENCLAVE
+
 using namespace IASUtil;
 
 namespace
@@ -92,6 +98,7 @@ int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t& gid, std::string &
 	outRevcList = "";
 	std::string requestId;
 
+#ifndef SIMULATING_ENCLAVE
 	cUrlContentCallBackFunc contentCallback = [&outRevcList](char *ptr, size_t size, size_t nmemb, void *userdata) -> size_t
 	{
 		outRevcList = std::string(ptr, size * nmemb);
@@ -138,6 +145,9 @@ int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t& gid, std::string &
 
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(hnd);
+#else
+	respCode = 200;
+#endif // !SIMULATING_ENCLAVE
 
 	return respCode;
 }
@@ -160,6 +170,7 @@ int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & o
 	outReport = "";
 	std::string requestId;
 
+#ifndef SIMULATING_ENCLAVE
 	cUrlContentCallBackFunc contentCallback = [&outReport](char *ptr, size_t size, size_t nmemb, void *userdata) -> size_t
 	{
 		outReport = std::string(ptr, size * nmemb);
@@ -221,6 +232,29 @@ int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & o
 
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(hnd);
+#else
+	Json::Value jsonRoot;
+	Json::CharReaderBuilder rbuilder;
+	rbuilder["collectComments"] = false;
+	std::string errStr;
+
+	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
+	bool isValid = reader->parse(jsonReqBody.c_str(), jsonReqBody.c_str() + jsonReqBody.size(), &jsonRoot, &errStr);
+
+	std::vector<uint8_t> buffer;
+	DeserializeStruct(buffer, jsonRoot["isvEnclaveQuote"].asString());
+	std::string quoteB64 = SerializeStruct(buffer.data(), sizeof(sgx_quote_t) - sizeof(sgx_quote_t::signature_len));
+
+	Json::Value reportJson;
+
+	reportJson["isvEnclaveQuoteStatus"] = "OK";
+	reportJson["nonce"] = jsonRoot["nonce"].asString();
+	reportJson["isvEnclaveQuoteBody"] = quoteB64;
+
+	outReport = reportJson.toStyledString();
+
+	respCode = 200;
+#endif // !SIMULATING_ENCLAVE
 
 	return respCode;
 }

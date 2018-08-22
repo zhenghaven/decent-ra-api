@@ -20,7 +20,6 @@
 #include "../../common/OpenSSLTools.h"
 #include "../../common/NonceGenerator.h"
 #include "../../common/EnclaveRAState.h"
-//#include "../../common/RACryptoManager.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/SGX/ias_report_cert.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
@@ -87,7 +86,6 @@ struct RASPContext
 
 namespace
 {
-
 	//Assume this is set correctly during init and no change afterwards.
 	static std::shared_ptr<const sgx_spid_t> g_sgxSPID = std::make_shared<const sgx_spid_t>();
 	//Assume this is set correctly during init and no change afterwards.
@@ -246,21 +244,6 @@ sgx_status_t SGXRAEnclave::GetIasNonce(const char* clientID, char* outStr)
 	return SGX_SUCCESS;
 }
 
-//sgx_status_t SGXRAEnclave::GetRASPEncrPubKey(sgx_ra_context_t context, sgx_ec256_public_t * outKey)
-//{
-//	if (!outKey)
-//	{
-//		return SGX_ERROR_INVALID_PARAMETER;
-//	}
-//	if (g_cryptoMgr.GetStatus() != SGX_SUCCESS)
-//	{
-//		return g_cryptoMgr.GetStatus();
-//	}
-//
-//	std::memcpy(outKey, &(g_cryptoMgr.GetEncrPubKey()), sizeof(sgx_ec256_public_t));
-//	return SGX_SUCCESS;
-//}
-
 sgx_status_t SGXRAEnclave::GetRASPSignPubKey(sgx_ec256_public_t * outKey)
 {
 	if (!outKey)
@@ -283,7 +266,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg0Send(const char* clientID)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	//std::map<std::string, std::pair<ClientRAState, RAKeyManager>>& clientsMap = EnclaveState::GetInstance().GetClientsMap();
+
 	sgx_ec256_public_t clientSignkey;
 	DeserializePubKey(clientID, clientSignkey);
 	if (!AddNewClientRAState(clientID, clientSignkey))
@@ -447,15 +430,6 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 		std::memcpy(outOriRD, &report_data, sizeof(sgx_report_data_t));
 	}
 
-	//TODO: Verify quote report here.
-#ifdef SIMULATING_ENCLAVE
-	COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", "Simulated!");
-	COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", "Simulated!");
-	outMsg4->status = ias_quote_status_t::IAS_QUOTE_OK;
-	//outMsg4->id = 222;
-
-#else
-
 	bool iasVerifyRes = SGXRAEnclave::VerifyIASReport(&outMsg4->status, iasReport, reportCert, reportSign, SGXRAEnclave::GetSelfHash(), report_data, spCTX.m_reportDataVerifier, spCTX.m_nonce.c_str());
 	if (!iasVerifyRes)
 	{
@@ -464,10 +438,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 		FUNC_ERR("Processing msg3, IAS report got rejected!");
 	}
 
-#endif // SIMULATING_ENCLAVE
-
-
-	//Temporary code here:
+	//TODO: Decide if we need to add PSE.
 	outMsg4->pse_status = ias_pse_status_t::IAS_PSE_OK;
 
 	{
@@ -503,6 +474,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 
 bool SGXRAEnclave::VerifyIASReport(ias_quote_status_t* outStatus,const std::string& iasReport, const std::string& reportCert, const std::string& reportSign, const std::string& progHash, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce)
 {
+#ifndef SIMULATING_ENCLAVE
 	std::vector<X509*> certs;
 	LoadX509CertsFromStr(certs, IAS_REPORT_CERT);
 	X509* iasCert = certs[0];
@@ -525,6 +497,10 @@ bool SGXRAEnclave::VerifyIASReport(ias_quote_status_t* outStatus,const std::stri
 	{
 		return false;
 	}
+#else
+	COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", "Simulated!");
+	COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", "Simulated!");
+#endif // !SIMULATING_ENCLAVE
 
 	rapidjson::Document jsonDoc;
 	jsonDoc.Parse(iasReport.c_str());
@@ -553,5 +529,9 @@ bool SGXRAEnclave::VerifyIASReport(ias_quote_status_t* outStatus,const std::stri
 	bool isReportDataMatch = rdVerifier(oriRD.d, std::vector<uint8_t>(reportData.d, reportData.d + sizeof(sgx_report_data_t)));
 	COMMON_PRINTF("IAS Report Is Report Data Match:    %s \n", isReportDataMatch ? "Yes!" : "No!");
 
+#ifndef SIMULATING_ENCLAVE
 	return certVerRes && signVerRes && isProgHashMatch && isReportDataMatch;
+#else
+	return isProgHashMatch && isReportDataMatch;
+#endif // !SIMULATING_ENCLAVE
 }

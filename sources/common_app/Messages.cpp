@@ -35,7 +35,7 @@ Messages::Messages(const Json::Value& msg) :
 
 const std::string & Messages::GetSenderID() const
 {
-	m_senderID;
+	return m_senderID;
 }
 
 std::string Messages::ToJsonString() const

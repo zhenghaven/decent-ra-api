@@ -5,7 +5,6 @@
 #include <string>
 
 class DecentEnclave;
-class DecentMessageMsg0;
 
 class DecentRASession : public DecentralizedRASession
 {
@@ -45,7 +44,7 @@ public:
 	 *
 	 * \return	True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessClientMessage0();
+	//virtual bool ProcessClientMessage0();
 
 	/**
 	 * \brief	Process the server side Decent Protocol Message 0.
@@ -54,7 +53,7 @@ public:
 	 *
 	 * \return	True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessServerMessage0();
+	//virtual bool ProcessServerMessage0();
 
 protected:
 	/**
@@ -64,7 +63,7 @@ protected:
 	 *
 	 * \return	True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessClientSideKeyRequest();
+	//virtual bool ProcessClientSideKeyRequest();
 
 	/**
 	 * \brief	Process the server side key request. This method should only called by a root server.
@@ -73,10 +72,8 @@ protected:
 	 *
 	 * \return True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessServerSideKeyRequest();
+	//virtual bool ProcessServerSideKeyRequest();
 
 private:
 	DecentEnclave& m_decentEnclave;
-
-	DecentMessageMsg0* ConstructMessage0();
 };

@@ -22,7 +22,6 @@
 #include "../common_app/Networking/Server.h"
 
 #include "../common_app/SGX/IAS/IASConnector.h"
-#include "../common_app/RAMessageRevRAReq.h"
 
 #include "ExampleEnclave.h"
 #include "SimpleMessage.h"
@@ -129,55 +128,6 @@ int main(int argc, char ** argv)
 		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
 		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
 		decentRA2.ProcessServerSideRA();
-	}
-	break;
-	case 2:
-	{
-		expEnc.SetDecentMode(DecentNodeMode::APPL_SERVER);
-		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, 57756U);
-		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
-		decentRA.ProcessClientSideRA();
-
-		Server ser(hostIP, 57750U);
-		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
-		decentRA2.ProcessServerSideRA();
-		decentRA2.SwapConnection(connection2);
-
-		std::string buffer;
-		connection2->Receive(buffer);
-		reader->parse(buffer.c_str(), buffer.c_str() + buffer.size(), &jsonRoot, &errStr);
-
-		RAMessageRevRAReq revMsg(jsonRoot);
-		uint64_t secret;
-		sgx_aes_gcm_128bit_tag_t secretMac;
-		expEnc.GetSimpleSecret(revMsg.GetSenderID(), secret, secretMac);
-		SimpleMessage sMsg(raSenderID, secret, secretMac);
-		connection2->Send(sMsg.ToJsonString());
-	}
-	break;
-	case 3:
-	{
-		expEnc.SetDecentMode(DecentNodeMode::APPL_SERVER);
-		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
-		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
-		decentRA.ProcessClientSideRA();
-
-		std::unique_ptr<Connection> connection2 = std::make_unique<Connection>(hostIP, 57750U);
-		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
-		decentRA2.ProcessClientMessage0();
-		decentRA2.SwapConnection(connection2);
-
-		RAMessageRevRAReq revMsg(raSenderID);
-		connection2->Send(revMsg.ToJsonString());
-
-		std::string buffer;
-		connection2->Receive(buffer);
-		reader->parse(buffer.c_str(), buffer.c_str() + buffer.size(), &jsonRoot, &errStr);
-
-		SimpleMessage sMsg(jsonRoot);
-		expEnc.ProcessSimpleSecret(sMsg.GetSenderID(), sMsg.GetSecret(), sMsg.GetSecretMac());
-
 	}
 	break;
 	default:
