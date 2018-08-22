@@ -19,8 +19,6 @@
 #include "SGXEnclaveRuntimeException.h"
 
 SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
-	//m_spid(spid),
-	DecentEnclave(),
 	SGXEnclaveServiceProvider(enclavePath, tokenPath, iasConnector)
 {
 	sgx_status_t retval = SGX_SUCCESS;
@@ -30,8 +28,6 @@ SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& en
 }
 
 SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath) :
-	//m_spid(spid),
-	DecentEnclave(),
 	SGXEnclaveServiceProvider(enclavePath, tokenPath, iasConnector)
 {
 	sgx_status_t retval = SGX_SUCCESS;
@@ -41,8 +37,6 @@ SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& en
 }
 
 SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
-	//m_spid(spid),
-	DecentEnclave(),
 	SGXEnclaveServiceProvider(enclavePath, tokenLocType, tokenFileName, iasConnector)
 {
 	sgx_status_t retval = SGX_SUCCESS;
@@ -233,6 +227,11 @@ sgx_status_t SGXDecentEnclave::TransitToDecentNode(const std::string & id, bool 
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_transit_to_decent_node);
 
 	return retval;
+}
+
+bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+{
+	return false;
 }
 
 sgx_status_t SGXDecentEnclave::GetProtocolSignKey(const std::string & id, sgx_ec256_private_t & outPriKey, sgx_aes_gcm_128bit_tag_t & outPriKeyMac, sgx_ec256_public_t & outPubKey, sgx_aes_gcm_128bit_tag_t & outPubKeyMac)

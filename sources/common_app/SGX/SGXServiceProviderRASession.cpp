@@ -84,10 +84,61 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 	return ParseMessageExpected<T>(jsonRoot);
 }
 
+static std::string ProcessHandshakeMsg(const SGXRAMessage0Send & msg0s)
+{
+	if (std::find(g_acceptedExGID.begin(), g_acceptedExGID.end(), msg0s.GetExtendedGroupID()) == g_acceptedExGID.end())
+	{
+		throw MessageInvalidException();
+	}
+
+	std::string res;
+	res = msg0s.GetSenderID();
+	return res;
+}
+
+static SGXRAMessage0Send ParseHandshakeMsg(const Json::Value& msg)
+{
+	SGXRAMessage0Send* msg0s = ParseMessageExpected<SGXRAMessage0Send>(msg);
+	if (!msg0s)
+	{
+		throw MessageInvalidException();
+	}
+	SGXRAMessage0Send res(*msg0s);
+	delete msg0s;
+	return res;
+}
+
+static const Json::Value ReceiveHandshakeMsg(std::unique_ptr<Connection>& connection)
+{
+	std::string msgBuffer;
+	connection->Receive(msgBuffer);
+
+	Json::Value jsonRoot;
+	Json::CharReaderBuilder rbuilder;
+	rbuilder["collectComments"] = false;
+	std::string errStr;
+
+	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
+	bool isValid = reader->parse(msgBuffer.c_str(), msgBuffer.c_str() + msgBuffer.size(), &jsonRoot, &errStr);
+
+	return jsonRoot;
+}
+
 SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias) :
+	SGXServiceProviderRASession(connection, serviceProviderBase, ias, ReceiveHandshakeMsg(connection))
+{
+}
+
+SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias, const Json::Value & jsonMsg) :
+	SGXServiceProviderRASession(connection, serviceProviderBase, ias, ParseHandshakeMsg(jsonMsg))
+{
+}
+
+SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias, const SGXRAMessage0Send & msg0s) :
 	ServiceProviderRASession(connection, serviceProviderBase),
 	m_sgxSP(serviceProviderBase),
-	m_ias(ias)
+	m_ias(ias),
+	k_remoteSideID(ProcessHandshakeMsg(msg0s))
 {
 }
 
@@ -105,46 +156,24 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 
 	std::string msgBuffer;
-	std::string msgSenderID = GetSenderID();
 
-	m_connection->Receive(msgBuffer);
-
-	auto msg0s = ParseMessageExpected<SGXRAMessage0Send>(msgBuffer);
-	if (!msg0s)
-	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Wrong request message!");
-		m_connection->Send(errMsg.ToJsonString());
-		return false;
-	}
-
-	if (std::find(g_acceptedExGID.begin(), g_acceptedExGID.end(), msg0s->GetExtendedGroupID()) == g_acceptedExGID.end())
-	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Extended Group ID is not accepted!");
-		m_connection->Send(errMsg.ToJsonString());
-		delete msg0s;
-		return false;
-	}
-
-	enclaveRes = m_sgxSP.ProcessRAMsg0Send(msg0s->GetSenderID());
+	enclaveRes = m_sgxSP.ProcessRAMsg0Send(k_raSenderID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
+		SGXRAClientErrMsg errMsg(k_raSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete msg0s;
 		return false;
 	}
 
-	SGXRAMessage0Resp msg0r(msgSenderID, msgSenderID);
+	SGXRAMessage0Resp msg0r(k_raSenderID, k_raSenderID);
 
 	m_connection->Send(msg0r.ToJsonString());
-	delete msg0s;
-	msg0s = nullptr;
 
 	m_connection->Receive(msgBuffer);
 	auto msg1 = ParseMessageExpected<SGXRAMessage1>(msgBuffer);
 	if (!msg1)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Wrong request message!");
+		SGXRAClientErrMsg errMsg(k_raSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
 		return false;
 	}
@@ -156,7 +185,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 
 	if (respCode != 200)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Failed to get Revocation List!");
+		SGXRAClientErrMsg errMsg(k_raSenderID, "Failed to get Revocation List!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete msg1;
 		return false;
@@ -171,14 +200,14 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Ref);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
+		SGXRAClientErrMsg errMsg(k_raSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete msg1;
 		return false;
 	}
 	msg2Ref.sig_rl_size = static_cast<uint32_t>(sigRLData.size());
 	std::memcpy(msg2Data.data() + sizeof(sgx_ra_msg2_t), sigRLData.data(), sigRLData.size());
-	SGXRAMessage2 msg2(msgSenderID, msg2Data);
+	SGXRAMessage2 msg2(k_raSenderID, msg2Data);
 
 	m_connection->Send(msg2.ToJsonString());
 	delete msg1;
@@ -189,7 +218,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 
 	if (!msg3)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Wrong request message!");
+		SGXRAClientErrMsg errMsg(k_raSenderID, "Wrong request message!");
 		m_connection->Send(errMsg.ToJsonString());
 		return false;
 	}
@@ -201,7 +230,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	enclaveRes = m_sgxSP.GetIasReportNonce(msg3->GetSenderID(), iasNonce);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
+		SGXRAClientErrMsg errMsg(k_raSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete msg3;
 		return false;
@@ -218,12 +247,12 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRAClientErrMsg errMsg(msgSenderID, "Enclave process error!");
+		SGXRAClientErrMsg errMsg(k_raSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete msg3;
 		return false;
 	}
-	SGXRAMessage4 msg4(msgSenderID, msg4Data, msg4Sign);
+	SGXRAMessage4 msg4(k_raSenderID, msg4Data, msg4Sign);
 
 	m_connection->Send(msg4.ToJsonString());
 	delete msg3;

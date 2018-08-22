@@ -4,7 +4,9 @@
 
 #include "../../common/SGX/sgx_constants.h"
 
+#include "SGXRAMessages/SGXRAMessage.h"
 #include "SGXEnclaveRuntimeException.h"
+#include "SGXServiceProviderRASession.h"
 
 SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const std::string & tokenPath, IASConnector ias) :
 	SGXEnclave(enclavePath, tokenPath),
@@ -93,4 +95,19 @@ sgx_status_t SGXEnclaveServiceProvider::ProcessRAMsg3(const std::string & client
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg3);
 
 	return retval;
+}
+
+bool SGXEnclaveServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+{
+	if (category == SGXRASPMessage::VALUE_CAT)
+	{
+		SGXServiceProviderRASession raSession(connection, *this, m_ias, jsonMsg);
+		bool res = raSession.ProcessServerSideRA();
+		raSession.SwapConnection(connection);
+		return res;
+	}
+	else
+	{
+		return ServiceProviderBase::ProcessSmartMessage(category, jsonMsg, connection);
+	}
 }

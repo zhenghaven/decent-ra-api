@@ -36,7 +36,7 @@ typedef sgx_status_t(*sgx_ecall_get_msg3_trusted_t)(
 	sgx_ra_msg3_t *p_msg3,
 	uint32_t msg3_size);
 
-class SGXEnclave : public EnclaveBase
+class SGXEnclave : virtual public EnclaveBase
 {
 public:
 	SGXEnclave() = delete;
@@ -55,6 +55,8 @@ public:
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID, sgx_ecall_proc_msg2_trusted_t proc_msg2_func, sgx_ecall_get_msg3_trusted_t get_msg3_func);
 	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID);
+
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 
 protected:
 	const sgx_enclave_id_t GetEnclaveId() const;

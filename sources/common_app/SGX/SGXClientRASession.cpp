@@ -72,9 +72,63 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 	return ParseMessageExpected<T>(jsonRoot);
 }
 
-SGXClientRASession::SGXClientRASession(std::unique_ptr<Connection>& m_connection, SGXEnclave& enclave) :
-	ClientRASession(m_connection, enclave),
-	m_sgxEnclave(enclave)
+static SGXRAMessage0Resp ParseHandshakeMsg(const Json::Value& msg)
+{
+	SGXRAMessage0Resp* msg0r = ParseMessageExpected<SGXRAMessage0Resp>(msg);
+	if (!msg0r)
+	{
+		throw MessageInvalidException();
+	}
+	SGXRAMessage0Resp res(*msg0r);
+	delete msg0r;
+	return res;
+}
+
+static sgx_ec256_public_t ProcessHandshakeMsgKey(const SGXRAMessage0Resp & msg0r)
+{
+	sgx_ec256_public_t res;
+	DeserializePubKey(msg0r.GetRAPubKey(), res);
+	return res;
+}
+
+static const Json::Value SendAndReceiveHandshakeMsg(std::unique_ptr<Connection>& connection, SGXEnclave& enclave)
+{
+	sgx_ec256_public_t signPubKey;
+	enclave.GetRAClientSignPubKey(signPubKey);
+	std::string senderID = SerializePubKey(signPubKey);
+
+	SGXRAMessage0Send msg0s(senderID, enclave.GetExGroupID());
+	connection->Send(msg0s.ToJsonString());
+
+	std::string msgBuffer;
+	connection->Receive(msgBuffer);
+
+	Json::Value jsonRoot;
+	Json::CharReaderBuilder rbuilder;
+	rbuilder["collectComments"] = false;
+	std::string errStr;
+
+	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
+	bool isValid = reader->parse(msgBuffer.c_str(), msgBuffer.c_str() + msgBuffer.size(), &jsonRoot, &errStr);
+
+	return jsonRoot;
+}
+
+SGXClientRASession::SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave) :
+	SGXClientRASession(connection, enclave, SendAndReceiveHandshakeMsg(connection, enclave))
+{
+}
+
+SGXClientRASession::SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const Json::Value & jsonMsg) :
+	SGXClientRASession(connection, enclave, ParseHandshakeMsg(jsonMsg))
+{
+}
+
+SGXClientRASession::SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const SGXRAMessage0Resp & msg0r) :
+	ClientRASession(connection, enclave),
+	m_sgxEnclave(enclave),
+	k_remoteSideID(msg0r.GetSenderID()),
+	k_remoteSideSignKey(ProcessHandshakeMsgKey(msg0r))
 {
 }
 
@@ -90,50 +144,27 @@ bool SGXClientRASession::ProcessClientSideRA()
 	}
 
 	sgx_status_t enclaveRes = SGX_SUCCESS;
-	
 	std::string msgBuffer;
-	std::string msgSenderID = GetSenderID();
-
-	//Send Message 0 Send
-	SGXRAMessage0Send msg0s(msgSenderID, m_sgxEnclave.GetExGroupID());
-	m_connection->Send(msg0s.ToJsonString());
-
-	m_connection->Receive(msgBuffer);
-	SGXRAMessage0Resp* msg0r = ParseMessageExpected<SGXRAMessage0Resp>(msgBuffer);
-	if (!msg0r)
-	{
-		SGXRASPErrMsg errMsg(msgSenderID, "Wrong response message!");
-		m_connection->Send(errMsg.ToJsonString());
-		return false;
-	}
-
-	sgx_ec256_public_t spRAPubKey;
-	DeserializePubKey(msg0r->GetRAPubKey(), spRAPubKey);
 
 	sgx_ra_context_t raContextID = 0;
 	sgx_ra_msg1_t msg1Data;
 
-	enclaveRes = m_sgxEnclave.ProcessRAMsg0Resp(msg0r->GetSenderID(), spRAPubKey, false, raContextID, msg1Data);
+	enclaveRes = m_sgxEnclave.ProcessRAMsg0Resp(k_remoteSideID, k_remoteSideSignKey, false, raContextID, msg1Data);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRASPErrMsg errMsg(msgSenderID, "Enclave process error!");
+		SGXRASPErrMsg errMsg(k_raSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
-		delete msg0r;
 		return false;
 	}
 
-	//Clean Message 0 response.
-	delete msg0r;
-	msg0r = nullptr;
-
-	SGXRAMessage1 msg1(msgSenderID, msg1Data);
+	SGXRAMessage1 msg1(k_raSenderID, msg1Data);
 
 	m_connection->Send(msg1.ToJsonString());
 	m_connection->Receive(msgBuffer);
 	auto msg2 = ParseMessageExpected<SGXRAMessage2>(msgBuffer);
 	if (!msg2)
 	{
-		SGXRASPErrMsg errMsg(msgSenderID, "Wrong response message!");
+		SGXRASPErrMsg errMsg(k_raSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
 		return false;
 	}
@@ -142,7 +173,7 @@ bool SGXClientRASession::ProcessClientSideRA()
 	enclaveRes = m_sgxEnclave.ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), msg3Data, raContextID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
-		SGXRASPErrMsg errMsg(msgSenderID, "Enclave process error!");
+		SGXRASPErrMsg errMsg(k_raSenderID, "Enclave process error!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete msg2;
 		return false;
@@ -152,14 +183,14 @@ bool SGXClientRASession::ProcessClientSideRA()
 	delete msg2;
 	msg2 = nullptr;
 
-	SGXRAMessage3 msg3(msgSenderID, msg3Data);
+	SGXRAMessage3 msg3(k_raSenderID, msg3Data);
 
 	m_connection->Send(msg3.ToJsonString());
 	m_connection->Receive(msgBuffer);
 	auto msg4 = ParseMessageExpected<SGXRAMessage4>(msgBuffer);
 	if (!msg4)
 	{
-		SGXRASPErrMsg errMsg(msgSenderID, "Wrong response message!");
+		SGXRASPErrMsg errMsg(k_raSenderID, "Wrong response message!");
 		m_connection->Send(errMsg.ToJsonString());
 		delete msg4;
 		return false;

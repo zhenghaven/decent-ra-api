@@ -6,13 +6,18 @@
 #include "Networking/Connection.h"
 #include "EnclaveBase.h"
 
-ClientRASession::ClientRASession(std::unique_ptr<Connection>& connection, EnclaveBase& enclaveBase) :
-	m_connection(std::move(connection)),
-	m_enclaveBase(enclaveBase)
+static std::string ConstructSenderID(EnclaveBase& enclaveBase)
 {
 	sgx_ec256_public_t signPubKey;
-	m_enclaveBase.GetRAClientSignPubKey(signPubKey);
-	m_raSenderID = SerializePubKey(signPubKey);
+	enclaveBase.GetRAClientSignPubKey(signPubKey);
+	return SerializePubKey(signPubKey);
+}
+
+ClientRASession::ClientRASession(std::unique_ptr<Connection>& connection, EnclaveBase& enclaveBase) :
+	m_connection(std::move(connection)),
+	m_enclaveBase(enclaveBase),
+	k_raSenderID(ConstructSenderID(enclaveBase))
+{
 }
 
 ClientRASession::~ClientRASession()
@@ -21,7 +26,7 @@ ClientRASession::~ClientRASession()
 
 std::string ClientRASession::GetSenderID() const
 {
-	return m_raSenderID;
+	return k_raSenderID;
 }
 
 void ClientRASession::SwapConnection(std::unique_ptr<Connection>& connection)

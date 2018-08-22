@@ -5,7 +5,7 @@
 #include "../DecentEnclave.h"
 #include "SGXEnclaveServiceProvider.h"
 
-class SGXDecentEnclave : public SGXEnclaveServiceProvider, public DecentEnclave
+class SGXDecentEnclave : public SGXEnclaveServiceProvider, virtual public DecentEnclave
 {
 public:
 	SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath);
@@ -30,6 +30,8 @@ public:
 	virtual bool ProcessDecentTrustedMsg(const std::string& nodeID, const std::unique_ptr<Connection>& connection, const std::string& jsonMsg) override;
 
 	virtual sgx_status_t TransitToDecentNode(const std::string& id, bool isSP) override;
+
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 
 	virtual sgx_status_t GetProtocolSignKey(const std::string& id, sgx_ec256_private_t& outPriKey, sgx_aes_gcm_128bit_tag_t& outPriKeyMac, sgx_ec256_public_t& outPubKey, sgx_aes_gcm_128bit_tag_t& outPubKeyMac) override;
 	virtual sgx_status_t SetProtocolSignKey(const std::string& id, const sgx_ec256_private_t& inPriKey, const sgx_aes_gcm_128bit_tag_t& inPriKeyMac, const sgx_ec256_public_t& inPubKey, const sgx_aes_gcm_128bit_tag_t& inPubKeyMac) override;

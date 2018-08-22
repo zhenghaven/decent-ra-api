@@ -12,7 +12,6 @@ class ClientRASession
 public:
 	ClientRASession() = delete;
 
-	//Caution! Blocking constructors!
 	ClientRASession(std::unique_ptr<Connection>& connection, EnclaveBase& enclaveBase);
 
 	virtual ~ClientRASession();
@@ -26,5 +25,5 @@ public:
 protected:
 	std::unique_ptr<Connection> m_connection;
 	EnclaveBase& m_enclaveBase;
-	std::string m_raSenderID;
+	const std::string k_raSenderID;
 };

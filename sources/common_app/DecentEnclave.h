@@ -14,7 +14,7 @@
 typedef struct _spid_t sgx_spid_t;
 class Connection;
 
-class DecentEnclave : public DecentralizedEnclave
+class DecentEnclave : virtual public DecentralizedEnclave
 {
 public:
 	DecentEnclave();
@@ -28,6 +28,8 @@ public:
 	virtual bool CreateDecentSelfRAReport(std::string& outReport) = 0;
 	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) = 0;
 	virtual bool ProcessDecentTrustedMsg(const std::string& nodeID, const std::unique_ptr<Connection>& connection, const std::string& jsonMsg) = 0;
+
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 
 	virtual sgx_status_t GetProtocolSignKey(const std::string& id, sgx_ec256_private_t& outPriKey, sgx_aes_gcm_128bit_tag_t& outPriKeyMac, sgx_ec256_public_t& outPubKey, sgx_aes_gcm_128bit_tag_t& outPubKeyMac) = 0;
 	virtual sgx_status_t SetProtocolSignKey(const std::string& id, const sgx_ec256_private_t& inPriKey, const sgx_aes_gcm_128bit_tag_t& inPriKeyMac, const sgx_ec256_public_t& inPubKey, const sgx_aes_gcm_128bit_tag_t& inPubKeyMac) = 0;

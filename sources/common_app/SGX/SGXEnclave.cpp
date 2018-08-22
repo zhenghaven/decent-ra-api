@@ -17,6 +17,7 @@
 
 #include "SGXClientRASession.h"
 #include "SGXEnclaveRuntimeException.h"
+#include "SGXRAMessages/SGXRAMessage.h"
 
 #include <Enclave_u.h>
 
@@ -180,6 +181,21 @@ sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_r
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg4);
 
 	return retval;
+}
+
+bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+{
+	if (category == SGXRAClientMessage::VALUE_CAT)
+	{
+		SGXClientRASession raSession(connection, *this, jsonMsg);
+		bool res = raSession.ProcessClientSideRA();
+		raSession.SwapConnection(connection);
+		return res;
+	}
+	else
+	{
+		return EnclaveBase::ProcessSmartMessage(category, jsonMsg, connection);
+	}
 }
 
 const sgx_enclave_id_t SGXEnclave::GetEnclaveId() const

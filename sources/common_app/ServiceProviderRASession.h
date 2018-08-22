@@ -22,5 +22,5 @@ public:
 protected:
 	std::unique_ptr<Connection> m_connection;
 	ServiceProviderBase& m_serviceProviderBase;
-	std::string m_raSenderID;
+	const std::string k_raSenderID;
 };
