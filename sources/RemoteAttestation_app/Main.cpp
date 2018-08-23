@@ -73,10 +73,9 @@ int main(int argc, char ** argv)
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, GetSGXErrorMessage(deviceStatusResErr).c_str());
 
 	IASConnector iasConnector;
-	ExampleEnclave expEnc(g_sgxSPID, ENCLAVE_FILENAME, iasConnector, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
+	ExampleEnclave expEnc(g_sgxSPID, iasConnector, true, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 
-	std::string decentSelfRaReport;
-	expEnc.CreateDecentSelfRAReport(decentSelfRaReport);
+	std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
 	expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
 
 	sgx_ec256_public_t signPubKey;
@@ -105,29 +104,27 @@ int main(int argc, char ** argv)
 	{
 	case 0:
 	{
-		expEnc.SetDecentMode(DecentNodeMode::ROOT_SERVER);
 		Server ser(hostIP, hostPort);
 
 		std::unique_ptr<Connection> connection = ser.AcceptConnection();
-		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
-		decentRA.ProcessServerSideRA();
+		//DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
+		//decentRA.ProcessServerSideRA();
 
 		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
-		decentRA2.ProcessServerSideRA();
+		//DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
+		//decentRA2.ProcessServerSideRA();
 	}
 	break;
 	case 1:
 	{
-		expEnc.SetDecentMode(DecentNodeMode::ROOT_SERVER);
 		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
-		DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
-		decentRA.ProcessClientSideRA();
+		//DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
+		//decentRA.ProcessClientSideRA();
 
 		Server ser(hostIP, 57756U);
 		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
-		decentRA2.ProcessServerSideRA();
+		//DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
+		//decentRA2.ProcessServerSideRA();
 	}
 	break;
 	default:

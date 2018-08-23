@@ -1,0 +1,7 @@
+enclave {
+	
+	trusted 
+	{
+		public int ecall_to_decentralized_node([in, string] const char* id, int is_server);
+	};
+};

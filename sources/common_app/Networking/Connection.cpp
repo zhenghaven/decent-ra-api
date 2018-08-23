@@ -5,9 +5,26 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_service.hpp>
 
+#include <json/json.h>
+
 #include "../Common.h"
 
 using namespace boost::asio;
+
+bool Connection::ConvertMsgStr2Json(Json::Value& outJson, const std::string& inStr)
+{
+	Json::CharReaderBuilder rbuilder;
+	rbuilder["collectComments"] = false;
+	std::string errStr;
+
+	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
+	bool isValid = reader->parse(inStr.c_str(), inStr.c_str() + inStr.size(), &outJson, &errStr);
+	if (!isValid)
+	{
+		LOGW("Json::CharReader: %s\n", errStr.c_str());
+	}
+	return isValid;
+}
 
 Connection::Connection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor & acceptor, size_t bufferSize) :
 	m_ioService(ioService),
@@ -35,6 +52,11 @@ size_t Connection::Send(const std::string & msg)
 	return res;
 }
 
+size_t Connection::Send(const Json::Value & msg)
+{
+	return Connection::Send(msg.toStyledString());
+}
+
 size_t Connection::Send(const std::vector<uint8_t>& msg)
 {
 	size_t res = m_socket->send(boost::asio::buffer(msg.data(), msg.size()));
@@ -50,6 +72,14 @@ size_t Connection::Receive(std::string & msg)
 	std::memcpy(&msg[0], m_buffer.data(), actualSize + 1);
 	LOGI("Recv Msg: %s\n", msg.c_str());
 	return actualSize;
+}
+
+size_t Connection::Receive(Json::Value & msg)
+{
+	std::string buffer;
+	size_t res = Connection::Receive(buffer);
+	bool isValid = Connection::ConvertMsgStr2Json(msg, buffer);
+	return isValid ? res : 0;
 }
 
 size_t Connection::Receive(std::vector<uint8_t>& msg)
@@ -89,7 +119,7 @@ extern "C" int ocall_send_decent_trusted_msg(void* connectionPtr, const char *ms
 	}
 
 	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
-	size_t sentLen = cnt->Send(msg);
+	size_t sentLen = cnt->Send(std::string(msg));
 
 	return (sentLen == std::strlen(msg)) ? 1 : 0;
 }

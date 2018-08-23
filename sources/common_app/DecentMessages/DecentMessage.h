@@ -61,8 +61,8 @@ public:
 
 public:
 	DecentRAHandshake() = delete;
-	DecentRAHandshake(const std::string& senderID);
-	DecentRAHandshake(const Json::Value& msg);
+	explicit DecentRAHandshake(const std::string& senderID);
+	explicit DecentRAHandshake(const Json::Value& msg);
 	virtual ~DecentRAHandshake();
 
 	virtual std::string GetMessageTypeStr() const override;
@@ -76,19 +76,26 @@ private:
 class DecentRAHandshakeAck : public DecentMessage
 {
 public:
+	static constexpr char* LABEL_SELF_REPORT = "SelfReport";
+
 	static constexpr char* VALUE_TYPE = "RAHandshakeAck";
+
+	static std::string ParseSelfRAReport(const Json::Value& DecentRoot);
 
 public:
 	DecentRAHandshakeAck() = delete;
-	DecentRAHandshakeAck(const std::string& senderID);
-	DecentRAHandshakeAck(const Json::Value& msg);
+	explicit DecentRAHandshakeAck(const std::string& senderID, const std::string& selfRAReport);
+	explicit DecentRAHandshakeAck(const Json::Value& msg);
 	virtual ~DecentRAHandshakeAck();
 
 	virtual std::string GetMessageTypeStr() const override;
+
+	virtual const std::string& GetSelfRAReport() const;
 
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 
 private:
+	const std::string m_selfRAReport;
 };
 

@@ -96,7 +96,7 @@ SGXEnclave::~SGXEnclave()
 	sgx_destroy_enclave(m_eid);
 }
 
-void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey)
+void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const
 {
 	sgx_status_t retval = SGX_SUCCESS;
 
@@ -105,7 +105,7 @@ void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_get_ra_client_pub_sig_key);
 }
 
-std::shared_ptr<ClientRASession> SGXEnclave::GetRASession(std::unique_ptr<Connection>& connection)
+std::shared_ptr<ClientRASession> SGXEnclave::GetRAClientSession(std::unique_ptr<Connection>& connection)
 {
 	return std::make_shared<SGXClientRASession>(connection, *this);
 }
@@ -187,14 +187,11 @@ bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::V
 {
 	if (category == SGXRAClientMessage::VALUE_CAT)
 	{
-		SGXClientRASession raSession(connection, *this, jsonMsg);
-		bool res = raSession.ProcessClientSideRA();
-		raSession.SwapConnection(connection);
-		return res;
+		return SGXClientRASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
 	}
 	else
 	{
-		return EnclaveBase::ProcessSmartMessage(category, jsonMsg, connection);
+		return false;
 	}
 }
 

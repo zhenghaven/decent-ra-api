@@ -4,14 +4,13 @@
 
 #include <json/json.h>
 
-#include "../../common/SGX/sgx_ra_msg4.h"
 #include "../../common/DataCoding.h"
 
 #include "../Common.h"
 
 #include "../Networking/Connection.h"
 
-#include "SGXServiceProvider.h"
+#include "SGXServiceProviderBase.h"
 
 #include "IAS/IASConnector.h"
 
@@ -124,17 +123,25 @@ static const Json::Value ReceiveHandshakeMsg(std::unique_ptr<Connection>& connec
 	return jsonRoot;
 }
 
-SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias) :
+bool SGXServiceProviderRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias, const Json::Value & jsonMsg)
+{
+	if (SGXRASPMessage::ParseType(jsonMsg[Messages::LABEL_ROOT]) == SGXRAMessage0Send::VALUE_TYPE)
+	{
+		SGXRAMessage0Send msg0s(jsonMsg);
+		SGXServiceProviderRASession raSession(connection, serviceProviderBase, ias, msg0s);
+		bool res = raSession.ProcessServerSideRA();
+		raSession.SwapConnection(connection);
+		return res;
+	}
+	return false;
+}
+
+SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias) :
 	SGXServiceProviderRASession(connection, serviceProviderBase, ias, ReceiveHandshakeMsg(connection))
 {
 }
 
-SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias, const Json::Value & jsonMsg) :
-	SGXServiceProviderRASession(connection, serviceProviderBase, ias, ParseHandshakeMsg(jsonMsg))
-{
-}
-
-SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProvider & serviceProviderBase, const IASConnector & ias, const SGXRAMessage0Send & msg0s) :
+SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias, const SGXRAMessage0Send & msg0s) :
 	ServiceProviderRASession(connection, serviceProviderBase),
 	m_sgxSP(serviceProviderBase),
 	m_ias(ias),

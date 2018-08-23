@@ -1,22 +1,10 @@
 #pragma once
 
-#include "../ServiceProviderBase.h"
-
-#include <vector>
-#include <string>
-
-#include <sgx_error.h>
+#include "SGXServiceProviderBase.h"
 
 #include "IAS/IASConnector.h"
 
-typedef struct _ra_msg1_t sgx_ra_msg1_t;
-typedef struct _ra_msg2_t sgx_ra_msg2_t;
-typedef struct _ra_msg3_t sgx_ra_msg3_t;
-typedef struct _ra_msg4_t sgx_ra_msg4_t;
-typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
-typedef struct _sgx_report_data_t sgx_report_data_t;
-
-class SGXServiceProvider : virtual public ServiceProviderBase
+class SGXServiceProvider : virtual public SGXServiceProviderBase
 {
 public:
 	SGXServiceProvider() = delete;
@@ -25,9 +13,9 @@ public:
 
 	virtual ~SGXServiceProvider();
 
-	virtual std::shared_ptr<ServiceProviderRASession> GetRASession(std::unique_ptr<Connection>& connection) override;
+	virtual std::shared_ptr<ServiceProviderRASession> GetRASPSession(std::unique_ptr<Connection>& connection) override;
 
-	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) override;
+	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) const override;
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce);
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID);
 	virtual sgx_status_t ProcessRAMsg1(const std::string& clientID, const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2);

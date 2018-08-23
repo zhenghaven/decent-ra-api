@@ -8,37 +8,34 @@
 #include "SGXEnclaveRuntimeException.h"
 #include "SGXServiceProviderRASession.h"
 
-SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const std::string & tokenPath, IASConnector ias) :
-	SGXEnclave(enclavePath, tokenPath),
-	SGXServiceProvider(ias)
+static inline void InitSGXRASP(const sgx_enclave_id_t& eid)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_sgx_ra_sp_init(GetEnclaveId(), &retval);
+	enclaveRet = ecall_sgx_ra_sp_init(eid, &retval);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_sp_environment);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
+}
+
+SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const std::string & tokenPath, IASConnector ias) :
+	SGXEnclave(enclavePath, tokenPath),
+	m_ias(ias)
+{
+	InitSGXRASP(GetEnclaveId());
 }
 
 SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const fs::path tokenPath, IASConnector ias) :
 	SGXEnclave(enclavePath, tokenPath),
-	SGXServiceProvider(ias)
+	m_ias(ias)
 {
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_sgx_ra_sp_init(GetEnclaveId(), &retval);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_sp_environment);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
+	InitSGXRASP(GetEnclaveId());
 }
 
 SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName, IASConnector ias) :
 	SGXEnclave(enclavePath, tokenLocType, tokenFileName),
-	SGXServiceProvider(ias)
+	m_ias(ias)
 {
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_sgx_ra_sp_init(GetEnclaveId(), &retval);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_sp_environment);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
+	InitSGXRASP(GetEnclaveId());
 }
 
 SGXEnclaveServiceProvider::~SGXEnclaveServiceProvider()
@@ -46,7 +43,22 @@ SGXEnclaveServiceProvider::~SGXEnclaveServiceProvider()
 	ecall_sgx_ra_sp_terminate(GetEnclaveId());
 }
 
-void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey)
+std::shared_ptr<ServiceProviderRASession> SGXEnclaveServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
+{
+	return std::make_shared<SGXServiceProviderRASession>(connection, *this, m_ias);
+}
+
+void SGXEnclaveServiceProvider::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const
+{
+	SGXEnclave::GetRAClientSignPubKey(outKey);
+}
+
+std::shared_ptr<ClientRASession> SGXEnclaveServiceProvider::GetRAClientSession(std::unique_ptr<Connection>& connection)
+{
+	return SGXEnclave::GetRAClientSession(connection);
+}
+
+void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) const
 {
 	sgx_status_t retval = SGX_SUCCESS;
 
@@ -101,13 +113,10 @@ bool SGXEnclaveServiceProvider::ProcessSmartMessage(const std::string & category
 {
 	if (category == SGXRASPMessage::VALUE_CAT)
 	{
-		SGXServiceProviderRASession raSession(connection, *this, m_ias, jsonMsg);
-		bool res = raSession.ProcessServerSideRA();
-		raSession.SwapConnection(connection);
-		return res;
+		return SGXServiceProviderRASession::SmartMsgEntryPoint(connection, *this, m_ias, jsonMsg);
 	}
 	else
 	{
-		return ServiceProviderBase::ProcessSmartMessage(category, jsonMsg, connection);
+		return SGXEnclave::ProcessSmartMessage(category, jsonMsg, connection);
 	}
 }

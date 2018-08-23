@@ -14,10 +14,10 @@ static std::string ConstructSenderID(EnclaveBase& enclaveBase)
 }
 
 ClientRASession::ClientRASession(std::unique_ptr<Connection>& connection, EnclaveBase& enclaveBase) :
-	m_connection(std::move(connection)),
 	m_enclaveBase(enclaveBase),
 	k_raSenderID(ConstructSenderID(enclaveBase))
 {
+	m_connection.swap(connection);
 }
 
 ClientRASession::~ClientRASession()
@@ -27,9 +27,4 @@ ClientRASession::~ClientRASession()
 std::string ClientRASession::GetSenderID() const
 {
 	return k_raSenderID;
-}
-
-void ClientRASession::SwapConnection(std::unique_ptr<Connection>& connection)
-{
-	m_connection.swap(connection);
 }

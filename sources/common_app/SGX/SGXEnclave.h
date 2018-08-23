@@ -46,8 +46,8 @@ public:
 
 	virtual ~SGXEnclave();
 
-	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) override;
-	virtual std::shared_ptr<ClientRASession> GetRASession(std::unique_ptr<Connection>& connection) override;
+	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override;
+	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override;
 
 	virtual uint32_t GetExGroupID();
 

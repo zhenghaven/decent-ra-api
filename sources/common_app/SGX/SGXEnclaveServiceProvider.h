@@ -1,9 +1,10 @@
 #pragma once
 
 #include "SGXEnclave.h"
-#include "SGXServiceProvider.h"
+#include "SGXServiceProviderBase.h"
+#include "../EnclaveServiceProviderBase.h"
 
-class SGXEnclaveServiceProvider : public SGXEnclave, public SGXServiceProvider
+class SGXEnclaveServiceProvider : public SGXEnclave, virtual public SGXServiceProviderBase, virtual public EnclaveServiceProviderBase
 {
 public:
 	SGXEnclaveServiceProvider() = delete;
@@ -14,7 +15,11 @@ public:
 
 	virtual ~SGXEnclaveServiceProvider();
 
-	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) override;
+	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override; /*This is used to suppress the warnning*/
+	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override; /*This is used to suppress the warnning*/
+
+	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) const override;
+	virtual std::shared_ptr<ServiceProviderRASession> GetRASPSession(std::unique_ptr<Connection>& connection) override;
 
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce) override;
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) override;
@@ -23,6 +28,6 @@ public:
 
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 
-private:
-
+protected:
+	const IASConnector m_ias;
 };

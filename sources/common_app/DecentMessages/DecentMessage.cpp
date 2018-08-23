@@ -84,8 +84,81 @@ Json::Value & DecentErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
-	//parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
 	parent[LABEL_ERR_MSG] = m_errStr;
+
+	return parent;
+}
+
+DecentRAHandshake::DecentRAHandshake(const std::string & senderID) :
+	DecentMessage(senderID)
+{
+}
+
+DecentRAHandshake::DecentRAHandshake(const Json::Value & msg) :
+	DecentMessage(msg)
+{
+}
+
+DecentRAHandshake::~DecentRAHandshake()
+{
+}
+
+std::string DecentRAHandshake::GetMessageTypeStr() const
+{
+	return VALUE_TYPE;
+}
+
+Json::Value & DecentRAHandshake::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
+
+	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
+
+	return parent;
+}
+
+std::string DecentRAHandshakeAck::ParseSelfRAReport(const Json::Value & DecentRoot)
+{
+	if (DecentRoot.isMember(LABEL_SELF_REPORT) && DecentRoot[LABEL_SELF_REPORT].isString())
+	{
+		return DecentRoot[LABEL_SELF_REPORT].asString();
+	}
+	throw MessageParseException();
+}
+
+DecentRAHandshakeAck::DecentRAHandshakeAck(const std::string & senderID, const std::string& selfRAReport) :
+	DecentMessage(senderID),
+	m_selfRAReport(selfRAReport)
+{
+}
+
+DecentRAHandshakeAck::DecentRAHandshakeAck(const Json::Value & msg) :
+	DecentMessage(msg),
+	m_selfRAReport(ParseSelfRAReport(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
+{
+}
+
+DecentRAHandshakeAck::~DecentRAHandshakeAck()
+{
+}
+
+std::string DecentRAHandshakeAck::GetMessageTypeStr() const
+{
+	return VALUE_TYPE;
+}
+
+const std::string & DecentRAHandshakeAck::GetSelfRAReport() const
+{
+	return m_selfRAReport;
+}
+
+Json::Value & DecentRAHandshakeAck::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
+
+	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_SELF_REPORT] = m_selfRAReport;
 
 	return parent;
 }

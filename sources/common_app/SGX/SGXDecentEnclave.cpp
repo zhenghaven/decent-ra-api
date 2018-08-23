@@ -16,33 +16,46 @@
 #include "../common/SGX/SGXOpenSSLConversions.h"
 #include "../common/DecentRAReport.h"
 
+#include "../DecentMessages/DecentMessage.h"
+#include "../DecentRASession.h"
 #include "SGXEnclaveRuntimeException.h"
 
-SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const std::string& tokenPath) :
-	SGXEnclaveServiceProvider(enclavePath, tokenPath, iasConnector)
+static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 {
 	sgx_status_t retval = SGX_SUCCESS;
-	sgx_status_t enclaveRet = ecall_decent_init(GetEnclaveId(), &retval, &spid);
+	sgx_status_t enclaveRet = ecall_decent_init(id, &retval, &spid);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
 }
 
-SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const fs::path tokenPath) :
+SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const std::string& tokenPath) :
 	SGXEnclaveServiceProvider(enclavePath, tokenPath, iasConnector)
 {
-	sgx_status_t retval = SGX_SUCCESS;
-	sgx_status_t enclaveRet = ecall_decent_init(GetEnclaveId(), &retval, &spid);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
+	InitDecent(GetEnclaveId(), spid);
+	if (isFirstNode)
+	{
+		m_selfRaReport = GenerateDecentSelfRAReport();
+	}
 }
 
-SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::string& enclavePath, IASConnector iasConnector, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
+SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const fs::path tokenPath) :
+	SGXEnclaveServiceProvider(enclavePath, tokenPath, iasConnector)
+{
+	InitDecent(GetEnclaveId(), spid);
+	if (isFirstNode)
+	{
+		m_selfRaReport = GenerateDecentSelfRAReport();
+	}
+}
+
+SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
 	SGXEnclaveServiceProvider(enclavePath, tokenLocType, tokenFileName, iasConnector)
 {
-	sgx_status_t retval = SGX_SUCCESS;
-	sgx_status_t enclaveRet = ecall_decent_init(GetEnclaveId(), &retval, &spid);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
+	InitDecent(GetEnclaveId(), spid);
+	if (isFirstNode)
+	{
+		m_selfRaReport = GenerateDecentSelfRAReport();
+	}
 }
 
 SGXDecentEnclave::~SGXDecentEnclave()
@@ -81,49 +94,57 @@ sgx_status_t SGXDecentEnclave::ProcessRAMsg2(const std::string & ServerID, const
 	return SGXEnclave::ProcessRAMsg2(ServerID, inMsg2, outMsg3, inContextID, decent_ra_proc_msg2_trusted, decent_ra_get_msg3_trusted);
 }
 
-sgx_status_t SGXDecentEnclave::ProcessRAMsg3(const std::string & clientID, const std::vector<uint8_t> & inMsg3, const std::string & iasReport, const std::string & reportSign, const std::string& reportCertChain, sgx_ra_msg4_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign, sgx_report_data_t* outOriRD)
+std::string SGXDecentEnclave::GetDecentSelfRAReport() const
 {
-	sgx_status_t retval = SGXEnclaveServiceProvider::ProcessRAMsg3(clientID, inMsg3, iasReport, reportSign, reportCertChain, outMsg4, outMsg4Sign, outOriRD);
-	if (retval != SGX_SUCCESS)
-	{
-		return retval;
-	}
-
-	TransitToDecentNode(clientID, false);
-	return SGX_SUCCESS;
+	return m_selfRaReport;
 }
 
-sgx_status_t SGXDecentEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_ra_msg4_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign, sgx_ra_context_t inContextID)
-{
-	sgx_status_t retval = SGXEnclave::ProcessRAMsg4(ServerID, inMsg4, inMsg4Sign, inContextID);
-	if (retval != SGX_SUCCESS)
-	{
-		return retval;
-	}
-
-	TransitToDecentNode(ServerID, true);
-	return SGX_SUCCESS;
-}
-
-void SGXDecentEnclave::SetDecentMode(DecentNodeMode inDecentMode)
+bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_set_decent_mode(GetEnclaveId(), inDecentMode);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_set_decent_mode);
+	enclaveRet = ecall_decent_process_ias_ra_report(GetEnclaveId(), &retval, inReport.c_str());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ias_ra_report);
+
+	return retval != 0;
 }
 
-DecentNodeMode SGXDecentEnclave::GetDecentMode()
+bool SGXDecentEnclave::ProcessDecentTrustedMsg(const std::string & nodeID, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg)
 {
-	DecentNodeMode res = DecentNodeMode::ROOT_SERVER;
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = SGX_SUCCESS;
 
-	sgx_status_t enclaveRet = ecall_get_decent_mode(GetEnclaveId(), &res);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_decent_mode);
+	enclaveRet = ecall_proc_decent_trusted_msg(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), jsonMsg.c_str());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_trusted_msg);
 
-	return res;
+	return retval != 0;
 }
 
-bool SGXDecentEnclave::CreateDecentSelfRAReport(std::string & outReport)
+bool SGXDecentEnclave::ToDecentralizedNode(const std::string & id, bool isSP)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = 0;
+
+	enclaveRet = ecall_to_decentralized_node(GetEnclaveId(), &retval, id.c_str(), isSP);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_transit_to_decent_node);
+
+	return retval == 1;
+}
+
+bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+{
+	if (category == DecentMessage::VALUE_CAT)
+	{
+		return DecentRASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
+	}
+	else
+	{
+		return false;
+	}
+}
+
+std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_ec256_public_t pubKey;
@@ -161,7 +182,7 @@ bool SGXDecentEnclave::CreateDecentSelfRAReport(std::string & outReport)
 
 	msg2Ref.sig_rl_size = static_cast<uint32_t>(sigRLData.size());
 	std::memcpy(msg2.data() + sizeof(sgx_ra_msg2_t), sigRLData.data(), sigRLData.size());
-	
+
 	enclaveRet = ProcessRAMsg2(senderID, msg2, msg3, raCtx);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg2);
 	enclaveRet = GetIasReportNonce(senderID, iasNonce);
@@ -179,6 +200,8 @@ bool SGXDecentEnclave::CreateDecentSelfRAReport(std::string & outReport)
 	enclaveRet = ProcessRAMsg4(senderID, msg4, msg4Sign, raCtx);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg4);
 
+	ToDecentralizedNode(senderID, true);
+
 	/*TODO: Safety check here: */
 	EC_KEY* pubECKey = EC_KEY_new();
 	bool opensslRet = ECKeyPubSGX2OpenSSL(&pubKey, pubECKey, nullptr);
@@ -192,99 +215,5 @@ bool SGXDecentEnclave::CreateDecentSelfRAReport(std::string & outReport)
 	decentReportBody[Decent::RAReport::LABEL_IAS_CERT_CHAIN] = reportCertChain;
 	decentReportBody[Decent::RAReport::LABEL_ORI_REP_DATA] = SerializeStruct(oriReportData);
 
-	outReport = root.toStyledString();
-	return true;
-}
-
-bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	int retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_decent_process_ias_ra_report(GetEnclaveId(), &retval, inReport.c_str());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ias_ra_report);
-
-	return retval != 0;
-}
-
-bool SGXDecentEnclave::ProcessDecentTrustedMsg(const std::string & nodeID, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	int retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_proc_decent_trusted_msg(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), jsonMsg.c_str());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_trusted_msg);
-
-	return retval != 0;
-}
-
-sgx_status_t SGXDecentEnclave::TransitToDecentNode(const std::string & id, bool isSP)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_transit_to_decent_node(GetEnclaveId(), &retval, id.c_str(), isSP);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_transit_to_decent_node);
-
-	return retval;
-}
-
-bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
-{
-	return false;
-}
-
-sgx_status_t SGXDecentEnclave::GetProtocolSignKey(const std::string & id, sgx_ec256_private_t & outPriKey, sgx_aes_gcm_128bit_tag_t & outPriKeyMac, sgx_ec256_public_t & outPubKey, sgx_aes_gcm_128bit_tag_t & outPubKeyMac)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_get_protocol_sign_key(GetEnclaveId(), &retval, id.c_str(), &outPriKey, &outPriKeyMac, &outPubKey, &outPubKeyMac);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_protocol_sign_key);
-
-	return retval;
-}
-
-sgx_status_t SGXDecentEnclave::SetProtocolSignKey(const std::string & id, const sgx_ec256_private_t & inPriKey, const sgx_aes_gcm_128bit_tag_t & inPriKeyMac, const sgx_ec256_public_t & inPubKey, const sgx_aes_gcm_128bit_tag_t & inPubKeyMac)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_set_protocol_sign_key(GetEnclaveId(), &retval, id.c_str(), &inPriKey, &inPriKeyMac, &inPubKey, &inPubKeyMac);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_set_protocol_sign_key);
-
-	return retval;
-}
-
-sgx_status_t SGXDecentEnclave::GetProtocolKeySigned(const std::string & id, const sgx_ec256_public_t & inSignKey, const sgx_ec256_public_t & inEncrKey, sgx_ec256_signature_t & outSignSign, sgx_aes_gcm_128bit_tag_t & outSignSignMac, sgx_ec256_signature_t & outEncrSign, sgx_aes_gcm_128bit_tag_t & outEncrSignMac)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_get_protocol_key_signed(GetEnclaveId(), &retval, id.c_str(), &inSignKey, &inEncrKey, &outSignSign, &outSignSignMac, &outEncrSign, &outEncrSignMac);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_protocol_key_signed);
-
-	return retval;
-}
-
-sgx_status_t SGXDecentEnclave::SetKeySigns(const std::string & id, const sgx_ec256_signature_t & inSignSign, const sgx_aes_gcm_128bit_tag_t & inSignSignMac, const sgx_ec256_signature_t & inEncrSign, const sgx_aes_gcm_128bit_tag_t & inEncrSignMac)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_set_key_signs(GetEnclaveId(), &retval, id.c_str(), &inSignSign, &inSignSignMac, &inEncrSign, &inEncrSignMac);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_set_key_signs);
-
-	return retval;
-}
-
-sgx_status_t SGXDecentEnclave::ProcessDecentMsg0(const std::string & id, const sgx_ec256_public_t & inSignKey, const sgx_ec256_signature_t & inSignSign, const sgx_ec256_public_t & inEncrKey, const sgx_ec256_signature_t & inEncrSign)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_proc_decent_msg0(GetEnclaveId(), &retval, id.c_str(), &inSignKey, &inSignSign, &inEncrKey, &inEncrSign);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_msg0);
-
-	return retval;
+	return root.toStyledString();
 }

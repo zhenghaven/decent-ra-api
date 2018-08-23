@@ -30,8 +30,3 @@ std::string ServiceProviderRASession::GetSenderID() const
 {
 	return k_raSenderID;
 }
-
-void ServiceProviderRASession::SwapConnection(std::unique_ptr<Connection>& connection)
-{
-	m_connection.swap(connection);
-}

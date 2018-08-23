@@ -2,6 +2,12 @@
 
 #include "../common_app/SGX/SGXDecentEnclave.h"
 
+//#ifdef _MSC_VER
+//#	pragma warning(push)
+//#	pragma warning(disable: 4250)
+//	//Disable the warning for virtual inheritance of EnclaveServiceProviderBase.
+//#endif // _MSC_VER
+
 class ExampleEnclave : public SGXDecentEnclave
 {
 public:
@@ -15,3 +21,7 @@ public:
 private:
 
 };
+
+//#ifdef _MSC_VER
+//#   pragma warning(pop)
+//#endif // _MSC_VER

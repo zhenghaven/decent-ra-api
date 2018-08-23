@@ -1,16 +1,30 @@
 #pragma once
 
-#include "DecentralizedRASession.h"
-
 #include <string>
+#include <memory>
+#include "CommSession.h"
 
 class DecentEnclave;
+class Connection;
+class EnclaveServiceProviderBase;
+class DecentRAHandshake;
+class DecentRAHandshakeAck;
+namespace Json
+{
+	class Value;
+}
 
-class DecentRASession : public DecentralizedRASession
+class DecentRASession : public CommSession
 {
 public:
+	static void SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& enclave);
+	static bool SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
+
+public:
 	DecentRASession() = delete;
-	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentEnclave& enclave);
+	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave);
+	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentRAHandshake& hsMsg);
+	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentRAHandshakeAck& ackMsg);
 
 	virtual ~DecentRASession();
 
@@ -24,7 +38,7 @@ public:
 	 *
 	 * \return	True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessClientSideRA() override;
+	virtual bool ProcessClientSideRA();
 
 	/**
 	 * \brief	Process the server side Remote Attestation.
@@ -35,45 +49,12 @@ public:
 	 *
 	 * \return	True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessServerSideRA() override;
-
-	/**
-	 * \brief	Process the client side Decent Protocol Message 0.
-	 *
-	 * \param [in,out]	enclave	The enclave object.
-	 *
-	 * \return	True if it succeeds, false if it fails.
-	 */
-	//virtual bool ProcessClientMessage0();
-
-	/**
-	 * \brief	Process the server side Decent Protocol Message 0.
-	 *
-	 * \param [in,out]	enclave	The enclave object.
-	 *
-	 * \return	True if it succeeds, false if it fails.
-	 */
-	//virtual bool ProcessServerMessage0();
-
-protected:
-	/**
-	 * \brief	Process the client side key request. This method can be called by a root or application server.
-	 *
-	 * \param [in,out]	enclave	The enclave object.
-	 *
-	 * \return	True if it succeeds, false if it fails.
-	 */
-	//virtual bool ProcessClientSideKeyRequest();
-
-	/**
-	 * \brief	Process the server side key request. This method should only called by a root server.
-	 *
-	 * \param [in,out] enclave The enclave object.
-	 *
-	 * \return True if it succeeds, false if it fails.
-	 */
-	//virtual bool ProcessServerSideKeyRequest();
+	virtual bool ProcessServerSideRA();
 
 private:
+	const std::string k_senderID;
+	const std::string k_remoteSideID;
+	EnclaveServiceProviderBase& m_hwEnclave;
 	DecentEnclave& m_decentEnclave;
+	const bool k_isServerSide;
 };

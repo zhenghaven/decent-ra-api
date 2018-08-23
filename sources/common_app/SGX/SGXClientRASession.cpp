@@ -93,12 +93,7 @@ static sgx_ec256_public_t ProcessHandshakeMsgKey(const SGXRAMessage0Resp & msg0r
 
 static const Json::Value SendAndReceiveHandshakeMsg(std::unique_ptr<Connection>& connection, SGXEnclave& enclave)
 {
-	sgx_ec256_public_t signPubKey;
-	enclave.GetRAClientSignPubKey(signPubKey);
-	std::string senderID = SerializePubKey(signPubKey);
-
-	SGXRAMessage0Send msg0s(senderID, enclave.GetExGroupID());
-	connection->Send(msg0s.ToJsonString());
+	SGXClientRASession::SendHandshakeMessage(connection, enclave);
 
 	std::string msgBuffer;
 	connection->Receive(msgBuffer);
@@ -114,13 +109,31 @@ static const Json::Value SendAndReceiveHandshakeMsg(std::unique_ptr<Connection>&
 	return jsonRoot;
 }
 
-SGXClientRASession::SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave) :
-	SGXClientRASession(connection, enclave, SendAndReceiveHandshakeMsg(connection, enclave))
+void SGXClientRASession::SendHandshakeMessage(std::unique_ptr<Connection>& connection, SGXEnclave& enclave)
 {
+	sgx_ec256_public_t signPubKey;
+	enclave.GetRAClientSignPubKey(signPubKey);
+	std::string senderID = SerializePubKey(signPubKey);
+
+	SGXRAMessage0Send msg0s(senderID, enclave.GetExGroupID());
+	connection->Send(msg0s.ToJsonString());
 }
 
-SGXClientRASession::SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const Json::Value & jsonMsg) :
-	SGXClientRASession(connection, enclave, ParseHandshakeMsg(jsonMsg))
+bool SGXClientRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const Json::Value & msg)
+{
+	if (SGXRASPMessage::ParseType(msg[Messages::LABEL_ROOT]) == SGXRAMessage0Resp::VALUE_TYPE)
+	{
+		SGXRAMessage0Resp msg0r(msg);
+		SGXClientRASession raSession(connection, enclave, msg0r);
+		bool res = raSession.ProcessClientSideRA();
+		raSession.SwapConnection(connection);
+		return res;
+	}
+	return false;
+}
+
+SGXClientRASession::SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave) :
+	SGXClientRASession(connection, enclave, SendAndReceiveHandshakeMsg(connection, enclave))
 {
 }
 

@@ -19,8 +19,16 @@ namespace boost {
 	} // namespace asio
 } // namespace boost
 
+namespace Json
+{
+	class Value;
+}
+
 class Connection
 {
+public:
+	static bool ConvertMsgStr2Json(Json::Value& outJson, const std::string& inStr);
+
 public:
 	Connection() = delete;
 	Connection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor& acceptor, size_t bufferSize = 5000U);
@@ -28,9 +36,11 @@ public:
 	~Connection();
 
 	virtual size_t Send(const std::string& msg);
+	virtual size_t Send(const Json::Value& msg);
 	virtual size_t Send(const std::vector<uint8_t>& msg);
 
 	virtual size_t Receive(std::string& msg);
+	virtual size_t Receive(Json::Value& msg);
 	virtual size_t Receive(std::vector<uint8_t>& msg);
 
 	uint32_t GetIPv4Addr() const;

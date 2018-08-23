@@ -2,15 +2,20 @@
 
 #include <json/json.h>
 
+#include <sgx_tcrypto.h>
+
 #include "Common.h"
+
 #include "ClientRASession.h"
 #include "ServiceProviderRASession.h"
+
 #include "DecentralizedEnclave.h"
-#include "EnclaveBase.h"
-#include "ServiceProviderBase.h"
+#include "EnclaveServiceProviderBase.h"
+
 #include "DecentralizedMessage.h"
 #include "MessageException.h"
 
+#include "../common/DataCoding.h"
 #include "Networking/Connection.h"
 
 template<class T>
@@ -55,24 +60,82 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 	static_assert(std::is_base_of<DecentralizedMessage, T>::value, "Class type must be a child class of DecentralizedMessage.");
 
 	Json::Value jsonRoot;
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-	std::string errStr;
-
-	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
-	bool isValid = reader->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.size(), &jsonRoot, &errStr);
+	Connection::ConvertMsgStr2Json(jsonRoot, jsonStr);
 
 	return ParseMessageExpected<T>(jsonRoot);
 }
 
-DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentralizedEnclave& enclave) :
-	m_connection(std::move(connection)),
-	m_hardwareEnclave(hardwareEnclave),
-	m_sp(sp),
-	m_hardwareSession(hardwareEnclave.GetRASession()),
-	m_spSession(sp.GetRASession()),
-	m_decentralizedEnc(enclave)
+static inline std::string ConstructSenderID(EnclaveServiceProviderBase & enclave)
 {
+	sgx_ec256_public_t signPubKey;
+	enclave.GetRAClientSignPubKey(signPubKey);
+	return SerializePubKey(signPubKey);
+}
+
+void DecentralizedRASession::SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & enclave)
+{
+	DecentralizedRAHandshake msg0s(ConstructSenderID(enclave));
+	connection->Send(msg0s.ToJsonString());
+}
+
+bool DecentralizedRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const Json::Value & jsonMsg)
+{
+	const std::string inType = DecentralizedMessage::ParseType(jsonMsg[Messages::LABEL_ROOT]);
+	if (inType == DecentralizedRAHandshake::VALUE_TYPE)
+	{
+		DecentralizedRAHandshake hsMsg(jsonMsg);
+		DecentralizedRASession raSession(connection, hwEnclave, enclave, hsMsg);
+		bool res = raSession.ProcessServerSideRA();
+		raSession.SwapConnection(connection);
+		return res;
+	}
+	else if (inType == DecentralizedRAHandshakeAck::VALUE_TYPE)
+	{
+		DecentralizedRAHandshakeAck ackMsg(jsonMsg);
+		DecentralizedRASession raSession(connection, hwEnclave, enclave, ackMsg);
+		bool res = raSession.ProcessClientSideRA();
+		raSession.SwapConnection(connection);
+		return res;
+	}
+	return false;
+}
+
+static const DecentralizedRAHandshakeAck SendAndReceiveHandshakeAck(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& enclave)
+{
+	DecentralizedRASession::SendHandshakeMessage(connection, enclave);
+
+	Json::Value jsonMsg;
+	connection->Receive(jsonMsg);
+
+	return DecentralizedRAHandshakeAck(jsonMsg);
+}
+
+DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave) :
+	DecentralizedRASession(connection, hwEnclave, enclave, SendAndReceiveHandshakeAck(connection, hwEnclave))
+{
+}
+
+DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const DecentralizedRAHandshake & hsMsg) :
+	m_hwEnclave(hwEnclave),
+	k_senderID(ConstructSenderID(hwEnclave)),
+	k_remoteSideID(hsMsg.GetSenderID()),
+	m_decentralizedEnc(enclave),
+	k_isServerSide(true)
+{
+	m_connection.swap(connection);
+
+	DecentralizedRAHandshakeAck hsAck(k_senderID);
+	m_connection->Send(hsAck.ToJsonString());
+}
+
+DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const DecentralizedRAHandshakeAck & ackMsg) :
+	m_hwEnclave(hwEnclave),
+	k_senderID(ConstructSenderID(hwEnclave)),
+	k_remoteSideID(ackMsg.GetSenderID()),
+	m_decentralizedEnc(enclave),
+	k_isServerSide(false)
+{
+	m_connection.swap(connection);
 }
 
 DecentralizedRASession::~DecentralizedRASession()
@@ -81,32 +144,31 @@ DecentralizedRASession::~DecentralizedRASession()
 
 bool DecentralizedRASession::ProcessClientSideRA()
 {
-	if (!m_connection)
+	if (!m_connection || k_isServerSide)
 	{
 		return false;
 	}
 
 	bool res = true;
-	const std::string senderID = m_hardwareSession->GetSenderID();
 
-	m_hardwareSession->SwapConnection(m_connection);
-	res = m_hardwareSession->ProcessClientSideRA();
-	m_hardwareSession->SwapConnection(m_connection);
+	std::shared_ptr<ClientRASession> clientSession = m_hwEnclave.GetRAClientSession(m_connection);
+	res = clientSession->ProcessClientSideRA();
+	clientSession->SwapConnection(m_connection);
 
 	if (!res)
 	{
 		return res;
 	}
 
-	res = SendReverseRARequest(senderID);
+	res = SendReverseRARequest(k_senderID);
 	if (!res)
 	{
 		return res;
 	}
 
-	m_spSession->SwapConnection(m_connection);
-	res = m_spSession->ProcessServerSideRA();
-	m_spSession->SwapConnection(m_connection);
+	std::shared_ptr<ServiceProviderRASession> spSession = m_hwEnclave.GetRASPSession(m_connection);
+	res = spSession->ProcessServerSideRA();
+	spSession->SwapConnection(m_connection);
 
 	if (!res)
 	{
@@ -114,23 +176,23 @@ bool DecentralizedRASession::ProcessClientSideRA()
 	}
 
 	res = RecvReverseRARequest();
+	m_decentralizedEnc.ToDecentralizedNode(k_remoteSideID, k_isServerSide);
 
 	return res;
 }
 
 bool DecentralizedRASession::ProcessServerSideRA()
 {
-	if (!m_connection)
+	if (!m_connection || !k_isServerSide)
 	{
 		return false;
 	}
 
 	bool res = true;
-	const std::string senderID = m_hardwareSession->GetSenderID();
 
-	m_spSession->SwapConnection(m_connection);
-	res = m_spSession->ProcessServerSideRA();
-	m_spSession->SwapConnection(m_connection);
+	std::shared_ptr<ServiceProviderRASession> spSession = m_hwEnclave.GetRASPSession(m_connection);
+	res = spSession->ProcessServerSideRA();
+	spSession->SwapConnection(m_connection);
 
 	if (!res)
 	{
@@ -143,16 +205,17 @@ bool DecentralizedRASession::ProcessServerSideRA()
 		return res;
 	}
 
-	m_hardwareSession->SwapConnection(m_connection);
-	res = m_hardwareSession->ProcessClientSideRA();
-	m_hardwareSession->SwapConnection(m_connection);
+	std::shared_ptr<ClientRASession> clientSession = m_hwEnclave.GetRAClientSession(m_connection);
+	res = clientSession->ProcessClientSideRA();
+	clientSession->SwapConnection(m_connection);
 
 	if (!res)
 	{
 		return res;
 	}
 
-	res = SendReverseRARequest(senderID);
+	res = SendReverseRARequest(k_senderID);
+	m_decentralizedEnc.ToDecentralizedNode(k_remoteSideID, k_isServerSide);
 
 	return res;
 }
@@ -184,15 +247,4 @@ bool DecentralizedRASession::RecvReverseRARequest()
 	delete reqMsg;
 
 	return true;
-}
-
-void DecentralizedRASession::AssignConnection(std::unique_ptr<Connection>& inConnection)
-{
-	m_connection.reset();
-	m_connection.swap(inConnection);
-}
-
-void DecentralizedRASession::SwapConnection(std::unique_ptr<Connection>& inConnection)
-{
-	m_connection.swap(inConnection);
 }

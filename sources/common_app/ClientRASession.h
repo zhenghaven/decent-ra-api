@@ -2,11 +2,12 @@
 
 #include <memory>
 #include <string>
+#include "CommSession.h"
 
 class Connection;
 class EnclaveBase;
 
-class ClientRASession
+class ClientRASession : public CommSession
 {
 
 public:
@@ -20,10 +21,7 @@ public:
 
 	virtual std::string GetSenderID() const;
 
-	void SwapConnection(std::unique_ptr<Connection>& connection);
-
 protected:
-	std::unique_ptr<Connection> m_connection;
 	EnclaveBase& m_enclaveBase;
 	const std::string k_raSenderID;
 };

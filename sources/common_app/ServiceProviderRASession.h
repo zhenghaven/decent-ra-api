@@ -2,11 +2,12 @@
 
 #include <memory>
 #include <string>
+#include "CommSession.h"
 
 class Connection;
 class ServiceProviderBase;
 
-class ServiceProviderRASession
+class ServiceProviderRASession : public CommSession
 {
 public:
 	ServiceProviderRASession() = delete;
@@ -17,10 +18,7 @@ public:
 
 	virtual std::string GetSenderID() const;
 
-	void SwapConnection(std::unique_ptr<Connection>& connection);
-
 protected:
-	std::unique_ptr<Connection> m_connection;
 	ServiceProviderBase& m_serviceProviderBase;
 	const std::string k_raSenderID;
 };

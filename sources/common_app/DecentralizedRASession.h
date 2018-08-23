@@ -3,20 +3,29 @@
 #include <memory>
 #include <string>
 
+#include "CommSession.h"
+
 class DecentralizedEnclave;
 class Connection;
-class EnclaveBase;
-class ServiceProviderBase;
-class ClientRASession;
-class ServiceProviderRASession;
+class EnclaveServiceProviderBase;
+class DecentralizedRAHandshake;
+class DecentralizedRAHandshakeAck;
+namespace Json
+{
+	class Value;
+}
 
-typedef struct _spid_t sgx_spid_t;
-
-class DecentralizedRASession
+class DecentralizedRASession : public CommSession
 {
 public:
+	static void SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& enclave);
+	static bool SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const Json::Value& jsonMsg);
+
+public:
 	DecentralizedRASession() = delete;
-	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveBase& hardwareEnclave, ServiceProviderBase& sp, DecentralizedEnclave& enclave);
+	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave);
+	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const DecentralizedRAHandshake& hsMsg);
+	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const DecentralizedRAHandshakeAck& ackMsg);
 	
 	virtual ~DecentralizedRASession();
 
@@ -24,21 +33,16 @@ public:
 
 	virtual bool ProcessServerSideRA();
 
-	void AssignConnection(std::unique_ptr<Connection>& inConnection);
-
-	void SwapConnection(std::unique_ptr<Connection>& inConnection);
-
 protected:
-	std::unique_ptr<Connection> m_connection;
-	EnclaveBase& m_hardwareEnclave;
-	ServiceProviderBase& m_sp;
-	std::shared_ptr<ClientRASession> m_hardwareSession;
-	std::shared_ptr<ServiceProviderRASession> m_spSession;
-
 	virtual bool SendReverseRARequest(const std::string& senderID);
 
 	virtual bool RecvReverseRARequest();
 
+	EnclaveServiceProviderBase& m_hwEnclave;
+
 private:
+	const std::string k_senderID;
+	const std::string k_remoteSideID;
 	DecentralizedEnclave& m_decentralizedEnc;
+	const bool k_isServerSide;
 };

@@ -18,7 +18,6 @@
 #include "../common/OpenSSLTools.h"
 #include "../common/EnclaveRAState.h"
 #include "../common/DecentRAReport.h"
-//#include "../common/DecentCryptoManager.h"
 #include "../common/EnclaveAsyKeyContainer.h"
 #include "../common/SGX/sgx_constants.h"
 #include "../common/SGX/sgx_crypto_tools.h"
@@ -174,37 +173,6 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* reportStr)
 	return reportVerifyRes ? 1 : 0;
 }
 
-extern "C" sgx_status_t ecall_transit_to_decent_node(const char* id, int is_server)
-{
-	if (!IsBothWayAttested(id))
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	if (is_server) 
-	{
-		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
-		SGXRAEnclave::GetClientKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
-	}
-	else
-	{
-		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
-		SGXRAEnclave::GetServerKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
-	}
-
-	return SGX_SUCCESS;
-}
-
-extern "C" void ecall_set_decent_mode(DecentNodeMode inDecentMode)
-{
-	g_decentMode = inDecentMode;
-}
-
-extern "C" DecentNodeMode ecall_get_decent_mode()
-{
-	return g_decentMode;
-}
-
 extern "C" sgx_status_t ecall_process_ra_msg0_send_decent(const char* clientID)
 {
 	if (!clientID)
@@ -301,328 +269,25 @@ extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const con
 	return true;
 }
 
-extern "C" sgx_status_t ecall_get_protocol_sign_key(const char* clientID, sgx_ec256_private_t* outPriKey, sgx_aes_gcm_128bit_tag_t* outPriKeyMac, sgx_ec256_public_t* outPubKey, sgx_aes_gcm_128bit_tag_t* outPubKeyMac)
+extern "C" int ecall_to_decentralized_node(const char* id, int is_server)
 {
-	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
+	if (!IsBothWayAttested(id))
 	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("This decent node is not a Root Server!");
+		return 0;
 	}
 
-	if ((!clientID || !outPriKey || !outPriKeyMac || !outPubKey || !outPubKeyMac))
+	if (is_server)
 	{
-		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
+		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
+		SGXRAEnclave::GetClientKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
 	}
-	auto nodeIt = g_decentNodesMap.find(clientID);
-	if (nodeIt == g_decentNodesMap.end())
+	else
 	{
-		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
-	}
-
-	DecentNodeContext& nodeCTX = nodeIt->second;
-
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
-	std::shared_ptr<const PrivateKeyWrap> signPrv = EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey();
-	sgx_status_t enclaveRes = SGX_SUCCESS;
-
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(&signPrv->m_prvKey),
-		sizeof(sgx_ec256_private_t),
-		reinterpret_cast<uint8_t*>(outPriKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		outPriKeyMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
+		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
+		SGXRAEnclave::GetServerKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
 	}
 
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(signPub.get()),
-		sizeof(sgx_ec256_public_t),
-		reinterpret_cast<uint8_t*>(outPubKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		outPubKeyMac
-	);
+	COMMON_PRINTF("Accepted New Decentralized Node: %s\n", id);
 
-	return enclaveRes; //Error return. (Error from SGX)
-}
-
-extern "C" sgx_status_t ecall_set_protocol_sign_key(const char* clientID, const sgx_ec256_private_t* inPriKey, const sgx_aes_gcm_128bit_tag_t* inPriKeyMac, const sgx_ec256_public_t* inPubKey, const sgx_aes_gcm_128bit_tag_t* inPubKeyMac)
-{
-	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
-	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("This decent node is not a Root Server!");
-	}
-
-	if ((!clientID || !inPriKey || !inPriKeyMac || !inPubKey || !inPubKeyMac))
-	{
-		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
-	}
-	auto nodeIt = g_decentNodesMap.find(clientID);
-	if (nodeIt == g_decentNodesMap.end())
-	{
-		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
-	}
-
-	DecentNodeContext& nodeCTX = nodeIt->second;
-
-	sgx_status_t enclaveRes = SGX_SUCCESS;
-
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	sgx_ec256_private_t priKey;
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(inPriKey),
-		sizeof(sgx_ec256_private_t),
-		reinterpret_cast<uint8_t*>(&priKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		inPriKeyMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-	sgx_ec256_public_t pubKey;
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(inPubKey),
-		sizeof(sgx_ec256_public_t),
-		reinterpret_cast<uint8_t*>(&pubKey),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		inPubKeyMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	SGXECCStateWrap eccState;
-	if (eccState.m_status != SGX_SUCCESS)
-	{
-		return eccState.m_status; //Error return. (Error from SGX)
-	}
-	sgx_ec256_signature_t signSign;
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&pubKey), sizeof(sgx_ec256_public_t), &priKey, &signSign, eccState.m_eccState);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	//g_cryptoMgr->SetSignPriKey(priKey);
-	//g_cryptoMgr->SetSignPubKey(pubKey);
-	//g_cryptoMgr->SetProtoSignPubKey(pubKey);
-
-	//ocall_printf("New Public Sign Key: %s\n", SerializePubKey(g_cryptoMgr->GetSignPubKey()).c_str());
-
-	return SGX_SUCCESS;
-}
-
-extern "C" sgx_status_t ecall_get_protocol_key_signed(const char* clientID, const sgx_ec256_public_t* inSignKey, const sgx_ec256_public_t* inEncrKey,
-	sgx_ec256_signature_t* outSignSign, sgx_aes_gcm_128bit_tag_t* outSignSignMac, sgx_ec256_signature_t* outEncrSign, sgx_aes_gcm_128bit_tag_t* outEncrSignMac)
-{
-	if (g_decentMode != DecentNodeMode::ROOT_SERVER)
-	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("This decent node is not a Root Server!");
-	}
-
-	if ((!clientID || !inSignKey || !inEncrKey || !outSignSign || !outSignSignMac || !outEncrSign || !outEncrSignMac))
-	{
-		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
-	}
-	auto nodeIt = g_decentNodesMap.find(clientID);
-	if (nodeIt == g_decentNodesMap.end())
-	{
-		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
-	}
-
-	DecentNodeContext& nodeCTX = nodeIt->second;
-
-	sgx_status_t enclaveRes = SGX_SUCCESS;
-	sgx_ec256_signature_t signSign;
-	sgx_ec256_signature_t encrSign;
-	std::shared_ptr<const PrivateKeyWrap> signPrv = EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey();
-
-	SGXECCStateWrap eccState;
-	if (eccState.m_status != SGX_SUCCESS)
-	{
-		return eccState.m_status; //Error return. (Error from SGX)
-	}
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&signPrv->m_prvKey), &signSign, eccState.m_eccState);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-	enclaveRes = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&signPrv->m_prvKey), &encrSign, eccState.m_eccState);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(&signSign),
-		sizeof(sgx_ec256_signature_t),
-		reinterpret_cast<uint8_t*>(outSignSign),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		outSignSignMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	enclaveRes = sgx_rijndael128GCM_encrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(&encrSign),
-		sizeof(sgx_ec256_signature_t),
-		reinterpret_cast<uint8_t*>(outEncrSign),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		outEncrSignMac
-	);
-
-	return SGX_SUCCESS;
-}
-
-extern "C" sgx_status_t ecall_set_key_signs(const char* clientID, const sgx_ec256_signature_t* inSignSign, const sgx_aes_gcm_128bit_tag_t* inSignSignMac, const sgx_ec256_signature_t* inEncrSign, const sgx_aes_gcm_128bit_tag_t* inEncrSignMac)
-{
-	if (g_decentMode != DecentNodeMode::APPL_SERVER)
-	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("This decent node is not a Root Server!");
-	}
-
-	if ((!clientID || !inSignSign || !inSignSignMac || !inEncrSign || !inEncrSignMac))
-	{
-		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
-	}
-	auto nodeIt = g_decentNodesMap.find(clientID);
-	if (nodeIt == g_decentNodesMap.end())
-	{
-		FUNC_ERR_Y("The requesting node had not been RAed.!", SGX_ERROR_INVALID_PARAMETER);
-	}
-
-	DecentNodeContext& nodeCTX = nodeIt->second;
-
-	sgx_status_t enclaveRes = SGX_SUCCESS;
-	sgx_ec256_signature_t signSign;
-	sgx_ec256_signature_t encrSign;
-
-	uint8_t aes_gcm_iv[SAMPLE_SP_IV_SIZE] = { 0 };
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(inSignSign),
-		sizeof(sgx_ec256_signature_t),
-		reinterpret_cast<uint8_t*>(&signSign),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		inSignSignMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-	enclaveRes = sgx_rijndael128GCM_decrypt(&nodeCTX.m_sk,
-		reinterpret_cast<const uint8_t*>(inEncrSign),
-		sizeof(sgx_ec256_signature_t),
-		reinterpret_cast<uint8_t*>(&encrSign),
-		aes_gcm_iv,
-		SAMPLE_SP_IV_SIZE,
-		nullptr,
-		0,
-		inEncrSignMac
-	);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-
-	//cryptoMgr.SetSignKeySign(signSign);
-
-	//cryptoMgr.SetProtoSignPubKey(nodeKeyMgr.GetSignKey());
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
-	ocall_printf("Accept Protocol Pub Sign Key: %s\n\n", SerializePubKey(*signPub).c_str());
-	ocall_printf("The Signature of Sign Pub Key is: %s\n", SerializeStruct(signSign).c_str());
-	ocall_printf("The Signature of Encr Pub Key is: %s\n", SerializeStruct(encrSign).c_str());
-
-	return SGX_SUCCESS;
-}
-
-extern "C" sgx_status_t ecall_proc_decent_msg0(const char* clientID, const sgx_ec256_public_t* inSignKey, const sgx_ec256_signature_t* inSignSign, const sgx_ec256_public_t* inEncrKey, const sgx_ec256_signature_t* inEncrSign)
-{
-	sgx_status_t enclaveRes = SGX_SUCCESS;
-	int isPointValid = 0;
-	if ((!clientID || !inSignKey || !inSignSign || !inEncrKey || !inEncrSign) ||
-		g_decentNodesMap.find(clientID) != g_decentNodesMap.end())
-	{
-		FUNC_ERR_Y("Invalid parameters!", SGX_ERROR_INVALID_PARAMETER);
-	}
-	SGXECCStateWrap eccState;
-	if (eccState.m_status != SGX_SUCCESS)
-	{
-		return eccState.m_status; //Error return. (Error from SGX)
-	}
-	enclaveRes = sgx_ecc256_check_point(inSignKey, eccState.m_eccState, &isPointValid);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-	if (isPointValid == 0)
-	{
-		FUNC_ERR_Y("Invalid Signing Key!", SGX_ERROR_INVALID_PARAMETER);
-	}
-	enclaveRes = sgx_ecc256_check_point(inEncrKey, eccState.m_eccState, &isPointValid);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-	if (isPointValid == 0)
-	{
-		FUNC_ERR_Y("Invalid Encryption key!", SGX_ERROR_INVALID_PARAMETER);
-	}
-
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
-	uint8_t verifyRes = 0;
-	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inSignKey), sizeof(sgx_ec256_public_t), signPub.get(), const_cast<sgx_ec256_signature_t*>(inSignSign), &verifyRes, eccState.m_eccState);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-	if (verifyRes != SGX_EC_VALID)
-	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("The signature of Attestee's Sign key is invalid.");
-	}
-
-	enclaveRes = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(inEncrKey), sizeof(sgx_ec256_public_t), signPub.get(), const_cast<sgx_ec256_signature_t*>(inEncrSign), &verifyRes, eccState.m_eccState);
-	if (enclaveRes != SGX_SUCCESS)
-	{
-		return enclaveRes; //Error return. (Error from SGX)
-	}
-	if (verifyRes != SGX_EC_VALID)
-	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("The signature of Attestee's Encr key is invalid.");
-	}
-
-	return SGX_SUCCESS;
+	return 1;
 }

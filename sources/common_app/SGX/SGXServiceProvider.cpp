@@ -19,12 +19,12 @@ SGXServiceProvider::~SGXServiceProvider()
 	SGXRAEnclave::ServiceProviderTerminate();
 }
 
-std::shared_ptr<ServiceProviderRASession> SGXServiceProvider::GetRASession(std::unique_ptr<Connection>& connection)
+std::shared_ptr<ServiceProviderRASession> SGXServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
 {
 	return std::make_shared<SGXServiceProviderRASession>(connection, *this, m_ias);
 }
 
-void SGXServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey)
+void SGXServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) const
 {
 	sgx_status_t retval = SGXRAEnclave::GetRASPSignPubKey(&outKey);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, SGXRAEnclave::GetRASPSignPubKey);
@@ -65,13 +65,10 @@ bool SGXServiceProvider::ProcessSmartMessage(const std::string & category, const
 {
 	if (category == SGXRASPMessage::VALUE_CAT)
 	{
-		SGXServiceProviderRASession raSession(connection, *this, m_ias, jsonMsg);
-		bool res = raSession.ProcessServerSideRA();
-		raSession.SwapConnection(connection);
-		return res;
+		return SGXServiceProviderRASession::SmartMsgEntryPoint(connection, *this, m_ias, jsonMsg);
 	}
 	else
 	{
-		return ServiceProviderBase::ProcessSmartMessage(category, jsonMsg, connection);
+		return false;
 	}
 }
