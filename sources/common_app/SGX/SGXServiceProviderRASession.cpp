@@ -5,6 +5,7 @@
 #include <json/json.h>
 
 #include "../../common/DataCoding.h"
+#include "../../common/JsonTools.h"
 
 #include "../Common.h"
 
@@ -113,12 +114,10 @@ static const Json::Value ReceiveHandshakeMsg(std::unique_ptr<Connection>& connec
 	connection->Receive(msgBuffer);
 
 	Json::Value jsonRoot;
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-	std::string errStr;
-
-	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
-	bool isValid = reader->parse(msgBuffer.c_str(), msgBuffer.c_str() + msgBuffer.size(), &jsonRoot, &errStr);
+	if (!ParseStr2Json(jsonRoot, msgBuffer))
+	{
+		return nullptr;
+	}
 
 	return jsonRoot;
 }

@@ -280,11 +280,13 @@ extern "C" int ecall_to_decentralized_node(const char* id, int is_server)
 	{
 		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
 		SGXRAEnclave::GetClientKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
+		SGXRAEnclave::DropServerRAState(id);
 	}
 	else
 	{
 		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
 		SGXRAEnclave::GetServerKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
+		SGXRAEnclave::DropClientRAState(id);
 	}
 
 	COMMON_PRINTF("Accepted New Decentralized Node: %s\n", id);

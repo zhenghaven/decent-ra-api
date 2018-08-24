@@ -27,9 +27,6 @@ namespace Json
 class Connection
 {
 public:
-	static bool ConvertMsgStr2Json(Json::Value& outJson, const std::string& inStr);
-
-public:
 	Connection() = delete;
 	Connection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor& acceptor, size_t bufferSize = 5000U);
 	Connection(uint32_t ipAddr, uint16_t portNum, size_t bufferSize = 5000U);

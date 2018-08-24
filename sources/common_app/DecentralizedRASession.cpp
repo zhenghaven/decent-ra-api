@@ -16,6 +16,7 @@
 #include "MessageException.h"
 
 #include "../common/DataCoding.h"
+#include "../common/JsonTools.h"
 #include "Networking/Connection.h"
 
 template<class T>
@@ -60,7 +61,10 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 	static_assert(std::is_base_of<DecentralizedMessage, T>::value, "Class type must be a child class of DecentralizedMessage.");
 
 	Json::Value jsonRoot;
-	Connection::ConvertMsgStr2Json(jsonRoot, jsonStr);
+	if (!ParseStr2Json(jsonRoot, jsonStr))
+	{
+		return nullptr;
+	}
 
 	return ParseMessageExpected<T>(jsonRoot);
 }

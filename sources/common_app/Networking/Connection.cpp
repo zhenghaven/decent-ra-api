@@ -8,23 +8,9 @@
 #include <json/json.h>
 
 #include "../Common.h"
+#include "../../common/JsonTools.h"
 
 using namespace boost::asio;
-
-bool Connection::ConvertMsgStr2Json(Json::Value& outJson, const std::string& inStr)
-{
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-	std::string errStr;
-
-	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
-	bool isValid = reader->parse(inStr.c_str(), inStr.c_str() + inStr.size(), &outJson, &errStr);
-	if (!isValid)
-	{
-		LOGW("Json::CharReader: %s\n", errStr.c_str());
-	}
-	return isValid;
-}
 
 Connection::Connection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor & acceptor, size_t bufferSize) :
 	m_ioService(ioService),
@@ -78,7 +64,7 @@ size_t Connection::Receive(Json::Value & msg)
 {
 	std::string buffer;
 	size_t res = Connection::Receive(buffer);
-	bool isValid = Connection::ConvertMsgStr2Json(msg, buffer);
+	bool isValid = ParseStr2Json(msg, buffer);
 	return isValid ? res : 0;
 }
 

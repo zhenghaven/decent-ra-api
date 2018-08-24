@@ -18,6 +18,7 @@
 #include "../MessageException.h"
 #include "../Networking/Connection.h"
 #include "../../common/DataCoding.h"
+#include "../../common/JsonTools.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 
 template<class T>
@@ -62,12 +63,10 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 	static_assert(std::is_base_of<SGXRAClientMessage, T>::value, "Class type must be a child class of SGXRAClientMessage.");
 
 	Json::Value jsonRoot;
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-	std::string errStr;
-
-	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
-	bool isValid = reader->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.size(), &jsonRoot, &errStr);
+	if (!ParseStr2Json(jsonRoot, jsonStr))
+	{
+		return nullptr;
+	}
 
 	return ParseMessageExpected<T>(jsonRoot);
 }

@@ -1,10 +1,14 @@
 #include <sgx_tcrypto.h>
+#include <sgx_trts.h>
 
 #include <cstring>
 #include <cstdlib>
 #include <cstdint>
 #include <map>
 #include <vector>
+#include <random>
+//#include <chrono>
+#include <climits>
 
 #include <cerrno>
 
@@ -578,4 +582,20 @@ int consttime_memequal(const void *b1, const void *b2, size_t len)
 	* certain CPUs for `!res'.
 	*/
 	return (1 & ((res - 1) >> 8));
+}
+
+sgx_status_t sgx_read_rand(unsigned char *rand, size_t length_in_bytes)
+{
+	std::random_device rd;
+	//unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	//std::mt19937 gen(seed);
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dis(0, UCHAR_MAX);
+
+	for (size_t i = 0; i < length_in_bytes; ++i)
+	{
+		rand[i] = dis(gen);
+	}
+
+	return SGX_SUCCESS;
 }

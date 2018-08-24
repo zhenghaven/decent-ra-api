@@ -24,7 +24,7 @@ enum class ConsoleColors
 
 void SetConsoleColor(ConsoleColors foreground, ConsoleColors background);
 
-#ifndef RELEASE_VER
+#ifndef NDEBUG
 
 #define LOGI(...)   printf(" I: "); \
 					(void)printf(__VA_ARGS__); \
