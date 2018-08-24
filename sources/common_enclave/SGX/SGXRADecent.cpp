@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <mutex>
 
 #include <openssl/ec.h>
 
@@ -13,12 +14,15 @@
 #include "../common_enclave/DecentError.h"
 
 #include "../common/Decent.h"
+#include "../common/JsonTools.h"
 #include "../common/CommonTool.h"
 #include "../common/DataCoding.h"
 #include "../common/OpenSSLTools.h"
 #include "../common/EnclaveRAState.h"
 #include "../common/DecentRAReport.h"
+#include "../common/AESGCMCommLayer.h"
 #include "../common/EnclaveAsyKeyContainer.h"
+
 #include "../common/SGX/sgx_constants.h"
 #include "../common/SGX/sgx_crypto_tools.h"
 #include "../common/SGX/SGXRAServiceProvider.h"
@@ -29,22 +33,39 @@
 
 class Connection;
 
-struct DecentNodeContext
-{
-	sgx_ec256_public_t m_peerSignKey = { {0},{0} };
-	sgx_ec_key_128bit_t m_mk = { 0 };
-	sgx_ec_key_128bit_t m_sk = { 0 };
+//struct DecentNodeContext
+//{
+//	sgx_ec256_public_t m_peerSignKey = { {0},{0} };
+//	sgx_ec_key_128bit_t m_mk = { 0 };
+//	sgx_ec_key_128bit_t m_sk = { 0 };
+//
+//};
 
-};
+typedef std::map<std::string, std::shared_ptr<const SecureCommLayer> > DecentNodeMapType;
 
 namespace
 {
-	static DecentNodeMode g_decentMode = DecentNodeMode::ROOT_SERVER;
-	static std::map<std::string, DecentNodeContext> g_decentNodesMap;
-	static std::map<std::string, std::string> g_pendingDecentNode;
+	static constexpr char* JSON_LABEL_FUNC = "Func";
+	static constexpr char* JSON_LABEL_PRV_KEY = "PrvKey";
 
-	//Shared objects:
-	//static std::shared_ptr<DecentCryptoManager> g_cryptoMgr = std::make_shared<DecentCryptoManager>();
+	static constexpr char* JSON_VALUE_FUNC_SET_PROTO_KEY = "SetProtoKey";
+
+	static std::mutex g_decentNodesMapMutex;
+	static DecentNodeMapType g_decentNodesMap;
+	static const DecentNodeMapType& k_decentNodesMap = g_decentNodesMap;
+
+	static std::map<std::string, std::string> g_pendingDecentNode;
+}
+
+static bool CommLayerSendFunc(void* const connectionPtr, const char *msg)
+{
+	int retVal = 0;
+	sgx_status_t enclaveRet = ocall_send_decent_trusted_msg(&retVal, connectionPtr, msg);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		return false;
+	}
+	return retVal == 1;
 }
 
 static bool IsBothWayAttested(const std::string& id)
@@ -93,13 +114,44 @@ static inline bool DecentReportDataVerifier(const std::string& pubSignKey, const
 	return std::memcmp(tmpHash, inData.data(), sizeof(sgx_sha256_hash_t)) == 0;
 }
 
+void DecentEnclave::DropDecentNode(const std::string & nodeID)
+{
+	std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
+	auto it = g_decentNodesMap.find(nodeID);
+	if (it != g_decentNodesMap.end())
+	{
+		g_decentNodesMap.erase(it);
+	}
+}
+
+std::shared_ptr<const SecureCommLayer> DecentEnclave::ReleaseCommLayer(const std::string & nodeID)
+{
+	std::shared_ptr<const SecureCommLayer> commLayer;
+	{
+		std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
+		auto it = g_decentNodesMap.find(nodeID);
+		if (it == g_decentNodesMap.end())
+		{
+			return nullptr;
+		}
+		commLayer = it->second;
+	}
+
+	return commLayer;
+}
+
 bool DecentEnclave::IsAttested(const std::string& id)
 {
-	return g_decentNodesMap.find(id) != g_decentNodesMap.end();
+	std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
+	return k_decentNodesMap.find(id) != k_decentNodesMap.cend();
 }
 
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 {
+	if (!inSpid)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 	SGXRAEnclave::SetSPID(*inSpid);
 
 	sgx_report_t selfReport;
@@ -124,6 +176,10 @@ extern "C" void ecall_decent_terminate()
 
 extern "C" int ecall_decent_process_ias_ra_report(const char* reportStr)
 {
+	if (!reportStr)
+	{
+		return 0;
+	}
 	rapidjson::Document jsonDoc;
 	jsonDoc.Parse(reportStr);
 
@@ -265,28 +321,83 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* ServerID, 
 
 extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const connectionPtr, const char* jsonMsg)
 {
+	if (!nodeID || !connectionPtr || !jsonMsg)
+	{
+		return 0;
+	}
+	std::shared_ptr<const SecureCommLayer> commLayer;
+	{
+		std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
+		auto it = g_decentNodesMap.find(nodeID);
+		if (it == g_decentNodesMap.end())
+		{
+			return 0;
+		}
+		commLayer = it->second;
+	}
 
-	return true;
+	std::string plainMsg;
+	commLayer->DecryptMsg(plainMsg, jsonMsg);
+
+	rapidjson::Value jsonRoot;
+	if (!ParseStr2Json(jsonRoot, plainMsg))
+	{
+		return 0;
+	}
+
+	if (!jsonRoot.HasMember(JSON_LABEL_FUNC) || !jsonRoot[JSON_LABEL_FUNC].IsString())
+	{
+		return 0;
+	}
+
+	std::string funcType(jsonRoot[JSON_LABEL_FUNC].GetString());
+
+	if (funcType == JSON_VALUE_FUNC_SET_PROTO_KEY) //Set Protocol Key Function:
+	{
+		if (!jsonRoot.HasMember(JSON_LABEL_PRV_KEY) || !jsonRoot[JSON_LABEL_PRV_KEY].IsString())
+		{
+			return 0;
+		}
+		sgx_ec256_public_t pubKey;
+		DeserializeStruct(pubKey, nodeID);
+		PrivateKeyWrap prvKey;
+		DeserializeStruct(prvKey.m_prvKey, jsonRoot[JSON_LABEL_PRV_KEY].GetString());
+		std::shared_ptr<const sgx_ec256_public_t> pubKeyPtr = std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(pubKey));
+		std::shared_ptr<const PrivateKeyWrap> prvKeyPtr = std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(prvKey));
+		EnclaveAsyKeyContainer::GetInstance().UpdateSignKeyPair(prvKeyPtr, pubKeyPtr);
+
+		DecentEnclave::DropDecentNode(nodeID); //Task done! End the session.
+		return 0; //return 0 to terminate the connection.
+	}
+
+	return 0;
 }
 
 extern "C" int ecall_to_decentralized_node(const char* id, int is_server)
 {
+	if (!id)
+	{
+		return 0;
+	}
 	if (!IsBothWayAttested(id))
 	{
 		return 0;
 	}
 
+	AESGCMCommLayer* commLayer = nullptr;
 	if (is_server)
 	{
-		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
-		SGXRAEnclave::GetClientKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
+		commLayer = SGXRAEnclave::ReleaseClientKeys(id, &CommLayerSendFunc);
 		SGXRAEnclave::DropServerRAState(id);
 	}
 	else
 	{
-		auto it = g_decentNodesMap.insert(std::make_pair(id, DecentNodeContext()));
-		SGXRAEnclave::GetServerKeys(id, &it.first->second.m_peerSignKey, &it.first->second.m_sk, &it.first->second.m_mk);
+		commLayer = SGXRAEnclave::ReleaseServerKeys(id, &CommLayerSendFunc);
 		SGXRAEnclave::DropClientRAState(id);
+	}
+	{
+		std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
+		g_decentNodesMap.insert(std::make_pair(id, std::shared_ptr<const AESGCMCommLayer>(commLayer)));
 	}
 
 	COMMON_PRINTF("Accepted New Decentralized Node: %s\n", id);

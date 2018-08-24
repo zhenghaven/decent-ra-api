@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <mutex>
 
 //#include <sgx_tkey_exchange.h>
 
@@ -13,8 +14,8 @@
 
 #include "../../common/DataCoding.h"
 #include "../../common/EnclaveRAState.h"
-//#include "../../common/RACryptoManager.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/AESGCMCommLayer.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 
 struct RAClientContext
@@ -24,6 +25,7 @@ struct RAClientContext
 	sgx_ec_key_128bit_t m_mk = { 0 };
 	sgx_ec_key_128bit_t m_sk = { 0 };
 	ServerRAState m_state;
+	std::mutex m_mutex;
 
 	RAClientContext(const sgx_ec256_public_t& signPub) :
 		m_peerSignKey(signPub),
@@ -34,27 +36,32 @@ struct RAClientContext
 	}
 };
 
+typedef std::map<std::string, std::shared_ptr<RAClientContext> > ServerMapType;
+
 namespace
 {
-	static std::map<std::string, std::unique_ptr<RAClientContext> > g_serversMap;
-	static const std::map<std::string, std::unique_ptr<RAClientContext> >& k_serversMap = g_serversMap;
+	static std::mutex g_serversMapMutex;
+	static ServerMapType g_serversMap;
+	static const ServerMapType& k_serversMap = g_serversMap;
 }
 
 bool SGXRAEnclave::AddNewServerRAState(const std::string& ServerID, const sgx_ec256_public_t& inPubKey)
 {
+	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
 	auto it = k_serversMap.find(ServerID);
 	if (it != k_serversMap.cend())
 	{
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR_Y("Processing msg0, but client ID already exist.", false);
 	}
-	g_serversMap.insert(std::make_pair<const std::string&, std::unique_ptr<RAClientContext>>(ServerID, std::unique_ptr<RAClientContext>(new RAClientContext(inPubKey))));
+	g_serversMap.insert(std::make_pair(ServerID, std::shared_ptr<RAClientContext>(new RAClientContext(inPubKey))));
 
 	return true;
 }
 
 void SGXRAEnclave::DropServerRAState(const std::string& serverID)
 {
+	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
 	auto it = k_serversMap.find(serverID);
 	if (it != g_serversMap.cend())
 	{
@@ -64,23 +71,30 @@ void SGXRAEnclave::DropServerRAState(const std::string& serverID)
 
 bool SGXRAEnclave::IsServerAttested(const std::string & serverID)
 {
+	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
 	auto it = k_serversMap.find(serverID);
 	return it == k_serversMap.cend() ? false : (it->second->m_state == ServerRAState::ATTESTED);
 }
 
-bool SGXRAEnclave::GetServerKeys(const std::string & serverID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
+bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
 {
 	if (!outSK && !outMK && !outSignPubKey)
 	{
 		return false;
 	}
-	auto it = g_serversMap.find(serverID);
-	if (it == g_serversMap.end())
+	std::shared_ptr<RAClientContext> clientCTXPtr;
 	{
-		return false;
+		std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
+		auto it = g_serversMap.find(serverID);
+		if (it == g_serversMap.end())
+		{
+			return false;
+		}
+		clientCTXPtr = it->second;
 	}
 
-	RAClientContext& clientCTX = *(it->second);
+	RAClientContext& clientCTX = *clientCTXPtr;
+	std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
 
 	if (outSK)
 	{
@@ -95,7 +109,32 @@ bool SGXRAEnclave::GetServerKeys(const std::string & serverID, sgx_ec256_public_
 		std::memcpy(outSignPubKey, &clientCTX.m_peerSignKey, sizeof(sgx_ec256_public_t));
 	}
 
+	SGXRAEnclave::DropServerRAState(serverID);
+
 	return true;
+}
+
+AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, SendFunctionType sendFunc)
+{
+	std::shared_ptr<RAClientContext> clientCTXPtr;
+	{
+		std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
+		auto it = g_serversMap.find(serverID);
+		if (it == g_serversMap.end())
+		{
+			return nullptr;
+		}
+		clientCTXPtr = it->second;
+	}
+
+	RAClientContext& clientCTX = *clientCTXPtr;
+	AESGCMCommLayer* res = nullptr;
+	{
+		std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
+		res = new AESGCMCommLayer(clientCTX.m_sk, sendFunc);
+	}
+	SGXRAEnclave::DropServerRAState(serverID);
+	return res;
 }
 
 /**
@@ -162,6 +201,11 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const s
 
 extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec256_public_t* p_g_b, sgx_ra_context_t inContextID)
 {
+	if (!ServerID || !p_g_b || !inContextID)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
 	sgx_status_t res = SGX_SUCCESS;
 	int isGbValid = 0;
 
@@ -196,16 +240,23 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 		FUNC_ERR_Y("Processing msg2, but g_b is invalid.", SGX_ERROR_INVALID_PARAMETER);
 	}
 
-	auto it = g_serversMap.find(ServerID);
-	if (it == g_serversMap.end()
-		|| it->second->m_state != ServerRAState::MSG0_DONE)
+	std::shared_ptr<RAClientContext> clientCTXPtr;
+	bool isValidState = false;
+	{
+		std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
+		auto it = g_serversMap.find(ServerID);
+		isValidState = (it != g_serversMap.end() && it->second->m_state == ServerRAState::MSG0_DONE);
+		clientCTXPtr = it->second;
+	}
+	if (!isValidState)
 	{
 		SGXRAEnclave::DropServerRAState(ServerID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg2, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RAClientContext& clientCTX = *(it->second);
+	RAClientContext& clientCTX = *clientCTXPtr;
+	std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
 
 	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_SK, &clientCTX.m_sk);
 	if (res != SGX_SUCCESS)
@@ -227,16 +278,28 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 
 extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra_msg4_t* inMsg4, sgx_ec256_signature_t* inMsg4Sign, sgx_ra_context_t inContextID)
 {
-	auto it = g_serversMap.find(ServerID);
-	if (it == g_serversMap.end()
-		|| it->second->m_state != ServerRAState::MSG2_DONE)
+	if (!ServerID || !inMsg4 || !inMsg4Sign)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	std::shared_ptr<RAClientContext> clientCTXPtr;
+	bool isValidState = false;
+	{
+		std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
+		auto it = g_serversMap.find(ServerID);
+		isValidState = (it != g_serversMap.end() && it->second->m_state == ServerRAState::MSG2_DONE);
+		clientCTXPtr = it->second;
+	}
+	if (!isValidState)
 	{
 		SGXRAEnclave::DropServerRAState(ServerID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg4, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RAClientContext& clientCTX = *(it->second);
+	RAClientContext& clientCTX = *clientCTXPtr;
+	std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
 
 	sgx_status_t res = SGX_SUCCESS;
 	

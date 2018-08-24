@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <atomic>
+#include <mutex>
 
 #include <openssl/x509.h>
 
@@ -20,6 +21,7 @@
 #include "../../common/OpenSSLTools.h"
 #include "../../common/NonceGenerator.h"
 #include "../../common/EnclaveRAState.h"
+#include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/SGX/ias_report_cert.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
@@ -43,6 +45,7 @@ struct RASPContext
 	sgx_ec_key_128bit_t m_sk = { 0 };
 	sgx_ec_key_128bit_t m_vk = { 0 };
 	sgx_ps_sec_prop_desc_t m_secProp;
+	std::mutex m_mutex;
 
 	RASPContext(const sgx_ec256_public_t& inSignPubKey) :
 		m_mySignPub(EnclaveAsyKeyContainer::GetInstance().GetSignPubKey()),
@@ -84,6 +87,8 @@ struct RASPContext
 	}
 };
 
+typedef std::map<std::string, std::shared_ptr<RASPContext> > ClientsMapType;
+
 namespace
 {
 	//Assume this is set correctly during init and no change afterwards.
@@ -91,16 +96,21 @@ namespace
 	//Assume this is set correctly during init and no change afterwards.
 	static std::shared_ptr<const std::string> g_selfHash = std::make_shared<const std::string>("");
 
-	static std::map<std::string, std::unique_ptr<RASPContext>> g_clientsMap;
+	std::mutex g_clientsMapMutex;
+	static ClientsMapType g_clientsMap;
+	static const ClientsMapType& k_clientsMap = g_clientsMap;
 }
 
 bool SGXRAEnclave::AddNewClientRAState(const std::string& clientID, const sgx_ec256_public_t& inPubKey)
 {
-	auto it = g_clientsMap.find(clientID);
-	if (it != g_clientsMap.end())
 	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR_Y("Processing msg0, but client ID already exist.", false);
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		auto it = g_clientsMap.find(clientID);
+		if (it != g_clientsMap.end())
+		{
+			//Error return. (Error caused by invalid input.)
+			FUNC_ERR_Y("Processing msg0, but client ID already exist.", false);
+		}
 	}
 
 	std::unique_ptr<RASPContext> spCTX(new RASPContext(inPubKey));
@@ -118,25 +128,37 @@ bool SGXRAEnclave::AddNewClientRAState(const std::string& clientID, const sgx_ec
 		return false;
 	}
 	
-	g_clientsMap.insert(std::make_pair<const std::string&, std::unique_ptr<RASPContext>>(clientID, std::move(spCTX)));
-	spCTX.reset();
+	{
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		g_clientsMap.insert(std::make_pair<const std::string&, std::shared_ptr<RASPContext>>(clientID, std::move(spCTX)));
+	}
+
 	return true;
 }
 
 bool SGXRAEnclave::SetReportDataVerifier(const std::string & clientID, ReportDataVerifier func)
 {
-	auto it = g_clientsMap.find(clientID);
-	if (it == g_clientsMap.end())
+	std::shared_ptr<RASPContext> spCTXPtr;
 	{
-		return false;
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		auto it = g_clientsMap.find(clientID);
+		if (it == g_clientsMap.end())
+		{
+			return false;
+		}
+		spCTXPtr = it->second;
 	}
 
-	it->second->m_reportDataVerifier = func;
+	RASPContext& spCTX = *spCTXPtr;
+	std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
+	spCTX.m_reportDataVerifier = func;
+
 	return true;
 }
 
 void SGXRAEnclave::DropClientRAState(const std::string & clientID)
 {
+	std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
 	auto it = g_clientsMap.find(clientID);
 	if (it != g_clientsMap.end())
 	{
@@ -146,38 +168,71 @@ void SGXRAEnclave::DropClientRAState(const std::string & clientID)
 
 bool SGXRAEnclave::IsClientAttested(const std::string & clientID)
 {
-	auto it = g_clientsMap.find(clientID);
-	return it == g_clientsMap.end() ? false : (it->second->m_state == ClientRAState::ATTESTED);
+	std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+	ClientsMapType::const_iterator it = k_clientsMap.find(clientID);
+	return it == k_clientsMap.cend() ? false : (it->second->m_state == ClientRAState::ATTESTED);
 }
 
-bool SGXRAEnclave::GetClientKeys(const std::string & clientID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
+bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
 {
 	if (!outSK && !outMK && !outSignPubKey)
 	{
 		return false;
 	}
-	auto it = g_clientsMap.find(clientID);
-	if (it == g_clientsMap.end())
+
+	std::shared_ptr<RASPContext> spCTXPtr;
 	{
-		return false;
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		auto it = g_clientsMap.find(clientID);
+		if (it == g_clientsMap.end())
+		{
+			return false;
+		}
+		spCTXPtr = it->second;
 	}
 
-	RASPContext& spCTX = *(it->second);
+	RASPContext& spCTX = *spCTXPtr;
+	{
+		std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
+		if (outSK)
+		{
+			std::memcpy(outSK, &spCTX.m_sk, sizeof(sgx_ec_key_128bit_t));
+		}
+		if (outMK)
+		{
+			std::memcpy(outMK, &spCTX.m_mk, sizeof(sgx_ec_key_128bit_t));
+		}
+		if (outSignPubKey)
+		{
+			std::memcpy(outSignPubKey, &spCTX.m_peerSignKey, sizeof(sgx_ec256_public_t));
+		}
+	}
 
-	if (outSK)
-	{
-		std::memcpy(outSK, &spCTX.m_sk, sizeof(sgx_ec_key_128bit_t));
-	}
-	if (outMK)
-	{
-		std::memcpy(outMK, &spCTX.m_mk, sizeof(sgx_ec_key_128bit_t));
-	}
-	if (outSignPubKey)
-	{
-		std::memcpy(outSignPubKey, &spCTX.m_peerSignKey, sizeof(sgx_ec256_public_t));
-	}
+	SGXRAEnclave::DropClientRAState(clientID);
 
 	return true;
+}
+
+AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, SendFunctionType sendFunc)
+{
+	std::shared_ptr<RASPContext> spCTXPtr;
+	{
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		auto it = g_clientsMap.find(clientID);
+		if (it == g_clientsMap.end())
+		{
+			return nullptr;
+		}
+		spCTXPtr = it->second;
+	}
+	AESGCMCommLayer* res = nullptr;
+	RASPContext& spCTX = *spCTXPtr;
+	{
+		std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
+		res = new AESGCMCommLayer(spCTX.m_sk, sendFunc);
+	}
+	SGXRAEnclave::DropClientRAState(clientID);
+	return res;
 }
 
 void SGXRAEnclave::SetTargetEnclaveHash(const std::string & hashBase64)
@@ -229,16 +284,25 @@ void SGXRAEnclave::ServiceProviderTerminate()
 
 sgx_status_t SGXRAEnclave::GetIasNonce(const char* clientID, char* outStr)
 {
-	if (!clientID)
+	if (!clientID || !outStr)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	auto it = g_clientsMap.find(clientID);
-	if (it == g_clientsMap.end())
+
+	std::shared_ptr<RASPContext> spCTXPtr;
 	{
-		return SGX_ERROR_INVALID_PARAMETER;
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		auto it = g_clientsMap.find(clientID);
+		if (it == g_clientsMap.end())
+		{
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
+		spCTXPtr = it->second;
 	}
-	const std::string& res = it->second->m_nonce;
+
+	RASPContext& spCTX = *spCTXPtr;
+	std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
+	const std::string& res = spCTX.m_nonce;
 	std::memcpy(outStr, res.data(), res.size());
 
 	return SGX_SUCCESS;
@@ -279,16 +343,28 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg0Send(const char* clientID)
 
 sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1_t *inMsg1, sgx_ra_msg2_t *outMsg2)
 {
-	auto it = g_clientsMap.find(clientID);
-	if (it == g_clientsMap.end()
-		|| it->second->m_state != ClientRAState::MSG0_DONE)
+	if (!clientID || !inMsg1 || !outMsg2)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	std::shared_ptr<RASPContext> spCTXPtr;
+	bool isValidState = false;
+	{
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		auto it = g_clientsMap.find(clientID);
+		isValidState = (it != g_clientsMap.end() && it->second->m_state == ClientRAState::MSG0_DONE);
+		spCTXPtr = it->second;
+	}
+	if (!isValidState)
 	{
 		SGXRAEnclave::DropClientRAState(clientID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg1, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RASPContext& spCTX = *(it->second);
+	RASPContext& spCTX = *spCTXPtr;
+	std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
 
 	sgx_status_t res = SGX_SUCCESS;
 
@@ -345,16 +421,28 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 
 sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign, sgx_report_data_t* outOriRD)
 {
-	auto it = g_clientsMap.find(clientID);
-	if (it == g_clientsMap.end()
-		|| it->second->m_state != ClientRAState::MSG1_DONE)
+	if (!clientID || !inMsg3 || !msg3Len || !iasReport || !reportSign || !reportCert || !outMsg4 || !outMsg4Sign || !outOriRD)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	std::shared_ptr<RASPContext> spCTXPtr;
+	bool isValidState = false;
+	{
+		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
+		auto it = g_clientsMap.find(clientID);
+		isValidState = (it != g_clientsMap.end() && it->second->m_state == ClientRAState::MSG1_DONE);
+		spCTXPtr = it->second;
+	}
+	if (!isValidState)
 	{
 		SGXRAEnclave::DropClientRAState(clientID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg3, but client ID doesn't exist or in a invalid state.");
 	}
 
-	RASPContext& spCTX = *(it->second);
+	RASPContext& spCTX = *spCTXPtr;
+	std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
 
 	sgx_status_t res = SGX_SUCCESS;
 	int cmpRes = 0;

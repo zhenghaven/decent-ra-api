@@ -29,18 +29,21 @@ public:
 
 public:
 	AESGCMCommLayer() = delete;
-	AESGCMCommLayer(const uint8_t (&sKey)[AES_GCM_128BIT_KEY_SIZE], SendFunctionType sendFunc);
+	AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], SendFunctionType sendFunc);
 	AESGCMCommLayer(const AesGcm128bKeyType& sKey, SendFunctionType sendFunc);
 	AESGCMCommLayer(AesGcm128bKeyType& sKey, SendFunctionType sendFunc);
-	AESGCMCommLayer(const AESGCMCommLayer& other);
+	//Copy is prohibited. 
+	AESGCMCommLayer(const AESGCMCommLayer& other) = delete;
 	AESGCMCommLayer(AESGCMCommLayer&& other);
 	virtual ~AESGCMCommLayer();
+	//Copy is prohibited. 
+	AESGCMCommLayer& operator=(const AESGCMCommLayer& other) = delete;
 
-	virtual bool DecryptMsg(std::string& outMsg, const char* inMsg) override;
-	virtual bool DecryptMsg(std::string& outMsg, const std::string& inMsg) override;
+	virtual bool DecryptMsg(std::string& outMsg, const char* inMsg) const override;
+	virtual bool DecryptMsg(std::string& outMsg, const std::string& inMsg) const override;
 
-	virtual std::string EncryptMsg(const std::string& msg) override;
-	virtual bool SendMsg(void* const connectionPtr, const std::string& msg) override;
+	virtual std::string EncryptMsg(const std::string& msg) const override;
+	virtual bool SendMsg(void* const connectionPtr, const std::string& msg) const override;
 
 private:
 	//std::unique_ptr<sgx_ec256_public_t> m_pubKey;

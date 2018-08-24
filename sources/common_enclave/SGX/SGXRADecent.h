@@ -1,10 +1,13 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
-class RAKeyManager;
+class SecureCommLayer;
 
 namespace DecentEnclave
 {
-	bool IsAttested(const std::string& id);
+	void DropDecentNode(const std::string& nodeID);
+	std::shared_ptr<const SecureCommLayer> ReleaseCommLayer(const std::string& nodeID);
+	bool IsAttested(const std::string& nodeID);
 }

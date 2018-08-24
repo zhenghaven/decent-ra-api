@@ -23,7 +23,7 @@
 #include "DataCoding.h"
 #include "JsonTools.h"
 
-AESGCMCommLayer::AESGCMCommLayer(const uint8_t(&sKey)[AES_GCM_128BIT_KEY_SIZE], SendFunctionType sendFunc) :
+AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], SendFunctionType sendFunc) :
 	m_sendFunc(sendFunc)
 {
 	std::memcpy(m_sk.data(), &sKey[0], AES_GCM_128BIT_KEY_SIZE);
@@ -41,11 +41,11 @@ AESGCMCommLayer::AESGCMCommLayer(AesGcm128bKeyType & sKey, SendFunctionType send
 	m_sk.swap(sKey);
 }
 
-AESGCMCommLayer::AESGCMCommLayer(const AESGCMCommLayer & other) :
-	m_sendFunc(other.m_sendFunc)
-{
-	std::memcpy(m_sk.data(), other.m_sk.data(), AES_GCM_128BIT_KEY_SIZE);
-}
+//AESGCMCommLayer::AESGCMCommLayer(const AESGCMCommLayer & other) :
+//	m_sendFunc(other.m_sendFunc)
+//{
+//	std::memcpy(m_sk.data(), other.m_sk.data(), AES_GCM_128BIT_KEY_SIZE);
+//}
 
 AESGCMCommLayer::AESGCMCommLayer(AESGCMCommLayer && other) :
 	m_sendFunc(other.m_sendFunc)
@@ -57,7 +57,7 @@ AESGCMCommLayer::~AESGCMCommLayer()
 {
 }
 
-bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
+bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg) const
 {
 	JSON_EDITION::Value jsonRoot;
 	if (!ParseStr2Json(jsonRoot, inMsg))
@@ -83,7 +83,7 @@ bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
 	outMsg.resize(decryptedMsg.size());
 
 	sgx_status_t enclaveRet = sgx_rijndael128GCM_decrypt(
-		reinterpret_cast<sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
+		reinterpret_cast<const sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
 		decryptedMsg.data(),
 		static_cast<uint32_t>(decryptedMsg.size()),
 		reinterpret_cast<uint8_t*>(&outMsg[0]),
@@ -101,12 +101,12 @@ bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
 	return true;
 }
 
-bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg)
+bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg) const
 {
 	return AESGCMCommLayer::DecryptMsg(outMsg, inMsg.c_str());
 }
 
-std::string AESGCMCommLayer::EncryptMsg(const std::string & msg)
+std::string AESGCMCommLayer::EncryptMsg(const std::string & msg) const
 {
 	JSON_EDITION::Value jsonRoot;
 
@@ -122,7 +122,7 @@ std::string AESGCMCommLayer::EncryptMsg(const std::string & msg)
 	}
 
 	enclaveRet = sgx_rijndael128GCM_encrypt(
-		reinterpret_cast<sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
+		reinterpret_cast<const sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
 		reinterpret_cast<const uint8_t*>(msg.data()),
 		static_cast<uint32_t>(msg.size()),
 		encryptedMsg.data(),
@@ -144,7 +144,7 @@ std::string AESGCMCommLayer::EncryptMsg(const std::string & msg)
 	return Json2StyleString(jsonRoot);
 }
 
-bool AESGCMCommLayer::SendMsg(void* const connectionPtr, const std::string & msg)
+bool AESGCMCommLayer::SendMsg(void* const connectionPtr, const std::string & msg) const
 {
 	if (msg.size() == 0)
 	{
