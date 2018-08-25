@@ -22,32 +22,38 @@
 
 #include "DataCoding.h"
 #include "JsonTools.h"
+#include "CommonTool.h"
 
-AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], SendFunctionType sendFunc) :
+AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], const std::string& senderID, SendFunctionType sendFunc) :
+	m_senderID(senderID),
 	m_sendFunc(sendFunc)
 {
 	std::memcpy(m_sk.data(), &sKey[0], AES_GCM_128BIT_KEY_SIZE);
 }
 
-AESGCMCommLayer::AESGCMCommLayer(const AesGcm128bKeyType & sKey, SendFunctionType sendFunc) :
+AESGCMCommLayer::AESGCMCommLayer(const AesGcm128bKeyType & sKey, const std::string& senderID, SendFunctionType sendFunc) :
+	m_senderID(senderID),
 	m_sendFunc(sendFunc)
 {
 	std::memcpy(m_sk.data(), sKey.data(), AES_GCM_128BIT_KEY_SIZE);
 }
 
-AESGCMCommLayer::AESGCMCommLayer(AesGcm128bKeyType & sKey, SendFunctionType sendFunc) :
+AESGCMCommLayer::AESGCMCommLayer(AesGcm128bKeyType & sKey, const std::string& senderID, SendFunctionType sendFunc) :
+	m_senderID(senderID),
 	m_sendFunc(sendFunc)
 {
 	m_sk.swap(sKey);
 }
 
 //AESGCMCommLayer::AESGCMCommLayer(const AESGCMCommLayer & other) :
+//	m_senderID(other.m_senderID),
 //	m_sendFunc(other.m_sendFunc)
 //{
 //	std::memcpy(m_sk.data(), other.m_sk.data(), AES_GCM_128BIT_KEY_SIZE);
 //}
 
 AESGCMCommLayer::AESGCMCommLayer(AESGCMCommLayer && other) :
+	m_senderID(std::move(other.m_senderID)),
 	m_sendFunc(other.m_sendFunc)
 {
 	m_sk.swap(other.m_sk);
@@ -59,16 +65,17 @@ AESGCMCommLayer::~AESGCMCommLayer()
 
 bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg) const
 {
-	JSON_EDITION::Value jsonRoot;
+	COMMON_PRINTF("Recv Encrypted Message: %s\n", inMsg);
+	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
 	if (!ParseStr2Json(jsonRoot, inMsg))
 	{
 		return false;
 	}
 
-	if (!jsonRoot.JSON_HAS_MEMBER(LABEL_ROOT) || jsonRoot[LABEL_ROOT].JSON_IS_OBJECT() ||
-		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_NONCE) || jsonRoot[LABEL_ROOT][LABEL_NONCE].JSON_IS_STRING() ||
-		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_MAC) || jsonRoot[LABEL_ROOT][LABEL_MAC].JSON_IS_STRING() ||
-		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_MSG) || jsonRoot[LABEL_ROOT][LABEL_MSG].JSON_IS_STRING())
+	if (!jsonRoot.JSON_HAS_MEMBER(LABEL_ROOT) || !jsonRoot[LABEL_ROOT].JSON_IS_OBJECT() ||
+		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_NONCE) || !jsonRoot[LABEL_ROOT][LABEL_NONCE].JSON_IS_STRING() ||
+		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_MAC) || !jsonRoot[LABEL_ROOT][LABEL_MAC].JSON_IS_STRING() ||
+		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_MSG) || !jsonRoot[LABEL_ROOT][LABEL_MSG].JSON_IS_STRING())
 	{
 		return false;
 	}
@@ -77,15 +84,15 @@ bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg) const
 	DeserializeStruct(iv, jsonRoot[LABEL_ROOT][LABEL_NONCE].JSON_AS_STRING());
 	sgx_aes_gcm_128bit_tag_t macTag;
 	DeserializeStruct(macTag, jsonRoot[LABEL_ROOT][LABEL_MAC].JSON_AS_STRING());
-	std::vector<uint8_t> decryptedMsg;
-	DeserializeStruct(decryptedMsg, jsonRoot[LABEL_ROOT][LABEL_MSG].JSON_AS_STRING());
+	std::vector<uint8_t> encryptedMsg;
+	DeserializeStruct(encryptedMsg, jsonRoot[LABEL_ROOT][LABEL_MSG].JSON_AS_STRING());
 
-	outMsg.resize(decryptedMsg.size());
+	outMsg.resize(encryptedMsg.size());
 
 	sgx_status_t enclaveRet = sgx_rijndael128GCM_decrypt(
 		reinterpret_cast<const sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
-		decryptedMsg.data(),
-		static_cast<uint32_t>(decryptedMsg.size()),
+		encryptedMsg.data(),
+		static_cast<uint32_t>(encryptedMsg.size()),
 		reinterpret_cast<uint8_t*>(&outMsg[0]),
 		iv,
 		static_cast<uint32_t>(GCM_IV_SIZE),
@@ -93,12 +100,7 @@ bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg) const
 		static_cast<uint32_t>(0),
 		&macTag);
 
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return false;
-	}
-
-	return true;
+	return (enclaveRet == SGX_SUCCESS);
 }
 
 bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg) const
@@ -108,8 +110,9 @@ bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg
 
 std::string AESGCMCommLayer::EncryptMsg(const std::string & msg) const
 {
+	JSON_EDITION::JSON_DOCUMENT_TYPE doc;
 	JSON_EDITION::Value jsonRoot;
-
+	
 	GcmIvType iv;
 	sgx_aes_gcm_128bit_tag_t macTag;
 	std::vector<uint8_t> encryptedMsg;
@@ -137,11 +140,17 @@ std::string AESGCMCommLayer::EncryptMsg(const std::string & msg) const
 		return std::string();
 	}
 
-	JsonCommonSetString(jsonRoot[LABEL_ROOT][LABEL_NONCE], SerializeStruct(iv));
-	JsonCommonSetString(jsonRoot[LABEL_ROOT][LABEL_MAC], SerializeStruct(macTag));
-	JsonCommonSetString(jsonRoot[LABEL_ROOT][LABEL_MSG], SerializeStruct(encryptedMsg.data(), encryptedMsg.size()));
+	JsonCommonSetString(doc, jsonRoot, LABEL_NONCE, SerializeStruct(iv));
+	JsonCommonSetString(doc, jsonRoot, LABEL_MAC, SerializeStruct(macTag));
+	JsonCommonSetString(doc, jsonRoot, LABEL_MSG, SerializeStruct(encryptedMsg.data(), encryptedMsg.size()));
+
+	JSON_EDITION::Value jsonRootRoot;
+	JsonCommonSetObject(doc, jsonRootRoot, LABEL_ROOT, jsonRoot);
 	
-	return Json2StyleString(jsonRoot);
+	std::string res = Json2StyleString(jsonRootRoot);
+	COMMON_PRINTF("Send Encrypted Message: %s\n", res.c_str());
+
+	return res;
 }
 
 bool AESGCMCommLayer::SendMsg(void* const connectionPtr, const std::string & msg) const
@@ -158,5 +167,5 @@ bool AESGCMCommLayer::SendMsg(void* const connectionPtr, const std::string & msg
 		return false;
 	}
 
-	return (*m_sendFunc)(connectionPtr, outStr.c_str());
+	return (*m_sendFunc)(connectionPtr, m_senderID.c_str(), outStr.c_str());
 }

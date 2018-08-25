@@ -18,6 +18,7 @@
 
 #include "../DecentMessages/DecentMessage.h"
 #include "../DecentRASession.h"
+#include "../Networking/Connection.h"
 #include "SGXEnclaveRuntimeException.h"
 
 static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
@@ -110,6 +111,17 @@ bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
 	return retval != 0;
 }
 
+bool SGXDecentEnclave::ToDecentNode(const std::string & nodeID, bool isServer)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_to_decent_node(GetEnclaveId(), &retval, nodeID.c_str(), isServer ? 1 : 0);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_to_decent_node);
+
+	return retval != 0;
+}
+
 bool SGXDecentEnclave::ProcessDecentTrustedMsg(const std::string & nodeID, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
@@ -117,6 +129,17 @@ bool SGXDecentEnclave::ProcessDecentTrustedMsg(const std::string & nodeID, const
 
 	enclaveRet = ecall_proc_decent_trusted_msg(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), jsonMsg.c_str());
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_trusted_msg);
+
+	return retval != 0;
+}
+
+bool SGXDecentEnclave::SendProtocolKey(const std::string & nodeID, const std::unique_ptr<Connection>& connection)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_decent_send_protocol_key(GetEnclaveId(), &retval, nodeID.c_str(), connection.get());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_send_protocol_key);
 
 	return retval != 0;
 }
@@ -216,4 +239,18 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	decentReportBody[Decent::RAReport::LABEL_ORI_REP_DATA] = SerializeStruct(oriReportData);
 
 	return root.toStyledString();
+}
+
+extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg)
+{
+	if (!connectionPtr || !msg)
+	{
+		return 0;
+	}
+
+	DecentTrustedMessage trustedMsg(senderID, msg);
+	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
+	size_t sentLen = cnt->Send(trustedMsg.ToJsonString());
+
+	return (sentLen == std::strlen(msg)) ? 1 : 0;
 }

@@ -16,6 +16,7 @@
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
+#include "../common_app/Messages.h"
 #include "../common_app/DecentRASession.h"
 
 #include "../common_app/Networking/Connection.h"
@@ -73,29 +74,9 @@ int main(int argc, char ** argv)
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, GetSGXErrorMessage(deviceStatusResErr).c_str());
 
 	IASConnector iasConnector;
-	ExampleEnclave expEnc(g_sgxSPID, iasConnector, true, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
-
-	std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
-	expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
-
-	sgx_ec256_public_t signPubKey;
-	expEnc.GetRASPSignPubKey(signPubKey);
-	std::string raSenderID = SerializePubKey(signPubKey);
-
-#ifdef SIMULATING_ENCLAVE
-	LOGW("Enclave is running under simulation mode!!\n");
-#endif // SIMULATING_ENCLAVE
-
 
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;
-
-	Json::Value jsonRoot;
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-	std::string errStr;
-
-	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
 
 #ifdef RA_SERVER_SIDE
 	std::cout << "================ This is server side ================" << std::endl;
@@ -104,27 +85,28 @@ int main(int argc, char ** argv)
 	{
 	case 0:
 	{
+		ExampleEnclave expEnc(g_sgxSPID, iasConnector, true, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
+		std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
+		expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
+
 		Server ser(hostIP, hostPort);
 
 		std::unique_ptr<Connection> connection = ser.AcceptConnection();
-		//DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
-		//decentRA.ProcessServerSideRA();
-
-		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		//DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
-		//decentRA2.ProcessServerSideRA();
+		Json::Value jsonRoot;
+		connection->Receive(jsonRoot);
+		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
 	}
 	break;
 	case 1:
 	{
-		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
-		//DecentRASession decentRA(connection, expEnc, expEnc, expEnc);
-		//decentRA.ProcessClientSideRA();
+		ExampleEnclave expEnc(g_sgxSPID, iasConnector, false, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 
-		Server ser(hostIP, 57756U);
-		std::unique_ptr<Connection> connection2 = ser.AcceptConnection();
-		//DecentRASession decentRA2(connection2, expEnc, expEnc, expEnc);
-		//decentRA2.ProcessServerSideRA();
+		std::unique_ptr<Connection> connection = std::make_unique<Connection>(hostIP, hostPort);
+		DecentRASession::SendHandshakeMessage(connection, expEnc);
+		Json::Value jsonRoot;
+		connection->Receive(jsonRoot);
+		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
+
 	}
 	break;
 	default:
@@ -132,10 +114,6 @@ int main(int argc, char ** argv)
 	}
 
 #else
-	std::cout << "================ This is client side ================" << std::endl;
-
-	expEnc.SetDecentMode(DecentNodeMode::ROOT_SERVER);
-	//std::unique_ptr<Connection> connection(expEnc.RequestRA(hostIP, hostPort));
 
 #endif // RA_SERVER_SIDE
 

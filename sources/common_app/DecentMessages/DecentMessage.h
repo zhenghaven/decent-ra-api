@@ -99,3 +99,48 @@ private:
 	const std::string m_selfRAReport;
 };
 
+class DecentProtocolKeyReq : public DecentMessage
+{
+public:
+	static constexpr char* VALUE_TYPE = "ProtoKeyReq";
+
+public:
+	DecentProtocolKeyReq() = delete;
+	explicit DecentProtocolKeyReq(const std::string& senderID);
+	explicit DecentProtocolKeyReq(const Json::Value& msg);
+	virtual ~DecentProtocolKeyReq();
+
+	virtual std::string GetMessageTypeStr() const override;
+
+protected:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
+
+private:
+};
+
+class DecentTrustedMessage : public DecentMessage
+{
+public:
+	static constexpr char* LABEL_TRUSTED_MSG = "Msg";
+
+	static constexpr char* VALUE_TYPE = "TrustedMsg";
+
+	static std::string ParseTrustedMsg(const Json::Value& DecentRoot);
+
+public:
+	DecentTrustedMessage() = delete;
+	explicit DecentTrustedMessage(const std::string& senderID, const std::string& trustedMsg);
+	explicit DecentTrustedMessage(const Json::Value& msg);
+	virtual ~DecentTrustedMessage();
+
+	virtual std::string GetMessageTypeStr() const override;
+
+	virtual const std::string& GetTrustedMsg() const;
+
+protected:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
+
+private:
+	const std::string m_trustedMsg;
+};
+

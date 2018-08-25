@@ -1,6 +1,5 @@
 enclave {
 	
-	include "../common/Decent.h"
 	include "sgx_quote.h"
 	
 	from "decent_tkey_exchange.edl" import *;
@@ -8,7 +7,7 @@ enclave {
 	
 	untrusted 
 	{
-		int ocall_send_decent_trusted_msg([user_check] void* connectionPtr, [in, string] const char *msg);
+		int ocall_decent_send_trusted_msg([user_check] void* connectionPtr, [in, string] const char* senderID, [in, string] const char *msg);
 	};
 	
 	trusted 
@@ -24,7 +23,11 @@ enclave {
 		
 		public sgx_status_t ecall_process_ra_msg0_resp_decent([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
 		
+		public int ecall_to_decent_node([in, string] const char* nodeID, int isServer);
+		
 		public int ecall_proc_decent_trusted_msg([in, string] const char* nodeID, [user_check] void* connectionPtr, [in, string] const char* jsonMsg);
+		
+		public int ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr);
 	};
 
 };

@@ -115,7 +115,30 @@ bool DecentRASession::ProcessClientSideRA()
 	res = clientSession->ProcessClientSideRA();
 	clientSession->SwapConnection(m_connection);
 
-	return res;
+	if (!res ||
+		!m_decentEnclave.ToDecentNode(k_remoteSideID, false))
+	{
+		return false;
+	}
+
+	DecentProtocolKeyReq keyReq(k_senderID);
+	m_connection->Send(keyReq.ToJsonString());
+
+	Json::Value trustedMsgJson;
+	m_connection->Receive(trustedMsgJson);
+
+	try
+	{
+		DecentTrustedMessage trustedMsg(trustedMsgJson);
+		m_decentEnclave.ProcessDecentTrustedMsg(k_remoteSideID, m_connection, trustedMsg.GetTrustedMsg());
+		return false;
+	}
+	catch (const MessageParseException&)
+	{
+		return false;
+	}
+
+	return false;
 }
 
 bool DecentRASession::ProcessServerSideRA()
@@ -131,5 +154,26 @@ bool DecentRASession::ProcessServerSideRA()
 	res = spSession->ProcessServerSideRA();
 	spSession->SwapConnection(m_connection);
 
-	return res;
+	if (!res ||
+		!m_decentEnclave.ToDecentNode(k_remoteSideID, true))
+	{
+		return false;
+	}
+
+	Json::Value keyReqJson;
+	m_connection->Receive(keyReqJson);
+
+	try
+	{
+		DecentProtocolKeyReq keyReq(keyReqJson);
+
+		m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
+		return false;
+	}
+	catch (const MessageParseException&)
+	{
+		return false;
+	}
+
+	return false;
 }

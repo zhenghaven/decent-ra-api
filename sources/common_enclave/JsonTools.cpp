@@ -7,22 +7,20 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
-bool ParseStr2Json(rapidjson::Value& outJson, const std::string& inStr)
+#include "Common.h"
+
+bool ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const std::string& inStr)
 {
-	rapidjson::Document jsonDoc;
-	jsonDoc.Parse(inStr.c_str());
-	rapidjson::ParseErrorCode errcode = jsonDoc.GetParseError();
-	outJson.Swap(jsonDoc);
+	outDoc.Parse(inStr.c_str());
+	rapidjson::ParseErrorCode errcode = outDoc.GetParseError();
 	
 	return errcode == rapidjson::ParseErrorCode::kParseErrorNone;
 }
 
-bool ParseStr2Json(rapidjson::Value& outJson, const char* inStr)
+bool ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const char* inStr)
 {
-	rapidjson::Document jsonDoc;
-	jsonDoc.Parse(inStr);
-	rapidjson::ParseErrorCode errcode = jsonDoc.GetParseError();
-	outJson.Swap(jsonDoc);
+	outDoc.Parse(inStr);
+	rapidjson::ParseErrorCode errcode = outDoc.GetParseError();
 
 	return errcode == rapidjson::ParseErrorCode::kParseErrorNone;
 }
@@ -33,11 +31,32 @@ std::string Json2StyleString(const rapidjson::Value & inJson)
 	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 	inJson.Accept(writer);
 
-	return buffer.GetString();
+	std::string res(buffer.GetString());
+	return res;
 }
 
-void JsonCommonSetString(JSON_EDITION::Value & outJson, const std::string & inStr)
+JSON_EDITION::Value& JsonCommonSetString(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, JSON_EDITION::Value & root, const std::string & index, const std::string & inStr)
 {
-	rapidjson::Document document;
-	outJson.SetString(inStr.c_str(), inStr.size(), document.GetAllocator());
+	if (!root.IsObject())
+	{
+		root.SetObject();
+	}
+	if (!root.HasMember(index.c_str()))
+	{
+		root.AddMember(rapidjson::StringRef(index.c_str(), index.size()), rapidjson::Value().SetNull(), doc.GetAllocator());
+	}
+	return (root[index.c_str()].SetString(rapidjson::StringRef(inStr.c_str(), inStr.size()), doc.GetAllocator()));
+}
+
+JSON_EDITION::Value& JsonCommonSetObject(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, JSON_EDITION::Value & root, const std::string & index, JSON_EDITION::Value & inObj)
+{
+	if (!root.IsObject())
+	{
+		root.SetObject();
+	}
+	if (!root.HasMember(index.c_str()))
+	{
+		root.AddMember(rapidjson::StringRef(index.c_str(), index.size()), rapidjson::Value().SetNull(), doc.GetAllocator());
+	}
+	return (root[index.c_str()] = inObj);
 }

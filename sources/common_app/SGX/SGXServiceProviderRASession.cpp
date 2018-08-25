@@ -163,7 +163,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 
 	std::string msgBuffer;
 
-	enclaveRes = m_sgxSP.ProcessRAMsg0Send(k_raSenderID);
+	enclaveRes = m_sgxSP.ProcessRAMsg0Send(k_remoteSideID);
 	if (enclaveRes != SGX_SUCCESS)
 	{
 		SGXRAClientErrMsg errMsg(k_raSenderID, "Enclave process error!");
@@ -248,7 +248,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	std::string iasReport;
 	std::string iasReportSign;
 	std::string iasCert;
-	/*TODO: Simulation code here: */
+	/*TODO: Safety check here: */
 	respCode = m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert);
 	enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
 	if (enclaveRes != SGX_SUCCESS)

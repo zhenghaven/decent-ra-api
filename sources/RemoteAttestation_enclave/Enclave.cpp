@@ -10,8 +10,6 @@
 #include "../common_enclave/DecentError.h"
 
 #include "../common/DataCoding.h"
-#include "../common/Decent.h"
-#include "../common/EnclaveRAState.h"
 #include "../common/SGX/sgx_constants.h"
 
 sgx_status_t ecall_get_simple_secret(const char* clientID, uint64_t* secret, sgx_aes_gcm_128bit_tag_t* outSecretMac)

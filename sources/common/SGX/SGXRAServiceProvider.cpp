@@ -20,13 +20,19 @@
 #include "../../common/DataCoding.h"
 #include "../../common/OpenSSLTools.h"
 #include "../../common/NonceGenerator.h"
-#include "../../common/EnclaveRAState.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/SGX/ias_report_cert.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
 #include "../../common/SGX/sgx_constants.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
+
+enum class ClientRAState
+{
+	MSG0_DONE,
+	MSG1_DONE,
+	ATTESTED, //MSG3_DONE,
+};
 
 struct RASPContext
 {
@@ -113,7 +119,7 @@ bool SGXRAEnclave::AddNewClientRAState(const std::string& clientID, const sgx_ec
 		}
 	}
 
-	std::unique_ptr<RASPContext> spCTX(new RASPContext(inPubKey));
+	std::shared_ptr<RASPContext> spCTX(new RASPContext(inPubKey));
 	sgx_ecc_state_handle_t ecState;
 	sgx_status_t enclaveRet = sgx_ecc256_open_context(&ecState);
 	if (!spCTX || (enclaveRet != SGX_SUCCESS))
@@ -229,7 +235,7 @@ AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, S
 	RASPContext& spCTX = *spCTXPtr;
 	{
 		std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
-		res = new AESGCMCommLayer(spCTX.m_sk, sendFunc);
+		res = new AESGCMCommLayer(spCTX.m_sk, SerializeStruct(*spCTX.m_mySignPub), sendFunc);
 	}
 	SGXRAEnclave::DropClientRAState(clientID);
 	return res;
@@ -271,9 +277,6 @@ sgx_status_t SGXRAEnclave::ServiceProviderInit()
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
-
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
-	COMMON_PRINTF("SP's public Sign Key: %s\n", SerializePubKey(*signPub).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -347,14 +350,13 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-
 	std::shared_ptr<RASPContext> spCTXPtr;
 	bool isValidState = false;
 	{
 		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
 		auto it = g_clientsMap.find(clientID);
 		isValidState = (it != g_clientsMap.end() && it->second->m_state == ClientRAState::MSG0_DONE);
-		spCTXPtr = it->second;
+		spCTXPtr = isValidState ? it->second : nullptr;
 	}
 	if (!isValidState)
 	{
@@ -421,7 +423,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const char* clientID, const sgx_ra_msg1
 
 sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* inMsg3, uint32_t msg3Len, const char* iasReport, const char* reportSign, const char* reportCert, sgx_ra_msg4_t* outMsg4, sgx_ec256_signature_t* outMsg4Sign, sgx_report_data_t* outOriRD)
 {
-	if (!clientID || !inMsg3 || !msg3Len || !iasReport || !reportSign || !reportCert || !outMsg4 || !outMsg4Sign || !outOriRD)
+	if (!clientID || !inMsg3 || !msg3Len || !iasReport || !reportSign || !reportCert || !outMsg4 || !outMsg4Sign)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -432,7 +434,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const char* clientID, const uint8_t* in
 		std::lock_guard<std::mutex> mapLock(g_clientsMapMutex);
 		auto it = g_clientsMap.find(clientID);
 		isValidState = (it != g_clientsMap.end() && it->second->m_state == ClientRAState::MSG1_DONE);
-		spCTXPtr = it->second;
+		spCTXPtr = isValidState ? it->second : nullptr;
 	}
 	if (!isValidState)
 	{

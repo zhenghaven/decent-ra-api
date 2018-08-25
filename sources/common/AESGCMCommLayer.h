@@ -25,13 +25,13 @@ public:
 	static constexpr size_t AES_GCM_128BIT_KEY_SIZE = 16;
 	typedef std::array<uint8_t, AES_GCM_128BIT_KEY_SIZE> AesGcm128bKeyType;
 
-	typedef bool (*SendFunctionType)(void* const connectionPtr, const char *msg);
+	typedef bool (*SendFunctionType)(void* const connectionPtr, const char* senderID, const char *msg);
 
 public:
 	AESGCMCommLayer() = delete;
-	AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], SendFunctionType sendFunc);
-	AESGCMCommLayer(const AesGcm128bKeyType& sKey, SendFunctionType sendFunc);
-	AESGCMCommLayer(AesGcm128bKeyType& sKey, SendFunctionType sendFunc);
+	AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], const std::string& senderID, SendFunctionType sendFunc);
+	AESGCMCommLayer(const AesGcm128bKeyType& sKey, const std::string& senderID, SendFunctionType sendFunc);
+	AESGCMCommLayer(AesGcm128bKeyType& sKey, const std::string& senderID, SendFunctionType sendFunc);
 	//Copy is prohibited. 
 	AESGCMCommLayer(const AESGCMCommLayer& other) = delete;
 	AESGCMCommLayer(AESGCMCommLayer&& other);
@@ -50,4 +50,6 @@ private:
 	AesGcm128bKeyType m_sk;
 	//AesGcm128bKeyType* m_mk;
 	SendFunctionType m_sendFunc;
+
+	const std::string m_senderID;
 };

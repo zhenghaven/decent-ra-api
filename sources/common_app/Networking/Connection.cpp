@@ -96,16 +96,3 @@ uint64_t Connection::GetConnectionID() const
 
 	return res;
 }
-
-extern "C" int ocall_send_decent_trusted_msg(void* connectionPtr, const char *msg)
-{
-	if (!connectionPtr || !msg)
-	{
-		return 0;
-	}
-
-	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
-	size_t sentLen = cnt->Send(std::string(msg));
-
-	return (sentLen == std::strlen(msg)) ? 1 : 0;
-}

@@ -37,6 +37,10 @@ static void CheckFilePath(const fs::path& enclavePath, const fs::path& tokenPath
 
 sgx_enclave_id_t SGXEnclave::LaunchEnclave(const fs::path& enclavePath, const fs::path& tokenPath)
 {
+#ifdef SIMULATING_ENCLAVE
+	LOGW("Enclave is running under simulation mode!!\n");
+#endif // SIMULATING_ENCLAVE
+
 	CheckFilePath(enclavePath, tokenPath);
 
 	sgx_enclave_id_t outEnclaveID;

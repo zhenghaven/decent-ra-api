@@ -7,7 +7,7 @@
 
 #include "../common/CommonTool.h"
 
-bool ParseStr2Json(Json::Value& outJson, const std::string& inStr)
+bool ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outJson, const std::string& inStr)
 {
 	Json::CharReaderBuilder rbuilder;
 	rbuilder["collectComments"] = false;
@@ -31,7 +31,7 @@ bool ParseStr2Json(Json::Value& outJson, const std::string& inStr)
 	return isValid;
 }
 
-bool ParseStr2Json(Json::Value& outJson, const char* inStr)
+bool ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outJson, const char* inStr)
 {
 	Json::CharReaderBuilder rbuilder;
 	rbuilder["collectComments"] = false;
@@ -60,7 +60,12 @@ std::string Json2StyleString(const Json::Value & inJson)
 	return inJson.toStyledString();
 }
 
-void JsonCommonSetString(JSON_EDITION::Value & outJson, const std::string & inStr)
+JSON_EDITION::Value& JsonCommonSetString(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, Json::Value& root, const std::string& index, const std::string& inStr)
 {
-	outJson = inStr;
+	return (root[index.c_str()] = inStr);
+}
+
+JSON_EDITION::Value& JsonCommonSetObject(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, Json::Value & root, const std::string & index, JSON_EDITION::Value & inObj)
+{
+	return (root[index.c_str()] = inObj);
 }

@@ -13,10 +13,16 @@
 #include "../DecentError.h"
 
 #include "../../common/DataCoding.h"
-#include "../../common/EnclaveRAState.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
+
+enum class ServerRAState
+{
+	MSG0_DONE,
+	MSG2_DONE,
+	ATTESTED, //MSG4_DONE,
+};
 
 struct RAClientContext
 {
@@ -59,7 +65,7 @@ bool SGXRAEnclave::AddNewServerRAState(const std::string& ServerID, const sgx_ec
 	return true;
 }
 
-void SGXRAEnclave::DropServerRAState(const std::string& serverID)
+void SGXRAEnclave::DropRAStateToServer(const std::string& serverID)
 {
 	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
 	auto it = k_serversMap.find(serverID);
@@ -69,7 +75,7 @@ void SGXRAEnclave::DropServerRAState(const std::string& serverID)
 	}
 }
 
-bool SGXRAEnclave::IsServerAttested(const std::string & serverID)
+bool SGXRAEnclave::IsAttestedToServer(const std::string & serverID)
 {
 	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
 	auto it = k_serversMap.find(serverID);
@@ -109,7 +115,7 @@ bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, sgx_ec256_pub
 		std::memcpy(outSignPubKey, &clientCTX.m_peerSignKey, sizeof(sgx_ec256_public_t));
 	}
 
-	SGXRAEnclave::DropServerRAState(serverID);
+	SGXRAEnclave::DropRAStateToServer(serverID);
 
 	return true;
 }
@@ -131,9 +137,9 @@ AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, S
 	AESGCMCommLayer* res = nullptr;
 	{
 		std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
-		res = new AESGCMCommLayer(clientCTX.m_sk, sendFunc);
+		res = new AESGCMCommLayer(clientCTX.m_sk, SerializeStruct(*EnclaveAsyKeyContainer::GetInstance().GetSignPubKey()), sendFunc);
 	}
-	SGXRAEnclave::DropServerRAState(serverID);
+	SGXRAEnclave::DropRAStateToServer(serverID);
 	return res;
 }
 
@@ -149,9 +155,6 @@ extern "C" sgx_status_t ecall_sgx_ra_client_init()
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
-
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
-	ocall_printf("Client's public Sign Key: %s\n", SerializePubKey(*signPub).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -201,7 +204,7 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp(const char* ServerID, const s
 
 extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec256_public_t* p_g_b, sgx_ra_context_t inContextID)
 {
-	if (!ServerID || !p_g_b || !inContextID)
+	if (!ServerID || !p_g_b)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -211,7 +214,7 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 
 	if (p_g_b == nullptr)
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
+		SGXRAEnclave::DropRAStateToServer(ServerID);
 		FUNC_ERR_Y("Processing msg2, but g_b is nullptr.", SGX_ERROR_INVALID_PARAMETER);
 	}
 
@@ -220,14 +223,14 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 		res = sgx_ecc256_open_context(&eccState);
 		if (res != SGX_SUCCESS)
 		{
-			SGXRAEnclave::DropServerRAState(ServerID);
+			SGXRAEnclave::DropRAStateToServer(ServerID);
 			return res; //Error return. (Error from SGX)
 		}
 
 		res = sgx_ecc256_check_point(p_g_b, eccState, &isGbValid);
 		if (res != SGX_SUCCESS)
 		{
-			SGXRAEnclave::DropServerRAState(ServerID);
+			SGXRAEnclave::DropRAStateToServer(ServerID);
 			return res; //Error return. (Error from SGX)
 		}
 
@@ -236,7 +239,7 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 
 	if (isGbValid == 0)
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
+		SGXRAEnclave::DropRAStateToServer(ServerID);
 		FUNC_ERR_Y("Processing msg2, but g_b is invalid.", SGX_ERROR_INVALID_PARAMETER);
 	}
 
@@ -250,7 +253,7 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 	}
 	if (!isValidState)
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
+		SGXRAEnclave::DropRAStateToServer(ServerID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg2, but client ID doesn't exist or in a invalid state.");
 	}
@@ -261,13 +264,13 @@ extern "C" sgx_status_t ecall_process_ra_msg2(const char* ServerID, const sgx_ec
 	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_SK, &clientCTX.m_sk);
 	if (res != SGX_SUCCESS)
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
+		SGXRAEnclave::DropRAStateToServer(ServerID);
 		return res; //Error return. (Error from SGX)	
 	}
 	res = decent_ra_get_keys(inContextID, SGX_RA_KEY_MK, &clientCTX.m_mk);
 	if (res != SGX_SUCCESS)
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
+		SGXRAEnclave::DropRAStateToServer(ServerID);
 		return res; //Error return. (Error from SGX)	
 	}
 
@@ -293,7 +296,7 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 	}
 	if (!isValidState)
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
+		SGXRAEnclave::DropRAStateToServer(ServerID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg4, but client ID doesn't exist or in a invalid state.");
 	}
@@ -308,7 +311,7 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 		res = sgx_ecc256_open_context(&eccState);
 		if (res != SGX_SUCCESS)
 		{
-			SGXRAEnclave::DropServerRAState(ServerID);
+			SGXRAEnclave::DropRAStateToServer(ServerID);
 			return res; //Error return. (Error from SGX)
 		}
 
@@ -316,7 +319,7 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 		res = sgx_ecdsa_verify((uint8_t *)inMsg4, sizeof(sgx_ra_msg4_t), &(clientCTX.m_peerSignKey), inMsg4Sign, &signVerifyRes, eccState);
 		if (signVerifyRes != SGX_EC_VALID)
 		{
-			SGXRAEnclave::DropServerRAState(ServerID);
+			SGXRAEnclave::DropRAStateToServer(ServerID);
 			//Error return. (Error caused by invalid input.)
 			FUNC_ERR("Processing msg4, but the signature of msg 4 is invalid.");
 		}
@@ -326,7 +329,7 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 
 	if (inMsg4->status != ias_quote_status_t::IAS_QUOTE_OK)
 	{
-		SGXRAEnclave::DropServerRAState(ServerID);
+		SGXRAEnclave::DropRAStateToServer(ServerID);
 		//Error return. (Error caused by invalid input.)
 		FUNC_ERR("Processing msg4, but the quote is rejected by the IAS.");
 	}

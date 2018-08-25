@@ -162,3 +162,76 @@ Json::Value & DecentRAHandshakeAck::GetJsonMsg(Json::Value & outJson) const
 
 	return parent;
 }
+
+DecentProtocolKeyReq::DecentProtocolKeyReq(const std::string & senderID) :
+	DecentMessage(senderID)
+{
+}
+
+DecentProtocolKeyReq::DecentProtocolKeyReq(const Json::Value & msg) :
+	DecentMessage(msg)
+{
+}
+
+DecentProtocolKeyReq::~DecentProtocolKeyReq()
+{
+}
+
+std::string DecentProtocolKeyReq::GetMessageTypeStr() const
+{
+	return VALUE_TYPE;
+}
+
+Json::Value & DecentProtocolKeyReq::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
+
+	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
+
+	return parent;
+}
+
+std::string DecentTrustedMessage::ParseTrustedMsg(const Json::Value & DecentRoot)
+{
+	if (DecentRoot.isMember(LABEL_TRUSTED_MSG) && DecentRoot[LABEL_TRUSTED_MSG].isString())
+	{
+		return DecentRoot[LABEL_TRUSTED_MSG].asString();
+	}
+	throw MessageParseException();
+}
+
+DecentTrustedMessage::DecentTrustedMessage(const std::string & senderID, const std::string & trustedMsg) :
+	DecentMessage(senderID),
+	m_trustedMsg(trustedMsg)
+{
+}
+
+DecentTrustedMessage::DecentTrustedMessage(const Json::Value & msg) :
+	DecentMessage(msg),
+	m_trustedMsg(ParseTrustedMsg(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
+{
+}
+
+DecentTrustedMessage::~DecentTrustedMessage()
+{
+}
+
+std::string DecentTrustedMessage::GetMessageTypeStr() const
+{
+	return VALUE_TYPE;
+}
+
+const std::string & DecentTrustedMessage::GetTrustedMsg() const
+{
+	return m_trustedMsg;
+}
+
+Json::Value & DecentTrustedMessage::GetJsonMsg(Json::Value & outJson) const
+{
+	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
+
+	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
+	parent[LABEL_TRUSTED_MSG] = m_trustedMsg;
+
+	return parent;
+}

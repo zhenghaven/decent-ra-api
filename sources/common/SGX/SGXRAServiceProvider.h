@@ -25,7 +25,7 @@ typedef uint32_t sgx_ra_context_t;
 typedef uint8_t sgx_ec_key_128bit_t[SGX_CMAC_KEY_SIZE];
 
 class AESGCMCommLayer;
-typedef bool(*SendFunctionType)(void* const connectionPtr, const char *msg);
+typedef bool(*SendFunctionType)(void* const connectionPtr, const char* senderID, const char *msg);
 
 namespace SGXRAEnclave
 {
