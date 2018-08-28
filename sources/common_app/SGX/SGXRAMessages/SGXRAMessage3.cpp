@@ -9,10 +9,10 @@
 
 std::vector<uint8_t> SGXRAMessage3::ParseMsg3Data(const Json::Value & SGXRASPRoot)
 {
-	if (SGXRASPRoot.isMember(SGXRAMessage3::LABEL_DATA) && SGXRASPRoot[SGXRAMessage3::LABEL_DATA].isString())
+	if (SGXRASPRoot.isMember(SGXRAMessage3::sk_LabelData) && SGXRASPRoot[SGXRAMessage3::sk_LabelData].isString())
 	{
 		std::vector<uint8_t> res;
-		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage3::LABEL_DATA].asString());
+		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage3::sk_LabelData].asString());
 
 		const sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<const sgx_ra_msg3_t*>(res.data());
 		const sgx_quote_t& quotePtr = *reinterpret_cast<const sgx_quote_t*>(msg3Ref.quote);
@@ -38,8 +38,8 @@ SGXRAMessage3::SGXRAMessage3(const std::string& senderID, const std::vector<uint
 }
 
 SGXRAMessage3::SGXRAMessage3(const Json::Value& msg) :
-	SGXRASPMessage(msg, VALUE_TYPE),
-	m_msg3Data(ParseMsg3Data(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
+	SGXRASPMessage(msg, sk_ValueType),
+	m_msg3Data(ParseMsg3Data(msg[Messages::sk_LabelRoot][SGXRASPMessage::sk_LabelRoot]))
 {
 }
 
@@ -49,7 +49,7 @@ SGXRAMessage3::~SGXRAMessage3()
 
 std::string SGXRAMessage3::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 const sgx_ra_msg3_t & SGXRAMessage3::GetMsg3() const
@@ -78,8 +78,8 @@ Json::Value & SGXRAMessage3::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	//parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_DATA] = SerializeStruct(m_msg3Data.data(), m_msg3Data.size());
+	//parent[SGXRASPMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelData] = SerializeStruct(m_msg3Data.data(), m_msg3Data.size());
 
 	return parent;
 }

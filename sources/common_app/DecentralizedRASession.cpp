@@ -26,7 +26,7 @@ static T*  ParseMessageExpected(const Json::Value& json)
 	
 	DecentralizedMessage::ParseCat(json); //Make sure it's a smart message. Otherwise a ParseException will be thrown.
 
-	if (DecentralizedMessage::ParseType(json[Messages::LABEL_ROOT]) == DecentralizedErrMsg::VALUE_TYPE)
+	if (DecentralizedMessage::ParseType(json[Messages::sk_LabelRoot]) == DecentralizedErrMsg::sk_ValueType)
 	{
 		throw ReceivedErrorMessageException();
 	}
@@ -63,8 +63,8 @@ void DecentralizedRASession::SendHandshakeMessage(std::unique_ptr<Connection>& c
 
 bool DecentralizedRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const Json::Value & jsonMsg)
 {
-	const std::string inType = DecentralizedMessage::ParseType(jsonMsg[Messages::LABEL_ROOT]);
-	if (inType == DecentralizedRAHandshake::VALUE_TYPE)
+	const std::string inType = DecentralizedMessage::ParseType(jsonMsg[Messages::sk_LabelRoot]);
+	if (inType == DecentralizedRAHandshake::sk_ValueType)
 	{
 		DecentralizedRAHandshake hsMsg(jsonMsg);
 		DecentralizedRASession raSession(connection, hwEnclave, enclave, hsMsg);
@@ -72,7 +72,7 @@ bool DecentralizedRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& con
 		raSession.SwapConnection(connection);
 		return res;
 	}
-	else if (inType == DecentralizedRAHandshakeAck::VALUE_TYPE)
+	else if (inType == DecentralizedRAHandshakeAck::sk_ValueType)
 	{
 		DecentralizedRAHandshakeAck ackMsg(jsonMsg);
 		DecentralizedRASession raSession(connection, hwEnclave, enclave, ackMsg);

@@ -192,7 +192,7 @@ sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_r
 
 bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
 {
-	if (category == SGXRAClientMessage::VALUE_CAT)
+	if (category == SGXRAClientMessage::sk_ValueCat)
 	{
 		return SGXClientRASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
 	}

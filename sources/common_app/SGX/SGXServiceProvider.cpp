@@ -63,7 +63,7 @@ sgx_status_t SGXServiceProvider::ProcessRAMsg3(const std::string & clientID, con
 
 bool SGXServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
 {
-	if (category == SGXRASPMessage::VALUE_CAT)
+	if (category == SGXRASPMessage::sk_ValueCat)
 	{
 		return SGXServiceProviderRASession::SmartMsgEntryPoint(connection, *this, m_ias, jsonMsg);
 	}

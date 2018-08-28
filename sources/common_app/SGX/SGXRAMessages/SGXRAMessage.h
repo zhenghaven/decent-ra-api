@@ -10,10 +10,10 @@ namespace Json
 class SGXRAClientMessage :  public Messages
 {
 public:
-	static constexpr char* LABEL_ROOT = "SGXRAClient";
-	static constexpr char* LABEL_TYPE = "Type";
+	static constexpr char sk_LabelRoot[] = "SGXRAClient";
+	static constexpr char sk_LabelType[] = "Type";
 
-	static constexpr char* VALUE_CAT  = LABEL_ROOT;
+	static constexpr char sk_ValueCat[]  = "SGXRAClient"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -36,10 +36,10 @@ private:
 class SGXRASPMessage : public Messages
 {
 public:
-	static constexpr char* LABEL_ROOT = "SGXRASP";
-	static constexpr char* LABEL_TYPE = "Type";
+	static constexpr char sk_LabelRoot[] = "SGXRASP";
+	static constexpr char sk_LabelType[] = "Type";
 
-	static constexpr char* VALUE_CAT = LABEL_ROOT;
+	static constexpr char sk_ValueCat[] = "SGXRASP"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -62,9 +62,9 @@ private:
 class SGXRAClientErrMsg : public SGXRAClientMessage
 {
 public:
-	static constexpr char* LABEL_ERR_MSG = "ErrorMsg";
+	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
 
-	static constexpr char* VALUE_TYPE = "Error";
+	static constexpr char sk_ValueType[] = "Error";
 
 	static std::string ParseErrorMsg(const Json::Value& SGXRAClientRoot);
 
@@ -88,9 +88,9 @@ private:
 class SGXRASPErrMsg : public SGXRASPMessage
 {
 public:
-	static constexpr char* LABEL_ERR_MSG = "ErrorMsg";
+	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
 
-	static constexpr char* VALUE_TYPE = "Error";
+	static constexpr char sk_ValueType[] = "Error";
 
 	static std::string ParseErrorMsg(const Json::Value& SGXRASPRoot);
 

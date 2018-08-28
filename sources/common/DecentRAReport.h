@@ -4,15 +4,15 @@ namespace Decent
 {
 	namespace RAReport
 	{
-		constexpr char* LABEL_ROOT           = "DecentSelfRAReport";
+		constexpr char sk_LabelRoot[]           = "DecentSelfRAReport";
 
-		constexpr char* LABEL_TYPE           = "Type";
-		constexpr char* LABEL_PUB_KEY        = "PublicKey";
-		constexpr char* LABEL_IAS_REPORT     = "IASReport";
-		constexpr char* LABEL_IAS_SIGN       = "IASSignature";
-		constexpr char* LABEL_IAS_CERT_CHAIN = "IASCertChain";
-		constexpr char* LABEL_ORI_REP_DATA   = "OriReportData";
+		constexpr char sk_LabelType[]           = "Type";
+		constexpr char sk_LabelPubKey[]        = "PublicKey";
+		constexpr char sk_LabelIasReport[]     = "IASReport";
+		constexpr char sk_LabelIasSign[]       = "IASSignature";
+		constexpr char sk_LabelIasCertChain[] = "IASCertChain";
+		constexpr char sk_LabelOriRepData[]   = "OriReportData";
 
-		constexpr char* VALUE_REPORT_TYPE    = "IAS";
+		constexpr char sk_ValueReportType[]    = "IAS";
 	}
 }

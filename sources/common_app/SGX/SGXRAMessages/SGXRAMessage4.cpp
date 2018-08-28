@@ -11,10 +11,10 @@
 
 sgx_ra_msg4_t SGXRAMessage4::ParseMsg4Data(const Json::Value & SGXRASPRoot)
 {
-	if (SGXRASPRoot.isMember(SGXRAMessage4::LABEL_DATA) && SGXRASPRoot[SGXRAMessage4::LABEL_DATA].isString())
+	if (SGXRASPRoot.isMember(SGXRAMessage4::sk_LabelData) && SGXRASPRoot[SGXRAMessage4::sk_LabelData].isString())
 	{
 		sgx_ra_msg4_t res;
-		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage4::LABEL_DATA].asString());
+		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage4::sk_LabelData].asString());
 		return res;
 	}
 	throw MessageParseException();
@@ -22,10 +22,10 @@ sgx_ra_msg4_t SGXRAMessage4::ParseMsg4Data(const Json::Value & SGXRASPRoot)
 
 sgx_ec256_signature_t SGXRAMessage4::ParseMsg4Sign(const Json::Value & SGXRASPRoot)
 {
-	if (SGXRASPRoot.isMember(SGXRAMessage4::LABEL_SIGN) && SGXRASPRoot[SGXRAMessage4::LABEL_SIGN].isString())
+	if (SGXRASPRoot.isMember(SGXRAMessage4::sk_LabelSign) && SGXRASPRoot[SGXRAMessage4::sk_LabelSign].isString())
 	{
 		sgx_ec256_signature_t res;
-		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage4::LABEL_SIGN].asString());
+		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage4::sk_LabelSign].asString());
 		return res;
 	}
 	throw MessageParseException();
@@ -39,9 +39,9 @@ SGXRAMessage4::SGXRAMessage4(const std::string& senderID, const sgx_ra_msg4_t& m
 }
 
 SGXRAMessage4::SGXRAMessage4(const Json::Value& msg) :
-	SGXRAClientMessage(msg, VALUE_TYPE),
-	m_msg4Data(ParseMsg4Data(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT])),
-	m_signature(ParseMsg4Sign(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
+	SGXRAClientMessage(msg, sk_ValueType),
+	m_msg4Data(ParseMsg4Data(msg[Messages::sk_LabelRoot][SGXRAClientMessage::sk_LabelRoot])),
+	m_signature(ParseMsg4Sign(msg[Messages::sk_LabelRoot][SGXRAClientMessage::sk_LabelRoot]))
 {
 }
 
@@ -51,7 +51,7 @@ SGXRAMessage4::~SGXRAMessage4()
 
 std::string SGXRAMessage4::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 const sgx_ra_msg4_t& SGXRAMessage4::GetMsg4Data() const
@@ -68,9 +68,9 @@ Json::Value & SGXRAMessage4::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRAClientMessage::GetJsonMsg(outJson);
 
-	//parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_DATA] = SerializeStruct(m_msg4Data);
-	parent[LABEL_SIGN] = SerializeStruct(m_signature);
+	//parent[SGXRAClientMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelData] = SerializeStruct(m_msg4Data);
+	parent[sk_LabelSign] = SerializeStruct(m_signature);
 
 	return parent;
 }

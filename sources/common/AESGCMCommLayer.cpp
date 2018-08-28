@@ -65,20 +65,20 @@ bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg) const
 		return false;
 	}
 
-	if (!jsonRoot.JSON_HAS_MEMBER(LABEL_ROOT) || !jsonRoot[LABEL_ROOT].JSON_IS_OBJECT() ||
-		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_NONCE) || !jsonRoot[LABEL_ROOT][LABEL_NONCE].JSON_IS_STRING() ||
-		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_MAC) || !jsonRoot[LABEL_ROOT][LABEL_MAC].JSON_IS_STRING() ||
-		!jsonRoot[LABEL_ROOT].JSON_HAS_MEMBER(LABEL_MSG) || !jsonRoot[LABEL_ROOT][LABEL_MSG].JSON_IS_STRING())
+	if (!jsonRoot.JSON_HAS_MEMBER(sk_LabelRoot) || !jsonRoot[sk_LabelRoot].JSON_IS_OBJECT() ||
+		!jsonRoot[sk_LabelRoot].JSON_HAS_MEMBER(sk_LabelNonce) || !jsonRoot[sk_LabelRoot][sk_LabelNonce].JSON_IS_STRING() ||
+		!jsonRoot[sk_LabelRoot].JSON_HAS_MEMBER(sk_LabelMac) || !jsonRoot[sk_LabelRoot][sk_LabelMac].JSON_IS_STRING() ||
+		!jsonRoot[sk_LabelRoot].JSON_HAS_MEMBER(sk_LabelMsg) || !jsonRoot[sk_LabelRoot][sk_LabelMsg].JSON_IS_STRING())
 	{
 		return false;
 	}
 
 	GcmIvType iv;
-	DeserializeStruct(iv, jsonRoot[LABEL_ROOT][LABEL_NONCE].JSON_AS_STRING());
+	DeserializeStruct(iv, jsonRoot[sk_LabelRoot][sk_LabelNonce].JSON_AS_STRING());
 	sgx_aes_gcm_128bit_tag_t macTag;
-	DeserializeStruct(macTag, jsonRoot[LABEL_ROOT][LABEL_MAC].JSON_AS_STRING());
+	DeserializeStruct(macTag, jsonRoot[sk_LabelRoot][sk_LabelMac].JSON_AS_STRING());
 	std::vector<uint8_t> encryptedMsg;
-	DeserializeStruct(encryptedMsg, jsonRoot[LABEL_ROOT][LABEL_MSG].JSON_AS_STRING());
+	DeserializeStruct(encryptedMsg, jsonRoot[sk_LabelRoot][sk_LabelMsg].JSON_AS_STRING());
 
 	outMsg.resize(encryptedMsg.size());
 
@@ -133,12 +133,12 @@ std::string AESGCMCommLayer::EncryptMsg(const std::string & msg) const
 		return std::string();
 	}
 
-	JsonCommonSetString(doc, jsonRoot, LABEL_NONCE, SerializeStruct(iv));
-	JsonCommonSetString(doc, jsonRoot, LABEL_MAC, SerializeStruct(macTag));
-	JsonCommonSetString(doc, jsonRoot, LABEL_MSG, SerializeStruct(encryptedMsg.data(), encryptedMsg.size()));
+	JsonCommonSetString(doc, jsonRoot, sk_LabelNonce, SerializeStruct(iv));
+	JsonCommonSetString(doc, jsonRoot, sk_LabelMac, SerializeStruct(macTag));
+	JsonCommonSetString(doc, jsonRoot, sk_LabelMsg, SerializeStruct(encryptedMsg.data(), encryptedMsg.size()));
 
 	JSON_EDITION::Value jsonRootRoot;
-	JsonCommonSetObject(doc, jsonRootRoot, LABEL_ROOT, jsonRoot);
+	JsonCommonSetObject(doc, jsonRootRoot, sk_LabelRoot, jsonRoot);
 	
 	std::string res = Json2StyleString(jsonRootRoot);
 	COMMON_PRINTF("Send Encrypted Message: %s\n", res.c_str());

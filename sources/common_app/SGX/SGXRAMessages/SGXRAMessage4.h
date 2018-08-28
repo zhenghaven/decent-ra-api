@@ -10,10 +10,10 @@
 class SGXRAMessage4 : public SGXRAClientMessage
 {
 public:
-	static constexpr char* LABEL_DATA = "Msg4Data";
-	static constexpr char* LABEL_SIGN = "Msg4Sign";
+	static constexpr char sk_LabelData[] = "Msg4Data";
+	static constexpr char sk_LabelSign[] = "Msg4Sign";
 
-	static constexpr char* VALUE_TYPE = "MSG4_RESP";
+	static constexpr char sk_ValueType[] = "MSG4_RESP";
 
 	static sgx_ra_msg4_t ParseMsg4Data(const Json::Value& SGXRASPRoot);
 	static sgx_ec256_signature_t ParseMsg4Sign(const Json::Value& SGXRASPRoot);

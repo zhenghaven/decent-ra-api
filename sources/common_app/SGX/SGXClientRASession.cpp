@@ -28,7 +28,7 @@ static T*  ParseMessageExpected(const Json::Value& json)
 	
 	SGXRAClientMessage::ParseCat(json); //Make sure it's a smart message. Otherwise a ParseException will be thrown.
 
-	if (SGXRAClientMessage::ParseType(json[Messages::LABEL_ROOT]) == SGXRASPErrMsg::VALUE_TYPE)
+	if (SGXRAClientMessage::ParseType(json[Messages::sk_LabelRoot]) == SGXRASPErrMsg::sk_ValueType)
 	{
 		throw ReceivedErrorMessageException();
 	}
@@ -85,7 +85,7 @@ void SGXClientRASession::SendHandshakeMessage(std::unique_ptr<Connection>& conne
 
 bool SGXClientRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const Json::Value & msg)
 {
-	if (SGXRASPMessage::ParseType(msg[Messages::LABEL_ROOT]) == SGXRAMessage0Resp::VALUE_TYPE)
+	if (SGXRASPMessage::ParseType(msg[Messages::sk_LabelRoot]) == SGXRAMessage0Resp::sk_ValueType)
 	{
 		SGXRAMessage0Resp msg0r(msg);
 		SGXClientRASession raSession(connection, enclave, msg0r);

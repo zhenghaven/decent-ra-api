@@ -6,11 +6,11 @@
 
 std::string SGXRAClientMessage::ParseType(const Json::Value & MsgRootContent)
 {
-	if (MsgRootContent.isMember(SGXRAClientMessage::LABEL_ROOT) && MsgRootContent[SGXRAClientMessage::LABEL_ROOT].isObject() &&
-		MsgRootContent[SGXRAClientMessage::LABEL_ROOT].isMember(LABEL_TYPE) && MsgRootContent[SGXRAClientMessage::LABEL_ROOT][LABEL_TYPE].isString()
+	if (MsgRootContent.isMember(SGXRAClientMessage::sk_LabelRoot) && MsgRootContent[SGXRAClientMessage::sk_LabelRoot].isObject() &&
+		MsgRootContent[SGXRAClientMessage::sk_LabelRoot].isMember(sk_LabelType) && MsgRootContent[SGXRAClientMessage::sk_LabelRoot][sk_LabelType].isString()
 		)
 	{
-		return MsgRootContent[SGXRAClientMessage::LABEL_ROOT][LABEL_TYPE].asString();
+		return MsgRootContent[SGXRAClientMessage::sk_LabelRoot][sk_LabelType].asString();
 	}
 	throw MessageParseException();
 }
@@ -21,9 +21,9 @@ SGXRAClientMessage::SGXRAClientMessage(const std::string & senderID) :
 }
 
 SGXRAClientMessage::SGXRAClientMessage(const Json::Value & msg, const char* expectedType) :
-	Messages(msg, VALUE_CAT)
+	Messages(msg, sk_ValueCat)
 {
-	if (expectedType && ParseType(msg[Messages::LABEL_ROOT]) != expectedType)
+	if (expectedType && ParseType(msg[Messages::sk_LabelRoot]) != expectedType)
 	{
 		throw MessageParseException();
 	}
@@ -35,26 +35,26 @@ SGXRAClientMessage::~SGXRAClientMessage()
 
 std::string SGXRAClientMessage::GetMessageCategoryStr() const
 {
-	return SGXRAClientMessage::VALUE_CAT;
+	return SGXRAClientMessage::sk_ValueCat;
 }
 
 Json::Value & SGXRAClientMessage::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = Messages::GetJsonMsg(outJson);
 
-	parent[SGXRAClientMessage::LABEL_ROOT] = Json::objectValue;
-	parent[SGXRAClientMessage::LABEL_ROOT][SGXRAClientMessage::LABEL_TYPE] = GetMessageTypeStr();
+	parent[SGXRAClientMessage::sk_LabelRoot] = Json::objectValue;
+	parent[SGXRAClientMessage::sk_LabelRoot][SGXRAClientMessage::sk_LabelType] = GetMessageTypeStr();
 
-	return parent[SGXRAClientMessage::LABEL_ROOT];
+	return parent[SGXRAClientMessage::sk_LabelRoot];
 }
 
 std::string SGXRASPMessage::ParseType(const Json::Value & MsgRootContent)
 {
-	if (MsgRootContent.isMember(SGXRASPMessage::LABEL_ROOT) && MsgRootContent[SGXRASPMessage::LABEL_ROOT].isObject() &&
-		MsgRootContent[SGXRASPMessage::LABEL_ROOT].isMember(LABEL_TYPE) && MsgRootContent[SGXRASPMessage::LABEL_ROOT][LABEL_TYPE].isString()
+	if (MsgRootContent.isMember(SGXRASPMessage::sk_LabelRoot) && MsgRootContent[SGXRASPMessage::sk_LabelRoot].isObject() &&
+		MsgRootContent[SGXRASPMessage::sk_LabelRoot].isMember(sk_LabelType) && MsgRootContent[SGXRASPMessage::sk_LabelRoot][sk_LabelType].isString()
 		)
 	{
-		return MsgRootContent[SGXRASPMessage::LABEL_ROOT][LABEL_TYPE].asString();
+		return MsgRootContent[SGXRASPMessage::sk_LabelRoot][sk_LabelType].asString();
 	}
 	throw MessageParseException();
 }
@@ -65,9 +65,9 @@ SGXRASPMessage::SGXRASPMessage(const std::string & senderID) :
 }
 
 SGXRASPMessage::SGXRASPMessage(const Json::Value & msg, const char* expectedType) :
-	Messages(msg, VALUE_CAT)
+	Messages(msg, sk_ValueCat)
 {
-	if (expectedType && ParseType(msg[Messages::LABEL_ROOT]) != expectedType)
+	if (expectedType && ParseType(msg[Messages::sk_LabelRoot]) != expectedType)
 	{
 		throw MessageParseException();
 	}
@@ -79,24 +79,24 @@ SGXRASPMessage::~SGXRASPMessage()
 
 std::string SGXRASPMessage::GetMessageCategoryStr() const
 {
-	return SGXRASPMessage::VALUE_CAT;
+	return SGXRASPMessage::sk_ValueCat;
 }
 
 Json::Value & SGXRASPMessage::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = Messages::GetJsonMsg(outJson);
 
-	parent[SGXRASPMessage::LABEL_ROOT] = Json::objectValue;
-	parent[SGXRASPMessage::LABEL_ROOT][SGXRASPMessage::LABEL_TYPE] = GetMessageTypeStr();
+	parent[SGXRASPMessage::sk_LabelRoot] = Json::objectValue;
+	parent[SGXRASPMessage::sk_LabelRoot][SGXRASPMessage::sk_LabelType] = GetMessageTypeStr();
 
-	return parent[SGXRASPMessage::LABEL_ROOT];
+	return parent[SGXRASPMessage::sk_LabelRoot];
 }
 
 std::string SGXRAClientErrMsg::ParseErrorMsg(const Json::Value & SGXRAClientRoot)
 {
-	if (SGXRAClientRoot.isMember(SGXRAClientErrMsg::LABEL_ERR_MSG) && SGXRAClientRoot[SGXRAClientErrMsg::LABEL_ERR_MSG].isString())
+	if (SGXRAClientRoot.isMember(SGXRAClientErrMsg::sk_LabelErrMsg) && SGXRAClientRoot[SGXRAClientErrMsg::sk_LabelErrMsg].isString())
 	{
-		return SGXRAClientRoot[SGXRAClientErrMsg::LABEL_ERR_MSG].asString();
+		return SGXRAClientRoot[SGXRAClientErrMsg::sk_LabelErrMsg].asString();
 	}
 	throw MessageParseException();
 }
@@ -108,8 +108,8 @@ SGXRAClientErrMsg::SGXRAClientErrMsg(const std::string & senderID, const std::st
 }
 
 SGXRAClientErrMsg::SGXRAClientErrMsg(const Json::Value & msg) :
-	SGXRAClientMessage(msg, VALUE_TYPE),
-	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
+	SGXRAClientMessage(msg, sk_ValueType),
+	m_errStr(ParseErrorMsg(msg[Messages::sk_LabelRoot][SGXRAClientMessage::sk_LabelRoot]))
 {
 }
 
@@ -119,7 +119,7 @@ SGXRAClientErrMsg::~SGXRAClientErrMsg()
 
 std::string SGXRAClientErrMsg::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 const std::string & SGXRAClientErrMsg::GetErrStr() const
@@ -131,17 +131,17 @@ Json::Value & SGXRAClientErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRAClientMessage::GetJsonMsg(outJson);
 
-	//parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_ERR_MSG] = m_errStr;
+	//parent[SGXRAClientMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelErrMsg] = m_errStr;
 
 	return parent;
 }
 
 std::string SGXRASPErrMsg::ParseErrorMsg(const Json::Value & SGXRASPRoot)
 {
-	if (SGXRASPRoot.isMember(SGXRASPErrMsg::LABEL_ERR_MSG) && SGXRASPRoot[SGXRASPErrMsg::LABEL_ERR_MSG].isString())
+	if (SGXRASPRoot.isMember(SGXRASPErrMsg::sk_LabelErrMsg) && SGXRASPRoot[SGXRASPErrMsg::sk_LabelErrMsg].isString())
 	{
-		return SGXRASPRoot[SGXRASPErrMsg::LABEL_ERR_MSG].asString();
+		return SGXRASPRoot[SGXRASPErrMsg::sk_LabelErrMsg].asString();
 	}
 	throw MessageParseException();
 }
@@ -153,8 +153,8 @@ SGXRASPErrMsg::SGXRASPErrMsg(const std::string & senderID, const std::string & e
 }
 
 SGXRASPErrMsg::SGXRASPErrMsg(const Json::Value & msg) :
-	SGXRASPMessage(msg, VALUE_TYPE),
-	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
+	SGXRASPMessage(msg, sk_ValueType),
+	m_errStr(ParseErrorMsg(msg[Messages::sk_LabelRoot][SGXRASPMessage::sk_LabelRoot]))
 {
 }
 
@@ -164,7 +164,7 @@ SGXRASPErrMsg::~SGXRASPErrMsg()
 
 std::string SGXRASPErrMsg::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 const std::string & SGXRASPErrMsg::GetErrStr() const
@@ -176,8 +176,8 @@ Json::Value & SGXRASPErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	//parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_ERR_MSG] = m_errStr;
+	//parent[SGXRASPMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelErrMsg] = m_errStr;
 
 	return parent;
 }

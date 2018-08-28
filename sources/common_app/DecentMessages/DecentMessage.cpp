@@ -6,11 +6,11 @@
 
 std::string DecentMessage::ParseType(const Json::Value & MsgRootContent)
 {
-	if (MsgRootContent.isMember(LABEL_ROOT) && MsgRootContent[LABEL_ROOT].isObject() &&
-		MsgRootContent[LABEL_ROOT].isMember(LABEL_TYPE) && MsgRootContent[LABEL_ROOT][LABEL_TYPE].isString()
+	if (MsgRootContent.isMember(sk_LabelRoot) && MsgRootContent[sk_LabelRoot].isObject() &&
+		MsgRootContent[sk_LabelRoot].isMember(sk_LabelType) && MsgRootContent[sk_LabelRoot][sk_LabelType].isString()
 		)
 	{
-		return MsgRootContent[LABEL_ROOT][LABEL_TYPE].asString();
+		return MsgRootContent[sk_LabelRoot][sk_LabelType].asString();
 	}
 	throw MessageParseException();
 }
@@ -21,9 +21,9 @@ DecentMessage::DecentMessage(const std::string & senderID) :
 }
 
 DecentMessage::DecentMessage(const Json::Value & msg, const char* expectedType) :
-	Messages(msg, VALUE_CAT)
+	Messages(msg, sk_ValueCat)
 {
-	if (expectedType && ParseType(msg[Messages::LABEL_ROOT]) != expectedType)
+	if (expectedType && ParseType(msg[Messages::sk_LabelRoot]) != expectedType)
 	{
 		throw MessageParseException();
 	}
@@ -35,24 +35,24 @@ DecentMessage::~DecentMessage()
 
 std::string DecentMessage::GetMessageCategoryStr() const
 {
-	return VALUE_CAT;
+	return sk_ValueCat;
 }
 
 Json::Value & DecentMessage::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = Messages::GetJsonMsg(outJson);
 
-	parent[LABEL_ROOT] = Json::objectValue;
-	parent[LABEL_ROOT][LABEL_TYPE] = GetMessageTypeStr();
+	parent[sk_LabelRoot] = Json::objectValue;
+	parent[sk_LabelRoot][sk_LabelType] = GetMessageTypeStr();
 
-	return parent[LABEL_ROOT];
+	return parent[sk_LabelRoot];
 }
 
 std::string DecentErrMsg::ParseErrorMsg(const Json::Value & DecentRoot)
 {
-	if (DecentRoot.isMember(LABEL_ERR_MSG) && DecentRoot[LABEL_ERR_MSG].isString())
+	if (DecentRoot.isMember(sk_LabelErrMsg) && DecentRoot[sk_LabelErrMsg].isString())
 	{
-		return DecentRoot[LABEL_ERR_MSG].asString();
+		return DecentRoot[sk_LabelErrMsg].asString();
 	}
 	throw MessageParseException();
 }
@@ -64,8 +64,8 @@ DecentErrMsg::DecentErrMsg(const std::string & senderID, const std::string & err
 }
 
 DecentErrMsg::DecentErrMsg(const Json::Value & msg) :
-	DecentMessage(msg, VALUE_TYPE),
-	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
+	DecentMessage(msg, sk_ValueType),
+	m_errStr(ParseErrorMsg(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot]))
 {
 }
 
@@ -75,7 +75,7 @@ DecentErrMsg::~DecentErrMsg()
 
 std::string DecentErrMsg::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 const std::string & DecentErrMsg::GetErrStr() const
@@ -87,8 +87,8 @@ Json::Value & DecentErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
-	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_ERR_MSG] = m_errStr;
+	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelErrMsg] = m_errStr;
 
 	return parent;
 }
@@ -99,7 +99,7 @@ DecentRAHandshake::DecentRAHandshake(const std::string & senderID) :
 }
 
 DecentRAHandshake::DecentRAHandshake(const Json::Value & msg) :
-	DecentMessage(msg, VALUE_TYPE)
+	DecentMessage(msg, sk_ValueType)
 {
 }
 
@@ -109,23 +109,23 @@ DecentRAHandshake::~DecentRAHandshake()
 
 std::string DecentRAHandshake::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 Json::Value & DecentRAHandshake::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
-	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
 
 	return parent;
 }
 
 std::string DecentRAHandshakeAck::ParseSelfRAReport(const Json::Value & DecentRoot)
 {
-	if (DecentRoot.isMember(LABEL_SELF_REPORT) && DecentRoot[LABEL_SELF_REPORT].isString())
+	if (DecentRoot.isMember(sk_LabelSelfReport) && DecentRoot[sk_LabelSelfReport].isString())
 	{
-		return DecentRoot[LABEL_SELF_REPORT].asString();
+		return DecentRoot[sk_LabelSelfReport].asString();
 	}
 	throw MessageParseException();
 }
@@ -137,8 +137,8 @@ DecentRAHandshakeAck::DecentRAHandshakeAck(const std::string & senderID, const s
 }
 
 DecentRAHandshakeAck::DecentRAHandshakeAck(const Json::Value & msg) :
-	DecentMessage(msg, VALUE_TYPE),
-	m_selfRAReport(ParseSelfRAReport(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
+	DecentMessage(msg, sk_ValueType),
+	m_selfRAReport(ParseSelfRAReport(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot]))
 {
 }
 
@@ -148,7 +148,7 @@ DecentRAHandshakeAck::~DecentRAHandshakeAck()
 
 std::string DecentRAHandshakeAck::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 const std::string & DecentRAHandshakeAck::GetSelfRAReport() const
@@ -160,8 +160,8 @@ Json::Value & DecentRAHandshakeAck::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
-	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_SELF_REPORT] = m_selfRAReport;
+	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelSelfReport] = m_selfRAReport;
 
 	return parent;
 }
@@ -172,7 +172,7 @@ DecentProtocolKeyReq::DecentProtocolKeyReq(const std::string & senderID) :
 }
 
 DecentProtocolKeyReq::DecentProtocolKeyReq(const Json::Value & msg) :
-	DecentMessage(msg, VALUE_TYPE)
+	DecentMessage(msg, sk_ValueType)
 {
 }
 
@@ -182,23 +182,23 @@ DecentProtocolKeyReq::~DecentProtocolKeyReq()
 
 std::string DecentProtocolKeyReq::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 Json::Value & DecentProtocolKeyReq::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
-	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
+	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
 
 	return parent;
 }
 
 std::string DecentTrustedMessage::ParseTrustedMsg(const Json::Value & DecentRoot)
 {
-	if (DecentRoot.isMember(LABEL_TRUSTED_MSG) && DecentRoot[LABEL_TRUSTED_MSG].isString())
+	if (DecentRoot.isMember(sk_LabelTrustedMsg) && DecentRoot[sk_LabelTrustedMsg].isString())
 	{
-		return DecentRoot[LABEL_TRUSTED_MSG].asString();
+		return DecentRoot[sk_LabelTrustedMsg].asString();
 	}
 	throw MessageParseException();
 }
@@ -210,8 +210,8 @@ DecentTrustedMessage::DecentTrustedMessage(const std::string & senderID, const s
 }
 
 DecentTrustedMessage::DecentTrustedMessage(const Json::Value & msg) :
-	DecentMessage(msg, VALUE_TYPE),
-	m_trustedMsg(ParseTrustedMsg(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
+	DecentMessage(msg, sk_ValueType),
+	m_trustedMsg(ParseTrustedMsg(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot]))
 {
 }
 
@@ -221,7 +221,7 @@ DecentTrustedMessage::~DecentTrustedMessage()
 
 std::string DecentTrustedMessage::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 const std::string & DecentTrustedMessage::GetTrustedMsg() const
@@ -233,8 +233,8 @@ Json::Value & DecentTrustedMessage::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
-	//parent[DecentMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_TRUSTED_MSG] = m_trustedMsg;
+	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelTrustedMsg] = m_trustedMsg;
 
 	return parent;
 }

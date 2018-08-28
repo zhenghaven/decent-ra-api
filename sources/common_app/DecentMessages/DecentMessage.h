@@ -5,10 +5,10 @@
 class DecentMessage : public Messages
 {
 public:
-	static constexpr char* LABEL_ROOT = "Decent";
-	static constexpr char* LABEL_TYPE = "Type";
+	static constexpr char sk_LabelRoot[] = "Decent";
+	static constexpr char sk_LabelType[] = "Type";
 
-	static constexpr char* VALUE_CAT = LABEL_ROOT;
+	static constexpr char sk_ValueCat[] = "Decent"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -31,9 +31,9 @@ private:
 class DecentErrMsg : public DecentMessage
 {
 public:
-	static constexpr char* LABEL_ERR_MSG = "ErrorMsg";
+	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
 
-	static constexpr char* VALUE_TYPE = "Error";
+	static constexpr char sk_ValueType[] = "Error";
 
 	static std::string ParseErrorMsg(const Json::Value& DecentRoot);
 
@@ -57,7 +57,7 @@ private:
 class DecentRAHandshake : public DecentMessage
 {
 public:
-	static constexpr char* VALUE_TYPE = "RAHandshake";
+	static constexpr char sk_ValueType[] = "RAHandshake";
 
 public:
 	DecentRAHandshake() = delete;
@@ -76,9 +76,9 @@ private:
 class DecentRAHandshakeAck : public DecentMessage
 {
 public:
-	static constexpr char* LABEL_SELF_REPORT = "SelfReport";
+	static constexpr char sk_LabelSelfReport[] = "SelfReport";
 
-	static constexpr char* VALUE_TYPE = "RAHandshakeAck";
+	static constexpr char sk_ValueType[] = "RAHandshakeAck";
 
 	static std::string ParseSelfRAReport(const Json::Value& DecentRoot);
 
@@ -102,7 +102,7 @@ private:
 class DecentProtocolKeyReq : public DecentMessage
 {
 public:
-	static constexpr char* VALUE_TYPE = "ProtoKeyReq";
+	static constexpr char sk_ValueType[] = "ProtoKeyReq";
 
 public:
 	DecentProtocolKeyReq() = delete;
@@ -121,9 +121,9 @@ private:
 class DecentTrustedMessage : public DecentMessage
 {
 public:
-	static constexpr char* LABEL_TRUSTED_MSG = "Msg";
+	static constexpr char sk_LabelTrustedMsg[] = "Msg";
 
-	static constexpr char* VALUE_TYPE = "TrustedMsg";
+	static constexpr char sk_ValueType[] = "TrustedMsg";
 
 	static std::string ParseTrustedMsg(const Json::Value& DecentRoot);
 

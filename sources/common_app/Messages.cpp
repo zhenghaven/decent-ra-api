@@ -6,20 +6,20 @@
 
 std::string Messages::ParseSenderID(const Json::Value& msg)
 {
-	if (msg.isMember(Messages::LABEL_ROOT) && msg[Messages::LABEL_ROOT].isObject()
-		&& msg[Messages::LABEL_ROOT].isMember(Messages::LABEL_SENDER) && msg[Messages::LABEL_ROOT][Messages::LABEL_SENDER].isString())
+	if (msg.isMember(Messages::sk_LabelRoot) && msg[Messages::sk_LabelRoot].isObject()
+		&& msg[Messages::sk_LabelRoot].isMember(Messages::sk_LabelSender) && msg[Messages::sk_LabelRoot][Messages::sk_LabelSender].isString())
 	{
-		return msg[Messages::LABEL_ROOT][Messages::LABEL_SENDER].asString();
+		return msg[Messages::sk_LabelRoot][Messages::sk_LabelSender].asString();
 	}
 	throw MessageParseException();
 }
 
 std::string Messages::ParseCat(const Json::Value& msg)
 {
-	if (msg.isMember(Messages::LABEL_ROOT) && msg[Messages::LABEL_ROOT].isObject()
-		&& msg[Messages::LABEL_ROOT].isMember(Messages::LABEL_CATEGORY) && msg[Messages::LABEL_ROOT][Messages::LABEL_CATEGORY].isString())
+	if (msg.isMember(Messages::sk_LabelRoot) && msg[Messages::sk_LabelRoot].isObject()
+		&& msg[Messages::sk_LabelRoot].isMember(Messages::sk_LabelCategory) && msg[Messages::sk_LabelRoot][Messages::sk_LabelCategory].isString())
 	{
-		return msg[Messages::LABEL_ROOT][Messages::LABEL_CATEGORY].asString();
+		return msg[Messages::sk_LabelRoot][Messages::sk_LabelCategory].asString();
 	}
 	throw MessageParseException();
 }
@@ -53,9 +53,9 @@ std::string Messages::ToJsonString() const
 
 Json::Value& Messages::GetJsonMsg(Json::Value& outJson) const
 {
-	outJson[LABEL_ROOT] = Json::objectValue;
-	outJson[LABEL_ROOT][LABEL_SENDER] = m_senderID;
-	outJson[LABEL_ROOT][LABEL_CATEGORY] = GetMessageCategoryStr();
+	outJson[sk_LabelRoot] = Json::objectValue;
+	outJson[sk_LabelRoot][sk_LabelSender] = m_senderID;
+	outJson[sk_LabelRoot][sk_LabelCategory] = GetMessageCategoryStr();
 
-	return outJson[LABEL_ROOT];
+	return outJson[sk_LabelRoot];
 }

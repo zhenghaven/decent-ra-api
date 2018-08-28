@@ -35,10 +35,10 @@ typedef std::map<std::string, std::shared_ptr<const SecureCommLayer> > DecentNod
 
 namespace
 {
-	static constexpr char* JSON_LABEL_FUNC = "Func";
-	static constexpr char* JSON_LABEL_PRV_KEY = "PrvKey";
+	static constexpr char gsk_LabelFunc[] = "Func";
+	static constexpr char gsk_LabelPrvKey[] = "PrvKey";
 
-	static constexpr char* JSON_VALUE_FUNC_SET_PROTO_KEY = "SetProtoKey";
+	static constexpr char gsk_ValueFuncSetProtoKey[] = "SetProtoKey";
 
 	static std::mutex g_decentNodesMapMutex;
 	static DecentNodeMapType g_decentNodesMap;
@@ -171,23 +171,23 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* reportStr)
 	rapidjson::Document jsonDoc;
 	jsonDoc.Parse(reportStr);
 
-	if (!jsonDoc.HasMember(Decent::RAReport::LABEL_ROOT))
+	if (!jsonDoc.HasMember(Decent::RAReport::sk_LabelRoot))
 	{
 		return 0;
 	}
-	rapidjson::Value& jsonRoot = jsonDoc[Decent::RAReport::LABEL_ROOT];
+	rapidjson::Value& jsonRoot = jsonDoc[Decent::RAReport::sk_LabelRoot];
 
-	if (!jsonRoot.HasMember(Decent::RAReport::LABEL_TYPE) || !(std::string(jsonRoot[Decent::RAReport::LABEL_TYPE].GetString()) == Decent::RAReport::VALUE_REPORT_TYPE))
+	if (!jsonRoot.HasMember(Decent::RAReport::sk_LabelType) || !(std::string(jsonRoot[Decent::RAReport::sk_LabelType].GetString()) == Decent::RAReport::sk_ValueReportType))
 	{
 		return 0;
 	}
 
 	std::string selfHash = SGXRAEnclave::GetSelfHash();
-	std::string pubKey = jsonRoot[Decent::RAReport::LABEL_PUB_KEY].GetString();
-	std::string iasReport = jsonRoot[Decent::RAReport::LABEL_IAS_REPORT].GetString();
-	std::string iasSign = jsonRoot[Decent::RAReport::LABEL_IAS_SIGN].GetString();
-	std::string iasCertChain = jsonRoot[Decent::RAReport::LABEL_IAS_CERT_CHAIN].GetString();
-	std::string oriRDB64 = jsonRoot[Decent::RAReport::LABEL_ORI_REP_DATA].GetString();
+	std::string pubKey = jsonRoot[Decent::RAReport::sk_LabelPubKey].GetString();
+	std::string iasReport = jsonRoot[Decent::RAReport::sk_LabelIasReport].GetString();
+	std::string iasSign = jsonRoot[Decent::RAReport::sk_LabelIasSign].GetString();
+	std::string iasCertChain = jsonRoot[Decent::RAReport::sk_LabelIasCertChain].GetString();
+	std::string oriRDB64 = jsonRoot[Decent::RAReport::sk_LabelOriRepData].GetString();
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);
 
@@ -380,23 +380,23 @@ extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const con
 		return 0;
 	}
 
-	if (!jsonRoot.HasMember(JSON_LABEL_FUNC) || !jsonRoot[JSON_LABEL_FUNC].IsString())
+	if (!jsonRoot.HasMember(gsk_LabelFunc) || !jsonRoot[gsk_LabelFunc].IsString())
 	{
 		return 0;
 	}
 
-	std::string funcType(jsonRoot[JSON_LABEL_FUNC].GetString());
+	std::string funcType(jsonRoot[gsk_LabelFunc].GetString());
 
-	if (funcType == JSON_VALUE_FUNC_SET_PROTO_KEY) //Set Protocol Key Function:
+	if (funcType == gsk_ValueFuncSetProtoKey) //Set Protocol Key Function:
 	{
-		if (!jsonRoot.HasMember(JSON_LABEL_PRV_KEY) || !jsonRoot[JSON_LABEL_PRV_KEY].IsString())
+		if (!jsonRoot.HasMember(gsk_LabelPrvKey) || !jsonRoot[gsk_LabelPrvKey].IsString())
 		{
 			return 0;
 		}
 		sgx_ec256_public_t pubKey;
 		DeserializeStruct(pubKey, nodeID);
 		PrivateKeyWrap prvKey;
-		DeserializeStruct(prvKey.m_prvKey, jsonRoot[JSON_LABEL_PRV_KEY].GetString());
+		DeserializeStruct(prvKey.m_prvKey, jsonRoot[gsk_LabelPrvKey].GetString());
 		std::shared_ptr<const sgx_ec256_public_t> pubKeyPtr = std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(pubKey));
 		std::shared_ptr<const PrivateKeyWrap> prvKeyPtr = std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(prvKey));
 		EnclaveAsyKeyContainer::GetInstance().UpdateSignKeyPair(prvKeyPtr, pubKeyPtr);
@@ -426,8 +426,8 @@ extern "C" int ecall_decent_send_protocol_key(const char* nodeID, void* const co
 
 	std::string prvKeyB64 = SerializeStruct(EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey()->m_prvKey);
 
-	JsonCommonSetString(doc, jsonRoot, JSON_LABEL_FUNC, JSON_VALUE_FUNC_SET_PROTO_KEY);
-	JsonCommonSetString(doc, jsonRoot, JSON_LABEL_PRV_KEY, prvKeyB64);
+	JsonCommonSetString(doc, jsonRoot, gsk_LabelFunc, gsk_ValueFuncSetProtoKey);
+	JsonCommonSetString(doc, jsonRoot, gsk_LabelPrvKey, prvKeyB64);
 
 	return commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot));
 }

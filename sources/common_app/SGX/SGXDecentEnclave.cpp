@@ -160,7 +160,7 @@ bool SGXDecentEnclave::ToDecentralizedNode(const std::string & id, bool isSP)
 
 bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
 {
-	if (category == DecentMessage::VALUE_CAT)
+	if (category == DecentMessage::sk_ValueCat)
 	{
 		return DecentRASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
 	}
@@ -233,13 +233,13 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	bool opensslRet = ECKeyPubSGX2OpenSSL(&pubKey, pubECKey, nullptr);
 
 	Json::Value root;
-	Json::Value& decentReportBody = root[Decent::RAReport::LABEL_ROOT];
-	decentReportBody[Decent::RAReport::LABEL_TYPE] = Decent::RAReport::VALUE_REPORT_TYPE;
-	decentReportBody[Decent::RAReport::LABEL_PUB_KEY] = ECKeyPubGetPEMStr(pubECKey);
-	decentReportBody[Decent::RAReport::LABEL_IAS_REPORT] = iasReport;
-	decentReportBody[Decent::RAReport::LABEL_IAS_SIGN] = reportSign;
-	decentReportBody[Decent::RAReport::LABEL_IAS_CERT_CHAIN] = reportCertChain;
-	decentReportBody[Decent::RAReport::LABEL_ORI_REP_DATA] = SerializeStruct(oriReportData);
+	Json::Value& decentReportBody = root[Decent::RAReport::sk_LabelRoot];
+	decentReportBody[Decent::RAReport::sk_LabelType] = Decent::RAReport::sk_ValueReportType;
+	decentReportBody[Decent::RAReport::sk_LabelPubKey] = ECKeyPubGetPEMStr(pubECKey);
+	decentReportBody[Decent::RAReport::sk_LabelIasReport] = iasReport;
+	decentReportBody[Decent::RAReport::sk_LabelIasSign] = reportSign;
+	decentReportBody[Decent::RAReport::sk_LabelIasCertChain] = reportCertChain;
+	decentReportBody[Decent::RAReport::sk_LabelOriRepData] = SerializeStruct(oriReportData);
 
 	return root.toStyledString();
 }

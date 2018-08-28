@@ -6,9 +6,9 @@
 
 uint32_t SGXRAMessage0Send::ParseExGroupID(const Json::Value & SGXRASPRoot)
 {
-	if (SGXRASPRoot.isMember(SGXRAMessage0Send::LABEL_EX_GROUP_ID) && SGXRASPRoot[SGXRAMessage0Send::LABEL_EX_GROUP_ID].isUInt())
+	if (SGXRASPRoot.isMember(SGXRAMessage0Send::sk_LabelExGroupId) && SGXRASPRoot[SGXRAMessage0Send::sk_LabelExGroupId].isUInt())
 	{
-		return SGXRASPRoot[SGXRAMessage0Send::LABEL_EX_GROUP_ID].asUInt();
+		return SGXRASPRoot[SGXRAMessage0Send::sk_LabelExGroupId].asUInt();
 	}
 	throw MessageParseException();
 }
@@ -20,8 +20,8 @@ SGXRAMessage0Send::SGXRAMessage0Send(const std::string& senderID, uint32_t exGrp
 }
 
 SGXRAMessage0Send::SGXRAMessage0Send(const Json::Value& msg) :
-	SGXRASPMessage(msg, VALUE_TYPE),
-	m_exGrpID(ParseExGroupID(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
+	SGXRASPMessage(msg, sk_ValueType),
+	m_exGrpID(ParseExGroupID(msg[Messages::sk_LabelRoot][SGXRASPMessage::sk_LabelRoot]))
 {
 }
 
@@ -31,7 +31,7 @@ SGXRAMessage0Send::~SGXRAMessage0Send()
 
 std::string SGXRAMessage0Send::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 uint32_t SGXRAMessage0Send::GetExtendedGroupID() const
@@ -43,17 +43,17 @@ Json::Value& SGXRAMessage0Send::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRASPMessage::GetJsonMsg(outJson);
 
-	//parent[SGXRASPMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_EX_GROUP_ID] = m_exGrpID;
+	//parent[SGXRASPMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelExGroupId] = m_exGrpID;
 
 	return parent;
 }
 
 std::string SGXRAMessage0Resp::ParsePublicKey(const Json::Value & SGXRAClientRoot)
 {
-	if (SGXRAClientRoot.isMember(SGXRAMessage0Resp::LABEL_PUB_KEY) && SGXRAClientRoot[SGXRAMessage0Resp::LABEL_PUB_KEY].isString())
+	if (SGXRAClientRoot.isMember(SGXRAMessage0Resp::sk_LabelPubKey) && SGXRAClientRoot[SGXRAMessage0Resp::sk_LabelPubKey].isString())
 	{
-		return SGXRAClientRoot[SGXRAMessage0Resp::LABEL_PUB_KEY].asString();
+		return SGXRAClientRoot[SGXRAMessage0Resp::sk_LabelPubKey].asString();
 	}
 	throw MessageParseException();
 }
@@ -65,8 +65,8 @@ SGXRAMessage0Resp::SGXRAMessage0Resp(const std::string& senderID, const std::str
 }
 
 SGXRAMessage0Resp::SGXRAMessage0Resp(const Json::Value& msg) :
-	SGXRAClientMessage(msg, VALUE_TYPE),
-	m_pubKey(ParsePublicKey(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
+	SGXRAClientMessage(msg, sk_ValueType),
+	m_pubKey(ParsePublicKey(msg[Messages::sk_LabelRoot][SGXRAClientMessage::sk_LabelRoot]))
 {
 }
 
@@ -76,7 +76,7 @@ SGXRAMessage0Resp::~SGXRAMessage0Resp()
 
 std::string SGXRAMessage0Resp::GetMessageTypeStr() const
 {
-	return VALUE_TYPE;
+	return sk_ValueType;
 }
 
 std::string SGXRAMessage0Resp::GetRAPubKey() const
@@ -88,8 +88,8 @@ Json::Value & SGXRAMessage0Resp::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXRAClientMessage::GetJsonMsg(outJson);
 
-	//parent[SGXRAClientMessage::LABEL_TYPE] = VALUE_TYPE;
-	parent[LABEL_PUB_KEY] = m_pubKey;
+	//parent[SGXRAClientMessage::sk_LabelType] = sk_ValueType;
+	parent[sk_LabelPubKey] = m_pubKey;
 
 	return parent;
 }

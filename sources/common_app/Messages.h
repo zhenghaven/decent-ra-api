@@ -10,9 +10,9 @@ namespace Json
 class Messages
 {
 public:
-	static constexpr char* LABEL_ROOT     = "SmartServerMsg";
-	static constexpr char* LABEL_SENDER   = "Sender";
-	static constexpr char* LABEL_CATEGORY = "Cat";
+	static constexpr char sk_LabelRoot[]     = "SmartServerMsg";
+	static constexpr char sk_LabelSender[]   = "Sender";
+	static constexpr char sk_LabelCategory[] = "Cat";
 
 	static std::string ParseSenderID(const Json::Value& msg);
 	static std::string ParseCat(const Json::Value& msg);

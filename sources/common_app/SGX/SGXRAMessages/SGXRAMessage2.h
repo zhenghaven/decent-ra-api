@@ -12,9 +12,9 @@ typedef _ra_msg2_t sgx_ra_msg2_t;
 class SGXRAMessage2 : public SGXRAClientMessage
 {
 public:
-	static constexpr char* LABEL_DATA = "Msg2Data";
+	static constexpr char sk_LabelData[] = "Msg2Data";
 
-	static constexpr char* VALUE_TYPE = "MSG2_RESP";
+	static constexpr char sk_ValueType[] = "MSG2_RESP";
 
 	static std::vector<uint8_t> ParseMsg2Data(const Json::Value& SGXRASPRoot);
 

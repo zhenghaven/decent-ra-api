@@ -5,7 +5,7 @@
 /**
  * The well-known certificate of the IAS report signing public key.
  */
-constexpr char* IAS_REPORT_CERT = "\
+constexpr char IAS_REPORT_CERT[] = "\
 -----BEGIN CERTIFICATE-----\n\
 MIIFSzCCA7OgAwIBAgIJANEHdl0yo7CUMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\n\
 BAYTAlVTMQswCQYDVQQIDAJDQTEUMBIGA1UEBwwLU2FudGEgQ2xhcmExGjAYBgNV\n\

@@ -14,10 +14,10 @@
 class AESGCMCommLayer : virtual public SecureCommLayer
 {
 public:
-	static constexpr char* LABEL_ROOT  = "AESGCM";
-	static constexpr char* LABEL_NONCE = "Nonce";
-	static constexpr char* LABEL_MAC   = "Mac";
-	static constexpr char* LABEL_MSG   = "Msg";
+	static constexpr char sk_LabelRoot[]  = "AESGCM";
+	static constexpr char sk_LabelNonce[] = "Nonce";
+	static constexpr char sk_LabelMac[]   = "Mac";
+	static constexpr char sk_LabelMsg[]   = "Msg";
 
 	static constexpr size_t GCM_IV_SIZE = 12;
 	typedef uint8_t GcmIvType[GCM_IV_SIZE];

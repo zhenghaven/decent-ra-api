@@ -5,9 +5,9 @@
 class SGXRAMessage0Send : public SGXRASPMessage
 {
 public:
-	static constexpr char* LABEL_EX_GROUP_ID = "ExGroupID";
+	static constexpr char sk_LabelExGroupId[] = "ExGroupID";
 
-	static constexpr char* VALUE_TYPE = "MSG0_SEND";
+	static constexpr char sk_ValueType[] = "MSG0_SEND";
 
 	static uint32_t ParseExGroupID(const Json::Value& SGXRASPRoot);
 
@@ -32,9 +32,9 @@ private:
 class SGXRAMessage0Resp : public SGXRAClientMessage
 {
 public:
-	static constexpr char* LABEL_PUB_KEY = "PublicKey";
+	static constexpr char sk_LabelPubKey[] = "PublicKey";
 
-	static constexpr char* VALUE_TYPE = "MSG0_RESP";
+	static constexpr char sk_ValueType[] = "MSG0_RESP";
 
 	static std::string ParsePublicKey(const Json::Value& SGXRAClientRoot);
 

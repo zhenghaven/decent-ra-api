@@ -35,8 +35,8 @@ void DecentRASession::SendHandshakeMessage(std::unique_ptr<Connection>& connecti
 
 bool DecentRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
 {
-	const std::string inType = DecentMessage::ParseType(jsonMsg[Messages::LABEL_ROOT]);
-	if (inType == DecentRAHandshake::VALUE_TYPE)
+	const std::string inType = DecentMessage::ParseType(jsonMsg[Messages::sk_LabelRoot]);
+	if (inType == DecentRAHandshake::sk_ValueType)
 	{
 		DecentRAHandshake hsMsg(jsonMsg);
 		DecentRASession raSession(connection, hwEnclave, enclave, hsMsg);
@@ -44,7 +44,7 @@ bool DecentRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection
 		raSession.SwapConnection(connection);
 		return res;
 	}
-	else if (inType == DecentRAHandshakeAck::VALUE_TYPE)
+	else if (inType == DecentRAHandshakeAck::sk_ValueType)
 	{
 		DecentRAHandshakeAck ackMsg(jsonMsg);
 		DecentRASession raSession(connection, hwEnclave, enclave, ackMsg);

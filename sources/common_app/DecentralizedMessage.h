@@ -5,10 +5,10 @@
 class DecentralizedMessage : public Messages
 {
 public:
-	static constexpr char* LABEL_ROOT = "Decentralized";
-	static constexpr char* LABEL_TYPE = "Type";
+	static constexpr char sk_LabelRoot[] = "Decentralized";
+	static constexpr char sk_LabelType[] = "Type";
 
-	static constexpr char* VALUE_CAT = LABEL_ROOT;
+	static constexpr char sk_ValueCat[] = "Decentralized"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -31,9 +31,9 @@ private:
 class DecentralizedErrMsg : public DecentralizedMessage
 {
 public:
-	static constexpr char* LABEL_ERR_MSG = "ErrorMsg";
+	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
 
-	static constexpr char* VALUE_TYPE = "Error";
+	static constexpr char sk_ValueType[] = "Error";
 
 	static std::string ParseErrorMsg(const Json::Value& DecentralizedRoot);
 
@@ -57,7 +57,7 @@ private:
 class DecentralizedRAHandshake : public DecentralizedMessage
 {
 public:
-	static constexpr char* VALUE_TYPE = "RAHandshake";
+	static constexpr char sk_ValueType[] = "RAHandshake";
 
 public:
 	DecentralizedRAHandshake() = delete;
@@ -76,7 +76,7 @@ private:
 class DecentralizedRAHandshakeAck : public DecentralizedMessage
 {
 public:
-	static constexpr char* VALUE_TYPE = "RAHandshakeAck";
+	static constexpr char sk_ValueType[] = "RAHandshakeAck";
 
 public:
 	DecentralizedRAHandshakeAck() = delete;
@@ -95,7 +95,7 @@ private:
 class DecentralizedReverseReq : public DecentralizedMessage
 {
 public:
-	static constexpr char* VALUE_TYPE = "ReverseReq";
+	static constexpr char sk_ValueType[] = "ReverseReq";
 
 public:
 	DecentralizedReverseReq() = delete;
