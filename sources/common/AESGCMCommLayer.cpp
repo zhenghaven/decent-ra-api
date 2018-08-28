@@ -17,6 +17,11 @@
 #include "JsonTools.h"
 #include "CommonTool.h"
 
+constexpr char AESGCMCommLayer::sk_LabelRoot[];
+constexpr char AESGCMCommLayer::sk_LabelNonce[];
+constexpr char AESGCMCommLayer::sk_LabelMac[];
+constexpr char AESGCMCommLayer::sk_LabelMsg[];
+
 AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], const std::string& senderID, SendFunctionType sendFunc) :
 	m_senderID(senderID),
 	m_sendFunc(sendFunc)

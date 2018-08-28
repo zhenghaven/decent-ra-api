@@ -6,6 +6,9 @@
 
 #include "../../../common/DataCoding.h"
 
+constexpr char SGXRAMessage1::sk_LabelData[];
+constexpr char SGXRAMessage1::sk_ValueType[];
+
 sgx_ra_msg1_t SGXRAMessage1::ParseMsg1Data(const Json::Value & SGXRASPRoot)
 {
 	if (SGXRASPRoot.isMember(SGXRAMessage1::sk_LabelData) && SGXRASPRoot[SGXRAMessage1::sk_LabelData].isString())

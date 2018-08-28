@@ -4,6 +4,10 @@
 
 #include "MessageException.h"
 
+constexpr char Messages::sk_LabelRoot[];
+constexpr char Messages::sk_LabelSender[];
+constexpr char Messages::sk_LabelCategory[];
+
 std::string Messages::ParseSenderID(const Json::Value& msg)
 {
 	if (msg.isMember(Messages::sk_LabelRoot) && msg[Messages::sk_LabelRoot].isObject()

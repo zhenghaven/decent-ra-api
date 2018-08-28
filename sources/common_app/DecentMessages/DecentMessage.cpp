@@ -4,6 +4,10 @@
 
 #include "../MessageException.h"
 
+constexpr char DecentMessage::sk_LabelRoot[];
+constexpr char DecentMessage::sk_LabelType[];
+constexpr char DecentMessage::sk_ValueCat[];
+
 std::string DecentMessage::ParseType(const Json::Value & MsgRootContent)
 {
 	if (MsgRootContent.isMember(sk_LabelRoot) && MsgRootContent[sk_LabelRoot].isObject() &&
@@ -47,6 +51,9 @@ Json::Value & DecentMessage::GetJsonMsg(Json::Value & outJson) const
 
 	return parent[sk_LabelRoot];
 }
+
+constexpr char DecentErrMsg::sk_LabelErrMsg[];
+constexpr char DecentErrMsg::sk_ValueType[];
 
 std::string DecentErrMsg::ParseErrorMsg(const Json::Value & DecentRoot)
 {
@@ -93,6 +100,8 @@ Json::Value & DecentErrMsg::GetJsonMsg(Json::Value & outJson) const
 	return parent;
 }
 
+constexpr char DecentRAHandshake::sk_ValueType[];
+
 DecentRAHandshake::DecentRAHandshake(const std::string & senderID) :
 	DecentMessage(senderID)
 {
@@ -120,6 +129,9 @@ Json::Value & DecentRAHandshake::GetJsonMsg(Json::Value & outJson) const
 
 	return parent;
 }
+
+constexpr char DecentRAHandshakeAck::sk_LabelSelfReport[];
+constexpr char DecentRAHandshakeAck::sk_ValueType[];
 
 std::string DecentRAHandshakeAck::ParseSelfRAReport(const Json::Value & DecentRoot)
 {
@@ -166,6 +178,8 @@ Json::Value & DecentRAHandshakeAck::GetJsonMsg(Json::Value & outJson) const
 	return parent;
 }
 
+constexpr char DecentProtocolKeyReq::sk_ValueType[];
+
 DecentProtocolKeyReq::DecentProtocolKeyReq(const std::string & senderID) :
 	DecentMessage(senderID)
 {
@@ -193,6 +207,9 @@ Json::Value & DecentProtocolKeyReq::GetJsonMsg(Json::Value & outJson) const
 
 	return parent;
 }
+
+constexpr char DecentTrustedMessage::sk_LabelTrustedMsg[];
+constexpr char DecentTrustedMessage::sk_ValueType[];
 
 std::string DecentTrustedMessage::ParseTrustedMsg(const Json::Value & DecentRoot)
 {

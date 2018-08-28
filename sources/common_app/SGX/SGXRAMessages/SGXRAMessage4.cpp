@@ -9,6 +9,10 @@
 #include "../../../common/DataCoding.h"
 #include "../../../common/SGX/sgx_ra_msg4.h"
 
+constexpr char SGXRAMessage4::sk_LabelData[];
+constexpr char SGXRAMessage4::sk_LabelSign[];
+constexpr char SGXRAMessage4::sk_ValueType[];
+
 sgx_ra_msg4_t SGXRAMessage4::ParseMsg4Data(const Json::Value & SGXRASPRoot)
 {
 	if (SGXRASPRoot.isMember(SGXRAMessage4::sk_LabelData) && SGXRASPRoot[SGXRAMessage4::sk_LabelData].isString())

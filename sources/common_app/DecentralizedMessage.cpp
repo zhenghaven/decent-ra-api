@@ -4,6 +4,10 @@
 
 #include "MessageException.h"
 
+constexpr char DecentralizedMessage::sk_LabelRoot[];
+constexpr char DecentralizedMessage::sk_LabelType[];
+constexpr char DecentralizedMessage::sk_ValueCat[];
+
 std::string DecentralizedMessage::ParseType(const Json::Value & MsgRootContent)
 {
 	if (MsgRootContent.isMember(DecentralizedMessage::sk_LabelRoot) && MsgRootContent[DecentralizedMessage::sk_LabelRoot].isObject() &&
@@ -47,6 +51,9 @@ Json::Value & DecentralizedMessage::GetJsonMsg(Json::Value & outJson) const
 
 	return parent[DecentralizedMessage::sk_LabelRoot];
 }
+
+constexpr char DecentralizedErrMsg::sk_LabelErrMsg[];
+constexpr char DecentralizedErrMsg::sk_ValueType[];
 
 std::string DecentralizedErrMsg::ParseErrorMsg(const Json::Value & DecentralizedRoot)
 {
@@ -93,6 +100,8 @@ Json::Value & DecentralizedErrMsg::GetJsonMsg(Json::Value & outJson) const
 	return parent;
 }
 
+constexpr char DecentralizedRAHandshake::sk_ValueType[];
+
 DecentralizedRAHandshake::DecentralizedRAHandshake(const std::string & senderID) :
 	DecentralizedMessage(senderID)
 {
@@ -121,6 +130,8 @@ Json::Value & DecentralizedRAHandshake::GetJsonMsg(Json::Value & outJson) const
 	return parent;
 }
 
+constexpr char DecentralizedRAHandshakeAck::sk_ValueType[];
+
 DecentralizedRAHandshakeAck::DecentralizedRAHandshakeAck(const std::string & senderID) :
 	DecentralizedMessage(senderID)
 {
@@ -148,6 +159,8 @@ Json::Value & DecentralizedRAHandshakeAck::GetJsonMsg(Json::Value & outJson) con
 
 	return parent;
 }
+
+constexpr char DecentralizedReverseReq::sk_ValueType[];
 
 DecentralizedReverseReq::DecentralizedReverseReq(const std::string & senderID) :
 	DecentralizedMessage(senderID)

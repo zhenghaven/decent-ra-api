@@ -4,6 +4,9 @@
 
 #include "../../MessageException.h"
 
+constexpr char SGXRAMessage0Send::sk_LabelExGroupId[];
+constexpr char SGXRAMessage0Send::sk_ValueType[];
+
 uint32_t SGXRAMessage0Send::ParseExGroupID(const Json::Value & SGXRASPRoot)
 {
 	if (SGXRASPRoot.isMember(SGXRAMessage0Send::sk_LabelExGroupId) && SGXRASPRoot[SGXRAMessage0Send::sk_LabelExGroupId].isUInt())
@@ -48,6 +51,9 @@ Json::Value& SGXRAMessage0Send::GetJsonMsg(Json::Value & outJson) const
 
 	return parent;
 }
+
+constexpr char SGXRAMessage0Resp::sk_LabelPubKey[];
+constexpr char SGXRAMessage0Resp::sk_ValueType[];
 
 std::string SGXRAMessage0Resp::ParsePublicKey(const Json::Value & SGXRAClientRoot)
 {

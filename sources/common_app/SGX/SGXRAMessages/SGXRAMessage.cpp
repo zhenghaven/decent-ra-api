@@ -4,6 +4,10 @@
 
 #include "../../MessageException.h"
 
+constexpr char SGXRAClientMessage::sk_LabelRoot[];
+constexpr char SGXRAClientMessage::sk_LabelType[];
+constexpr char SGXRAClientMessage::sk_ValueCat[];
+
 std::string SGXRAClientMessage::ParseType(const Json::Value & MsgRootContent)
 {
 	if (MsgRootContent.isMember(SGXRAClientMessage::sk_LabelRoot) && MsgRootContent[SGXRAClientMessage::sk_LabelRoot].isObject() &&
@@ -47,6 +51,10 @@ Json::Value & SGXRAClientMessage::GetJsonMsg(Json::Value & outJson) const
 
 	return parent[SGXRAClientMessage::sk_LabelRoot];
 }
+
+constexpr char SGXRASPMessage::sk_LabelRoot[];
+constexpr char SGXRASPMessage::sk_LabelType[];
+constexpr char SGXRASPMessage::sk_ValueCat[];
 
 std::string SGXRASPMessage::ParseType(const Json::Value & MsgRootContent)
 {
@@ -92,6 +100,9 @@ Json::Value & SGXRASPMessage::GetJsonMsg(Json::Value & outJson) const
 	return parent[SGXRASPMessage::sk_LabelRoot];
 }
 
+constexpr char SGXRAClientErrMsg::sk_LabelErrMsg[];
+constexpr char SGXRAClientErrMsg::sk_ValueType[];
+
 std::string SGXRAClientErrMsg::ParseErrorMsg(const Json::Value & SGXRAClientRoot)
 {
 	if (SGXRAClientRoot.isMember(SGXRAClientErrMsg::sk_LabelErrMsg) && SGXRAClientRoot[SGXRAClientErrMsg::sk_LabelErrMsg].isString())
@@ -136,6 +147,9 @@ Json::Value & SGXRAClientErrMsg::GetJsonMsg(Json::Value & outJson) const
 
 	return parent;
 }
+
+constexpr char SGXRASPErrMsg::sk_LabelErrMsg[];
+constexpr char SGXRASPErrMsg::sk_ValueType[];
 
 std::string SGXRASPErrMsg::ParseErrorMsg(const Json::Value & SGXRASPRoot)
 {

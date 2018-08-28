@@ -7,6 +7,9 @@
 #include "../../MessageException.h"
 #include "../../../common/DataCoding.h"
 
+constexpr char SGXRAMessage3::sk_LabelData[];
+constexpr char SGXRAMessage3::sk_ValueType[];
+
 std::vector<uint8_t> SGXRAMessage3::ParseMsg3Data(const Json::Value & SGXRASPRoot)
 {
 	if (SGXRASPRoot.isMember(SGXRAMessage3::sk_LabelData) && SGXRASPRoot[SGXRAMessage3::sk_LabelData].isString())
