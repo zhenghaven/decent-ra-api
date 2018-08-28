@@ -19,8 +19,8 @@ Server::~Server()
 	//delete m_RAServerAcc;
 }
 
-std::unique_ptr<Connection> Server::AcceptConnection(size_t bufferSize)
+std::unique_ptr<Connection> Server::AcceptConnection()
 {
-	std::unique_ptr<Connection> connection(std::make_unique<Connection>(m_serverIO, *m_serverAcc, bufferSize));
+	std::unique_ptr<Connection> connection(std::make_unique<Connection>(m_serverIO, *m_serverAcc));
 	return std::move(connection);
 }

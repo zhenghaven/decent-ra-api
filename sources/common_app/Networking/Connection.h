@@ -30,8 +30,8 @@ class Connection
 {
 public:
 	Connection() = delete;
-	Connection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor& acceptor, size_t bufferSize = 5000U);
-	Connection(uint32_t ipAddr, uint16_t portNum, size_t bufferSize = 5000U);
+	Connection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor& acceptor);
+	Connection(uint32_t ipAddr, uint16_t portNum);
 	~Connection();
 
 	virtual size_t Send(const Messages& msg);
@@ -52,6 +52,4 @@ public:
 private:
 	std::shared_ptr<boost::asio::io_service> m_ioService;
 	std::unique_ptr<boost::asio::ip::tcp::socket> m_socket;
-
-	std::string m_buffer;
 };

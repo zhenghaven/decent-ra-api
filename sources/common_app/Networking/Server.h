@@ -28,7 +28,7 @@ public:
 	virtual ~Server();
 	
 	///Warning: Blocking method! This method will be blocked until a connection is accepted.
-	virtual std::unique_ptr<Connection> AcceptConnection(size_t bufferSize = 5000U);
+	virtual std::unique_ptr<Connection> AcceptConnection();
 
 protected:
 	std::shared_ptr<boost::asio::io_service> m_serverIO;
