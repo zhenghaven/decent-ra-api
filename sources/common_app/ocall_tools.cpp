@@ -1,5 +1,3 @@
-#pragma once
-
 #include <cstdio>
 
 #include "Common.h"
@@ -18,8 +16,7 @@ extern "C" void ocall_log_w(const char *file, int line, const char *str)
 	SetConsoleColor(ConsoleColors::Yellow, ConsoleColors::Default);
 	printf("File:%s\nline:%d\n", file, line);
 	printf(" W: ");
-	printf(str);
-	printf("\n");
+	printf("%s\n", str);
 	SetConsoleColor(ConsoleColors::Default, ConsoleColors::Default);
 }
 
@@ -28,8 +25,7 @@ extern "C" void ocall_log_e(const char *file, int line, const char *str)
 	SetConsoleColor(ConsoleColors::Red, ConsoleColors::Default);
 	printf("File:%s\nline:%d\n", file, line);
 	printf(" E: ");
-	printf(str);
-	printf("\n");
+	printf("%s\n", str);
 	SetConsoleColor(ConsoleColors::Default, ConsoleColors::Default);
 	assert(false);
 }

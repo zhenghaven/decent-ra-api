@@ -52,7 +52,7 @@ size_t Connection::Send(const Json::Value & msg)
 size_t Connection::Send(const std::vector<uint8_t>& msg)
 {
 	size_t res = m_socket->send(boost::asio::buffer(msg.data(), msg.size()));
-	LOGI("Sent Binary with size %llu\n", msg.size());
+	LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(msg.size()));
 	return res;
 }
 
@@ -80,7 +80,7 @@ size_t Connection::Receive(std::vector<uint8_t>& msg)
 	m_buffer[actualSize] = '\0';
 	msg.resize(actualSize);
 	std::memcpy(&msg[0], m_buffer.data(), actualSize);
-	LOGI("Recv Binary with size %llu\n", actualSize);
+	LOGI("Recv Binary with size %llu\n", static_cast<unsigned long long>(actualSize));
 	return actualSize;
 }
 

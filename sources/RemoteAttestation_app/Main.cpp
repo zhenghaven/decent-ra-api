@@ -71,7 +71,7 @@ int main(int argc, char ** argv)
 
 	sgx_device_status_t deviceStatusRes;
 	sgx_status_t deviceStatusResErr = GetSGXDeviceStatus(deviceStatusRes);
-	ASSERT(deviceStatusResErr == SGX_SUCCESS, GetSGXErrorMessage(deviceStatusResErr).c_str());
+	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", GetSGXErrorMessage(deviceStatusResErr).c_str());
 
 	IASConnector iasConnector;
 

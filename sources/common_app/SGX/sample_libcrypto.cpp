@@ -305,7 +305,7 @@ sgx_status_t sgx_rijndael128_cmac_msg(const sgx_cmac_128bit_key_t *p_key, const 
 
 	if (outCmacLen != SGX_CMAC_MAC_SIZE)
 	{
-		LOGW("CMAC Tag size doesn't match! It should be %d, but the actual size is %llu.", SGX_CMAC_MAC_SIZE, outCmacLen);
+		LOGW("CMAC Tag size doesn't match! It should be %d, but the actual size is %llu.", SGX_CMAC_MAC_SIZE, static_cast<unsigned long long>(outCmacLen));
 		return SGX_ERROR_UNEXPECTED;
 	}
 
