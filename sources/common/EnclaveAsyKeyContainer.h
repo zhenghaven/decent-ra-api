@@ -2,6 +2,7 @@
 
 #include <sgx_tcrypto.h>
 #include <memory>
+#include <cstring>
 
 struct PrivateKeyWrap
 {

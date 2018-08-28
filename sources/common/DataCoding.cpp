@@ -4,7 +4,8 @@
 # define NOMINMAX
 #endif
 
-#include <cstdlib>
+#include <algorithm>
+#include <cstring>
 #include <vector>
 
 #include <sgx_tcrypto.h>
@@ -16,7 +17,7 @@
 std::string SerializePubKey(const sgx_ec256_public_t & pubKey)
 {
 	std::vector<uint8_t> buffer(sizeof(sgx_ec256_public_t), 0);
-	std::memcpy(&buffer[0], &pubKey, sizeof(sgx_ec256_public_t));
+	memcpy(buffer.data(), &pubKey, sizeof(sgx_ec256_public_t));
 
 	return cppcodec::base64_rfc4648::encode(buffer);
 }
@@ -26,7 +27,7 @@ void DeserializePubKey(const std::string & inPubKeyStr, sgx_ec256_public_t & out
 	std::vector<uint8_t> buffer(sizeof(sgx_ec256_public_t), 0);
 	cppcodec::base64_rfc4648::decode(buffer, inPubKeyStr);
 
-	std::memcpy(&outPubKey, buffer.data(), sizeof(sgx_ec256_public_t));
+	memcpy(&outPubKey, buffer.data(), sizeof(sgx_ec256_public_t));
 }
 
 std::string SerializeStruct(const void * ptr, size_t size)
@@ -38,8 +39,9 @@ void DeserializeStruct(void* bufferPtr, size_t bufferSize, const std::string& in
 {
 	std::vector<uint8_t> buffer(bufferSize, 0);
 	cppcodec::base64_rfc4648::decode(buffer, inStr);
-
-	std::memcpy(bufferPtr, buffer.data(), bufferSize <= buffer.size() ? bufferSize : buffer.size());
+	
+	const size_t neededSize = bufferSize <= buffer.size() ? bufferSize : buffer.size();
+	memcpy(bufferPtr, buffer.data(), neededSize);
 }
 
 void DeserializeStruct(std::vector<uint8_t>& outData, const std::string& inStr)

@@ -1,6 +1,7 @@
 #include "AESGCMCommLayer.h"
 
-#include <cstdlib>
+#include <algorithm>
+#include <iterator>
 
 #include <sgx_tcrypto.h>
 #include <sgx_trts.h>
@@ -20,14 +21,14 @@ AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], co
 	m_senderID(senderID),
 	m_sendFunc(sendFunc)
 {
-	std::memcpy(m_sk.data(), &sKey[0], AES_GCM_128BIT_KEY_SIZE);
+	std::copy(sKey, sKey + AES_GCM_128BIT_KEY_SIZE, m_sk.begin());
 }
 
 AESGCMCommLayer::AESGCMCommLayer(const AesGcm128bKeyType & sKey, const std::string& senderID, SendFunctionType sendFunc) :
 	m_senderID(senderID),
 	m_sendFunc(sendFunc)
 {
-	std::memcpy(m_sk.data(), sKey.data(), AES_GCM_128BIT_KEY_SIZE);
+	std::copy(sKey.begin(), sKey.end(), m_sk.begin());
 }
 
 AESGCMCommLayer::AESGCMCommLayer(AesGcm128bKeyType & sKey, const std::string& senderID, SendFunctionType sendFunc) :

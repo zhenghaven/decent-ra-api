@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <iterator>
+#include <algorithm>
 
 #include <openssl/cmac.h>
 #include <openssl/sha.h>
