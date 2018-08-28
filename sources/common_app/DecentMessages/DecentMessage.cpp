@@ -20,10 +20,13 @@ DecentMessage::DecentMessage(const std::string & senderID) :
 {
 }
 
-DecentMessage::DecentMessage(const Json::Value & msg) :
-	Messages(msg)
+DecentMessage::DecentMessage(const Json::Value & msg, const char* expectedType) :
+	Messages(msg, VALUE_CAT)
 {
-	ParseType(msg[Messages::LABEL_ROOT]);
+	if (expectedType && ParseType(msg[Messages::LABEL_ROOT]) != expectedType)
+	{
+		throw MessageParseException();
+	}
 }
 
 DecentMessage::~DecentMessage()
@@ -61,7 +64,7 @@ DecentErrMsg::DecentErrMsg(const std::string & senderID, const std::string & err
 }
 
 DecentErrMsg::DecentErrMsg(const Json::Value & msg) :
-	DecentMessage(msg),
+	DecentMessage(msg, VALUE_TYPE),
 	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
 {
 }
@@ -96,7 +99,7 @@ DecentRAHandshake::DecentRAHandshake(const std::string & senderID) :
 }
 
 DecentRAHandshake::DecentRAHandshake(const Json::Value & msg) :
-	DecentMessage(msg)
+	DecentMessage(msg, VALUE_TYPE)
 {
 }
 
@@ -134,7 +137,7 @@ DecentRAHandshakeAck::DecentRAHandshakeAck(const std::string & senderID, const s
 }
 
 DecentRAHandshakeAck::DecentRAHandshakeAck(const Json::Value & msg) :
-	DecentMessage(msg),
+	DecentMessage(msg, VALUE_TYPE),
 	m_selfRAReport(ParseSelfRAReport(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
 {
 }
@@ -169,7 +172,7 @@ DecentProtocolKeyReq::DecentProtocolKeyReq(const std::string & senderID) :
 }
 
 DecentProtocolKeyReq::DecentProtocolKeyReq(const Json::Value & msg) :
-	DecentMessage(msg)
+	DecentMessage(msg, VALUE_TYPE)
 {
 }
 
@@ -207,7 +210,7 @@ DecentTrustedMessage::DecentTrustedMessage(const std::string & senderID, const s
 }
 
 DecentTrustedMessage::DecentTrustedMessage(const Json::Value & msg) :
-	DecentMessage(msg),
+	DecentMessage(msg, VALUE_TYPE),
 	m_trustedMsg(ParseTrustedMsg(msg[Messages::LABEL_ROOT][DecentMessage::LABEL_ROOT]))
 {
 }

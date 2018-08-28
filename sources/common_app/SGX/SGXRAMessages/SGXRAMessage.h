@@ -20,7 +20,7 @@ public:
 public:
 	SGXRAClientMessage() = delete;
 	SGXRAClientMessage(const std::string& senderID);
-	SGXRAClientMessage(const Json::Value& msg);
+	SGXRAClientMessage(const Json::Value& msg, const char* expectedType);
 	virtual ~SGXRAClientMessage();
 
 	virtual std::string GetMessageCategoryStr() const override;
@@ -46,7 +46,7 @@ public:
 public:
 	SGXRASPMessage() = delete;
 	SGXRASPMessage(const std::string& senderID);
-	SGXRASPMessage(const Json::Value& msg);
+	SGXRASPMessage(const Json::Value& msg, const char* expectedType);
 	virtual ~SGXRASPMessage();
 
 	virtual std::string GetMessageCategoryStr() const override;

@@ -28,9 +28,13 @@ Messages::Messages(const std::string& senderID) :
 	m_senderID(senderID)
 {}
 
-Messages::Messages(const Json::Value& msg) :
+Messages::Messages(const Json::Value& msg, const char* expectedCat) :
 	m_senderID(ParseSenderID(msg))
 {
+	if (expectedCat && ParseCat(msg) != expectedCat)
+	{
+		throw MessageParseException();
+	}
 }
 
 const std::string & Messages::GetSenderID() const

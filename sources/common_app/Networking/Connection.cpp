@@ -8,6 +8,7 @@
 #include <json/json.h>
 
 #include "../Common.h"
+#include "../Messages.h"
 #include "../../common/JsonTools.h"
 
 using namespace boost::asio;
@@ -29,6 +30,11 @@ Connection::Connection(uint32_t ipAddr, uint16_t portNum, size_t bufferSize) :
 
 Connection::~Connection()
 {
+}
+
+size_t Connection::Send(const Messages & msg)
+{
+	return Send(msg.ToJsonString());
 }
 
 size_t Connection::Send(const std::string & msg)

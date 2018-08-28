@@ -101,6 +101,9 @@ if(MSVC)
 	set(RELEASE_OPTIONS /MT /Ox /fp:fast /GL /GR- /DNDEBUG)
 	
 	set(ENCLAVE_OPTIONS "/NODEFAULTLIB /NOENTRY")
+	
+	set(COMMON_APP_DEFINES WIN32_LEAN_AND_MEAN CURL_STATICLIB)
+	set(COMMON_ENCLAVE_DEFINES ENCLAVE_CODE)
 #elseif(APPLE)
 #	set(COMMON_OPTIONS )
 #	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
@@ -110,6 +113,9 @@ else()
 	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
 	set(SIMULATE_OPTIONS -DSIMULATING_ENCLAVE)
 	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
+	
+	set(COMMON_APP_DEFINES CURL_STATICLIB)
+	set(COMMON_ENCLAVE_DEFINES ENCLAVE_CODE)
 endif()
 
 set(DEBUG_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
@@ -207,6 +213,22 @@ set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/enclaveRapidJson/includ
 set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 set(CURL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/curl/include)
 
+set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS} 
+							 ${INTEL_SGX_SDK_INCLUDE_PATH} 
+							 ${TCLAP_INCLUDE_DIR} 
+							 ${CURL_INCLUDE_DIR} 
+							 ${CPPCODEC_INCLUDE_DIR} 
+#							 ${Boost_INCLUDE_DIRS} 
+							 )
+
+set(COMMON_ENCLAVE_INCLUDE_DIRS ${INTEL_SGX_SDK_INCLUDE_PATH} 
+							 ${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc 
+							 ${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME} 
+							 ${INTEL_SGX_SSL_INCLUDE_PATH}
+							 ${CPPCODEC_INCLUDE_DIR}
+							 ${RAPIDJSON_INCLUDE_DIR}
+							 )
+
 #==========================================================
 #   Add files
 #==========================================================
@@ -220,7 +242,8 @@ file(GLOB_RECURSE SOURCES_COMMON_ENCLAVE ${CMAKE_CURRENT_LIST_DIR}/sources/commo
 file(GLOB_RECURSE SOURCES_COMMON_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.edl)
 
 # LibTest_App Files:
-file(GLOB_RECURSE SOURCES_LibTest_App ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app/*.[ch]*)
+set(SOURCESDIR_LibTest_App ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app)
+file(GLOB_RECURSE SOURCES_LibTest_App ${SOURCESDIR_LibTest_App}/*.[ch]*)
 
 # RemoteAttestation Files:
 set(SOURCEDIR_RemoteAttestation_App ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app)
@@ -267,18 +290,10 @@ endif()
 ### LibTest_App
 ###########################################################
 add_executable(LibTest_App ${SOURCES_COMMON} ${SOURCES_COMMON_APP} ${SOURCES_LibTest_App})
-target_include_directories(LibTest_App 
-							PRIVATE ${JSONCPP_INCLUDE_DIRS} 
-							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
-							PRIVATE ${Boost_INCLUDE_DIRS} 
-							PRIVATE ${TCLAP_INCLUDE_DIR}
-							PRIVATE ${CURL_INCLUDE_DIR}
-							PRIVATE ${CPPCODEC_INCLUDE_DIR}
-							PRIVATE ${RAPIDJSON_INCLUDE_DIR})
+target_include_directories(LibTest_App PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
+							 ${SOURCESDIR_LibTest_App})
 
-if(MSVC)
-	target_compile_definitions(LibTest_App PRIVATE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
-endif()
+target_compile_definitions(LibTest_App PRIVATE ${COMMON_APP_DEFINES})
 
 target_link_libraries(LibTest_App 
 					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
@@ -315,17 +330,10 @@ endif()
 
 add_library(RemoteAttestation_Enclave SHARED ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_RemoteAttestation_Enclave} ${SOURCES_RemoteAttestation_EDL})
 
-target_compile_definitions(RemoteAttestation_Enclave PRIVATE ENCLAVE_CODE)
+target_compile_definitions(RemoteAttestation_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 
-target_include_directories(RemoteAttestation_Enclave BEFORE 
-							PRIVATE ${SOURCEDIR_RemoteAttestation_Enclave} 
-							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
-							PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc" 
-							PRIVATE "${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME}" 
-							PRIVATE ${INTEL_SGX_SSL_INCLUDE_PATH}
-							PRIVATE ${CPPCODEC_INCLUDE_DIR}
-							PRIVATE ${RAPIDJSON_INCLUDE_DIR}
-							)
+target_include_directories(RemoteAttestation_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS} 
+							 ${SOURCEDIR_RemoteAttestation_Enclave})
 
 set_target_properties(RemoteAttestation_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}")
 
@@ -374,20 +382,10 @@ target_link_libraries(RemoteAttestation_Enclave
 
 add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
 target_include_directories(RemoteAttestation_App 
-							PRIVATE ${SOURCEDIR_RemoteAttestation_App} 
-							PRIVATE ${JSONCPP_INCLUDE_DIRS} 
-							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
-							PRIVATE ${Boost_INCLUDE_DIRS} 
-							PRIVATE ${TCLAP_INCLUDE_DIR}
-							PRIVATE ${CURL_INCLUDE_DIR}
-							PRIVATE ${CPPCODEC_INCLUDE_DIR}
-							PRIVATE ${RAPIDJSON_INCLUDE_DIR})
+							PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
+							 ${SOURCEDIR_RemoteAttestation_App})
 
-if(MSVC)
-	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
-else()
-	target_compile_definitions(RemoteAttestation_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE CURL_STATICLIB)
-endif()
+target_compile_definitions(RemoteAttestation_App PRIVATE ${COMMON_APP_DEFINES} ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE)
 
 add_custom_command(TARGET RemoteAttestation_App
 	PRE_BUILD
@@ -422,21 +420,10 @@ target_link_libraries(RemoteAttestation_App
 ###########################################################
 
 add_executable(RemoteAttestationR_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
-target_include_directories(RemoteAttestationR_App 
-							PRIVATE ${SOURCEDIR_RemoteAttestation_App} 
-							PRIVATE ${JSONCPP_INCLUDE_DIRS} 
-							PRIVATE ${INTEL_SGX_SDK_INCLUDE_PATH} 
-							PRIVATE ${Boost_INCLUDE_DIRS} 
-							PRIVATE ${TCLAP_INCLUDE_DIR}
-							PRIVATE ${CURL_INCLUDE_DIR}
-							PRIVATE ${CPPCODEC_INCLUDE_DIR}
-							PRIVATE ${RAPIDJSON_INCLUDE_DIR})
+target_include_directories(RemoteAttestationR_App PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
+							 ${SOURCEDIR_RemoteAttestation_App})
 
-if(MSVC)
-	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE WIN32_LEAN_AND_MEAN CURL_STATICLIB)
-else()
-	target_compile_definitions(RemoteAttestationR_App PRIVATE ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE CURL_STATICLIB)
-endif()
+target_compile_definitions(RemoteAttestationR_App PRIVATE ${COMMON_APP_DEFINES} ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE)
 
 add_custom_command(TARGET RemoteAttestationR_App
 	PRE_BUILD

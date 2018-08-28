@@ -15,7 +15,7 @@ public:
 public:
 	DecentMessage() = delete;
 	DecentMessage(const std::string& senderID);
-	DecentMessage(const Json::Value& msg);
+	DecentMessage(const Json::Value& msg, const char* expectedType);
 	~DecentMessage();
 
 	virtual std::string GetMessageCategoryStr() const override;

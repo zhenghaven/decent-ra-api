@@ -111,34 +111,35 @@ bool DecentRASession::ProcessClientSideRA()
 
 	bool res = true;
 
-	std::shared_ptr<ClientRASession> clientSession = m_hwEnclave.GetRAClientSession(m_connection);
-	res = clientSession->ProcessClientSideRA();
-	clientSession->SwapConnection(m_connection);
-
-	if (!res ||
-		!m_decentEnclave.ToDecentNode(k_remoteSideID, false))
-	{
-		return false;
-	}
-
-	DecentProtocolKeyReq keyReq(k_senderID);
-	m_connection->Send(keyReq.ToJsonString());
-
-	Json::Value trustedMsgJson;
-	m_connection->Receive(trustedMsgJson);
-
 	try
 	{
+		std::shared_ptr<ClientRASession> clientSession = m_hwEnclave.GetRAClientSession(m_connection);
+		res = clientSession->ProcessClientSideRA();
+		clientSession->SwapConnection(m_connection);
+
+		if (!res ||
+			!m_decentEnclave.ToDecentNode(k_remoteSideID, false))
+		{
+			return false;
+		}
+
+		DecentProtocolKeyReq keyReq(k_senderID);
+		m_connection->Send(keyReq.ToJsonString());
+
+		Json::Value trustedMsgJson;
+		m_connection->Receive(trustedMsgJson);
+
 		DecentTrustedMessage trustedMsg(trustedMsgJson);
 		m_decentEnclave.ProcessDecentTrustedMsg(k_remoteSideID, m_connection, trustedMsg.GetTrustedMsg());
+
 		return false;
 	}
 	catch (const MessageParseException&)
 	{
+		DecentErrMsg errMsg(k_senderID, "Received unexpected message! Make sure you are following the protocol.");
+		m_connection->Send(errMsg);
 		return false;
 	}
-
-	return false;
 }
 
 bool DecentRASession::ProcessServerSideRA()
@@ -150,30 +151,30 @@ bool DecentRASession::ProcessServerSideRA()
 
 	bool res = true;
 
-	std::shared_ptr<ServiceProviderRASession> spSession = m_hwEnclave.GetRASPSession(m_connection);
-	res = spSession->ProcessServerSideRA();
-	spSession->SwapConnection(m_connection);
-
-	if (!res ||
-		!m_decentEnclave.ToDecentNode(k_remoteSideID, true))
-	{
-		return false;
-	}
-
-	Json::Value keyReqJson;
-	m_connection->Receive(keyReqJson);
-
 	try
 	{
+		std::shared_ptr<ServiceProviderRASession> spSession = m_hwEnclave.GetRASPSession(m_connection);
+		res = spSession->ProcessServerSideRA();
+		spSession->SwapConnection(m_connection);
+
+		if (!res ||
+			!m_decentEnclave.ToDecentNode(k_remoteSideID, true))
+		{
+			return false;
+		}
+
+		Json::Value keyReqJson;
+		m_connection->Receive(keyReqJson);
 		DecentProtocolKeyReq keyReq(keyReqJson);
 
 		m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
-		return false;
-	}
-	catch (const MessageParseException&)
-	{
-		return false;
-	}
 
-	return false;
+		return false;
+	}
+	catch (const std::exception&)
+	{
+		DecentErrMsg errMsg(k_senderID, "Received unexpected message! Make sure you are following the protocol.");
+		m_connection->Send(errMsg);
+		return false;
+	}
 }

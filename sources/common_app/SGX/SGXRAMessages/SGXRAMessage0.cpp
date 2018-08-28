@@ -20,7 +20,7 @@ SGXRAMessage0Send::SGXRAMessage0Send(const std::string& senderID, uint32_t exGrp
 }
 
 SGXRAMessage0Send::SGXRAMessage0Send(const Json::Value& msg) :
-	SGXRASPMessage(msg),
+	SGXRASPMessage(msg, VALUE_TYPE),
 	m_exGrpID(ParseExGroupID(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
 {
 }
@@ -65,7 +65,7 @@ SGXRAMessage0Resp::SGXRAMessage0Resp(const std::string& senderID, const std::str
 }
 
 SGXRAMessage0Resp::SGXRAMessage0Resp(const Json::Value& msg) :
-	SGXRAClientMessage(msg),
+	SGXRAClientMessage(msg, VALUE_TYPE),
 	m_pubKey(ParsePublicKey(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
 {
 }

@@ -8,16 +8,8 @@
 #ifdef ENCLAVE_CODE
 #include <rapidjson/document.h>
 #include <Enclave_t.h>
-#define JSON_HAS_MEMBER HasMember
-#define JSON_IS_OBJECT IsObject
-#define JSON_IS_STRING IsString
-#define JSON_AS_STRING GetString
 #else
 #include <json/json.h>
-#define JSON_HAS_MEMBER isMember
-#define JSON_IS_OBJECT isObject
-#define JSON_IS_STRING isString
-#define JSON_AS_STRING asString
 #endif // ENCLAVE_CODE
 
 #include "DataCoding.h"

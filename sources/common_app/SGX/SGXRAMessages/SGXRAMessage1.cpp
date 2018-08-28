@@ -24,7 +24,7 @@ SGXRAMessage1::SGXRAMessage1(const std::string& senderID, const sgx_ra_msg1_t& m
 }
 
 SGXRAMessage1::SGXRAMessage1(const Json::Value& msg) :
-	SGXRASPMessage(msg),
+	SGXRASPMessage(msg, VALUE_TYPE),
 	m_msg1Data(ParseMsg1Data(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
 {
 }

@@ -12,10 +12,9 @@
 #include <sgx_quote.h>
 #include <sgx_key_exchange.h>
 
-#include <rapidjson/document.h>
-
 #include <cppcodec/base64_rfc4648.hpp>
 
+#include "../../common/JsonTools.h"
 #include "../../common/CommonTool.h"
 #include "../../common/DataCoding.h"
 #include "../../common/OpenSSLTools.h"
@@ -26,6 +25,12 @@
 #include "../../common/SGX/sgx_crypto_tools.h"
 #include "../../common/SGX/sgx_constants.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
+
+#ifdef ENCLAVE_CODE
+#include <rapidjson/document.h>
+#else
+#include <json/json.h>
+#endif
 
 enum class ClientRAState
 {
@@ -592,14 +597,14 @@ bool SGXRAEnclave::VerifyIASReport(ias_quote_status_t* outStatus,const std::stri
 	COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", "Simulated!");
 #endif // !SIMULATING_ENCLAVE
 
-	rapidjson::Document jsonDoc;
-	jsonDoc.Parse(iasReport.c_str());
-	*outStatus = ParseIASQuoteStatus(jsonDoc["isvEnclaveQuoteStatus"].GetString());
+	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
+	ParseStr2Json(jsonDoc, iasReport);
+	*outStatus = ParseIASQuoteStatus(jsonDoc["isvEnclaveQuoteStatus"].JSON_AS_CSTRING());
 	//COMMON_PRINTF("IAS Report Verify Result:           %s \n", quoteStatus == ias_quote_status_t::IAS_QUOTE_OK ? "Success!" : "Failed!");
 
 	if (nonce)
 	{
-		bool isNonceMatch = (std::memcmp(jsonDoc["nonce"].GetString(), nonce, std::strlen(nonce)) == 0);
+		bool isNonceMatch = (std::memcmp(jsonDoc["nonce"].JSON_AS_CSTRING(), nonce, std::strlen(nonce)) == 0);
 		COMMON_PRINTF("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
 		if (!isNonceMatch)
 		{
@@ -607,7 +612,7 @@ bool SGXRAEnclave::VerifyIASReport(ias_quote_status_t* outStatus,const std::stri
 		}
 	}
 
-	std::string quoteBodyB64 = jsonDoc["isvEnclaveQuoteBody"].GetString();
+	std::string quoteBodyB64 = jsonDoc["isvEnclaveQuoteBody"].JSON_AS_STRING();
 	sgx_quote_t quoteBody;
 	DeserializeStruct(quoteBody, quoteBodyB64);
 

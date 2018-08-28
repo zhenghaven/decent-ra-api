@@ -1,3 +1,6 @@
+#include "../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
+
 #include "SGXDecentEnclave.h"
 
 #include <iostream>
@@ -254,3 +257,5 @@ extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* se
 
 	return (sentLen == std::strlen(msg)) ? 1 : 0;
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

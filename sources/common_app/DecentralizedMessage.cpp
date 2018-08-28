@@ -20,10 +20,13 @@ DecentralizedMessage::DecentralizedMessage(const std::string & senderID) :
 {
 }
 
-DecentralizedMessage::DecentralizedMessage(const Json::Value & msg) :
-	Messages(msg)
+DecentralizedMessage::DecentralizedMessage(const Json::Value & msg, const char* expectedType) :
+	Messages(msg, VALUE_CAT)
 {
-	ParseType(msg[Messages::LABEL_ROOT]);
+	if (expectedType && ParseType(msg[Messages::LABEL_ROOT]) != expectedType)
+	{
+		throw MessageParseException();
+	}
 }
 
 DecentralizedMessage::~DecentralizedMessage()
@@ -61,7 +64,7 @@ DecentralizedErrMsg::DecentralizedErrMsg(const std::string & senderID, const std
 }
 
 DecentralizedErrMsg::DecentralizedErrMsg(const Json::Value & msg) :
-	DecentralizedMessage(msg),
+	DecentralizedMessage(msg, VALUE_TYPE),
 	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][DecentralizedMessage::LABEL_ROOT]))
 {
 }
@@ -96,7 +99,7 @@ DecentralizedRAHandshake::DecentralizedRAHandshake(const std::string & senderID)
 }
 
 DecentralizedRAHandshake::DecentralizedRAHandshake(const Json::Value & msg) :
-	DecentralizedMessage(msg)
+	DecentralizedMessage(msg, VALUE_TYPE)
 {
 }
 
@@ -124,7 +127,7 @@ DecentralizedRAHandshakeAck::DecentralizedRAHandshakeAck(const std::string & sen
 }
 
 DecentralizedRAHandshakeAck::DecentralizedRAHandshakeAck(const Json::Value & msg) :
-	DecentralizedMessage(msg)
+	DecentralizedMessage(msg, VALUE_TYPE)
 {
 }
 
@@ -152,7 +155,7 @@ DecentralizedReverseReq::DecentralizedReverseReq(const std::string & senderID) :
 }
 
 DecentralizedReverseReq::DecentralizedReverseReq(const Json::Value & msg) :
-	DecentralizedMessage(msg)
+	DecentralizedMessage(msg, VALUE_TYPE)
 {
 }
 

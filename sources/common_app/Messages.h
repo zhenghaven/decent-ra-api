@@ -20,7 +20,7 @@ public:
 public:
 	Messages() = delete;
 	Messages(const std::string& senderID);
-	Messages(const Json::Value& msg);
+	Messages(const Json::Value& msg, const char* expectedCat);
 
 	virtual ~Messages() {}
 

@@ -1,3 +1,6 @@
+#include "../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "SGXEnclave.h"
 
 #include <algorithm>
@@ -229,3 +232,5 @@ bool SGXEnclave::UpdateToken(const fs::path& tokenPath, const std::vector<uint8_
 	bool writeRes = tokenFile.WriteBlock(inToken);
 	return writeRes;
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

@@ -15,7 +15,7 @@ public:
 public:
 	DecentralizedMessage() = delete;
 	DecentralizedMessage(const std::string& senderID);
-	DecentralizedMessage(const Json::Value& msg);
+	DecentralizedMessage(const Json::Value& msg, const char* expectedType);
 	virtual ~DecentralizedMessage();
 
 	virtual std::string GetMessageCategoryStr() const override;

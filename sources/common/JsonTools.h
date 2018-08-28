@@ -5,9 +5,21 @@
 #ifdef ENCLAVE_CODE
 #define JSON_EDITION rapidjson
 #define JSON_DOCUMENT_TYPE Document
+
+#define JSON_HAS_MEMBER HasMember
+#define JSON_IS_OBJECT IsObject
+#define JSON_IS_STRING IsString
+#define JSON_AS_STRING GetString
+#define JSON_AS_CSTRING JSON_AS_STRING
 #else
 #define JSON_EDITION Json
 #define JSON_DOCUMENT_TYPE Value
+
+#define JSON_HAS_MEMBER isMember
+#define JSON_IS_OBJECT isObject
+#define JSON_IS_STRING isString
+#define JSON_AS_STRING asString
+#define JSON_AS_CSTRING asCString
 #endif
 
 #ifdef ENCLAVE_CODE

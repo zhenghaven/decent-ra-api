@@ -24,6 +24,8 @@ namespace Json
 	class Value;
 }
 
+class Messages;
+
 class Connection
 {
 public:
@@ -32,6 +34,7 @@ public:
 	Connection(uint32_t ipAddr, uint16_t portNum, size_t bufferSize = 5000U);
 	~Connection();
 
+	virtual size_t Send(const Messages& msg);
 	virtual size_t Send(const std::string& msg);
 	virtual size_t Send(const Json::Value& msg);
 	virtual size_t Send(const std::vector<uint8_t>& msg);

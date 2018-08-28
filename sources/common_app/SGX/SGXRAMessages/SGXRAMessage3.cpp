@@ -38,7 +38,7 @@ SGXRAMessage3::SGXRAMessage3(const std::string& senderID, const std::vector<uint
 }
 
 SGXRAMessage3::SGXRAMessage3(const Json::Value& msg) :
-	SGXRASPMessage(msg),
+	SGXRASPMessage(msg, VALUE_TYPE),
 	m_msg3Data(ParseMsg3Data(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
 {
 }

@@ -1,3 +1,6 @@
+#include "../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENTRALIZED_ENCLAVE_INTERNAL
+
 #include "SGXEnclaveServiceProvider.h"
 
 #include <Enclave_u.h>
@@ -120,3 +123,5 @@ bool SGXEnclaveServiceProvider::ProcessSmartMessage(const std::string & category
 		return SGXEnclave::ProcessSmartMessage(category, jsonMsg, connection);
 	}
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENTRALIZED_ENCLAVE_INTERNAL

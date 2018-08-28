@@ -20,10 +20,13 @@ SGXRAClientMessage::SGXRAClientMessage(const std::string & senderID) :
 {
 }
 
-SGXRAClientMessage::SGXRAClientMessage(const Json::Value & msg) :
-	Messages(msg)
+SGXRAClientMessage::SGXRAClientMessage(const Json::Value & msg, const char* expectedType) :
+	Messages(msg, VALUE_CAT)
 {
-	ParseType(msg[Messages::LABEL_ROOT]);
+	if (expectedType && ParseType(msg[Messages::LABEL_ROOT]) != expectedType)
+	{
+		throw MessageParseException();
+	}
 }
 
 SGXRAClientMessage::~SGXRAClientMessage()
@@ -61,10 +64,13 @@ SGXRASPMessage::SGXRASPMessage(const std::string & senderID) :
 {
 }
 
-SGXRASPMessage::SGXRASPMessage(const Json::Value & msg) :
-	Messages(msg)
+SGXRASPMessage::SGXRASPMessage(const Json::Value & msg, const char* expectedType) :
+	Messages(msg, VALUE_CAT)
 {
-	ParseType(msg[Messages::LABEL_ROOT]);
+	if (expectedType && ParseType(msg[Messages::LABEL_ROOT]) != expectedType)
+	{
+		throw MessageParseException();
+	}
 }
 
 SGXRASPMessage::~SGXRASPMessage()
@@ -102,7 +108,7 @@ SGXRAClientErrMsg::SGXRAClientErrMsg(const std::string & senderID, const std::st
 }
 
 SGXRAClientErrMsg::SGXRAClientErrMsg(const Json::Value & msg) :
-	SGXRAClientMessage(msg),
+	SGXRAClientMessage(msg, VALUE_TYPE),
 	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
 {
 }
@@ -147,7 +153,7 @@ SGXRASPErrMsg::SGXRASPErrMsg(const std::string & senderID, const std::string & e
 }
 
 SGXRASPErrMsg::SGXRASPErrMsg(const Json::Value & msg) :
-	SGXRASPMessage(msg),
+	SGXRASPMessage(msg, VALUE_TYPE),
 	m_errStr(ParseErrorMsg(msg[Messages::LABEL_ROOT][SGXRASPMessage::LABEL_ROOT]))
 {
 }

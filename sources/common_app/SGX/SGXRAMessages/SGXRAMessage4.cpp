@@ -39,7 +39,7 @@ SGXRAMessage4::SGXRAMessage4(const std::string& senderID, const sgx_ra_msg4_t& m
 }
 
 SGXRAMessage4::SGXRAMessage4(const Json::Value& msg) :
-	SGXRAClientMessage(msg),
+	SGXRAClientMessage(msg, VALUE_TYPE),
 	m_msg4Data(ParseMsg4Data(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT])),
 	m_signature(ParseMsg4Sign(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
 {

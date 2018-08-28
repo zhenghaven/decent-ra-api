@@ -31,7 +31,7 @@ SGXRAMessage2::SGXRAMessage2(const std::string& senderID, const std::vector<uint
 }
 
 SGXRAMessage2::SGXRAMessage2(const Json::Value& msg) :
-	SGXRAClientMessage(msg),
+	SGXRAClientMessage(msg, VALUE_TYPE),
 	m_msg2Data(ParseMsg2Data(msg[Messages::LABEL_ROOT][SGXRAClientMessage::LABEL_ROOT]))
 {
 }
