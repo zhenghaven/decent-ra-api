@@ -1,4 +1,4 @@
-#include "Connection.h"
+#include "TCPConnection.h"
 
 #include <array>
 
@@ -13,29 +13,29 @@
 
 using namespace boost::asio;
 
-Connection::Connection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor & acceptor) :
+TCPConnection::TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor & acceptor) :
 	m_ioService(ioService),
 	m_socket(std::make_unique<ip::tcp::socket>(acceptor.accept()))
 {
 }
 
-Connection::Connection(uint32_t ipAddr, uint16_t portNum) :
+TCPConnection::TCPConnection(uint32_t ipAddr, uint16_t portNum) :
 	m_ioService(std::make_shared<io_service>()),
 	m_socket(std::make_unique<ip::tcp::socket>(*m_ioService))
 {
 	m_socket->connect(ip::tcp::endpoint(ip::address_v4(ipAddr), portNum));
 }
 
-Connection::~Connection()
+TCPConnection::~TCPConnection()
 {
 }
 
-size_t Connection::Send(const Messages & msg)
+size_t TCPConnection::Send(const Messages & msg)
 {
 	return Send(msg.ToJsonString());
 }
 
-size_t Connection::Send(const std::string & msg)
+size_t TCPConnection::Send(const std::string & msg)
 {
 	uint64_t msgSize = static_cast<unsigned long long>(msg.size());
 	std::array<boost::asio::const_buffer, 2> msgBuf = {
@@ -47,12 +47,12 @@ size_t Connection::Send(const std::string & msg)
 	return res - sizeof(msgBuf);
 }
 
-size_t Connection::Send(const Json::Value & msg)
+size_t TCPConnection::Send(const Json::Value & msg)
 {
-	return Connection::Send(msg.toStyledString());
+	return Send(msg.toStyledString());
 }
 
-size_t Connection::Send(const std::vector<uint8_t>& msg)
+size_t TCPConnection::Send(const std::vector<uint8_t>& msg)
 {
 	uint64_t msgSize = static_cast<unsigned long long>(msg.size());
 	std::array<boost::asio::const_buffer, 2> msgBuf = {
@@ -64,7 +64,7 @@ size_t Connection::Send(const std::vector<uint8_t>& msg)
 	return res - sizeof(msgBuf);
 }
 
-size_t Connection::Receive(std::string & msg)
+size_t TCPConnection::Receive(std::string & msg)
 {
 	uint64_t msgSize = 0;
 	uint64_t receivedSize = 0;
@@ -78,15 +78,15 @@ size_t Connection::Receive(std::string & msg)
 	return receivedSize;
 }
 
-size_t Connection::Receive(Json::Value & msg)
+size_t TCPConnection::Receive(Json::Value & msg)
 {
 	std::string buffer;
-	size_t res = Connection::Receive(buffer);
+	size_t res = Receive(buffer);
 	bool isValid = ParseStr2Json(msg, buffer);
 	return isValid ? res : 0;
 }
 
-size_t Connection::Receive(std::vector<uint8_t>& msg)
+size_t TCPConnection::Receive(std::vector<uint8_t>& msg)
 {
 	uint64_t msgSize = 0;
 	uint64_t receivedSize = 0;
@@ -100,17 +100,17 @@ size_t Connection::Receive(std::vector<uint8_t>& msg)
 	return receivedSize;
 }
 
-uint32_t Connection::GetIPv4Addr() const
+uint32_t TCPConnection::GetIPv4Addr() const
 {
 	return m_socket->remote_endpoint().address().to_v4().to_uint();
 }
 
-uint16_t Connection::GetIPPort() const
+uint16_t TCPConnection::GetIPPort() const
 {
 	return m_socket->remote_endpoint().port();
 }
 
-uint64_t Connection::GetConnectionID() const
+uint64_t TCPConnection::GetConnectionID() const
 {
 	uint64_t res = GetIPv4Addr();
 	res = (res << 32);

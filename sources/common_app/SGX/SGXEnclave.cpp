@@ -13,8 +13,6 @@
 
 #include "../Common.h"
 
-#include "../Networking/Connection.h"
-
 #include "../../common/DataCoding.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 
@@ -23,8 +21,6 @@
 #include "SGXRAMessages/SGXRAMessage.h"
 
 #include <Enclave_u.h>
-
-using namespace boost::asio;
 
 static void CheckFilePath(const fs::path& enclavePath, const fs::path& tokenPath)
 {

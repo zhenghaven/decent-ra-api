@@ -1,26 +1,25 @@
-#include "Server.h"
+#include "TCPServer.h"
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include "Connection.h"
+#include "TCPConnection.h"
 
 using namespace boost::asio;
 
-Server::Server(uint32_t ipAddr, uint16_t portNum) :
+TCPServer::TCPServer(uint32_t ipAddr, uint16_t portNum) :
 	m_serverIO(std::make_shared<io_service>()),
 	m_serverAcc(std::make_unique<ip::tcp::acceptor>(*m_serverIO, ip::tcp::endpoint(ip::address_v4(ipAddr), portNum)))
 {
 }
 
-Server::~Server()
+TCPServer::~TCPServer()
 {
 	//delete m_RAServerIO;
 	//delete m_RAServerAcc;
 }
 
-std::unique_ptr<Connection> Server::AcceptConnection()
+std::unique_ptr<Connection> TCPServer::AcceptConnection()
 {
-	std::unique_ptr<Connection> connection(std::make_unique<Connection>(m_serverIO, *m_serverAcc));
-	return std::move(connection);
+	return std::make_unique<TCPConnection>(m_serverIO, *m_serverAcc);
 }
