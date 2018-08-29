@@ -1,6 +1,7 @@
 #include "Server.h"
 
 #include <string>
+#include <utility>
 
 namespace boost
 {
@@ -24,7 +25,8 @@ public:
 
 	bool IsTerminate() const;
 
-	boost::interprocess::shared_memory_object* Accept();
+	std::pair<boost::interprocess::shared_memory_object*, 
+		boost::interprocess::shared_memory_object*> Accept();
 
 protected:
 	void Terminate();

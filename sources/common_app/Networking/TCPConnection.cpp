@@ -76,7 +76,7 @@ size_t TCPConnection::Receive(std::string & msg)
 	{
 		receivedSize += m_socket->receive(boost::asio::buffer(&msg[receivedSize], (msgSize - receivedSize)));
 	}
-	LOGI("Recv Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(receivedSize), msg.c_str());
+	LOGI("Recv Msg (len=%llu): \n%s\n", receivedSize, msg.c_str());
 	return receivedSize;
 }
 

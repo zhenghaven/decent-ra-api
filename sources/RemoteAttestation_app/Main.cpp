@@ -21,6 +21,8 @@
 
 #include "../common_app/Networking/TCPConnection.h"
 #include "../common_app/Networking/TCPServer.h"
+#include "../common_app/Networking/LocalConnection.h"
+#include "../common_app/Networking/LocalServer.h"
 
 #include "../common_app/SGX/IAS/IASConnector.h"
 
@@ -89,7 +91,8 @@ int main(int argc, char ** argv)
 		std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
 		expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
 
-		TCPServer ser(hostIP, hostPort);
+		//TCPServer ser(hostIP, hostPort);
+		LocalServer ser("TestLocalConnection");
 
 		std::unique_ptr<Connection> connection = ser.AcceptConnection();
 		Json::Value jsonRoot;
@@ -101,7 +104,8 @@ int main(int argc, char ** argv)
 	{
 		ExampleEnclave expEnc(g_sgxSPID, iasConnector, false, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 
-		std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
+		//std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
+		std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
 		DecentRASession::SendHandshakeMessage(connection, expEnc);
 		Json::Value jsonRoot;
 		connection->Receive(jsonRoot);

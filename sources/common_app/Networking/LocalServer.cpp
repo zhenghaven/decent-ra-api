@@ -14,8 +14,14 @@
 
 #include "LocalConnectionStructs.h"
 #include "LocalConnection.h"
+#include "NetworkException.h"
 
 using namespace boost::interprocess;
+
+#define ACCEPTOR_CLOSED_CHECK if (m_connectStruct->m_isClosed)\
+								 {\
+								 throw ConnectionClosedException();\
+								 }
 
 static std::string GenerateSessionId()
 {
@@ -93,30 +99,36 @@ void LocalAcceptor::Terminate()
 	m_connectStruct->m_isClosed = true;
 
 	m_connectStruct->m_idReadySignal.notify_all();
+	m_connectStruct->m_connectSignal.notify_all();
 }
 
-boost::interprocess::shared_memory_object* LocalAcceptor::Accept()
+std::pair<shared_memory_object*, shared_memory_object*> LocalAcceptor::Accept()
 {
 	scoped_lock<interprocess_mutex> lock(m_connectStruct->m_writeLock);
 
-	m_connectStruct->m_connectSignal.wait(lock,
-		[this]() -> bool
-	{
-		return this->IsTerminate();
-	});
+	ACCEPTOR_CLOSED_CHECK;
+	m_connectStruct->m_connectSignal.wait(lock);
+	ACCEPTOR_CLOSED_CHECK;
 
 	std::string uuid = GenerateSessionId();
 
-	shared_memory_object* sharedObjPtr = new shared_memory_object(create_only, uuid.c_str(), read_write);
-	sharedObjPtr->truncate(sizeof(LocalSessionStruct));
+	shared_memory_object* sharedObjPtr_s2c = new shared_memory_object(create_only, (uuid + "S2C").c_str(), read_write);
+	sharedObjPtr_s2c->truncate(sizeof(LocalSessionStruct));
 
-	mapped_region mapReg(*sharedObjPtr, read_write);
-	LocalSessionStruct* dataPtr = new (mapReg.get_address()) LocalSessionStruct;
+	mapped_region mapReg_s2c(*sharedObjPtr_s2c, read_write);
+	LocalSessionStruct* dataPtr_s2c = new (mapReg_s2c.get_address()) LocalSessionStruct;
+
+	shared_memory_object* sharedObjPtr_c2s = new shared_memory_object(create_only, (uuid + "C2S").c_str(), read_write);
+	sharedObjPtr_c2s->truncate(sizeof(LocalSessionStruct));
+
+	mapped_region mapReg_c2s(*sharedObjPtr_c2s, read_write);
+	LocalSessionStruct* dataPtr_c2s = new (mapReg_c2s.get_address()) LocalSessionStruct;
+
 
 	std::memcpy(m_connectStruct->m_msg, uuid.c_str(), sizeof(m_connectStruct->m_msg));
 	m_connectStruct->m_idReadySignal.notify_one();
 
-	return sharedObjPtr;
+	return std::make_pair(sharedObjPtr_c2s, sharedObjPtr_s2c);
 }
 
 LocalServer::LocalServer(const std::string & serverName) :

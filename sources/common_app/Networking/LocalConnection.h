@@ -1,5 +1,7 @@
 #include "Connection.h"
 
+#include <utility>
+
 namespace boost
 {
 	namespace interprocess
@@ -32,14 +34,22 @@ public:
 	virtual size_t Receive(Json::Value& msg) override;
 	virtual size_t Receive(std::vector<uint8_t>& msg) override;
 
+	virtual bool IsTerminate() const;
+
+protected:
+	void Terminate();
+
 private:
 	LocalConnection(const std::string& sessionId);
-	LocalConnection(boost::interprocess::shared_memory_object* sharedObj);
-	LocalConnection(boost::interprocess::shared_memory_object* sharedObj, boost::interprocess::mapped_region* mapReg);
+	LocalConnection(std::pair<boost::interprocess::shared_memory_object*, boost::interprocess::shared_memory_object*> sharedObjs);
+	LocalConnection(boost::interprocess::shared_memory_object* inSharedObj, boost::interprocess::mapped_region* inMapReg, boost::interprocess::shared_memory_object* outSharedObj, boost::interprocess::mapped_region* outMapReg);
 
 private:
 	//const std::string m_sessionName;
-	boost::interprocess::shared_memory_object* m_sharedObj;
-	boost::interprocess::mapped_region* m_mapReg;
-	LocalSessionStruct* const m_dataPtr;
+	boost::interprocess::shared_memory_object* m_inSharedObj;
+	boost::interprocess::mapped_region* m_inMapReg;
+	LocalSessionStruct& m_inData;
+	boost::interprocess::shared_memory_object* m_outSharedObj;
+	boost::interprocess::mapped_region* m_outMapReg;
+	LocalSessionStruct& m_outData;
 };

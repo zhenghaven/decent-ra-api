@@ -28,7 +28,8 @@ struct LocalSessionStruct
 	enum { MSG_SIZE = 65536 };
 
 	boost::interprocess::interprocess_mutex m_msgLock;
-	boost::interprocess::interprocess_condition m_msgSignal;
+	boost::interprocess::interprocess_condition m_emptySignal;
+	boost::interprocess::interprocess_condition m_readySignal;
 
 	uint8_t m_isClosed;
 	uint8_t m_isMsgReady;
