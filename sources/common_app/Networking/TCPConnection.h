@@ -40,6 +40,7 @@ public:
 	virtual size_t Send(const std::string& msg) override;
 	virtual size_t Send(const Json::Value& msg) override;
 	virtual size_t Send(const std::vector<uint8_t>& msg) override;
+	virtual size_t Send(const void* const dataPtr, const size_t size) override;
 
 	virtual size_t Receive(std::string& msg) override;
 	virtual size_t Receive(Json::Value& msg) override;

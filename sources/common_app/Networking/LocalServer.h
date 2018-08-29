@@ -2,38 +2,55 @@
 
 #include <string>
 
-#include <boost/interprocess/managed_shared_memory.hpp>
-
-#include <boost/interprocess/sync/interprocess_mutex.hpp>
-#include <boost/interprocess/sync/interprocess_condition.hpp>
-
-//#include <boost/uuid/uuid.hpp>
-
-struct LocalConnectStruct
+namespace boost
 {
-	enum { UUID_SIZE = 16 };
-	boost::interprocess::interprocess_mutex m_connectLock;
-	boost::interprocess::interprocess_condition m_connectSignal;
-
-	uint8_t m_msg[UUID_SIZE];
+	namespace interprocess
+	{
+		class shared_memory_object;
+		class mapped_region;
+	};
 };
 
-struct LocalSessionStruct
-{
-	enum { MSG_SIZE = 65536 };
-	boost::interprocess::interprocess_mutex m_msgLock;
-	boost::interprocess::interprocess_condition m_msgSignal;
+struct LocalConnectStruct;
 
-	uint8_t m_msg[MSG_SIZE];
+class LocalAcceptor
+{
+public:
+	LocalAcceptor() = delete;
+	LocalAcceptor(const std::string& serverName);
+	LocalAcceptor(const LocalAcceptor& other) = delete; //Copy is not allowed.
+	LocalAcceptor(LocalAcceptor&& other);
+	virtual ~LocalAcceptor();
+
+	bool IsTerminate() const;
+
+	boost::interprocess::shared_memory_object* Accept();
+
+protected:
+	void Terminate();
+
+private:
+	LocalAcceptor(boost::interprocess::shared_memory_object* sharedObj);
+	LocalAcceptor(boost::interprocess::shared_memory_object* sharedObj, boost::interprocess::mapped_region* mapReg);
+
+private:
+	//const std::string m_serverName;
+	boost::interprocess::shared_memory_object* m_sharedObj;
+	boost::interprocess::mapped_region* m_mapReg;
+	LocalConnectStruct* const m_connectStruct;
 };
 
-class LocalServer : public Server
+class LocalServer : virtual public Server
 {
 public:
 	LocalServer() = delete;
 	LocalServer(const std::string& serverName);
+	LocalServer(const LocalServer& other) = delete; //Copy is not allowed.
+	//LocalServer(LocalServer&& other);
 	virtual ~LocalServer();
 
+	virtual std::unique_ptr<Connection> AcceptConnection() override;
+
 private:
-	boost::interprocess::managed_shared_memory
+	LocalAcceptor m_acceptor;
 };

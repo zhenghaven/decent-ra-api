@@ -37,14 +37,9 @@ size_t TCPConnection::Send(const Messages & msg)
 
 size_t TCPConnection::Send(const std::string & msg)
 {
-	uint64_t msgSize = static_cast<unsigned long long>(msg.size());
-	std::array<boost::asio::const_buffer, 2> msgBuf = {
-		boost::asio::buffer(&msgSize, sizeof(msgSize)),
-		boost::asio::buffer(msg.data(), msg.size())
-	};
-	size_t res = m_socket->send(msgBuf);
-	LOGI("Sent Msg: %s\n", msg.c_str());
-	return res - sizeof(msgBuf);
+	size_t sentSize = Send(msg.data(), msg.size());
+	LOGI("Sent Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(sentSize), msg.c_str());
+	return sentSize;
 }
 
 size_t TCPConnection::Send(const Json::Value & msg)
@@ -54,14 +49,21 @@ size_t TCPConnection::Send(const Json::Value & msg)
 
 size_t TCPConnection::Send(const std::vector<uint8_t>& msg)
 {
-	uint64_t msgSize = static_cast<unsigned long long>(msg.size());
+	size_t sentSize = Send(msg.data(), msg.size());
+	LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(sentSize));
+	return sentSize;
+}
+
+size_t TCPConnection::Send(const void * const dataPtr, const size_t size)
+{
+	uint64_t msgSize = static_cast<unsigned long long>(size);
 	std::array<boost::asio::const_buffer, 2> msgBuf = {
 		boost::asio::buffer(&msgSize, sizeof(msgSize)),
-		boost::asio::buffer(msg.data(), msg.size())
+		boost::asio::buffer(dataPtr, size)
 	};
+
 	size_t res = m_socket->send(msgBuf);
-	LOGI("Sent Binary with size %llu\n", msgSize);
-	return res - sizeof(msgBuf);
+	return res > sizeof(msgSize) ? res - sizeof(msgSize) : 0;
 }
 
 size_t TCPConnection::Receive(std::string & msg)
@@ -74,7 +76,7 @@ size_t TCPConnection::Receive(std::string & msg)
 	{
 		receivedSize += m_socket->receive(boost::asio::buffer(&msg[receivedSize], (msgSize - receivedSize)));
 	}
-	LOGI("Recv Msg: %s\n", msg.c_str());
+	LOGI("Recv Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(receivedSize), msg.c_str());
 	return receivedSize;
 }
 
