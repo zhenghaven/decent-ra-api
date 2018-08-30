@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #pragma once
 
 #include "../ClientRASession.h"
@@ -35,3 +38,5 @@ protected:
 	const std::string k_remoteSideID;
 	const sgx_ec256_public_t k_remoteSideSignKey;
 };
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

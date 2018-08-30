@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "../../common/SGX/SGXRAServiceProvider.h"
 
 /**
@@ -51,3 +54,5 @@ extern "C" sgx_status_t ecall_process_ra_msg3(const char* clientID, const uint8_
 {
 	return SGXRAEnclave::ProcessRaMsg3(clientID, inMsg3, msg3Len, iasReport, reportSign, reportCert, outMsg4, outMsg4Sign, outOriRD);
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

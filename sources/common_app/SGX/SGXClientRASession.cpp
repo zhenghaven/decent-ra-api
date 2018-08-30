@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "SGXClientRASession.h"
 
 #include <cstring>
@@ -172,3 +175,5 @@ bool SGXClientRASession::ProcessClientSideRA()
 		return false;
 	}
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #pragma once
 
 #include "../EnclaveBase.h"
@@ -70,3 +73,5 @@ private:
 	const fs::path m_tokenPath;
 
 };
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

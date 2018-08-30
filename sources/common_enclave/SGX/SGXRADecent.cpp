@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
+
 #include "SGXRADecent.h"
 
 #include <string>
@@ -59,14 +62,6 @@ static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, c
 		return false;
 	}
 	return retVal == 1;
-}
-
-static bool IsBothWayAttested(const std::string& id)
-{
-	bool isClientAttested = SGXRAEnclave::IsClientAttested(id);
-	bool isServerAttested = SGXRAEnclave::IsAttestedToServer(id);
-
-	return isClientAttested && isServerAttested;
 }
 
 static inline bool DecentReportDataVerifier(const std::string& pubSignKey, const uint8_t* initData, const std::vector<uint8_t>& inData)
@@ -316,10 +311,6 @@ extern "C" int ecall_to_decent_node(const char* nodeID, int isServer)
 	{
 		return 0;
 	}
-	if (ecall_to_decentralized_node(nodeID, isServer))
-	{
-		return 1;
-	}
 
 	if (isServer)
 	{
@@ -327,6 +318,10 @@ extern "C" int ecall_to_decent_node(const char* nodeID, int isServer)
 		{
 			AESGCMCommLayer* commLayer = nullptr;
 			commLayer = SGXRAEnclave::ReleaseClientKeys(nodeID, &CommLayerSendFunc);
+			if (!commLayer)
+			{
+				return 0;
+			}
 			{
 				std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
 				g_decentNodesMap.insert(std::make_pair(nodeID, std::shared_ptr<const AESGCMCommLayer>(commLayer)));
@@ -350,6 +345,10 @@ extern "C" int ecall_to_decent_node(const char* nodeID, int isServer)
 				g_pendingDecentNode.erase(g_pendingDecentNode.find(nodeID));
 			}
 			commLayer = SGXRAEnclave::ReleaseServerKeys(nodeID, &CommLayerSendFunc);
+			if (!commLayer)
+			{
+				return 0;
+			}
 			{
 				std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
 				g_decentNodesMap.insert(std::make_pair(nodeID, std::shared_ptr<const AESGCMCommLayer>(commLayer)));
@@ -434,34 +433,4 @@ extern "C" int ecall_decent_send_protocol_key(const char* nodeID, void* const co
 	return commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot));
 }
 
-extern "C" int ecall_to_decentralized_node(const char* id, int is_server)
-{
-	if (!id)
-	{
-		return 0;
-	}
-	if (!IsBothWayAttested(id))
-	{
-		return 0;
-	}
-
-	AESGCMCommLayer* commLayer = nullptr;
-	if (is_server)
-	{
-		commLayer = SGXRAEnclave::ReleaseClientKeys(id, &CommLayerSendFunc);
-		SGXRAEnclave::DropRAStateToServer(id);
-	}
-	else
-	{
-		commLayer = SGXRAEnclave::ReleaseServerKeys(id, &CommLayerSendFunc);
-		SGXRAEnclave::DropClientRAState(id);
-	}
-	{
-		std::lock_guard<std::mutex> mapLock(g_decentNodesMapMutex);
-		g_decentNodesMap.insert(std::make_pair(id, std::shared_ptr<const AESGCMCommLayer>(commLayer)));
-	}
-
-	COMMON_PRINTF("Accepted New Decentralized Node: %s\n", id);
-
-	return 1;
-}
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

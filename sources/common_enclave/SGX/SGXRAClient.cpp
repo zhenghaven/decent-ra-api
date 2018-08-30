@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "SGXRAClient.h"
 
 #include <string>
@@ -69,7 +72,7 @@ void SGXRAEnclave::DropRAStateToServer(const std::string& serverID)
 {
 	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
 	auto it = k_serversMap.find(serverID);
-	if (it != g_serversMap.cend())
+	if (it != k_serversMap.cend())
 	{
 		g_serversMap.erase(it);
 	}
@@ -340,3 +343,5 @@ extern "C" sgx_status_t ecall_process_ra_msg4(const char* ServerID, const sgx_ra
 
 	return SGX_SUCCESS;
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

@@ -1,4 +1,4 @@
-#include "../common/ModuleConfigInternal.h"
+#include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
 
 #include "SGXDecentEnclave.h"

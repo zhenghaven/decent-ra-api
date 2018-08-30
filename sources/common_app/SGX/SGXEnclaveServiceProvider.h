@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #pragma once
 
 #include "SGXEnclave.h"
@@ -31,3 +34,5 @@ public:
 protected:
 	const IASConnector m_ias;
 };
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL
