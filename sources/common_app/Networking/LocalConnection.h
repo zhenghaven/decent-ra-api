@@ -1,5 +1,6 @@
 #include "Connection.h"
 
+#include <memory>
 #include <utility>
 
 namespace boost
@@ -10,6 +11,9 @@ namespace boost
 		class mapped_region;
 	};
 };
+
+template<typename T>
+struct SharedObject;
 
 class LocalAcceptor;
 struct LocalSessionStruct;
@@ -41,15 +45,17 @@ protected:
 
 private:
 	LocalConnection(const std::string& sessionId);
-	LocalConnection(std::pair<boost::interprocess::shared_memory_object*, boost::interprocess::shared_memory_object*> sharedObjs);
-	LocalConnection(boost::interprocess::shared_memory_object* inSharedObj, boost::interprocess::mapped_region* inMapReg, boost::interprocess::shared_memory_object* outSharedObj, boost::interprocess::mapped_region* outMapReg);
+	LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs);
+	//LocalConnection(boost::interprocess::shared_memory_object* inSharedObj, boost::interprocess::mapped_region* inMapReg, boost::interprocess::shared_memory_object* outSharedObj, boost::interprocess::mapped_region* outMapReg);
 
 private:
 	//const std::string m_sessionName;
-	boost::interprocess::shared_memory_object* m_inSharedObj;
-	boost::interprocess::mapped_region* m_inMapReg;
-	LocalSessionStruct& m_inData;
-	boost::interprocess::shared_memory_object* m_outSharedObj;
-	boost::interprocess::mapped_region* m_outMapReg;
-	LocalSessionStruct& m_outData;
+	//boost::interprocess::shared_memory_object* m_inSharedObj;
+	//boost::interprocess::mapped_region* m_inMapReg;
+	//LocalSessionStruct& m_inData;
+	//boost::interprocess::shared_memory_object* m_outSharedObj;
+	//boost::interprocess::mapped_region* m_outMapReg;
+	//LocalSessionStruct& m_outData;
+	std::shared_ptr<SharedObject<LocalSessionStruct> > m_inSharedObj;
+	std::shared_ptr<SharedObject<LocalSessionStruct> > m_outSharedObj;
 };
