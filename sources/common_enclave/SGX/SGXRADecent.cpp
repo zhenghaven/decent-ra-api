@@ -11,10 +11,12 @@
 
 #include <rapidjson/document.h>
 
+#include <Enclave_t.h>
+
 #include "../common_enclave/DecentError.h"
 
 #include "../common/JsonTools.h"
-#include "../common/CommonTool.h" /*TODO: Remove Enclave_t.h from here.*/
+#include "../common/CommonTool.h"
 #include "../common/DataCoding.h"
 #include "../common/OpenSSLTools.h"
 #include "../common/DecentRAReport.h"

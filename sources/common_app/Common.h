@@ -24,6 +24,8 @@ enum class ConsoleColors
 
 void SetConsoleColor(ConsoleColors foreground, ConsoleColors background);
 
+#define COMMON_PRINTF printf
+
 #ifndef NDEBUG
 
 #define LOGI(...)   printf(" I: "); \
@@ -44,8 +46,6 @@ void SetConsoleColor(ConsoleColors foreground, ConsoleColors background);
 #define LOGP(...)   (void)printf(__VA_ARGS__);printf("\n");
 #define ASSERT(Condition, ...) if(!(Condition)){LOGE(__VA_ARGS__);}
 #define ASSERTP(Condition, ...)  if(!(Condition)){LOGE(__VA_ARGS__);}
-
-#define COMMON_PRINTF printf
 
 //These are used only before the real error handling way is developped:
 

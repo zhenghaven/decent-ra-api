@@ -98,8 +98,6 @@ int main(int argc, char ** argv)
 		Json::Value jsonRoot;
 		connection->Receive(jsonRoot);
 		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
-
-		connection->Send(jsonRoot);
 	}
 	break;
 	case 1:

@@ -3,9 +3,9 @@ enclave {
 	untrusted {
 		void ocall_print_string([in, string] const char *str);
 
-		void ocall_log_w([in, string] const char *file, int line, [in, string] const char *str);
+		void ocall_print_string_w([in, string] const char *str);
 
-		void ocall_log_e([in, string] const char *file, int line, [in, string] const char *str);
+		void ocall_print_string_e([in, string] const char *str);
 	};
 
 };

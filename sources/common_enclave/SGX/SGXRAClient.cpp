@@ -10,7 +10,7 @@
 #include "sgx_ra_tools.h"
 #include "decent_tkey_exchange.h"
 
-#include "../DecentError.h"
+#include "../Common.h"
 
 #include "../../common/DataCoding.h"
 #include "../../common/EnclaveAsyKeyContainer.h"

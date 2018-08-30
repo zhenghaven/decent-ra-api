@@ -8,7 +8,6 @@
 
 #ifdef ENCLAVE_CODE
 #include <rapidjson/document.h>
-#include <Enclave_t.h>
 #else
 #include <json/json.h>
 #endif // ENCLAVE_CODE
