@@ -34,21 +34,14 @@ Connection* LocalConnection::Connect(const std::string & serverName)
 
 	sharedAcc->GetObject().m_connectSignal.notify_one();
 
-	CONNECTION_CLOSED_CHECK(sharedAcc->GetObject().m_isClosed);
+	CONNECTION_CLOSED_CHECK(sharedAcc->GetObject().IsClosed());
 	sharedAcc->GetObject().m_idReadySignal.wait(writelock);
-	CONNECTION_CLOSED_CHECK(sharedAcc->GetObject().m_isClosed);
+	CONNECTION_CLOSED_CHECK(sharedAcc->GetObject().IsClosed());
 
 	std::string sessionId(sharedAcc->GetObject().m_msg);
 
 	return new LocalConnection(sessionId);
 }
-
-//static inline std::pair<shared_memory_object*, shared_memory_object*> OpenConnection(const std::string & sessionId)
-//{
-//	shared_memory_object* sharedObjPtr_s2c = new shared_memory_object(open_only, (sessionId + "S2C").c_str(), read_write);
-//	shared_memory_object* sharedObjPtr_c2s = new shared_memory_object(open_only, (sessionId + "C2S").c_str(), read_write);
-//	return std::make_pair(sharedObjPtr_s2c, sharedObjPtr_c2s);
-//}
 
 LocalConnection::LocalConnection(const std::string & sessionId) :
 	m_inSharedObj(std::make_shared<SharedObject<LocalSessionStruct> >((sessionId + "S2C"), false)),
@@ -66,22 +59,26 @@ LocalConnection::LocalConnection(const std::pair<std::shared_ptr<SharedObject<Lo
 	m_outSharedObj(sharedObjs.second)
 {
 }
-//
-//LocalConnection::LocalConnection(boost::interprocess::shared_memory_object* inSharedObj, boost::interprocess::mapped_region* inMapReg, boost::interprocess::shared_memory_object* outSharedObj, boost::interprocess::mapped_region* outMapReg) :
-//	//m_sessionName(sharedObj->get_name()),
-//	m_inSharedObj(inSharedObj),
-//	m_inMapReg(inMapReg),
-//	m_inData(*static_cast<LocalSessionStruct*>(m_inMapReg->get_address())),
-//	m_outSharedObj(outSharedObj),
-//	m_outMapReg(outMapReg),
-//	m_outData(*static_cast<LocalSessionStruct*>(m_outMapReg->get_address()))
-//{
-//
-//}
+
+LocalConnection::LocalConnection(LocalConnection && other) :
+	m_inSharedObj(std::move(other.m_inSharedObj)),
+	m_outSharedObj(std::move(other.m_outSharedObj))
+{
+}
 
 LocalConnection::~LocalConnection()
 {
 	Terminate();
+}
+
+LocalConnection & LocalConnection::operator=(LocalConnection && other)
+{
+	if (this != &other)
+	{
+		m_inSharedObj = std::move(other.m_inSharedObj);
+		m_outSharedObj = std::move(other.m_outSharedObj);
+	}
+	return *this;
 }
 
 size_t LocalConnection::Send(const Messages & msg)
@@ -121,10 +118,10 @@ size_t LocalConnection::Send(const void * const dataPtr, const size_t size)
 		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
 		if (m_dataRef.m_isMsgReady)
 		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.m_isClosed);
+			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
 			m_dataRef.m_emptySignal.wait(writelock);
 		}
-		CONNECTION_CLOSED_CHECK(m_dataRef.m_isClosed);
+		CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
 
 		m_dataRef.m_totalSize = static_cast<uint64_t>(size) - sentSize;
 		m_dataRef.m_sentSize = m_dataRef.m_totalSize < LocalSessionStruct::MSG_SIZE ? static_cast<uint32_t>(m_dataRef.m_totalSize) : LocalSessionStruct::MSG_SIZE;
@@ -151,7 +148,7 @@ size_t LocalConnection::Receive(std::string & msg)
 		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
 		if (!m_dataRef.m_isMsgReady)
 		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.m_isClosed);
+			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
 			m_dataRef.m_readySignal.wait(writelock);
 		}
 		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
@@ -170,7 +167,7 @@ size_t LocalConnection::Receive(std::string & msg)
 		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
 		if (!m_dataRef.m_isMsgReady)
 		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.m_isClosed);
+			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
 			m_dataRef.m_readySignal.wait(writelock);
 		}
 		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
@@ -206,7 +203,7 @@ size_t LocalConnection::Receive(std::vector<uint8_t>& msg)
 		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
 		if (!m_dataRef.m_isMsgReady)
 		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.m_isClosed);
+			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
 			m_dataRef.m_readySignal.wait(writelock);
 		}
 		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
@@ -225,7 +222,7 @@ size_t LocalConnection::Receive(std::vector<uint8_t>& msg)
 		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
 		if (!m_dataRef.m_isMsgReady)
 		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.m_isClosed);
+			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
 			m_dataRef.m_readySignal.wait(writelock);
 		}
 		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
@@ -245,8 +242,8 @@ bool LocalConnection::IsTerminate() const
 {
 	std::shared_ptr<const SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
 	std::shared_ptr<const SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj);
-
-	return inSharedObj->GetObject().m_isClosed || inSharedObj->GetObject().m_isClosed;
+	
+	return inSharedObj->GetObject().IsClosed() || inSharedObj->GetObject().IsClosed();
 }
 
 void LocalConnection::Terminate()
@@ -254,11 +251,12 @@ void LocalConnection::Terminate()
 	std::shared_ptr<SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
 	std::shared_ptr<SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj);
 
-	inSharedObj->GetObject().m_isClosed = inSharedObj->GetObject().m_isClosed = true;
+	inSharedObj->GetObject().SetClose();
+	outSharedObj->GetObject().SetClose();
 
 	inSharedObj->GetObject().m_emptySignal.notify_all();
 	inSharedObj->GetObject().m_readySignal.notify_all();
 
-	inSharedObj->GetObject().m_emptySignal.notify_all();
-	inSharedObj->GetObject().m_readySignal.notify_all();
+	outSharedObj->GetObject().m_emptySignal.notify_all();
+	outSharedObj->GetObject().m_readySignal.notify_all();
 }

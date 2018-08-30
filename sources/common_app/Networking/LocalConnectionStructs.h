@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
@@ -5,6 +7,8 @@
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+
+#include <boost/interprocess/detail/atomic.hpp>
 
 #include "../Common.h"
 
@@ -90,8 +94,7 @@ struct LocalConnectStruct
 {
 	enum { UUID_STR_LEN = (16 * 2) + 1 };
 
-	//uint8_t m_isListening;
-	uint8_t m_isClosed;
+	uint32_t m_isClosed; //used as atomic variable.
 
 	boost::interprocess::interprocess_mutex m_connectLock;
 	boost::interprocess::interprocess_mutex m_writeLock;
@@ -102,10 +105,19 @@ struct LocalConnectStruct
 	char m_msg[UUID_STR_LEN];
 
 	LocalConnectStruct() :
-		//m_isListening(false),
 		m_isClosed(false),
 		m_msg{ 0 }
 	{}
+
+	void SetClose()
+	{
+		boost::interprocess::ipcdetail::atomic_inc32(&m_isClosed);
+	}
+
+	bool IsClosed() const
+	{
+		return boost::interprocess::ipcdetail::atomic_read32(const_cast<uint32_t*>(&m_isClosed));
+	}
 };
 
 struct LocalSessionStruct
@@ -116,7 +128,8 @@ struct LocalSessionStruct
 	boost::interprocess::interprocess_condition m_emptySignal;
 	boost::interprocess::interprocess_condition m_readySignal;
 
-	uint8_t m_isClosed;
+	uint32_t m_isClosed; //used as atomic variable.
+
 	uint8_t m_isMsgReady;
 	uint64_t m_totalSize;
 	uint32_t m_sentSize;
@@ -130,5 +143,15 @@ struct LocalSessionStruct
 		m_msg{ 0 }
 	{
 		static_assert(sizeof(m_sentSize) < MSG_SIZE, "The MSG_SIZE must not exceed the size of m_sentSize!");
+	}
+
+	void SetClose()
+	{
+		boost::interprocess::ipcdetail::atomic_inc32(&m_isClosed);
+	}
+
+	bool IsClosed() const
+	{
+		return boost::interprocess::ipcdetail::atomic_read32(const_cast<uint32_t*>(&m_isClosed));
 	}
 };

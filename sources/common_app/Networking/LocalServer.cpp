@@ -19,7 +19,7 @@
 
 using namespace boost::interprocess;
 
-#define ACCEPTOR_CLOSED_CHECK if (m_connectStruct->m_isClosed)\
+#define ACCEPTOR_CLOSED_CHECK if (m_connectStruct->IsClosed())\
 								 {\
 								 throw ConnectionClosedException();\
 								 }
@@ -35,71 +35,39 @@ static std::string GenerateSessionId()
 	return cppcodec::hex_lower::encode(uuid.data, sizeof(uuid.data));
 }
 
-//static inline LocalConnectStruct* OpenAcceptor(const mapped_region& mapReg)
-//{
-//	void * addr = mapReg.get_address();
-//	return new (addr) LocalConnectStruct;
-//}
-//
-//static inline shared_memory_object* CreateSharedObj(const std::string & serverName)
-//{
-//	shared_memory_object::remove(serverName.c_str());
-//
-//	shared_memory_object* ptr = new shared_memory_object(create_only, serverName.c_str(), read_write);
-//	ptr->truncate(sizeof(LocalConnectStruct));
-//	return ptr;
-//}
-
 LocalAcceptor::LocalAcceptor(const std::string & serverName) :
 	m_sharedObj(std::make_shared<SharedObject<LocalConnectStruct> >(serverName, true))
 {
 }
 
-//LocalAcceptor::LocalAcceptor(boost::interprocess::shared_memory_object* sharedObj) :
-//	LocalAcceptor(sharedObj, new mapped_region(*sharedObj, read_write))
-//{
-//}
-//
-//LocalAcceptor::LocalAcceptor(boost::interprocess::shared_memory_object* sharedObj, boost::interprocess::mapped_region* mapReg) :
-//	//m_serverName(serverName),
-//	m_sharedObj(sharedObj),
-//	m_mapReg(mapReg),
-//	m_connectStruct(OpenAcceptor(*mapReg))
-//{
-//}
-
-//LocalAcceptor::LocalAcceptor(LocalAcceptor && other) :
-//	//m_serverName(std::move(other.m_serverName)),
-//	//m_sharedObj(other.m_sharedObj),
-//	//m_mapReg(other.m_mapReg),
-//	//m_connectStruct(other.m_connectStruct)
-//{
-//	//other.m_sharedObj = nullptr;
-//	//other.m_mapReg = nullptr;
-//}
+LocalAcceptor::LocalAcceptor(LocalAcceptor && other) :
+	m_sharedObj(std::move(other.m_sharedObj))
+{
+}
 
 LocalAcceptor::~LocalAcceptor()
 {
-	//std::string serverName = m_sharedObj->get_name();
+}
 
-	//Terminate();
-
-	//delete m_sharedObj;
-	//delete m_mapReg;
-
-	//shared_memory_object::remove(serverName.c_str());
+LocalAcceptor & LocalAcceptor::operator=(LocalAcceptor && other)
+{
+	if (this != &other)
+	{
+		m_sharedObj = std::move(other.m_sharedObj);
+	}
+	return *this;
 }
 
 bool LocalAcceptor::IsTerminate() const
 {
 	std::shared_ptr<const SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
-	return obj->GetObject().m_isClosed;
+	return obj->GetObject().IsClosed();
 }
 
 void LocalAcceptor::Terminate()
 {
 	std::shared_ptr<SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
-	obj->GetObject().m_isClosed = true;
+	obj->GetObject().SetClose();
 
 	obj->GetObject().m_idReadySignal.notify_all();
 	obj->GetObject().m_connectSignal.notify_all();
@@ -129,8 +97,22 @@ LocalServer::LocalServer(const std::string & serverName) :
 {
 }
 
+LocalServer::LocalServer(LocalServer && other) :
+	m_acceptor(std::move(other.m_acceptor))
+{
+}
+
 LocalServer::~LocalServer()
 {
+}
+
+LocalServer & LocalServer::operator=(LocalServer && other)
+{
+	if (this != &other)
+	{
+		m_acceptor = std::move(other.m_acceptor);
+	}
+	return *this;
 }
 
 std::unique_ptr<Connection> LocalServer::AcceptConnection()

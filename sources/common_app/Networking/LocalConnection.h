@@ -26,7 +26,12 @@ public:
 public:
 	LocalConnection() = delete;
 	LocalConnection(LocalAcceptor& acceptor);
+	LocalConnection(const LocalConnection& other) = delete;
+	LocalConnection(LocalConnection&& other);
 	virtual ~LocalConnection();
+
+	LocalConnection& operator=(const LocalConnection& other) = delete;
+	LocalConnection& operator=(LocalConnection&& other);
 
 	virtual size_t Send(const Messages& msg) override;
 	virtual size_t Send(const std::string& msg) override;
@@ -46,16 +51,8 @@ protected:
 private:
 	LocalConnection(const std::string& sessionId);
 	LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs);
-	//LocalConnection(boost::interprocess::shared_memory_object* inSharedObj, boost::interprocess::mapped_region* inMapReg, boost::interprocess::shared_memory_object* outSharedObj, boost::interprocess::mapped_region* outMapReg);
 
 private:
-	//const std::string m_sessionName;
-	//boost::interprocess::shared_memory_object* m_inSharedObj;
-	//boost::interprocess::mapped_region* m_inMapReg;
-	//LocalSessionStruct& m_inData;
-	//boost::interprocess::shared_memory_object* m_outSharedObj;
-	//boost::interprocess::mapped_region* m_outMapReg;
-	//LocalSessionStruct& m_outData;
 	std::shared_ptr<SharedObject<LocalSessionStruct> > m_inSharedObj;
 	std::shared_ptr<SharedObject<LocalSessionStruct> > m_outSharedObj;
 };

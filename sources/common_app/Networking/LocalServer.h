@@ -25,8 +25,11 @@ public:
 	LocalAcceptor() = delete;
 	LocalAcceptor(const std::string& serverName);
 	LocalAcceptor(const LocalAcceptor& other) = delete; //Copy is not allowed.
-	//LocalAcceptor(LocalAcceptor&& other);
+	LocalAcceptor(LocalAcceptor&& other);
 	virtual ~LocalAcceptor();
+
+	LocalAcceptor& operator=(const LocalAcceptor& other) = delete;
+	LocalAcceptor& operator=(LocalAcceptor&& other);
 
 	bool IsTerminate() const;
 
@@ -37,14 +40,6 @@ protected:
 	void Terminate();
 
 private:
-	//LocalAcceptor(boost::interprocess::shared_memory_object* sharedObj);
-	//LocalAcceptor(boost::interprocess::shared_memory_object* sharedObj, boost::interprocess::mapped_region* mapReg);
-
-private:
-	//const std::string m_serverName;
-	//boost::interprocess::shared_memory_object* m_sharedObj;
-	//boost::interprocess::mapped_region* m_mapReg;
-	//LocalConnectStruct* const m_connectStruct;
 	std::shared_ptr<SharedObject<LocalConnectStruct> > m_sharedObj;
 };
 
@@ -54,8 +49,11 @@ public:
 	LocalServer() = delete;
 	LocalServer(const std::string& serverName);
 	LocalServer(const LocalServer& other) = delete; //Copy is not allowed.
-	//LocalServer(LocalServer&& other);
+	LocalServer(LocalServer&& other);
 	virtual ~LocalServer();
+
+	LocalServer& operator=(const LocalServer& other) = delete;
+	LocalServer& operator=(LocalServer&& other);
 
 	virtual std::unique_ptr<Connection> AcceptConnection() override;
 
