@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MODULE_CONFIG_INTERNAL_H
+#define MODULE_CONFIG_INTERNAL_H
+
 #include <ModuleConfig.h>
 
 //Check if all required macros if defined:
@@ -47,3 +51,5 @@
 #else
 #	define USE_DECENT_ENCLAVE_APP_INTERNAL 1
 #endif //!USE_DECENT_ENCLAVE_APP || !USE_DECENT_ENCLAVE_INTERNAL
+
+#endif // !MODULE_CONFIG_INTERNAL_H

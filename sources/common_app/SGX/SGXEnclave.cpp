@@ -186,6 +186,50 @@ sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_r
 	return retval;
 }
 
+sgx_status_t SGXEnclave::LocalAttestationInit(const std::string & peerID, bool isInitiator)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_sgx_la_init(GetEnclaveId(), &retval, peerID.c_str(), isInitiator);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
+
+	return retval;
+}
+
+sgx_status_t SGXEnclave::InitiatorProcessLAMsg1(const std::string & peerID, const sgx_dh_msg1_t & inMsg1, sgx_dh_msg2_t & outMsg2)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_sgx_la_initiator_proc_msg1(GetEnclaveId(), &retval, peerID.c_str(), &inMsg1, &outMsg2);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
+
+	return retval;
+}
+
+sgx_status_t SGXEnclave::ResponderProcessLAMsg2(const std::string & peerID, const sgx_dh_msg2_t & inMsg2, sgx_dh_msg3_t & outMsg3)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_sgx_la_responder_proc_msg2(GetEnclaveId(), &retval, peerID.c_str(), &inMsg2, &outMsg3);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
+
+	return retval;
+}
+
+sgx_status_t SGXEnclave::InitiatorProcessLAMsg3(const std::string & peerID, const sgx_dh_msg3_t & inMsg3)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_sgx_la_initiator_proc_msg3(GetEnclaveId(), &retval, peerID.c_str(), &inMsg3);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
+
+	return retval;
+}
+
 bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
 {
 	if (category == SGXRAClientMessage::sk_ValueCat)

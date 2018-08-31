@@ -1,7 +1,7 @@
+#pragma once
+
 #include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL
-
-#pragma once
 
 #include "../EnclaveBase.h"
 
@@ -20,6 +20,10 @@ typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
 typedef struct _ra_msg3_t sgx_ra_msg3_t;
 typedef struct _ra_msg4_t sgx_ra_msg4_t;
+
+typedef struct _sgx_dh_msg1_t sgx_dh_msg1_t;
+typedef struct _sgx_dh_msg2_t sgx_dh_msg2_t;
+typedef struct _sgx_dh_msg3_t sgx_dh_msg3_t;
 
 typedef sgx_status_t(*sgx_ecall_proc_msg2_trusted_t)(
 	sgx_enclave_id_t eid,
@@ -54,10 +58,24 @@ public:
 
 	virtual uint32_t GetExGroupID();
 
+	//***************************************
+	//  Remote Attestation Methods
+	//***************************************
+
 	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID, sgx_ecall_proc_msg2_trusted_t proc_msg2_func, sgx_ecall_get_msg3_trusted_t get_msg3_func);
 	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID);
+
+
+	//***************************************
+	//  Local Attestation Methods
+	//***************************************
+
+	virtual sgx_status_t LocalAttestationInit(const std::string& peerID, bool isInitiator);
+	virtual sgx_status_t InitiatorProcessLAMsg1(const std::string& peerID, const sgx_dh_msg1_t& inMsg1, sgx_dh_msg2_t& outMsg2);
+	virtual sgx_status_t ResponderProcessLAMsg2(const std::string& peerID, const sgx_dh_msg2_t& inMsg2, sgx_dh_msg3_t& outMsg3);
+	virtual sgx_status_t InitiatorProcessLAMsg3(const std::string& peerID, const sgx_dh_msg3_t& inMsg3);
 
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 

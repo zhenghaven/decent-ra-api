@@ -66,6 +66,7 @@ extern "C" int ecall_to_decentralized_node(const char* id, int is_server)
 	}
 	if (!getKeyRes)
 	{
+		delete nodeCtx;
 		return 0;
 	}
 
