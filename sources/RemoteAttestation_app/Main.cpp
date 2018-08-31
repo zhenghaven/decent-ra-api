@@ -81,7 +81,6 @@ int main(int argc, char ** argv)
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;
 
-#ifdef RA_SERVER_SIDE
 	std::cout << "================ This is server side ================" << std::endl;
 
 	switch (testOpt.getValue())
@@ -124,10 +123,6 @@ int main(int argc, char ** argv)
 	default:
 		break;
 	}
-
-#else
-
-#endif // RA_SERVER_SIDE
 
 	printf("Enter a character before exit ...\n");
 	getchar();

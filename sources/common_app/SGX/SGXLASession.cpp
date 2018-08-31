@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "SGXLASession.h"
 
 #include <json/json.h>
@@ -188,3 +191,5 @@ bool SGXLASession::PerformResponderSideLA()
 
 	return true;
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

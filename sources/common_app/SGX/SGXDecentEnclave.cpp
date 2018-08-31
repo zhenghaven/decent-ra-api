@@ -264,4 +264,18 @@ extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* se
 	return (sentLen == std::strlen(msg)) ? 1 : 0;
 }
 
+extern "C" int ocall_decent_la_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg)
+{
+	if (!connectionPtr || !msg)
+	{
+		return 0;
+	}
+
+	DecentTrustedMessage trustedMsg(senderID, msg);
+	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
+	size_t sentLen = cnt->Send(trustedMsg.ToJsonString());
+
+	return (sentLen == std::strlen(msg)) ? 1 : 0;
+}
+
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

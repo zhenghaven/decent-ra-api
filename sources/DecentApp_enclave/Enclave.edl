@@ -1,0 +1,17 @@
+enclave {
+	
+	include "sgx_key_exchange.h"
+	include "sgx_trts.h"
+
+	from "sgx_tsgxssl.edl" import *;
+	
+	from "common_enclave.edl" import *;
+	from "ra_client_enclave.edl" import *;
+	from "ra_sp_enclave.edl" import *;
+	from "la_enclave.edl" import *;
+
+	trusted 
+	{
+	};
+
+};

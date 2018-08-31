@@ -252,6 +252,13 @@ file(GLOB_RECURSE SOURCES_RemoteAttestation_App ${SOURCEDIR_RemoteAttestation_Ap
 file(GLOB_RECURSE SOURCES_RemoteAttestation_Enclave ${SOURCEDIR_RemoteAttestation_Enclave}/*.[ch]*)
 file(GLOB_RECURSE SOURCES_RemoteAttestation_EDL ${SOURCEDIR_RemoteAttestation_Enclave}/*.edl)
 
+# DecentApp Files:
+set(SOURCEDIR_DecentApp_App ${CMAKE_CURRENT_LIST_DIR}/sources/DecentApp_app)
+set(SOURCEDIR_DecentApp_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/DecentApp_enclave)
+file(GLOB_RECURSE SOURCES_DecentApp_App ${SOURCEDIR_DecentApp_App}/*.[ch]*)
+file(GLOB_RECURSE SOURCES_DecentApp_Enclave ${SOURCEDIR_DecentApp_Enclave}/*.[ch]*)
+file(GLOB_RECURSE SOURCES_DecentApp_EDL ${SOURCEDIR_DecentApp_Enclave}/*.edl)
+
 #==========================================================
 #   Setup filters
 #==========================================================
@@ -314,175 +321,140 @@ target_link_libraries(LibTest_App
 					)
 
 
-###########################################################
-### RemoteAttestation_Enclave
-###########################################################
-
 if(MSVC)
-	set(Enclave_Filename "RemoteAttestation_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.dll")
-	set(Enclave_Libname "RemoteAttestation_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.dll")
+	set(Enclave_Prog_Prefix )
+	set(Enclave_Prog_Postfix dll)
 	set(Enclave_Bin_Path "${CMAKE_BINARY_DIR}/$<CONFIG>")
 else()
-	set(Enclave_Filename "${CMAKE_SHARED_LIBRARY_PREFIX}RemoteAttestation_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.so")
-	set(Enclave_Libname "${CMAKE_SHARED_LIBRARY_PREFIX}RemoteAttestation_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.so")
+	set(Enclave_Prog_Prefix ${CMAKE_SHARED_LIBRARY_PREFIX})
+	set(Enclave_Prog_Postfix so)
 	set(Enclave_Bin_Path "${CMAKE_BINARY_DIR}")
 endif()
 
-add_library(RemoteAttestation_Enclave SHARED ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_RemoteAttestation_Enclave} ${SOURCES_RemoteAttestation_EDL})
+#==========================================================
+#   Enclave Projects
+#==========================================================
 
-target_compile_definitions(RemoteAttestation_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
+set(Enclave_Project_List RemoteAttestation DecentApp)
 
-target_include_directories(RemoteAttestation_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS} 
-							 ${SOURCEDIR_RemoteAttestation_Enclave})
+foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
+	
+	###########################################################
+	### Enclave
+	###########################################################
 
-set_target_properties(RemoteAttestation_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}")
+	set(${Proj_Name}_Enclave_File "${Enclave_Prog_Prefix}${Proj_Name}_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.${Enclave_Prog_Postfix}")
+	set(${Proj_Name}_Enclave_Lib "${Enclave_Prog_Prefix}${Proj_Name}_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.${Enclave_Prog_Postfix}")
 
-add_custom_command(TARGET RemoteAttestation_Enclave
-	PRE_BUILD
-	COMMAND "${INTEL_SGX_EDGER_PATH}"  
-	--trusted "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.edl" 
-	--search-path "${SOURCEDIR_RemoteAttestation_Enclave}" 
-	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
-	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
-	WORKING_DIRECTORY "${SOURCEDIR_RemoteAttestation_Enclave}"
-)
+	add_library(${Proj_Name}_Enclave SHARED ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_${Proj_Name}_Enclave} ${SOURCES_${Proj_Name}_EDL})
 
-add_custom_command(TARGET RemoteAttestation_Enclave
-	POST_BUILD
-	COMMAND "${INTEL_SGX_SIGNER_PATH}" sign 
-	-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
-	-enclave "${Enclave_Bin_Path}/${Enclave_Libname}" 
-	-out "${CMAKE_BINARY_DIR}/${Enclave_Filename}" 
-	-config "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.config.xml"
-)
+	target_compile_definitions(${Proj_Name}_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 
-target_link_libraries(RemoteAttestation_Enclave 
-					${WHOLE_ARCHIVE_FLAG_BEGIN} 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}>" 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_RELEASE}>" 
-					${WHOLE_ARCHIVE_FLAG_END}
-					${GROUP_FLAG_BEGIN}
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_GROUP_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_GROUP_RELEASE}>" 
-					${GROUP_FLAG_END}
+	target_include_directories(${Proj_Name}_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS} 
+								 ${SOURCEDIR_${Proj_Name}_Enclave})
+
+	set_target_properties(${Proj_Name}_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_OPTIONS}")
+
+	add_custom_command(TARGET ${Proj_Name}_Enclave
+		PRE_BUILD
+		COMMAND "${INTEL_SGX_EDGER_PATH}"  
+		--trusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
+		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
+		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
+		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
+		--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
+		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_Enclave}"
+	)
+
+	add_custom_command(TARGET ${Proj_Name}_Enclave
+		POST_BUILD
+		COMMAND "${INTEL_SGX_SIGNER_PATH}" sign 
+		-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
+		-enclave "${Enclave_Bin_Path}/${${Proj_Name}_Enclave_Lib}" 
+		-out "${CMAKE_BINARY_DIR}/${${Proj_Name}_Enclave_File}" 
+		-config "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.config.xml"
+	)
+
+	target_link_libraries(${Proj_Name}_Enclave 
+						${WHOLE_ARCHIVE_FLAG_BEGIN} 
+						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}>" 
+						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM}>" 
+						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}>" 
+						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUG}>" 
+						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUGSIM}>" 
+						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_RELEASE}>" 
+						${WHOLE_ARCHIVE_FLAG_END}
+						${GROUP_FLAG_BEGIN}
+						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
+						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
+						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
+						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_GROUP_DEBUG}>" 
+						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM}>" 
+						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_GROUP_RELEASE}>" 
+						${GROUP_FLAG_END}
+						)
+
+	###########################################################
+	### App
+	###########################################################
+
+	add_executable(${Proj_Name}_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_${Proj_Name}_App} ${SOURCES_${Proj_Name}_EDL})
+	target_include_directories(${Proj_Name}_App 
+								PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
+								 ${SOURCEDIR_${Proj_Name}_App})
+
+	target_compile_definitions(${Proj_Name}_App PRIVATE ${COMMON_APP_DEFINES} ENCLAVE_FILENAME="${${Proj_Name}_Enclave_File}" TOKEN_FILENAME="${Proj_Name}_Enclave.token")
+
+	add_custom_command(TARGET ${Proj_Name}_App
+		PRE_BUILD
+		COMMAND "${INTEL_SGX_EDGER_PATH}"  
+		--untrusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
+		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
+		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
+		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
+		--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
+		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_App}"
+	)
+
+	target_link_libraries(${Proj_Name}_App 
+						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
+						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
+						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
+						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
+						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
+						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
+						${COMMON_STANDARD_LIBRARIES}
+						jsoncpp_lib_static
+						libcurl
+						OpenSSL::SSL 
+						OpenSSL::Crypto 
+						Boost::filesystem
+						Boost::date_time
+						Boost::system
 					)
+	
+	### Config Flags for Linux OS ###
+	if(NOT MSVC)
 
-###########################################################
-### RemoteAttestation_App
-###########################################################
+		target_compile_options(${Proj_Name}_Enclave
+							PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS}>
+							)
 
-add_executable(RemoteAttestation_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
-target_include_directories(RemoteAttestation_App 
-							PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
-							 ${SOURCEDIR_RemoteAttestation_App})
+		set_target_properties(${Proj_Name}_Enclave 
+							PROPERTIES 
+							LINK_FLAGS_DEBUG "${INTEL_SGX_SDK_LINKER_FLAGS_T_HW}"
+							LINK_FLAGS_DEBUGSIMULATION "${INTEL_SGX_SDK_LINKER_FLAGS_T_SIM}"
+							LINK_FLAGS_RELEASE "${INTEL_SGX_SDK_LINKER_FLAGS_T_HW}"
+							)
 
-target_compile_definitions(RemoteAttestation_App PRIVATE ${COMMON_APP_DEFINES} ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_CLIENT_SIDE)
+		set_target_properties(${Proj_Name}_App 
+							PROPERTIES 
+							LINK_FLAGS_DEBUG "${INTEL_SGX_SDK_LINKER_FLAGS_U_HW}"
+							LINK_FLAGS_DEBUGSIMULATION "${INTEL_SGX_SDK_LINKER_FLAGS_U_SIM}"
+							LINK_FLAGS_RELEASE "${INTEL_SGX_SDK_LINKER_FLAGS_U_HW}"
+							)
 
-add_custom_command(TARGET RemoteAttestation_App
-	PRE_BUILD
-	COMMAND "${INTEL_SGX_EDGER_PATH}"  
-	--untrusted "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.edl" 
-	--search-path "${SOURCEDIR_RemoteAttestation_Enclave}" 
-	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
-	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
-	WORKING_DIRECTORY "${SOURCEDIR_RemoteAttestation_App}"
-)
-
-target_link_libraries(RemoteAttestation_App 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
-					${COMMON_STANDARD_LIBRARIES}
-					jsoncpp_lib_static
-					libcurl
-					OpenSSL::SSL 
-					OpenSSL::Crypto 
-					Boost::filesystem
-					Boost::date_time
-					Boost::system
-				)
-
-###########################################################
-### RemoteAttestationR_App
-###########################################################
-
-add_executable(RemoteAttestationR_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_RemoteAttestation_App} ${SOURCES_RemoteAttestation_EDL})
-target_include_directories(RemoteAttestationR_App PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
-							 ${SOURCEDIR_RemoteAttestation_App})
-
-target_compile_definitions(RemoteAttestationR_App PRIVATE ${COMMON_APP_DEFINES} ENCLAVE_FILENAME="${Enclave_Filename}" TOKEN_FILENAME="RemoteAttestation_Enclave.token" RA_SERVER_SIDE)
-
-add_custom_command(TARGET RemoteAttestationR_App
-	PRE_BUILD
-	COMMAND "${INTEL_SGX_EDGER_PATH}"  
-	--untrusted "${SOURCEDIR_RemoteAttestation_Enclave}/Enclave.edl" 
-	--search-path "${SOURCEDIR_RemoteAttestation_Enclave}" 
-	--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
-	--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-	--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
-	WORKING_DIRECTORY "${SOURCEDIR_RemoteAttestation_App}"
-)
-
-target_link_libraries(RemoteAttestationR_App 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
-					${COMMON_STANDARD_LIBRARIES}
-					jsoncpp_lib_static
-					libcurl
-					OpenSSL::SSL 
-					OpenSSL::Crypto 
-					Boost::filesystem
-					Boost::date_time
-					Boost::system
-				)
-
-### Config Flags for Linux OS ###
-
-if(NOT MSVC)
-
-target_compile_options(RemoteAttestation_Enclave
-					PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS}>
-					)
-
-set_target_properties(RemoteAttestation_Enclave 
-					PROPERTIES 
-					LINK_FLAGS_DEBUG "${INTEL_SGX_SDK_LINKER_FLAGS_T_HW}"
-					LINK_FLAGS_DEBUGSIMULATION "${INTEL_SGX_SDK_LINKER_FLAGS_T_SIM}"
-					LINK_FLAGS_RELEASE "${INTEL_SGX_SDK_LINKER_FLAGS_T_HW}"
-					)
-
-set_target_properties(RemoteAttestation_App 
-					PROPERTIES 
-					LINK_FLAGS_DEBUG "${INTEL_SGX_SDK_LINKER_FLAGS_U_HW}"
-					LINK_FLAGS_DEBUGSIMULATION "${INTEL_SGX_SDK_LINKER_FLAGS_U_SIM}"
-					LINK_FLAGS_RELEASE "${INTEL_SGX_SDK_LINKER_FLAGS_U_HW}"
-					)
-
-set_target_properties(RemoteAttestationR_App 
-					PROPERTIES 
-					LINK_FLAGS_DEBUG "${INTEL_SGX_SDK_LINKER_FLAGS_U_HW}"
-					LINK_FLAGS_DEBUGSIMULATION "${INTEL_SGX_SDK_LINKER_FLAGS_U_SIM}"
-					LINK_FLAGS_RELEASE "${INTEL_SGX_SDK_LINKER_FLAGS_U_HW}"
-					)
-
-endif()
-
-### End Config Flags for Linux OS ###
+	endif()
+	
+endforeach()
 
