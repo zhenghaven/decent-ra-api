@@ -34,8 +34,6 @@
 #include "sgx_ra_tools.h"
 #include "SGXRAClient.h"
 
-class Connection;
-
 typedef std::map<std::string, std::shared_ptr<const SecureCommLayer> > DecentNodeMapType;
 
 namespace

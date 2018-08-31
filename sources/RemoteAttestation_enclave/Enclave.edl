@@ -10,6 +10,7 @@ enclave {
 	from "ra_sp_enclave.edl" import *;
 	from "la_enclave.edl" import *;
 	from "decent_enclave.edl" import *;
+	from "decent_la.edl" import *;
 
 	trusted 
 	{

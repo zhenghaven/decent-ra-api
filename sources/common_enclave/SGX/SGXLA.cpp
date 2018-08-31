@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "SGXLA.h"
 
 #include <cstring>
@@ -190,3 +193,5 @@ bool SGXLAEnclave::ReleasePeerKey(const std::string & peerId, sgx_dh_session_enc
 
 	return true;
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL
