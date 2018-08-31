@@ -4,7 +4,7 @@ enclave {
 	
 	trusted 
 	{
-		public sgx_status_t ecall_sgx_la_init([in, string] const char* peerId, int isInitiator);
+		public sgx_status_t ecall_sgx_la_responder_gen_msg1([in, string] const char* peerId, [out] sgx_dh_msg1_t* outMsg1);
 		
 		public sgx_status_t ecall_sgx_la_initiator_proc_msg1([in, string] const char* peerId, [in] const sgx_dh_msg1_t* inMsg1, [out] sgx_dh_msg2_t* outMsg2);
 		

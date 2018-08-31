@@ -23,6 +23,8 @@
 #include "../DecentRASession.h"
 #include "../Networking/Connection.h"
 #include "SGXEnclaveRuntimeException.h"
+#include "SGXLASession.h"
+#include "SGXMessages/SGXLAMessage.h"
 
 static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 {
@@ -163,6 +165,10 @@ bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const J
 	if (category == DecentMessage::sk_ValueCat)
 	{
 		return DecentRASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
+	}
+	else if (category == SGXLAMessage::sk_ValueCat)
+	{
+		return SGXLASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
 	}
 	else
 	{

@@ -15,12 +15,12 @@
 
 #include "IAS/IASConnector.h"
 
-#include "SGXRAMessages/SGXRAMessage.h"
-#include "SGXRAMessages/SGXRAMessage0.h"
-#include "SGXRAMessages/SGXRAMessage1.h"
-#include "SGXRAMessages/SGXRAMessage2.h"
-#include "SGXRAMessages/SGXRAMessage3.h"
-#include "SGXRAMessages/SGXRAMessage4.h"
+#include "SGXMessages/SGXRAMessage.h"
+#include "SGXMessages/SGXRAMessage0.h"
+#include "SGXMessages/SGXRAMessage1.h"
+#include "SGXMessages/SGXRAMessage2.h"
+#include "SGXMessages/SGXRAMessage3.h"
+#include "SGXMessages/SGXRAMessage4.h"
 
 #include "../MessageException.h"
 

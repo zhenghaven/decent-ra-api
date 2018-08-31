@@ -72,7 +72,7 @@ public:
 	//  Local Attestation Methods
 	//***************************************
 
-	virtual sgx_status_t LocalAttestationInit(const std::string& peerID, bool isInitiator);
+	virtual sgx_status_t ResponderGenerateLAMsg1(const std::string& peerID, sgx_dh_msg1_t& outMsg1);
 	virtual sgx_status_t InitiatorProcessLAMsg1(const std::string& peerID, const sgx_dh_msg1_t& inMsg1, sgx_dh_msg2_t& outMsg2);
 	virtual sgx_status_t ResponderProcessLAMsg2(const std::string& peerID, const sgx_dh_msg2_t& inMsg2, sgx_dh_msg3_t& outMsg3);
 	virtual sgx_status_t InitiatorProcessLAMsg3(const std::string& peerID, const sgx_dh_msg3_t& inMsg3);

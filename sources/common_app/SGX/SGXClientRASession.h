@@ -9,7 +9,6 @@
 
 #include <sgx_tcrypto.h>
 
-class IASConnector;
 class SGXEnclave;
 class SGXRAMessage0Resp;
 namespace Json

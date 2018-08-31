@@ -16,9 +16,11 @@
 #include "../../common/DataCoding.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
 
-#include "SGXClientRASession.h"
 #include "SGXEnclaveRuntimeException.h"
-#include "SGXRAMessages/SGXRAMessage.h"
+#include "SGXClientRASession.h"
+#include "SGXMessages/SGXRAMessage.h"
+#include "SGXLASession.h"
+#include "SGXMessages/SGXLAMessage.h"
 
 #include <Enclave_u.h>
 
@@ -186,13 +188,13 @@ sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_r
 	return retval;
 }
 
-sgx_status_t SGXEnclave::LocalAttestationInit(const std::string & peerID, bool isInitiator)
+sgx_status_t SGXEnclave::ResponderGenerateLAMsg1(const std::string & peerID, sgx_dh_msg1_t & outMsg1)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_sgx_la_init(GetEnclaveId(), &retval, peerID.c_str(), isInitiator);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
+	enclaveRet = ecall_sgx_la_responder_gen_msg1(GetEnclaveId(), &retval, peerID.c_str(), &outMsg1);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_responder_gen_msg1);
 
 	return retval;
 }
@@ -235,6 +237,10 @@ bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::V
 	if (category == SGXRAClientMessage::sk_ValueCat)
 	{
 		return SGXClientRASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
+	}
+	else if (category == SGXLAMessage::sk_ValueCat)
+	{
+		return SGXLASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
 	}
 	else
 	{

@@ -3,7 +3,7 @@
 #include "../../common/SGX/SGXRAServiceProvider.h"
 #include "../../common/SGX/sgx_constants.h"
 
-#include "SGXRAMessages/SGXRAMessage.h"
+#include "SGXMessages/SGXRAMessage.h"
 #include "SGXEnclaveRuntimeException.h"
 #include "SGXServiceProviderRASession.h"
 
