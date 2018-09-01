@@ -24,6 +24,8 @@
 
 #include <Enclave_u.h>
 
+constexpr char SGXEnclave::sk_platformType[];
+
 static void CheckFilePath(const fs::path& enclavePath, const fs::path& tokenPath)
 {
 	if (!fs::exists(enclavePath))
@@ -99,6 +101,11 @@ SGXEnclave::~SGXEnclave()
 {
 	ecall_sgx_ra_client_terminate(m_eid);
 	sgx_destroy_enclave(m_eid);
+}
+
+const char * SGXEnclave::GetPlatformType() const
+{
+	return sk_platformType;
 }
 
 void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const

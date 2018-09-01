@@ -1,8 +1,10 @@
 enclave {
 	trusted 
 	{
+		public sgx_status_t ecall_decent_app_process_ias_ra_report([in, string] const char* reportStr);
+		
 		public sgx_status_t ecall_decent_app_send_report_data([in, string] const char* decentId, [user_check] void* connectionPtr, [user_check] const char* appAttach);
 		
-		public sgx_status_t ecall_decent_proc_app_sign_msg([in, string] const char* jsonMsg, [out] sgx_report_body_t* outReport, [out] sgx_ec256_signature_t* outSign);
+		public sgx_status_t ecall_decent_app_proc_app_sign_msg([in, string] const char* jsonMsg, [out] sgx_report_body_t* outReport, [out] sgx_ec256_signature_t* outSign);
 	};
 };

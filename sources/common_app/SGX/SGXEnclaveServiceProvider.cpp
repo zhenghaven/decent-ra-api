@@ -20,21 +20,21 @@ static inline void InitSGXRASP(const sgx_enclave_id_t& eid)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
 }
 
-SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const std::string & tokenPath, IASConnector ias) :
+SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(IASConnector ias, const std::string & enclavePath, const std::string & tokenPath) :
 	SGXEnclave(enclavePath, tokenPath),
 	m_ias(ias)
 {
 	InitSGXRASP(GetEnclaveId());
 }
 
-SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const fs::path tokenPath, IASConnector ias) :
+SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(IASConnector ias, const std::string & enclavePath, const fs::path tokenPath) :
 	SGXEnclave(enclavePath, tokenPath),
 	m_ias(ias)
 {
 	InitSGXRASP(GetEnclaveId());
 }
 
-SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName, IASConnector ias) :
+SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(IASConnector ias, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
 	SGXEnclave(enclavePath, tokenLocType, tokenFileName),
 	m_ias(ias)
 {
@@ -49,6 +49,11 @@ SGXEnclaveServiceProvider::~SGXEnclaveServiceProvider()
 std::shared_ptr<ServiceProviderRASession> SGXEnclaveServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
 {
 	return std::make_shared<SGXServiceProviderRASession>(connection, *this, m_ias);
+}
+
+const char * SGXEnclaveServiceProvider::GetPlatformType() const
+{
+	return SGXEnclave::GetPlatformType();
 }
 
 void SGXEnclaveServiceProvider::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const

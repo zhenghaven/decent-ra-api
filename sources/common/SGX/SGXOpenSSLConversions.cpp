@@ -14,6 +14,8 @@
 
 #include <sgx_tcrypto.h>
 
+#include "../OpenSSLTools.h"
+
 #ifdef ENCLAVE_CODE
 
 namespace std
@@ -596,6 +598,33 @@ bool ECKeySignSGX2OpenSSL(const sgx_ec256_signature_t * inSign, ECDSA_SIG * outS
 		BN_free(s);
 		return false;
 	}
+
+	return true;
+}
+
+bool ECKeyPubSGX2Pem(const sgx_ec256_public_t & inPub, std::string & outPem)
+{
+	EC_KEY* pubKey = EC_KEY_new();
+	if (!pubKey || !ECKeyPubSGX2OpenSSL(&inPub, pubKey, nullptr))
+	{
+		EC_KEY_free(pubKey);
+		return false;
+	}
+	outPem = ECKeyPubGetPEMStr(pubKey);
+	EC_KEY_free(pubKey);
+
+	return true;
+}
+
+bool ECKeyPubPem2SGX(const std::string & inPem, sgx_ec256_public_t & outPub)
+{
+	EC_KEY* pubECKey = ECKeyPubFromPEMStr(inPem);
+	if (!pubECKey || 
+		!ECKeyPairOpenSSL2SGX(pubECKey, nullptr, &outPub, nullptr))
+	{
+		return false;
+	}
+	EC_KEY_free(pubECKey);
 
 	return true;
 }

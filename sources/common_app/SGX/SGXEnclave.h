@@ -46,6 +46,9 @@ typedef sgx_status_t(*sgx_ecall_get_msg3_trusted_t)(
 class SGXEnclave : virtual public EnclaveBase
 {
 public:
+	static constexpr char sk_platformType[] = "SGX";
+
+public:
 	SGXEnclave() = delete;
 	SGXEnclave(const std::string& enclavePath, const std::string& tokenPath);
 	SGXEnclave(const fs::path& enclavePath, const fs::path& tokenPath);
@@ -53,6 +56,7 @@ public:
 
 	virtual ~SGXEnclave();
 
+	virtual const char* GetPlatformType() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override;
 	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override;
 

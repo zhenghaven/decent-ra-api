@@ -18,6 +18,9 @@ typedef struct _sgx_report_data_t sgx_report_data_t;
 class SGXServiceProviderBase : virtual public ServiceProviderBase
 {
 public:
+	static constexpr char sk_platformType[] = "SGX";
+
+public:
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce) = 0;
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID) = 0;
 	virtual sgx_status_t ProcessRAMsg1(const std::string& clientID, const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2) = 0;

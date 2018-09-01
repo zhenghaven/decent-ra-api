@@ -17,11 +17,15 @@
 
 #include "SGXLA.h"
 #include "SGXLADecent.h"
+#include "SGXDecentCommon.h"
 
 #include "../../common/DataCoding.h"
 #include "../../common/JsonTools.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/DecentRAReport.h"
+
+#include "../../common/SGX/SGXRAServiceProvider.h"
 
 namespace
 {
@@ -33,6 +37,8 @@ namespace
 
 	//Hardcoded decent enclave's hash. (Not used until decent program is stable)
 	static constexpr char gk_decentHash[] = "";
+
+	static std::shared_ptr<const sgx_ec256_public_t> g_decentPubKey;
 }
 
 static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg, const char* attach)
@@ -44,6 +50,27 @@ static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, c
 		return false;
 	}
 	return retVal == 1;
+}
+
+extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* reportStr)
+{
+	if (!reportStr)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	std::shared_ptr<sgx_ec256_public_t> decentPubKey = std::make_shared<sgx_ec256_public_t>();
+
+	bool verifyRes = DecentEnclave::ProcessIasRaReport(reportStr, gk_decentHash, *decentPubKey, nullptr, nullptr);
+	//Won't be successful now, since the decent hash is unknown.
+	//if (!verifyRes)
+	//{
+	//	return SGX_ERROR_INVALID_PARAMETER;
+	//}
+
+	g_decentPubKey = decentPubKey;
+
+	return SGX_SUCCESS;
 }
 
 extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, void* const connectionPtr, const char* const appAttach)
@@ -119,9 +146,9 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 	return SGX_SUCCESS;
 }
 
-extern "C" sgx_status_t ecall_decent_proc_app_sign_msg(const char* jsonMsg, sgx_report_body_t* outReport, sgx_ec256_signature_t* outSign)
+extern "C" sgx_status_t ecall_decent_app_proc_app_sign_msg(const char* jsonMsg, sgx_report_body_t* outReport, sgx_ec256_signature_t* outSign)
 {
-	if (!g_decentCommLayer)
+	if (!g_decentCommLayer || !g_decentPubKey)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -155,6 +182,28 @@ extern "C" sgx_status_t ecall_decent_proc_app_sign_msg(const char* jsonMsg, sgx_
 
 		DeserializeStruct(*outReport, jsonRoot[SGXLADecent::gsk_LabelReport].GetString());
 		DeserializeStruct(*outSign, jsonRoot[SGXLADecent::gsk_LabelSign].GetString());
+
+		sgx_ecc_state_handle_t ecState;
+		sgx_status_t enclaveRet = SGX_SUCCESS;
+
+		enclaveRet = sgx_ecc256_open_context(&ecState);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			return enclaveRet;
+		}
+
+		uint8_t ecdsaRes = SGX_EC_INVALID_SIGNATURE;
+		enclaveRet = sgx_ecdsa_verify(reinterpret_cast<uint8_t*>(outReport), sizeof(sgx_report_body_t), g_decentPubKey.get(), outSign, &ecdsaRes, ecState);
+		sgx_ecc256_close_context(ecState);
+
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			return enclaveRet;
+		}
+		if (ecdsaRes != SGX_EC_VALID)
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
 
 		return SGX_SUCCESS;
 	}

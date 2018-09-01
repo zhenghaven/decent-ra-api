@@ -1,13 +1,11 @@
 #pragma once
 
-#include "DecentralizedEnclave.h"
-
 #include <string>
 #include <memory>
 
 class Connection;
 
-class DecentEnclave : virtual public DecentralizedEnclave
+class DecentEnclave
 {
 public:
 	virtual std::string GetDecentSelfRAReport() const = 0;

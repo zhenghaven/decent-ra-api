@@ -35,7 +35,7 @@ static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 }
 
 SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const std::string& tokenPath) :
-	SGXEnclaveServiceProvider(enclavePath, tokenPath, iasConnector)
+	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 	if (isFirstNode)
@@ -45,7 +45,7 @@ SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConne
 }
 
 SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const fs::path tokenPath) :
-	SGXEnclaveServiceProvider(enclavePath, tokenPath, iasConnector)
+	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 	if (isFirstNode)
@@ -55,7 +55,7 @@ SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConne
 }
 
 SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
-	SGXEnclaveServiceProvider(enclavePath, tokenLocType, tokenFileName, iasConnector)
+	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenLocType, tokenFileName)
 {
 	InitDecent(GetEnclaveId(), spid);
 	if (isFirstNode)
@@ -149,17 +149,6 @@ bool SGXDecentEnclave::SendProtocolKey(const std::string & nodeID, const std::un
 	return retval != 0;
 }
 
-bool SGXDecentEnclave::ToDecentralizedNode(const std::string & id, bool isSP)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	int retval = 0;
-
-	enclaveRet = ecall_to_decentralized_node(GetEnclaveId(), &retval, id.c_str(), isSP);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_transit_to_decent_node);
-
-	return retval == 1;
-}
-
 bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
 {
 	if (category == DecentMessage::sk_ValueCat)
@@ -232,7 +221,7 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	enclaveRet = ProcessRAMsg4(senderID, msg4, msg4Sign, raCtx);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg4);
 
-	ToDecentralizedNode(senderID, true);
+	//ToDecentralizedNode(senderID, true);
 
 	/*TODO: Safety check here: */
 	EC_KEY* pubECKey = EC_KEY_new();

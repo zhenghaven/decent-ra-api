@@ -11,7 +11,9 @@ public:
 
 	SGXServiceProvider(IASConnector ias);
 
-	virtual ~SGXServiceProvider();
+	virtual ~SGXServiceProvider(); 
+
+	virtual const char* GetPlatformType() const override;
 
 	virtual std::shared_ptr<ServiceProviderRASession> GetRASPSession(std::unique_ptr<Connection>& connection) override;
 

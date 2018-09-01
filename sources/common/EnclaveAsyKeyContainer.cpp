@@ -7,7 +7,6 @@
 #include "CommonTool.h"
 #include "DataCoding.h"
 #include "SGX/SGXOpenSSLConversions.h"
-#include "OpenSSLTools.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>
@@ -18,18 +17,6 @@ constexpr bool IS_IN_ENCLAVE_SIDE = true;
 #else
 constexpr bool IS_IN_ENCLAVE_SIDE = false;
 #endif // ENCLAVE_CODE
-
-static inline void GeneratePublicKeyPemString(std::shared_ptr<std::string> outStr, const sgx_ec256_public_t& inPubKey)
-{
-	EC_KEY* pubKey = EC_KEY_new();
-	if (!pubKey || !ECKeyPubSGX2OpenSSL(&inPubKey, pubKey, nullptr))
-	{
-		EC_KEY_free(pubKey);
-		return;
-	}
-	*outStr = ECKeyPubGetPEMStr(pubKey);
-	EC_KEY_free(pubKey);
-}
 
 EnclaveAsyKeyContainer & EnclaveAsyKeyContainer::GetInstance()
 {
@@ -63,7 +50,7 @@ EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
 		SerializeStruct(*tmpPub).c_str());
 
 	std::shared_ptr<std::string> pubPem;
-	GeneratePublicKeyPemString(pubPem, *tmpPub);
+	ECKeyPubSGX2Pem(*tmpPub, *pubPem);
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPriKey, tmpPrv);
@@ -124,7 +111,7 @@ void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyW
 //		SerializeStruct(prv->m_prvKey).c_str());
 
 	std::shared_ptr<std::string> pubPem;
-	GeneratePublicKeyPemString(pubPem, *pub);
+	ECKeyPubSGX2Pem(*pub, *pubPem);
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPriKey, prv);

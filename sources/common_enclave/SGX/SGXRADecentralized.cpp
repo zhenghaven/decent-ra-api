@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 
+#include <sgx_utils.h>
 #include <sgx_tcrypto.h>
 #include <sgx_ecp_types.h>
 
@@ -39,6 +40,28 @@ static bool IsBothWayAttested(const std::string& id)
 	bool isServerAttested = SGXRAEnclave::IsAttestedToServer(id);
 
 	return isClientAttested && isServerAttested;
+}
+
+extern "C" sgx_status_t ecall_decentralized_init(const sgx_spid_t* inSpid)
+{
+	if (!inSpid)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+	SGXRAEnclave::SetSPID(*inSpid);
+
+	sgx_report_t selfReport;
+	sgx_status_t res = sgx_create_report(nullptr, nullptr, &selfReport);
+	if (res != SGX_SUCCESS)
+	{
+		return res; //Error return. (Error from SGX)
+	}
+
+	sgx_measurement_t& enclaveHash = selfReport.body.mr_enclave;
+	ocall_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
+	SGXRAEnclave::SetTargetEnclaveHash(SerializeStruct(enclaveHash));
+
+	return SGX_SUCCESS;
 }
 
 extern "C" int ecall_to_decentralized_node(const char* id, int is_server)

@@ -19,6 +19,11 @@ SGXServiceProvider::~SGXServiceProvider()
 	SGXRAEnclave::ServiceProviderTerminate();
 }
 
+const char * SGXServiceProvider::GetPlatformType() const
+{
+	return SGXServiceProviderBase::sk_platformType;
+}
+
 std::shared_ptr<ServiceProviderRASession> SGXServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
 {
 	return std::make_shared<SGXServiceProviderRASession>(connection, *this, m_ias);

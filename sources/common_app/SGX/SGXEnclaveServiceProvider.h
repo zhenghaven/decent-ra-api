@@ -12,12 +12,13 @@ class SGXEnclaveServiceProvider : public SGXEnclave, virtual public SGXServicePr
 public:
 	SGXEnclaveServiceProvider() = delete;
 
-	SGXEnclaveServiceProvider(const std::string& enclavePath, const std::string& tokenPath, IASConnector ias);
-	SGXEnclaveServiceProvider(const std::string& enclavePath, const fs::path tokenPath, IASConnector ias);
-	SGXEnclaveServiceProvider(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName, IASConnector ias);
+	SGXEnclaveServiceProvider(IASConnector ias, const std::string& enclavePath, const std::string& tokenPath);
+	SGXEnclaveServiceProvider(IASConnector ias, const std::string& enclavePath, const fs::path tokenPath);
+	SGXEnclaveServiceProvider(IASConnector ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	virtual ~SGXEnclaveServiceProvider();
 
+	virtual const char* GetPlatformType() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override; /*This is used to suppress the warnning*/
 	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override; /*This is used to suppress the warnning*/
 
