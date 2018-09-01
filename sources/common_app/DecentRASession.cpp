@@ -130,7 +130,7 @@ bool DecentRASession::ProcessClientSideRA()
 		m_connection->Receive(trustedMsgJson);
 
 		DecentTrustedMessage trustedMsg(trustedMsgJson);
-		m_decentEnclave.ProcessDecentTrustedMsg(k_remoteSideID, m_connection, trustedMsg.GetTrustedMsg());
+		m_decentEnclave.ProcessDecentTrustedMsg(k_remoteSideID, m_connection, trustedMsg.GetTrustedMsg(), nullptr);
 
 		return false;
 	}

@@ -127,12 +127,12 @@ bool SGXDecentEnclave::ToDecentNode(const std::string & nodeID, bool isServer)
 	return retval != 0;
 }
 
-bool SGXDecentEnclave::ProcessDecentTrustedMsg(const std::string & nodeID, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg)
+bool SGXDecentEnclave::ProcessDecentTrustedMsg(const std::string & nodeID, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg, const char* appAttach)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	int retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_proc_decent_trusted_msg(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), jsonMsg.c_str());
+	enclaveRet = ecall_proc_decent_trusted_msg(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), jsonMsg.c_str(), appAttach);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_trusted_msg);
 
 	return retval != 0;
@@ -143,7 +143,7 @@ bool SGXDecentEnclave::SendProtocolKey(const std::string & nodeID, const std::un
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	int retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_decent_send_protocol_key(GetEnclaveId(), &retval, nodeID.c_str(), connection.get());
+	enclaveRet = ecall_decent_send_protocol_key(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), nullptr);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_send_protocol_key);
 
 	return retval != 0;
@@ -250,7 +250,7 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	return root.toStyledString();
 }
 
-extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg)
+extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg, const char* appAttach)
 {
 	if (!connectionPtr || !msg)
 	{
@@ -264,7 +264,7 @@ extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* se
 	return (sentLen == std::strlen(msg)) ? 1 : 0;
 }
 
-extern "C" int ocall_decent_la_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg)
+extern "C" int ocall_decent_la_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg, const char* appAttach)
 {
 	if (!connectionPtr || !msg)
 	{

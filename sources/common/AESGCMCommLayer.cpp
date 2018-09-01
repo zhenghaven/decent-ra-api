@@ -150,7 +150,7 @@ std::string AESGCMCommLayer::EncryptMsg(const std::string & msg) const
 	return res;
 }
 
-bool AESGCMCommLayer::SendMsg(void* const connectionPtr, const std::string & msg) const
+bool AESGCMCommLayer::SendMsg(void* const connectionPtr, const std::string & msg, const char* appAttach) const
 {
 	if (msg.size() == 0)
 	{
@@ -164,5 +164,5 @@ bool AESGCMCommLayer::SendMsg(void* const connectionPtr, const std::string & msg
 		return false;
 	}
 
-	return (*m_sendFunc)(connectionPtr, m_senderID.c_str(), outStr.c_str());
+	return (*m_sendFunc)(connectionPtr, m_senderID.c_str(), outStr.c_str(), appAttach);
 }

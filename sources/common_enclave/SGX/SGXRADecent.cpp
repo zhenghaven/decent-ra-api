@@ -51,10 +51,10 @@ namespace
 	static std::map<std::string, std::string> g_pendingDecentNode;
 }
 
-static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg)
+static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg, const char* appAttach)
 {
 	int retVal = 0;
-	sgx_status_t enclaveRet = ocall_decent_send_trusted_msg(&retVal, connectionPtr, senderID, msg);
+	sgx_status_t enclaveRet = ocall_decent_send_trusted_msg(&retVal, connectionPtr, senderID, msg, appAttach);
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		return false;
@@ -358,7 +358,7 @@ extern "C" int ecall_to_decent_node(const char* nodeID, int isServer)
 	return 0;
 }
 
-extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const connectionPtr, const char* jsonMsg)
+extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const connectionPtr, const char* jsonMsg, const char* appAttach)
 {
 	if (!nodeID || !connectionPtr || !jsonMsg)
 	{
@@ -371,7 +371,10 @@ extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const con
 	}
 
 	std::string plainMsg;
-	commLayer->DecryptMsg(plainMsg, jsonMsg);
+	if (!commLayer->DecryptMsg(plainMsg, jsonMsg))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
 	if (!ParseStr2Json(jsonRoot, plainMsg))
@@ -407,7 +410,7 @@ extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const con
 	return 0;
 }
 
-extern "C" int ecall_decent_send_protocol_key(const char* nodeID, void* const connectionPtr)
+extern "C" int ecall_decent_send_protocol_key(const char* nodeID, void* const connectionPtr, const char* appAttach)
 {
 	if (!nodeID || !connectionPtr)
 	{
@@ -428,7 +431,7 @@ extern "C" int ecall_decent_send_protocol_key(const char* nodeID, void* const co
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelFunc, gsk_ValueFuncSetProtoKey);
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelPrvKey, prvKeyB64);
 
-	return commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot));
+	return commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot), appAttach);
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

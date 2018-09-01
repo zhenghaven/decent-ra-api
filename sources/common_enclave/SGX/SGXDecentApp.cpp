@@ -1,0 +1,165 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL
+
+#include <string>
+#include <memory>
+#include <cstring>
+
+#include <sgx_report.h>
+#include <sgx_error.h>
+#include <sgx_ecp_types.h>
+#include <sgx_dh.h>
+#include <sgx_tcrypto.h>
+
+#include <rapidjson/document.h>
+
+#include <Enclave_t.h>
+
+#include "SGXLA.h"
+#include "SGXLADecent.h"
+
+#include "../../common/DataCoding.h"
+#include "../../common/JsonTools.h"
+#include "../../common/AESGCMCommLayer.h"
+#include "../../common/EnclaveAsyKeyContainer.h"
+
+namespace
+{
+	//The default key container
+	static const EnclaveAsyKeyContainer& gk_keyContainer = EnclaveAsyKeyContainer::GetInstance();
+
+	//Secure comm layer to decent server. (We only attest to one decent server once)
+	static std::shared_ptr<const SecureCommLayer> g_decentCommLayer;
+
+	//Hardcoded decent enclave's hash. (Not used until decent program is stable)
+	static constexpr char gk_decentHash[] = "";
+}
+
+static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg, const char* attach)
+{
+	int retVal = 0;
+	sgx_status_t enclaveRet = ocall_decent_la_send_trusted_msg(&retVal, connectionPtr, senderID, msg, attach);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		return false;
+	}
+	return retVal == 1;
+}
+
+extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, void* const connectionPtr, const char* const appAttach)
+{
+	if (!decentId || !connectionPtr)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	sgx_dh_session_enclave_identity_t identity;
+	sgx_ec_key_128bit_t aesKey;
+	if (!SGXLAEnclave::ReleasePeerKey(decentId, identity, aesKey))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	//=============== Not used now 
+	//sgx_measurement_t targetHash;
+	//DeserializeStruct(targetHash, gk_decentHash);
+	//const sgx_measurement_t& testHash = identity.mr_enclave;
+
+	//if (!consttime_memequal(&targetHash, &testHash, sizeof(sgx_measurement_t)))
+	//{
+	//	return SGX_ERROR_INVALID_PARAMETER;
+	//}
+	//===============
+
+	std::shared_ptr<const sgx_ec256_public_t> pubKey = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::shared_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
+
+	sgx_report_data_t reportData;
+	std::memset(&reportData, 0, sizeof(sgx_report_data_t));
+
+	std::shared_ptr<const std::string> pubPem = EnclaveAsyKeyContainer::GetInstance().GetSignPubPem();
+
+	sgx_sha_state_handle_t shaState;
+	sgx_sha256_hash_t tmpHash;
+	sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		return enclaveRet;
+	}
+	enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubPem->data()), static_cast<uint32_t>(pubPem->size()), shaState);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		sgx_sha256_close(shaState);
+		return enclaveRet;
+	}
+	enclaveRet = sgx_sha256_get_hash(shaState, &tmpHash);
+	sgx_sha256_close(shaState);
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		return enclaveRet;
+	}
+
+	std::memcpy(&reportData, &tmpHash, sizeof(sgx_sha256_hash_t));
+
+	rapidjson::Document doc;
+	rapidjson::Value jsonRoot;
+
+	std::string reportDataB64 = SerializeStruct(reportData);
+
+	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelFunc, SGXLADecent::gsk_ValueFuncReportData);
+	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelReportData, reportDataB64);
+
+	if (!commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot), appAttach))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	g_decentCommLayer = commLayer;
+
+	return SGX_SUCCESS;
+}
+
+extern "C" sgx_status_t ecall_decent_proc_app_sign_msg(const char* jsonMsg, sgx_report_body_t* outReport, sgx_ec256_signature_t* outSign)
+{
+	if (!g_decentCommLayer)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	std::shared_ptr<const SecureCommLayer> commLayer = g_decentCommLayer;
+	g_decentCommLayer.reset();
+
+	std::string plainMsg;
+	if (!commLayer->DecryptMsg(plainMsg, jsonMsg))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
+	if (!ParseStr2Json(jsonRoot, plainMsg) ||
+		!jsonRoot.HasMember(SGXLADecent::gsk_LabelFunc) ||
+		!jsonRoot[SGXLADecent::gsk_LabelFunc].IsString())
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	std::string funcType(jsonRoot[SGXLADecent::gsk_LabelFunc].GetString());
+
+	if (funcType == SGXLADecent::gsk_ValueFuncAppSign)
+	{
+		if (!jsonRoot.HasMember(SGXLADecent::gsk_LabelReport) || !jsonRoot[SGXLADecent::gsk_LabelReport].IsString() ||
+		!jsonRoot.HasMember(SGXLADecent::gsk_LabelSign) || !jsonRoot[SGXLADecent::gsk_LabelSign].IsString() )
+		{
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
+
+		DeserializeStruct(*outReport, jsonRoot[SGXLADecent::gsk_LabelReport].GetString());
+		DeserializeStruct(*outSign, jsonRoot[SGXLADecent::gsk_LabelSign].GetString());
+
+		return SGX_SUCCESS;
+	}
+
+	return SGX_ERROR_INVALID_PARAMETER;
+}
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL

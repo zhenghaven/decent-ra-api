@@ -25,7 +25,7 @@ public:
 	static constexpr size_t AES_GCM_128BIT_KEY_SIZE = 16;
 	typedef std::array<uint8_t, AES_GCM_128BIT_KEY_SIZE> AesGcm128bKeyType;
 
-	typedef bool (*SendFunctionType)(void* const connectionPtr, const char* senderID, const char *msg);
+	typedef bool (*SendFunctionType)(void* const connectionPtr, const char* senderID, const char *msg, const char* appAttach);
 
 public:
 	AESGCMCommLayer() = delete;
@@ -43,7 +43,7 @@ public:
 	virtual bool DecryptMsg(std::string& outMsg, const std::string& inMsg) const override;
 
 	virtual std::string EncryptMsg(const std::string& msg) const override;
-	virtual bool SendMsg(void* const connectionPtr, const std::string& msg) const override;
+	virtual bool SendMsg(void* const connectionPtr, const std::string& msg, const char* appAttach) const override;
 
 private:
 	//std::unique_ptr<sgx_ec256_public_t> m_pubKey;

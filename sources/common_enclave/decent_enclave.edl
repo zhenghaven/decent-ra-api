@@ -7,7 +7,7 @@ enclave {
 	
 	untrusted 
 	{
-		int ocall_decent_send_trusted_msg([user_check] void* connectionPtr, [in, string] const char* senderID, [in, string] const char *msg);
+		int ocall_decent_send_trusted_msg([user_check] void* connectionPtr, [in, string] const char* senderID, [in, string] const char *msg, [user_check] const char* appAttach);
 	};
 	
 	trusted 
@@ -25,9 +25,9 @@ enclave {
 		
 		public int ecall_to_decent_node([in, string] const char* nodeID, int isServer);
 		
-		public int ecall_proc_decent_trusted_msg([in, string] const char* nodeID, [user_check] void* connectionPtr, [in, string] const char* jsonMsg);
+		public int ecall_proc_decent_trusted_msg([in, string] const char* nodeID, [user_check] void* connectionPtr, [in, string] const char* jsonMsg, [user_check] const char* appAttach);
 		
-		public int ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr);
+		public int ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr, [user_check] const char* appAttach);
 	};
 
 };

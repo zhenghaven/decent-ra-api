@@ -5,10 +5,8 @@
 
 #define STRUCT_ASSERT_ERROR_MSG "Check sgx_report_body_t and sgx_dh_session_enclave_identity_t has different struct"
 
-#include <map>
 #include <string>
 #include <memory>
-#include <mutex>
 #include <cstring>
 #include <cstddef>
 
@@ -29,10 +27,10 @@
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 
-static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg)
+static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg, const char* appAttach)
 {
 	int retVal = 0;
-	sgx_status_t enclaveRet = ocall_decent_la_send_trusted_msg(&retVal, connectionPtr, senderID, msg);
+	sgx_status_t enclaveRet = ocall_decent_la_send_trusted_msg(&retVal, connectionPtr, senderID, msg, appAttach);
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		return false;
@@ -63,7 +61,7 @@ static_assert(offsetof(sgx_report_body_t, isv_prod_id) == offsetof(sgx_dh_sessio
 static_assert(offsetof(sgx_report_body_t, isv_svn) == offsetof(sgx_dh_session_enclave_identity_t, isv_svn), STRUCT_ASSERT_ERROR_MSG);
 static_assert(offsetof(sgx_report_body_t, reserved4) == sizeof(sgx_dh_session_enclave_identity_t), STRUCT_ASSERT_ERROR_MSG);
 
-static inline sgx_status_t ecall_decent_send_app_report_sign(const sgx_dh_session_enclave_identity_t& identity, const sgx_report_data_t& reportData, std::unique_ptr<const SecureCommLayer>& commLayer, void* const connectionPtr)
+static inline sgx_status_t ecall_decent_send_app_report_sign(const sgx_dh_session_enclave_identity_t& identity, const sgx_report_data_t& reportData, std::unique_ptr<const SecureCommLayer>& commLayer, void* const connectionPtr, const char* appAttach)
 {
 	sgx_report_body_t report = { 0 };
 
@@ -100,7 +98,7 @@ static inline sgx_status_t ecall_decent_send_app_report_sign(const sgx_dh_sessio
 	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelReport, reportB64);
 	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelSign, signB64);
 
-	if (!commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot)))
+	if (!commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot), appAttach))
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -109,7 +107,7 @@ static inline sgx_status_t ecall_decent_send_app_report_sign(const sgx_dh_sessio
 }
 
 
-extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, void* const connectionPtr, const char* jsonMsg)
+extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, void* const connectionPtr, const char* jsonMsg, const char* appAttach)
 {
 	if (!peerId || !connectionPtr || !jsonMsg)
 	{
@@ -127,7 +125,10 @@ extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, 
 	std::unique_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
 
 	std::string plainMsg;
-	commLayer->DecryptMsg(plainMsg, jsonMsg);
+	if (!commLayer->DecryptMsg(plainMsg, jsonMsg))
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
 
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
 	if (!ParseStr2Json(jsonRoot, plainMsg) ||
@@ -149,7 +150,7 @@ extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, 
 		sgx_report_data_t reportData;
 		DeserializeStruct(reportData, jsonRoot[SGXLADecent::gsk_LabelReportData].GetString());
 
-		return ecall_decent_send_app_report_sign(identity, reportData, commLayer, connectionPtr);
+		return ecall_decent_send_app_report_sign(identity, reportData, commLayer, connectionPtr, appAttach);
 	}
 
 	return SGX_ERROR_INVALID_PARAMETER;

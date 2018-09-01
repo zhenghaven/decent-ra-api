@@ -6,9 +6,9 @@ enclave {
 	from "sgx_tsgxssl.edl" import *;
 	
 	from "common_enclave.edl" import *;
-	from "ra_client_enclave.edl" import *;
-	from "ra_sp_enclave.edl" import *;
-	from "la_enclave.edl" import *;
+	from "sgx_ra_client.edl" import *;
+	from "sgx_ra_sp.edl" import *;
+	from "sgx_la.edl" import *;
 
 	trusted 
 	{

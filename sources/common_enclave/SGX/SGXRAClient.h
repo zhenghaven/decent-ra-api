@@ -8,7 +8,7 @@
 
 class AESGCMCommLayer;
 
-typedef bool(*SendFunctionType)(void* const connectionPtr, const char* senderID, const char *msg);
+typedef bool(*SendFunctionType)(void* const connectionPtr, const char* senderID, const char *msg, const char* appAttach);
 
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 #define SGX_CMAC_KEY_SIZE               16
