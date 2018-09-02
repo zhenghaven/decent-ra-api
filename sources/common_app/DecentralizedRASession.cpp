@@ -100,20 +100,20 @@ DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& conn
 
 DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const DecentralizedRAHandshake & hsMsg) :
 	m_hwEnclave(hwEnclave),
-	k_senderID(ConstructSenderID(hwEnclave)),
-	k_remoteSideID(hsMsg.GetSenderID()),
+	k_senderId(ConstructSenderID(hwEnclave)),
+	k_remoteSideId(hsMsg.GetSenderID()),
 	m_decentralizedEnc(enclave),
 	k_isServerSide(true)
 {
-	m_connection.swap(connection);
+	connection->Send(DecentralizedRAHandshakeAck(k_senderId));
 
-	m_connection->Send(DecentralizedRAHandshakeAck(k_senderID));
+	m_connection.swap(connection);
 }
 
 DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const DecentralizedRAHandshakeAck & ackMsg) :
 	m_hwEnclave(hwEnclave),
-	k_senderID(ConstructSenderID(hwEnclave)),
-	k_remoteSideID(ackMsg.GetSenderID()),
+	k_senderId(ConstructSenderID(hwEnclave)),
+	k_remoteSideId(ackMsg.GetSenderID()),
 	m_decentralizedEnc(enclave),
 	k_isServerSide(false)
 {
@@ -144,7 +144,7 @@ bool DecentralizedRASession::ProcessClientSideRA()
 			return res;
 		}
 
-		SendReverseRARequest(k_senderID); //should reture true here since the m_connection is available at this point.
+		SendReverseRARequest(k_senderId); //should reture true here since the m_connection is available at this point.
 
 		std::shared_ptr<ServiceProviderRASession> spSession = m_hwEnclave.GetRASPSession(m_connection);
 		res = spSession->ProcessServerSideRA();
@@ -156,13 +156,13 @@ bool DecentralizedRASession::ProcessClientSideRA()
 		}
 
 		RecvReverseRARequest();
-		m_decentralizedEnc.ToDecentralizedNode(k_remoteSideID, k_isServerSide);
+		m_decentralizedEnc.ToDecentralizedNode(k_remoteSideId, k_isServerSide);
 
 		return true;
 	}
 	catch (const MessageParseException&)
 	{
-		DecentralizedErrMsg errMsg(k_senderID, "Received unexpected message! Make sure you are following the protocol.");
+		DecentralizedErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
 		m_connection->Send(errMsg);
 		return false;
 	}
@@ -199,14 +199,14 @@ bool DecentralizedRASession::ProcessServerSideRA()
 			return res;
 		}
 
-		SendReverseRARequest(k_senderID);
-		m_decentralizedEnc.ToDecentralizedNode(k_remoteSideID, k_isServerSide);
+		SendReverseRARequest(k_senderId);
+		m_decentralizedEnc.ToDecentralizedNode(k_remoteSideId, k_isServerSide);
 
 		return true;
 	}
 	catch (const MessageParseException&)
 	{
-		DecentralizedErrMsg errMsg(k_senderID, "Received unexpected message! Make sure you are following the protocol.");
+		DecentralizedErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
 		m_connection->Send(errMsg);
 		return false;
 	}

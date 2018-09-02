@@ -1,5 +1,8 @@
 #include "SGXServiceProvider.h"
 
+#include <sgx_tcrypto.h>
+
+#include "../../common/DataCoding.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
 #include "../../common/SGX/sgx_constants.h"
 
@@ -34,6 +37,13 @@ void SGXServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) const
 {
 	sgx_status_t retval = SGXRAEnclave::GetRASPSignPubKey(&outKey);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, SGXRAEnclave::GetRASPSignPubKey);
+}
+
+const std::string SGXServiceProvider::GetRASPSignPubKey() const
+{
+	sgx_ec256_public_t signPubKey;
+	GetRASPSignPubKey(signPubKey);
+	return SerializePubKey(signPubKey);
 }
 
 sgx_status_t SGXServiceProvider::GetIasReportNonce(const std::string & clientID, std::string & outNonce)

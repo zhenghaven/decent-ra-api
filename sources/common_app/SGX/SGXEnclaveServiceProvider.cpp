@@ -1,10 +1,11 @@
 #include "../../common/ModuleConfigInternal.h"
-#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENTRALIZED_ENCLAVE_INTERNAL
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENTRALIZED_ENCLAVE_INTERNAL || USE_DECENT_ENCLAVE_SERVER_INTERNAL)
 
 #include "SGXEnclaveServiceProvider.h"
 
 #include <Enclave_u.h>
 
+#include "../../common/DataCoding.h"
 #include "../../common/SGX/sgx_constants.h"
 
 #include "SGXMessages/SGXRAMessage.h"
@@ -61,7 +62,7 @@ void SGXEnclaveServiceProvider::GetRAClientSignPubKey(sgx_ec256_public_t & outKe
 	SGXEnclave::GetRAClientSignPubKey(outKey);
 }
 
-std::string SGXEnclaveServiceProvider::GetRAClientSignPubKey() const
+const std::string SGXEnclaveServiceProvider::GetRAClientSignPubKey() const
 {
 	return SGXEnclave::GetRAClientSignPubKey();
 }
@@ -71,6 +72,26 @@ std::shared_ptr<ClientRASession> SGXEnclaveServiceProvider::GetRAClientSession(s
 	return SGXEnclave::GetRAClientSession(connection);
 }
 
+bool SGXEnclaveServiceProvider::SendLARequest(std::unique_ptr<Connection>& connection)
+{
+	return SGXEnclave::SendLARequest(connection);
+}
+
+std::shared_ptr<LocalAttestationSession> SGXEnclaveServiceProvider::GetLAInitiatorSession(std::unique_ptr<Connection>& connection)
+{
+	return SGXEnclave::GetLAInitiatorSession(connection);
+}
+
+std::shared_ptr<LocalAttestationSession> SGXEnclaveServiceProvider::GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value & ackMsg)
+{
+	return SGXEnclave::GetLAInitiatorSession(connection, ackMsg);
+}
+
+std::shared_ptr<LocalAttestationSession> SGXEnclaveServiceProvider::GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value & initMsg)
+{
+	return SGXEnclave::GetLAResponderSession(connection, initMsg);
+}
+
 void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) const
 {
 	sgx_status_t retval = SGX_SUCCESS;
@@ -78,6 +99,13 @@ void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) c
 	sgx_status_t enclaveRet = ecall_get_ra_sp_pub_sig_key(GetEnclaveId(), &retval, &outKey);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_sp_pub_sig_key);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
+}
+
+const std::string SGXEnclaveServiceProvider::GetRASPSignPubKey() const
+{
+	sgx_ec256_public_t signPubKey;
+	GetRASPSignPubKey(signPubKey);
+	return SerializePubKey(signPubKey);
 }
 
 sgx_status_t SGXEnclaveServiceProvider::GetIasReportNonce(const std::string & clientID, std::string & outNonce)
@@ -134,4 +162,4 @@ bool SGXEnclaveServiceProvider::ProcessSmartMessage(const std::string & category
 	}
 }
 
-#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENTRALIZED_ENCLAVE_INTERNAL
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENTRALIZED_ENCLAVE_INTERNAL || USE_DECENT_ENCLAVE_SERVER_INTERNAL)

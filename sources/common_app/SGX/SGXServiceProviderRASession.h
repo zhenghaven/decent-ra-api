@@ -2,6 +2,9 @@
 
 #include "../ServiceProviderRASession.h"
 
+#include <string>
+#include <memory>
+
 class SGXServiceProviderBase;
 class IASConnector;
 class SGXRAMessage0Send;
@@ -23,8 +26,13 @@ public:
 
 	virtual bool ProcessServerSideRA() override;
 
+	virtual const std::string GetSenderID() const override { return k_senderId; }
+
+	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
+
 protected:
+	const std::string k_senderId;
+	const std::string k_remoteSideId;
 	SGXServiceProviderBase& m_sgxSP;
 	const IASConnector& m_ias;
-	const std::string k_remoteSideID;
 };

@@ -1,4 +1,12 @@
 #include "../../common/ModuleConfigInternal.h"
+
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)
+
+#include "../DecentMessages/DecentAppMessage.h"
+#include "../Networking/Connection.h"
+
+#endif // USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)
+
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
 
 #include "SGXDecentEnclave.h"
@@ -20,11 +28,10 @@
 #include "../common/DecentRAReport.h"
 
 #include "../DecentMessages/DecentMessage.h"
-#include "../DecentMessages/DecentAppMessage.h"
 #include "../DecentRASession.h"
-#include "../Networking/Connection.h"
+#include "../DecentAppLASession.h"
+
 #include "SGXEnclaveRuntimeException.h"
-#include "SGXLASession.h"
 #include "SGXMessages/SGXLAMessage.h"
 #include "IAS/IASConnector.h"
 
@@ -151,6 +158,17 @@ bool SGXDecentEnclave::SendProtocolKey(const std::string & nodeID, const std::un
 	return retval != 0;
 }
 
+bool SGXDecentEnclave::ProcessAppReportSignReq(const std::string & appId, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg, const char * appAttach)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
+
+	enclaveRet = ecall_decent_proc_send_app_sign_req(GetEnclaveId(), &retval, appId.c_str(), connection.get(), jsonMsg.c_str(), appAttach);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_proc_send_app_sign_req);
+
+	return retval == SGX_SUCCESS;
+}
+
 bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
 {
 	if (category == DecentMessage::sk_ValueCat)
@@ -159,7 +177,7 @@ bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const J
 	}
 	else if (category == SGXLAMessage::sk_ValueCat)
 	{
-		return SGXLASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
+		return DecentServerLASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
 	}
 	else
 	{
@@ -250,10 +268,15 @@ extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* se
 
 	DecentTrustedMessage trustedMsg(senderID, msg, appAttach ? appAttach : "");
 	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
-	size_t sentLen = cnt->Send(trustedMsg.ToJsonString());
+	std::string sentMsg = trustedMsg.ToJsonString();
+	size_t sentLen = cnt->Send(sentMsg);
 
-	return (sentLen == std::strlen(msg)) ? 1 : 0;
+	return (sentLen == sentMsg.size()) ? 1 : 0;
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
+
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)
 
 extern "C" int ocall_decent_la_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg, const char* appAttach)
 {
@@ -264,9 +287,10 @@ extern "C" int ocall_decent_la_send_trusted_msg(void* connectionPtr, const char*
 
 	DecentAppTrustedMessage trustedMsg(senderID, msg, appAttach ? appAttach : "");
 	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
-	size_t sentLen = cnt->Send(trustedMsg.ToJsonString());
+	std::string sentMsg = trustedMsg.ToJsonString();
+	size_t sentLen = cnt->Send(sentMsg);
 
-	return (sentLen == std::strlen(msg)) ? 1 : 0;
+	return (sentLen == sentMsg.size()) ? 1 : 0;
 }
 
-#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
+#endif // USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)

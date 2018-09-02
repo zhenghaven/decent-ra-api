@@ -38,7 +38,7 @@ public:
 
 	virtual std::shared_ptr<const sgx_ec256_public_t> GetSignPubKey() const;
 
-	virtual std::shared_ptr<const std::string> GetSignPubPem() const;
+	//virtual std::shared_ptr<const std::string> GetSignPubPem() const;
 
 	virtual void UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const sgx_ec256_public_t> pub);
 
@@ -47,7 +47,7 @@ private:
 
 	std::shared_ptr<const PrivateKeyWrap> m_signPriKey;
 
-	std::shared_ptr<const std::string> m_signPubPem;
+	//std::shared_ptr<const std::string> m_signPubPem;
 
 	bool m_isValid;
 };

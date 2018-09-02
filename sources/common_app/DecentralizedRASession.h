@@ -33,6 +33,10 @@ public:
 
 	virtual bool ProcessServerSideRA();
 
+	virtual const std::string GetSenderID() const override { return k_senderId; }
+
+	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
+
 protected:
 	virtual bool SendReverseRARequest(const std::string& senderID);
 
@@ -41,8 +45,8 @@ protected:
 	EnclaveServiceProviderBase& m_hwEnclave;
 
 private:
-	const std::string k_senderID;
-	const std::string k_remoteSideID;
+	const std::string k_senderId;
+	const std::string k_remoteSideId;
 	DecentralizedEnclave& m_decentralizedEnc;
 	const bool k_isServerSide;
 };

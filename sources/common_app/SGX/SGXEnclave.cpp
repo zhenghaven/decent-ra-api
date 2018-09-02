@@ -120,7 +120,7 @@ void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_get_ra_client_pub_sig_key);
 }
 
-std::string SGXEnclave::GetRAClientSignPubKey() const
+const std::string SGXEnclave::GetRAClientSignPubKey() const
 {
 	sgx_ec256_public_t signPubKey;
 	GetRAClientSignPubKey(signPubKey);
@@ -130,6 +130,28 @@ std::string SGXEnclave::GetRAClientSignPubKey() const
 std::shared_ptr<ClientRASession> SGXEnclave::GetRAClientSession(std::unique_ptr<Connection>& connection)
 {
 	return std::make_shared<SGXClientRASession>(connection, *this);
+}
+
+bool SGXEnclave::SendLARequest(std::unique_ptr<Connection>& connection)
+{
+	return SGXLASession::SendHandshakeMessage(connection, *this);
+}
+
+std::shared_ptr<LocalAttestationSession> SGXEnclave::GetLAInitiatorSession(std::unique_ptr<Connection>& connection)
+{
+	return std::make_shared<SGXLASession>(connection, *this);
+}
+
+std::shared_ptr<LocalAttestationSession> SGXEnclave::GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value & ackMsg)
+{
+	SGXLAMessage1* msg1 = new SGXLAMessage1(ackMsg);
+	return std::make_shared<SGXLASession>(connection, *this, msg1);
+}
+
+std::shared_ptr<LocalAttestationSession> SGXEnclave::GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value & initMsg)
+{
+	SGXLARequest req(initMsg);
+	return std::make_shared<SGXLASession>(connection, *this, req);
 }
 
 uint32_t SGXEnclave::GetExGroupID()

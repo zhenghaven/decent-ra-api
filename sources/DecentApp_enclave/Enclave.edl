@@ -9,6 +9,8 @@ enclave {
 	from "sgx_ra_client.edl" import *;
 	from "sgx_ra_sp.edl" import *;
 	from "sgx_la.edl" import *;
+	from "decent_app.edl" import *;
+	from "decent_app_la.edl" import *;
 
 	trusted 
 	{

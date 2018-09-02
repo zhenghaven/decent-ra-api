@@ -32,9 +32,14 @@ public:
 
 	virtual bool ProcessClientSideRA() override;
 
+	virtual const std::string GetSenderID() const override { return k_senderId; }
+
+	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
+
 protected:
-	SGXEnclave& m_sgxEnclave;
-	const std::string k_remoteSideID;
+	const std::string k_senderId;
+	const std::string k_remoteSideId;
+	SGXEnclave& m_hwEnclave;
 	const sgx_ec256_public_t k_remoteSideSignKey;
 };
 

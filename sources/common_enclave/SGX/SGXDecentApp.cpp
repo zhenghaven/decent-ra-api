@@ -19,8 +19,10 @@
 #include "SGXLADecent.h"
 #include "SGXDecentCommon.h"
 
+#include "../Common.h"
 #include "../../common/DataCoding.h"
 #include "../../common/JsonTools.h"
+#include "../../common/SGX/SGXOpenSSLConversions.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/DecentRAReport.h"
@@ -69,6 +71,7 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* repor
 	//}
 
 	g_decentPubKey = decentPubKey;
+	COMMON_PRINTF("Accepted Decent Server %s.\n", SerializeStruct(*g_decentPubKey).c_str());
 
 	return SGX_SUCCESS;
 }
@@ -104,7 +107,9 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 	sgx_report_data_t reportData;
 	std::memset(&reportData, 0, sizeof(sgx_report_data_t));
 
-	std::shared_ptr<const std::string> pubPem = EnclaveAsyKeyContainer::GetInstance().GetSignPubPem();
+	//std::shared_ptr<const std::string> pubPem = EnclaveAsyKeyContainer::GetInstance().GetSignPubPem();
+	std::string pubPem;
+	ECKeyPubSGX2Pem(*EnclaveAsyKeyContainer::GetInstance().GetSignPubKey(), pubPem);
 
 	sgx_sha_state_handle_t shaState;
 	sgx_sha256_hash_t tmpHash;
@@ -113,7 +118,7 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 	{
 		return enclaveRet;
 	}
-	enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubPem->data()), static_cast<uint32_t>(pubPem->size()), shaState);
+	enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubPem.data()), static_cast<uint32_t>(pubPem.size()), shaState);
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		sgx_sha256_close(shaState);

@@ -12,6 +12,11 @@
 
 #include "../common_app/EnclaveUtil.h"
 #include "../common_app/Common.h"
+#include "../common_app/SGX/SGXDecentAppEnclave.h"
+#include "../common_app/DecentAppLASession.h"
+#include "../common_app/Messages.h"
+
+#include "../common_app/Networking/LocalConnection.h"
 
 /**
  * \brief	Main entry-point for this application
@@ -45,6 +50,13 @@ int main(int argc, char ** argv)
 
 	std::cout << "================ This is App side ================" << std::endl;
 
+	SGXDecentAppEnclave enclave(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
+
+	std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
+	DecentAppLASession::SendHandshakeMessage(connection, enclave);
+	Json::Value jsonRoot;
+	connection->Receive(jsonRoot);
+	enclave.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
 
 	printf("Enter a character before exit ...\n");
 	getchar();

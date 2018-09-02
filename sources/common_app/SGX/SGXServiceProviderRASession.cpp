@@ -106,11 +106,13 @@ SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connect
 }
 
 SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias, const SGXRAMessage0Send & msg0s) :
-	ServiceProviderRASession(connection, serviceProviderBase),
+	k_senderId(serviceProviderBase.GetRASPSignPubKey()),
+	k_remoteSideId(ProcessHandshakeMsg(msg0s)),
 	m_sgxSP(serviceProviderBase),
-	m_ias(ias),
-	k_remoteSideID(ProcessHandshakeMsg(msg0s))
+	m_ias(ias)
 {
+	//At this point, everything went well, no exeception thrown. Now acquire the connection.
+	m_connection.swap(connection);
 }
 
 SGXServiceProviderRASession::~SGXServiceProviderRASession()
@@ -128,16 +130,16 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 
 	try
 	{
-		SGXRAClientErrMsg enclaveErrMsg(k_raSenderID, "Enclave process error!");
+		SGXRAClientErrMsg enclaveErrMsg(k_senderId, "Enclave process error!");
 
-		enclaveRes = m_sgxSP.ProcessRAMsg0Send(k_remoteSideID);
+		enclaveRes = m_sgxSP.ProcessRAMsg0Send(k_remoteSideId);
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			m_connection->Send(enclaveErrMsg);
 			return false;
 		}
 
-		SGXRAMessage0Resp msg0r(k_raSenderID, k_raSenderID);
+		SGXRAMessage0Resp msg0r(k_senderId, k_senderId);
 		m_connection->Send(msg0r.ToJsonString());
 
 		m_connection->Receive(msgBuffer);
@@ -149,7 +151,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		respCode = m_ias.GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
 		if (respCode != 200)
 		{
-			SGXRAClientErrMsg errMsg(k_raSenderID, "Failed to get Revocation List from IAS!");
+			SGXRAClientErrMsg errMsg(k_senderId, "Failed to get Revocation List from IAS!");
 			m_connection->Send(errMsg.ToJsonString());
 			return false;
 		}
@@ -169,7 +171,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		msg2Ref.sig_rl_size = static_cast<uint32_t>(sigRLData.size());
 		std::memcpy(msg2Data.data() + sizeof(sgx_ra_msg2_t), sigRLData.data(), sigRLData.size());
 
-		SGXRAMessage2 msg2(k_raSenderID, msg2Data);
+		SGXRAMessage2 msg2(k_senderId, msg2Data);
 		m_connection->Send(msg2.ToJsonString());
 
 		m_connection->Receive(msgBuffer);
@@ -196,7 +198,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		respCode = m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert);
 		if (respCode != 200)
 		{
-			SGXRAClientErrMsg errMsg(k_raSenderID, "Failed to get report from IAS!");
+			SGXRAClientErrMsg errMsg(k_senderId, "Failed to get report from IAS!");
 			m_connection->Send(errMsg.ToJsonString());
 			return false;
 		}
@@ -208,14 +210,14 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 			return false;
 		}
 
-		SGXRAMessage4 msg4(k_raSenderID, msg4Data, msg4Sign);
+		SGXRAMessage4 msg4(k_senderId, msg4Data, msg4Sign);
 		m_connection->Send(msg4.ToJsonString());
 
 		return true;
 	}
 	catch (const MessageParseException&)
 	{
-		SGXRAClientErrMsg errMsg(k_raSenderID, "Received unexpected message! Make sure you are following the protocol.");
+		SGXRAClientErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
 		m_connection->Send(errMsg);
 		return false;
 	}

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../common/ModuleConfigInternal.h"
-#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENTRALIZED_ENCLAVE_INTERNAL || USE_DECENT_ENCLAVE_SERVER_INTERNAL)
 
 #include "SGXEnclave.h"
 #include "SGXServiceProviderBase.h"
@@ -24,10 +24,16 @@ public:
 
 	virtual const char* GetPlatformType() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override; /*This is used to suppress the warnning*/
-	virtual std::string GetRAClientSignPubKey() const override; /*This is used to suppress the warnning*/
+	virtual const std::string GetRAClientSignPubKey() const override; /*This is used to suppress the warnning*/
 	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override; /*This is used to suppress the warnning*/
 
+	virtual bool SendLARequest(std::unique_ptr<Connection>& connection) override;
+	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection) override;
+	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value& ackMsg) override;
+	virtual std::shared_ptr<LocalAttestationSession> GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value& initMsg) override;
+
 	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) const override;
+	virtual const std::string GetRASPSignPubKey() const override;
 	virtual std::shared_ptr<ServiceProviderRASession> GetRASPSession(std::unique_ptr<Connection>& connection) override;
 
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce) override;
@@ -41,4 +47,4 @@ protected:
 	std::shared_ptr<const IASConnector> m_ias;
 };
 
-#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENTRALIZED_ENCLAVE_INTERNAL || USE_DECENT_ENCLAVE_SERVER_INTERNAL)

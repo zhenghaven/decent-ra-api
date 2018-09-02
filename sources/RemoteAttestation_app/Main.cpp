@@ -100,9 +100,6 @@ int main(int argc, char ** argv)
 		connection->Receive(jsonRoot);
 		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
 
-		connection->Receive(jsonRoot);
-		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
-
 	}
 	break;
 	case 1:
@@ -113,10 +110,6 @@ int main(int argc, char ** argv)
 		std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
 		DecentRASession::SendHandshakeMessage(connection, expEnc);
 		Json::Value jsonRoot;
-		connection->Receive(jsonRoot);
-		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
-
-		SGXLASession::SendHandshakeMessage(connection, expEnc);
 		connection->Receive(jsonRoot);
 		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
 	}

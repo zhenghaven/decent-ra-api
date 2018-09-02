@@ -6,6 +6,8 @@
 #include "SGXEnclaveRuntimeException.h"
 
 #include "../../common/DataCoding.h"
+#include "../DecentAppLASession.h"
+#include "SGXMessages/SGXLAMessage.h"
 
 #include <Enclave_u.h>
 
@@ -25,7 +27,7 @@ bool SGXDecentAppEnclave::ProcessDecentSelfRAReport(std::string & inReport)
 		m_decentRAReport.swap(inReport);
 	}
 
-	return retval;
+	return retval == SGX_SUCCESS;
 }
 
 bool SGXDecentAppEnclave::SendReportDataToServer(const std::string & decentId, const std::unique_ptr<Connection>& connection)
@@ -35,7 +37,7 @@ bool SGXDecentAppEnclave::SendReportDataToServer(const std::string & decentId, c
 	enclaveRet = ecall_decent_app_send_report_data(GetEnclaveId(), &retval, decentId.c_str(), connection.get(), nullptr);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_process_ias_ra_report);
 
-	return retval;
+	return retval == SGX_SUCCESS;
 }
 
 bool SGXDecentAppEnclave::ProcessAppReportSignMsg(const std::string & trustedMsg)
@@ -60,7 +62,7 @@ bool SGXDecentAppEnclave::ProcessAppReportSignMsg(const std::string & trustedMsg
 		m_sgxEnclaveReportSign.reset();
 	}
 
-	return false;
+	return retval == SGX_SUCCESS;
 }
 
 const std::string & SGXDecentAppEnclave::GetDecentRAReport() const
@@ -76,4 +78,16 @@ const std::string & SGXDecentAppEnclave::GetEnclaveReport() const
 const std::string & SGXDecentAppEnclave::GetEnclaveReportSign() const
 {
 	return m_enclaveReportSign;
+}
+
+bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+{
+	if (category == SGXLAMessage::sk_ValueCat)
+	{
+		return DecentAppLASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
+	}
+	else
+	{
+		return false;
+	}
 }

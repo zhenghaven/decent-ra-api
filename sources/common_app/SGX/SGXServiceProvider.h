@@ -20,6 +20,7 @@ public:
 	virtual std::shared_ptr<ServiceProviderRASession> GetRASPSession(std::unique_ptr<Connection>& connection) override;
 
 	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) const override;
+	virtual const std::string GetRASPSignPubKey() const override;
 	virtual sgx_status_t GetIasReportNonce(const std::string & clientID, std::string& outNonce);
 	virtual sgx_status_t ProcessRAMsg0Send(const std::string& clientID);
 	virtual sgx_status_t ProcessRAMsg1(const std::string& clientID, const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2);

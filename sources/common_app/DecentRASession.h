@@ -51,9 +51,13 @@ public:
 	 */
 	virtual bool ProcessServerSideRA();
 
+	virtual const std::string GetSenderID() const override { return k_senderId; }
+
+	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
+
 private:
-	const std::string k_senderID;
-	const std::string k_remoteSideID;
+	const std::string k_senderId;
+	const std::string k_remoteSideId;
 	EnclaveServiceProviderBase& m_hwEnclave;
 	DecentEnclave& m_decentEnclave;
 	const bool k_isServerSide;

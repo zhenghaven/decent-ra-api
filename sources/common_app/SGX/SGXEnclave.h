@@ -77,8 +77,13 @@ public:
 
 	virtual const char* GetPlatformType() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override;
-	virtual std::string GetRAClientSignPubKey() const override;
+	virtual const std::string GetRAClientSignPubKey() const override;
 	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override;
+
+	virtual bool SendLARequest(std::unique_ptr<Connection>& connection) override;
+	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection) override;
+	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value& ackMsg) override;
+	virtual std::shared_ptr<LocalAttestationSession> GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value& initMsg) override;
 
 	virtual uint32_t GetExGroupID();
 

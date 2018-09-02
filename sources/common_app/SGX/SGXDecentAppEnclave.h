@@ -4,19 +4,19 @@
 #pragma once
 
 #include "../DecentAppEnclave.h"
-#include "SGXEnclaveServiceProvider.h"
+#include "SGXEnclave.h"
 
 #include <memory>
 
 typedef struct _report_body_t sgx_report_body_t;
 typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
 
-class SGXDecentAppEnclave : public SGXEnclaveServiceProvider, virtual public DecentAppEnclave
+class SGXDecentAppEnclave : public SGXEnclave, virtual public DecentAppEnclave
 {
 public:
 	SGXDecentAppEnclave() = delete;
 	
-	using SGXEnclaveServiceProvider::SGXEnclaveServiceProvider;
+	using SGXEnclave::SGXEnclave;
 	
 	virtual ~SGXDecentAppEnclave();
 
@@ -29,6 +29,8 @@ public:
 	virtual const std::string& GetDecentRAReport() const override;
 	virtual const std::string& GetEnclaveReport() const override;
 	virtual const std::string& GetEnclaveReportSign() const override;
+
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 
 private:
 	std::string m_decentRAReport;

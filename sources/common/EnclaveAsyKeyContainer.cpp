@@ -49,8 +49,8 @@ EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
 		IS_IN_ENCLAVE_SIDE ? "Enclave" : "App", 
 		SerializeStruct(*tmpPub).c_str());
 
-	std::shared_ptr<std::string> pubPem;
-	ECKeyPubSGX2Pem(*tmpPub, *pubPem);
+	//std::shared_ptr<std::string> pubPem = std::make_shared<std::string>();
+	//ECKeyPubSGX2Pem(*tmpPub, testStr);
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPriKey, tmpPrv);
@@ -59,7 +59,7 @@ EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
 #else
 	m_signPriKey = tmpPrv;
 	m_signPubKey = tmpPub;
-	m_signPubPem = pubPem;
+	//m_signPubPem = pubPem;
 #endif // DECENT_THREAD_SAFETY_HIGH
 
 	m_isValid = true;
@@ -92,14 +92,14 @@ std::shared_ptr<const sgx_ec256_public_t> EnclaveAsyKeyContainer::GetSignPubKey(
 #endif // !DECENT_THREAD_SAFETY_HIGH
 }
 
-std::shared_ptr<const std::string> EnclaveAsyKeyContainer::GetSignPubPem() const
-{
-#ifdef DECENT_THREAD_SAFETY_HIGH
-	return std::atomic_load(&m_signPubPem);
-#else
-	return m_signPubPem;
-#endif // !DECENT_THREAD_SAFETY_HIGH
-}
+//std::shared_ptr<const std::string> EnclaveAsyKeyContainer::GetSignPubPem() const
+//{
+//#ifdef DECENT_THREAD_SAFETY_HIGH
+//	return std::atomic_load(&m_signPubPem);
+//#else
+//	return m_signPubPem;
+//#endif // !DECENT_THREAD_SAFETY_HIGH
+//}
 
 void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const sgx_ec256_public_t> pub)
 {
@@ -110,8 +110,8 @@ void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyW
 //		IS_IN_ENCLAVE_SIDE ? "Enclave" : "App",
 //		SerializeStruct(prv->m_prvKey).c_str());
 
-	std::shared_ptr<std::string> pubPem;
-	ECKeyPubSGX2Pem(*pub, *pubPem);
+	//std::shared_ptr<std::string> pubPem(new std::string);
+	//ECKeyPubSGX2Pem(*pub, *pubPem);
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPriKey, prv);
@@ -120,6 +120,6 @@ void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyW
 #else
 	m_signPriKey = prv;
 	m_signPubKey = pub;
-	m_signPubPem = pubPem;
+	//m_signPubPem = pubPem;
 #endif // !DECENT_THREAD_SAFETY_HIGH
 }

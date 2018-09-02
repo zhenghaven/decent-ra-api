@@ -9,7 +9,7 @@
 
 #include <memory>
 
-//class SGXEnclave;
+class SGXEnclave;
 class SGXLARequest;
 class SGXLAMessage1;
 namespace Json
@@ -17,7 +17,7 @@ namespace Json
 	class Value;
 }
 
-class SGXLASession : public LocalAttestationSession<SGXEnclave>
+class SGXLASession : public LocalAttestationSession
 {
 public:
 	static bool SendHandshakeMessage(std::unique_ptr<Connection>& connection, SGXEnclave& enclave);
@@ -36,8 +36,14 @@ public:
 
 	virtual bool PerformResponderSideLA() override;
 
+	virtual const std::string GetSenderID() const override { return k_senderId; }
+
+	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
+
 private:
-	const std::string k_remoteSideID;
+	const std::string k_senderId;
+	const std::string k_remoteSideId;
+	SGXEnclave& m_hwEnclave;
 	std::unique_ptr<const SGXLAMessage1> m_initorMsg1;
 };
 
