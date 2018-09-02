@@ -63,3 +63,15 @@ Json::Value& Messages::GetJsonMsg(Json::Value& outJson) const
 
 	return outJson[sk_LabelRoot];
 }
+
+constexpr char ErrorMessage::sk_LabelErrMsg[];
+constexpr char ErrorMessage::sk_ValueType[];
+
+std::string ErrorMessage::ParseErrorMsg(const Json::Value & typeRoot)
+{
+	if (typeRoot.isMember(sk_LabelErrMsg) && typeRoot[sk_LabelErrMsg].isString())
+	{
+		return typeRoot[sk_LabelErrMsg].asString();
+	}
+	throw MessageParseException();
+}

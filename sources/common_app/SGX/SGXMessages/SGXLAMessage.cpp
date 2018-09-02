@@ -7,6 +7,10 @@
 #include "../../../common/DataCoding.h"
 #include "../../MessageException.h"
 
+constexpr char SGXLAMessage::sk_LabelRoot[];
+constexpr char SGXLAMessage::sk_LabelType[];
+constexpr char SGXLAMessage::sk_ValueCat[];
+
 std::string SGXLAMessage::ParseType(const Json::Value & MsgRootContent)
 {
 	if (MsgRootContent.isMember(SGXLAMessage::sk_LabelRoot) && MsgRootContent[SGXLAMessage::sk_LabelRoot].isObject() &&
@@ -51,24 +55,15 @@ Json::Value & SGXLAMessage::GetJsonMsg(Json::Value & outJson) const
 	return parent[SGXLAMessage::sk_LabelRoot];
 }
 
-std::string SGXLAErrMsg::ParseErrorMsg(const Json::Value & SGXLARoot)
-{
-	if (SGXLARoot.isMember(SGXLAErrMsg::sk_LabelErrMsg) && SGXLARoot[SGXLAErrMsg::sk_LabelErrMsg].isString())
-	{
-		return SGXLARoot[SGXLAErrMsg::sk_LabelErrMsg].asString();
-	}
-	throw MessageParseException();
-}
-
 SGXLAErrMsg::SGXLAErrMsg(const std::string & senderID, const std::string & errStr) :
 	SGXLAMessage(senderID),
-	m_errStr(errStr)
+	ErrorMessage(errStr)
 {
 }
 
 SGXLAErrMsg::SGXLAErrMsg(const Json::Value & msg) :
 	SGXLAMessage(msg, sk_ValueType),
-	m_errStr(ParseErrorMsg(msg[Messages::sk_LabelRoot][SGXLAMessage::sk_LabelRoot]))
+	ErrorMessage(msg[Messages::sk_LabelRoot][SGXLAMessage::sk_LabelRoot])
 {
 }
 
@@ -81,20 +76,17 @@ std::string SGXLAErrMsg::GetMessageTypeStr() const
 	return sk_ValueType;
 }
 
-const std::string & SGXLAErrMsg::GetErrStr() const
-{
-	return m_errStr;
-}
-
 Json::Value & SGXLAErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = SGXLAMessage::GetJsonMsg(outJson);
 
 	//parent[SGXLAErrMsg::sk_LabelType] = sk_ValueType;
-	parent[sk_LabelErrMsg] = m_errStr;
+	parent[sk_LabelErrMsg] = GetErrorStr();
 
 	return parent;
 }
+
+constexpr char SGXLARequest::sk_ValueType[];
 
 SGXLARequest::SGXLARequest(const std::string & senderID) :
 	SGXLAMessage(senderID)
@@ -136,6 +128,10 @@ static inline T* ParseDataTemplate(const Json::Value & SGXLARoot, const char* la
 	throw MessageParseException();
 }
 
+constexpr char SGXLADataMessage<sgx_dh_msg1_t>::sk_LabelData[];
+constexpr char SGXLADataMessage<sgx_dh_msg2_t>::sk_LabelData[];
+constexpr char SGXLADataMessage<sgx_dh_msg3_t>::sk_LabelData[];
+
 inline sgx_dh_msg1_t * SGXLADataMessage<sgx_dh_msg1_t>::ParseData(const Json::Value & SGXLARoot)
 {
 	return ParseDataTemplate<sgx_dh_msg1_t>(SGXLARoot, sk_LabelData);
@@ -172,6 +168,8 @@ inline Json::Value & SGXLADataMessage<sgx_dh_msg3_t>::GetJsonMsg(Json::Value & o
 	return parent;
 }
 
+constexpr char SGXLAMessage1::sk_ValueType[];
+
 SGXLAMessage1::SGXLAMessage1(const std::string & senderID, std::unique_ptr<sgx_dh_msg1_t>& msg1Data) :
 	SGXLADataMessage(senderID, msg1Data)
 {
@@ -191,6 +189,8 @@ std::string SGXLAMessage1::GetMessageTypeStr() const
 	return sk_ValueType;
 }
 
+constexpr char SGXLAMessage2::sk_ValueType[];
+
 SGXLAMessage2::SGXLAMessage2(const std::string & senderID, std::unique_ptr<sgx_dh_msg2_t>& msg2Data) :
 	SGXLADataMessage(senderID, msg2Data)
 {
@@ -209,6 +209,8 @@ std::string SGXLAMessage2::GetMessageTypeStr() const
 {
 	return sk_ValueType;
 }
+
+constexpr char SGXLAMessage3::sk_ValueType[];
 
 SGXLAMessage3::SGXLAMessage3(const std::string & senderID, std::unique_ptr<sgx_dh_msg3_t>& msg3Data) :
 	SGXLADataMessage(senderID, msg3Data)

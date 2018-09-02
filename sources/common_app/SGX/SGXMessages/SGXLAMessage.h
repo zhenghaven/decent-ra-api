@@ -40,15 +40,8 @@ private:
 
 };
 
-class SGXLAErrMsg : public SGXLAMessage
+class SGXLAErrMsg : public SGXLAMessage, public ErrorMessage
 {
-public:
-	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
-
-	static constexpr char sk_ValueType[] = "Error";
-
-	static std::string ParseErrorMsg(const Json::Value& SGXLARoot);
-
 public:
 	SGXLAErrMsg() = delete;
 	SGXLAErrMsg(const std::string& senderID, const std::string& errStr);
@@ -57,13 +50,8 @@ public:
 
 	virtual std::string GetMessageTypeStr() const override;
 
-	const std::string& GetErrStr() const;
-
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
-
-private:
-	const std::string m_errStr;
 };
 
 class SGXLARequest : public SGXLAMessage

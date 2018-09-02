@@ -37,3 +37,31 @@ private:
 	const std::string m_senderID;
 	//const std::string m_cat;
 };
+
+class ErrorMessage
+{
+public:
+	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
+
+	static constexpr char sk_ValueType[] = "Error";
+
+	static std::string ParseErrorMsg(const Json::Value& typeRoot);
+
+public:
+	ErrorMessage() = delete;
+
+	explicit ErrorMessage(const std::string& errStr) :
+		m_errStr(errStr)
+	{}
+
+	explicit ErrorMessage(const Json::Value& typeRoot) :
+		m_errStr(ParseErrorMsg(typeRoot))
+	{}
+
+	virtual ~ErrorMessage() {}
+
+	const std::string& GetErrorStr() const { return m_errStr; }
+
+private:
+	const std::string m_errStr;
+};

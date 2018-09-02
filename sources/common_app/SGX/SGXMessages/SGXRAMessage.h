@@ -59,15 +59,8 @@ private:
 
 };
 
-class SGXRAClientErrMsg : public SGXRAClientMessage
+class SGXRAClientErrMsg : public SGXRAClientMessage, public ErrorMessage
 {
-public:
-	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
-
-	static constexpr char sk_ValueType[] = "Error";
-
-	static std::string ParseErrorMsg(const Json::Value& SGXRAClientRoot);
-
 public:
 	SGXRAClientErrMsg() = delete;
 	SGXRAClientErrMsg(const std::string& senderID, const std::string& errStr);
@@ -76,24 +69,12 @@ public:
 
 	virtual std::string GetMessageTypeStr() const override;
 
-	const std::string& GetErrStr() const;
-
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
-
-private:
-	const std::string m_errStr;
 };
 
-class SGXRASPErrMsg : public SGXRASPMessage
+class SGXRASPErrMsg : public SGXRASPMessage, public ErrorMessage
 {
-public:
-	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
-
-	static constexpr char sk_ValueType[] = "Error";
-
-	static std::string ParseErrorMsg(const Json::Value& SGXRASPRoot);
-
 public:
 	SGXRASPErrMsg() = delete;
 	SGXRASPErrMsg(const std::string& senderID, const std::string& errStr);
@@ -102,11 +83,6 @@ public:
 
 	virtual std::string GetMessageTypeStr() const override;
 
-	const std::string& GetErrStr() const;
-
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
-
-private:
-	const std::string m_errStr;
 };

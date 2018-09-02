@@ -52,27 +52,15 @@ Json::Value & DecentMessage::GetJsonMsg(Json::Value & outJson) const
 	return parent[sk_LabelRoot];
 }
 
-constexpr char DecentErrMsg::sk_LabelErrMsg[];
-constexpr char DecentErrMsg::sk_ValueType[];
-
-std::string DecentErrMsg::ParseErrorMsg(const Json::Value & DecentRoot)
-{
-	if (DecentRoot.isMember(sk_LabelErrMsg) && DecentRoot[sk_LabelErrMsg].isString())
-	{
-		return DecentRoot[sk_LabelErrMsg].asString();
-	}
-	throw MessageParseException();
-}
-
 DecentErrMsg::DecentErrMsg(const std::string & senderID, const std::string & errStr) :
 	DecentMessage(senderID),
-	m_errStr(errStr)
+	ErrorMessage(errStr)
 {
 }
 
 DecentErrMsg::DecentErrMsg(const Json::Value & msg) :
 	DecentMessage(msg, sk_ValueType),
-	m_errStr(ParseErrorMsg(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot]))
+	ErrorMessage(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot])
 {
 }
 
@@ -85,17 +73,12 @@ std::string DecentErrMsg::GetMessageTypeStr() const
 	return sk_ValueType;
 }
 
-const std::string & DecentErrMsg::GetErrStr() const
-{
-	return m_errStr;
-}
-
 Json::Value & DecentErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
 	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
-	parent[sk_LabelErrMsg] = m_errStr;
+	parent[sk_LabelErrMsg] = GetErrorStr();
 
 	return parent;
 }

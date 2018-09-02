@@ -52,27 +52,15 @@ Json::Value & DecentralizedMessage::GetJsonMsg(Json::Value & outJson) const
 	return parent[DecentralizedMessage::sk_LabelRoot];
 }
 
-constexpr char DecentralizedErrMsg::sk_LabelErrMsg[];
-constexpr char DecentralizedErrMsg::sk_ValueType[];
-
-std::string DecentralizedErrMsg::ParseErrorMsg(const Json::Value & DecentralizedRoot)
-{
-	if (DecentralizedRoot.isMember(DecentralizedErrMsg::sk_LabelErrMsg) && DecentralizedRoot[DecentralizedErrMsg::sk_LabelErrMsg].isString())
-	{
-		return DecentralizedRoot[DecentralizedErrMsg::sk_LabelErrMsg].asString();
-	}
-	throw MessageParseException();
-}
-
 DecentralizedErrMsg::DecentralizedErrMsg(const std::string & senderID, const std::string & errStr) :
 	DecentralizedMessage(senderID),
-	m_errStr(errStr)
+	ErrorMessage(errStr)
 {
 }
 
 DecentralizedErrMsg::DecentralizedErrMsg(const Json::Value & msg) :
 	DecentralizedMessage(msg, sk_ValueType),
-	m_errStr(ParseErrorMsg(msg[Messages::sk_LabelRoot][DecentralizedMessage::sk_LabelRoot]))
+	ErrorMessage(msg[Messages::sk_LabelRoot][DecentralizedMessage::sk_LabelRoot])
 {
 }
 
@@ -85,17 +73,12 @@ std::string DecentralizedErrMsg::GetMessageTypeStr() const
 	return sk_ValueType;
 }
 
-const std::string & DecentralizedErrMsg::GetErrStr() const
-{
-	return m_errStr;
-}
-
 Json::Value & DecentralizedErrMsg::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentralizedMessage::GetJsonMsg(outJson);
 
 	//parent[SGXRASPMessage::sk_LabelType] = sk_ValueType;
-	parent[sk_LabelErrMsg] = m_errStr;
+	parent[sk_LabelErrMsg] = GetErrorStr();
 
 	return parent;
 }
