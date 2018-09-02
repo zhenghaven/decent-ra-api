@@ -140,7 +140,7 @@ AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, S
 	AESGCMCommLayer* res = nullptr;
 	{
 		std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
-		res = new AESGCMCommLayer(clientCTX.m_sk, SerializeStruct(*EnclaveAsyKeyContainer::GetInstance().GetSignPubKey()), sendFunc);
+		res = new AESGCMCommLayer(clientCTX.m_sk, SerializeStruct(*EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey()), sendFunc);
 	}
 	SGXRAEnclave::DropRAStateToServer(serverID);
 	return res;
@@ -154,7 +154,7 @@ AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, S
 extern "C" sgx_status_t ecall_sgx_ra_client_init()
 {
 	sgx_status_t res = SGX_SUCCESS;
-	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
+	if (!EnclaveAsyKeyContainer::GetInstance()->IsValid())
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
@@ -184,12 +184,13 @@ extern "C" sgx_status_t ecall_get_ra_client_pub_sig_key(sgx_ec256_public_t* outK
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
+	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer = EnclaveAsyKeyContainer::GetInstance();
+	if (!keyContainer->IsValid())
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::shared_ptr<const sgx_ec256_public_t> signPub = keyContainer->GetSignPubKey();
 	std::memcpy(outKey, signPub.get(), sizeof(sgx_ec256_public_t));
 	return SGX_SUCCESS;
 }

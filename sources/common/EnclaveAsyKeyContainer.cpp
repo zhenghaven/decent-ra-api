@@ -2,8 +2,6 @@
 
 #include <cstring>
 
-#include <openssl/ec.h>
-
 #include "CommonTool.h"
 #include "DataCoding.h"
 #include "SGX/SGXOpenSSLConversions.h"
@@ -18,10 +16,35 @@ constexpr bool IS_IN_ENCLAVE_SIDE = true;
 constexpr bool IS_IN_ENCLAVE_SIDE = false;
 #endif // ENCLAVE_CODE
 
-EnclaveAsyKeyContainer & EnclaveAsyKeyContainer::GetInstance()
+namespace
 {
-	static EnclaveAsyKeyContainer inst;
-	return inst;
+	static std::shared_ptr<EnclaveAsyKeyContainer> g_instance;
+}
+
+const std::shared_ptr<EnclaveAsyKeyContainer> EnclaveAsyKeyContainer::GetInstance()
+{
+	if (!g_instance)
+	{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+		std::atomic_store(&g_instance, std::make_shared<EnclaveAsyKeyContainer>());
+#else
+		g_instance.reset(new EnclaveAsyKeyContainer);
+#endif // !DECENT_THREAD_SAFETY_HIGH
+	}
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	return std::atomic_load(&g_instance);
+#else
+	return g_instance;
+#endif // !DECENT_THREAD_SAFETY_HIGH
+}
+
+void EnclaveAsyKeyContainer::SetInstance(std::shared_ptr<EnclaveAsyKeyContainer> instance)
+{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&g_instance, instance);
+#else
+	g_instance.swap(instance);
+#endif // !DECENT_THREAD_SAFETY_HIGH
 }
 
 EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
@@ -33,8 +56,8 @@ EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
 		m_isValid = false;
 		return;
 	}
-	std::shared_ptr<sgx_ec256_public_t> tmpPub(new sgx_ec256_public_t);
-	std::shared_ptr<PrivateKeyWrap> tmpPrv(new PrivateKeyWrap);
+	std::unique_ptr<sgx_ec256_public_t> tmpPub(new sgx_ec256_public_t);
+	std::unique_ptr<PrivateKeyWrap> tmpPrv(new PrivateKeyWrap);
 
 	status = sgx_ecc256_create_key_pair(&(tmpPrv->m_prvKey), tmpPub.get(), eccContext);
 	if (status != SGX_SUCCESS)
@@ -50,15 +73,16 @@ EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
 		SerializeStruct(*tmpPub).c_str());
 
 	//std::shared_ptr<std::string> pubPem = std::make_shared<std::string>();
+	//std::string testStr;
 	//ECKeyPubSGX2Pem(*tmpPub, testStr);
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
-	std::atomic_store(&m_signPriKey, tmpPrv);
-	std::atomic_store(&m_signPubKey, tmpPub);
-	std::atomic_store(&m_signPubPem, pubPem);
+	std::atomic_store(&m_signPriKey, std::shared_ptr<const PrivateKeyWrap>(tmpPrv.release()));
+	std::atomic_store(&m_signPubKey, std::shared_ptr<const sgx_ec256_public_t>(tmpPub.release()));
+	//std::atomic_store(&m_signPubPem, pubPem);
 #else
-	m_signPriKey = tmpPrv;
-	m_signPubKey = tmpPub;
+	m_signPriKey.reset(tmpPrv.release());
+	m_signPubKey.reset(tmpPub.release());
 	//m_signPubPem = pubPem;
 #endif // DECENT_THREAD_SAFETY_HIGH
 
@@ -116,7 +140,7 @@ void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyW
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPriKey, prv);
 	std::atomic_store(&m_signPubKey, pub);
-	std::atomic_store(&m_signPubPem, pubPem);
+	//std::atomic_store(&m_signPubPem, pubPem);
 #else
 	m_signPriKey = prv;
 	m_signPubKey = pub;

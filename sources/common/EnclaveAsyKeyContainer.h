@@ -26,7 +26,8 @@ struct PrivateKeyWrap
 class EnclaveAsyKeyContainer
 {
 public:
-	static EnclaveAsyKeyContainer& GetInstance();
+	static const std::shared_ptr<EnclaveAsyKeyContainer> GetInstance();
+	static void SetInstance(std::shared_ptr<EnclaveAsyKeyContainer> instance);
 
 	EnclaveAsyKeyContainer();
 

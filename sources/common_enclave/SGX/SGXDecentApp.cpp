@@ -31,9 +31,6 @@
 
 namespace
 {
-	//The default key container
-	static const EnclaveAsyKeyContainer& gk_keyContainer = EnclaveAsyKeyContainer::GetInstance();
-
 	//Secure comm layer to decent server. (We only attest to one decent server once)
 	static std::shared_ptr<const SecureCommLayer> g_decentCommLayer;
 
@@ -101,7 +98,8 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 	//}
 	//===============
 
-	std::shared_ptr<const sgx_ec256_public_t> pubKey = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer = EnclaveAsyKeyContainer::GetInstance();
+	std::shared_ptr<const sgx_ec256_public_t> pubKey = keyContainer->GetSignPubKey();
 	std::shared_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
 
 	sgx_report_data_t reportData;
@@ -109,7 +107,7 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 
 	//std::shared_ptr<const std::string> pubPem = EnclaveAsyKeyContainer::GetInstance().GetSignPubPem();
 	std::string pubPem;
-	ECKeyPubSGX2Pem(*EnclaveAsyKeyContainer::GetInstance().GetSignPubKey(), pubPem);
+	ECKeyPubSGX2Pem(*keyContainer->GetSignPubKey(), pubPem);
 
 	sgx_sha_state_handle_t shaState;
 	sgx_sha256_hash_t tmpHash;

@@ -69,7 +69,7 @@ static inline sgx_status_t ecall_decent_send_app_report_sign(const sgx_dh_sessio
 	std::memcpy(&(report.cpu_svn), &(identity.cpu_svn), sizeof(sgx_dh_session_enclave_identity_t));
 	std::memcpy(&(report.report_data), &reportData, sizeof(sgx_report_data_t));
 
-	std::shared_ptr<const PrivateKeyWrap> signKey = EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey();
+	std::shared_ptr<const PrivateKeyWrap> signKey = EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKey();
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_ec256_signature_t signature;
 	sgx_ecc_state_handle_t ecState;
@@ -121,7 +121,7 @@ extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, 
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	std::shared_ptr<const sgx_ec256_public_t> pubKey = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::shared_ptr<const sgx_ec256_public_t> pubKey = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
 	std::unique_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
 
 	std::string plainMsg;

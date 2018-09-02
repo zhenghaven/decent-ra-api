@@ -179,11 +179,11 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* ServerID, 
 
 	ReportDataGenerator rdGenerator = [](const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen) -> bool
 	{
-		std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+		std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
 		std::string pubKeyPem;
 
-		ECKeyPubSGX2Pem(*signPub, pubKeyPem);
-		if (pubKeyPem.size() == 0)
+		bool res = ECKeyPubSGX2Pem(*signPub, pubKeyPem);
+		if (!res || pubKeyPem.size() == 0)
 		{
 			return false;
 		}
@@ -320,7 +320,7 @@ extern "C" int ecall_proc_decent_trusted_msg(const char* nodeID, void* const con
 		DeserializeStruct(prvKey.m_prvKey, jsonRoot[gsk_LabelPrvKey].GetString());
 		std::shared_ptr<const sgx_ec256_public_t> pubKeyPtr = std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(pubKey));
 		std::shared_ptr<const PrivateKeyWrap> prvKeyPtr = std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(prvKey));
-		EnclaveAsyKeyContainer::GetInstance().UpdateSignKeyPair(prvKeyPtr, pubKeyPtr);
+		EnclaveAsyKeyContainer::GetInstance()->UpdateSignKeyPair(prvKeyPtr, pubKeyPtr);
 
 		DecentEnclave::DropDecentNode(nodeID); //Task done! End the session.
 		return 0; //return 0 to terminate the connection.
@@ -345,7 +345,7 @@ extern "C" int ecall_decent_send_protocol_key(const char* nodeID, void* const co
 	JSON_EDITION::JSON_DOCUMENT_TYPE doc;
 	rapidjson::Value jsonRoot;
 
-	std::string prvKeyB64 = SerializeStruct(EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey()->m_prvKey);
+	std::string prvKeyB64 = SerializeStruct(EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKey()->m_prvKey);
 
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelFunc, gsk_ValueFuncSetProtoKey);
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelPrvKey, prvKeyB64);

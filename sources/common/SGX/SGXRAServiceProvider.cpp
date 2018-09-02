@@ -58,9 +58,9 @@ struct RASPContext
 	sgx_ps_sec_prop_desc_t m_secProp;
 	std::mutex m_mutex;
 
-	RASPContext(const sgx_ec256_public_t& inSignPubKey) :
-		m_mySignPub(EnclaveAsyKeyContainer::GetInstance().GetSignPubKey()),
-		m_mySignPrv(EnclaveAsyKeyContainer::GetInstance().GetSignPrvKey()),
+	RASPContext(const EnclaveAsyKeyContainer& keyContainer, const sgx_ec256_public_t& inSignPubKey) :
+		m_mySignPub(keyContainer.GetSignPubKey()),
+		m_mySignPrv(keyContainer.GetSignPrvKey()),
 		m_prvKey(),
 		m_pubKey(),
 		m_peerSignKey(inSignPubKey),
@@ -124,7 +124,7 @@ bool SGXRAEnclave::AddNewClientRAState(const std::string& clientID, const sgx_ec
 		}
 	}
 
-	std::shared_ptr<RASPContext> spCTX(new RASPContext(inPubKey));
+	std::shared_ptr<RASPContext> spCTX(new RASPContext(*EnclaveAsyKeyContainer::GetInstance(), inPubKey));
 	sgx_ecc_state_handle_t ecState;
 	sgx_status_t enclaveRet = sgx_ecc256_open_context(&ecState);
 	if (!spCTX || (enclaveRet != SGX_SUCCESS))
@@ -278,7 +278,7 @@ std::string SGXRAEnclave::GetSelfHash()
 sgx_status_t SGXRAEnclave::ServiceProviderInit()
 {
 	sgx_status_t res = SGX_SUCCESS;
-	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
+	if (!EnclaveAsyKeyContainer::GetInstance()->IsValid())
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
@@ -322,12 +322,13 @@ sgx_status_t SGXRAEnclave::GetRASPSignPubKey(sgx_ec256_public_t * outKey)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	if (!EnclaveAsyKeyContainer::GetInstance().IsValid())
+	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer = EnclaveAsyKeyContainer::GetInstance();
+	if (!keyContainer->IsValid())
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance().GetSignPubKey();
+	std::shared_ptr<const sgx_ec256_public_t> signPub = keyContainer->GetSignPubKey();
 	std::memcpy(outKey, signPub.get(), sizeof(sgx_ec256_public_t));
 	return SGX_SUCCESS;
 }
