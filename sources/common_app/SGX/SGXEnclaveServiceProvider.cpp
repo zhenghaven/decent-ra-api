@@ -20,21 +20,21 @@ static inline void InitSGXRASP(const sgx_enclave_id_t& eid)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_sp_environment);
 }
 
-SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(IASConnector ias, const std::string & enclavePath, const std::string & tokenPath) :
+SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string & enclavePath, const std::string & tokenPath) :
 	SGXEnclave(enclavePath, tokenPath),
 	m_ias(ias)
 {
 	InitSGXRASP(GetEnclaveId());
 }
 
-SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(IASConnector ias, const std::string & enclavePath, const fs::path tokenPath) :
+SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const fs::path& enclavePath, const fs::path& tokenPath) :
 	SGXEnclave(enclavePath, tokenPath),
 	m_ias(ias)
 {
 	InitSGXRASP(GetEnclaveId());
 }
 
-SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(IASConnector ias, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
+SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
 	SGXEnclave(enclavePath, tokenLocType, tokenFileName),
 	m_ias(ias)
 {
@@ -48,7 +48,7 @@ SGXEnclaveServiceProvider::~SGXEnclaveServiceProvider()
 
 std::shared_ptr<ServiceProviderRASession> SGXEnclaveServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
 {
-	return std::make_shared<SGXServiceProviderRASession>(connection, *this, m_ias);
+	return std::make_shared<SGXServiceProviderRASession>(connection, *this, *m_ias);
 }
 
 const char * SGXEnclaveServiceProvider::GetPlatformType() const
@@ -59,6 +59,11 @@ const char * SGXEnclaveServiceProvider::GetPlatformType() const
 void SGXEnclaveServiceProvider::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const
 {
 	SGXEnclave::GetRAClientSignPubKey(outKey);
+}
+
+std::string SGXEnclaveServiceProvider::GetRAClientSignPubKey() const
+{
+	return SGXEnclave::GetRAClientSignPubKey();
 }
 
 std::shared_ptr<ClientRASession> SGXEnclaveServiceProvider::GetRAClientSession(std::unique_ptr<Connection>& connection)
@@ -121,7 +126,7 @@ bool SGXEnclaveServiceProvider::ProcessSmartMessage(const std::string & category
 {
 	if (category == SGXRASPMessage::sk_ValueCat)
 	{
-		return SGXServiceProviderRASession::SmartMsgEntryPoint(connection, *this, m_ias, jsonMsg);
+		return SGXServiceProviderRASession::SmartMsgEntryPoint(connection, *this, *m_ias, jsonMsg);
 	}
 	else
 	{

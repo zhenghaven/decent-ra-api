@@ -6,22 +6,9 @@
 
 #include <boost/filesystem/path.hpp>
 
-namespace fs = boost::filesystem;
+#include "FileSystemDefs.h"
 
-enum class KnownFolderType
-{
-	WorkingDir,
-	LocalAppData,
-	LocalAppDataEnclave,
-	Temp,
-	Home,
-	Desktop,
-	Documents,
-	Downloads,
-	Music,
-	Pictures,
-	Videos,
-};
+namespace fs = boost::filesystem;
 
 fs::path GetKnownFolderPath(KnownFolderType type);
 

@@ -11,6 +11,8 @@ public:
 		m_connection.swap(inConnection);
 	}
 
+	virtual ~CommSession();
+
 protected:
 	std::unique_ptr<Connection> m_connection;
 };

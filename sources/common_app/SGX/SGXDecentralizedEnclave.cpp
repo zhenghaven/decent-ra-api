@@ -15,19 +15,19 @@ static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
 }
 
-SGXDecentralizedEnclave::SGXDecentralizedEnclave(const sgx_spid_t & spid, IASConnector iasConnector, const std::string & enclavePath, const std::string & tokenPath) :
+SGXDecentralizedEnclave::SGXDecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<IASConnector>& iasConnector, const std::string & enclavePath, const std::string & tokenPath) :
 	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 }
 
-SGXDecentralizedEnclave::SGXDecentralizedEnclave(const sgx_spid_t & spid, IASConnector iasConnector, const std::string & enclavePath, const fs::path tokenPath) :
+SGXDecentralizedEnclave::SGXDecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<IASConnector>& iasConnector, const fs::path& enclavePath, const fs::path& tokenPath) :
 	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 }
 
-SGXDecentralizedEnclave::SGXDecentralizedEnclave(const sgx_spid_t & spid, IASConnector iasConnector, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
+SGXDecentralizedEnclave::SGXDecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<IASConnector>& iasConnector, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
 	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenLocType, tokenFileName)
 {
 	InitDecent(GetEnclaveId(), spid);

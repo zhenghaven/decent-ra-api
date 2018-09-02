@@ -6,14 +6,16 @@
 #include "../DecentralizedEnclave.h"
 #include "SGXEnclaveServiceProvider.h"
 
+#include <memory>
+
 typedef struct _spid_t sgx_spid_t;
 
 class SGXDecentralizedEnclave : public SGXEnclaveServiceProvider, virtual public DecentralizedEnclave
 {
 public:
-	SGXDecentralizedEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const std::string& enclavePath, const std::string& tokenPath);
-	SGXDecentralizedEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const std::string& enclavePath, const fs::path tokenPath);
-	SGXDecentralizedEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	SGXDecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& iasConnector, const std::string& enclavePath, const std::string& tokenPath);
+	SGXDecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& iasConnector, const fs::path& enclavePath, const fs::path& tokenPath);
+	SGXDecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& iasConnector, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	virtual ~SGXDecentralizedEnclave();
 

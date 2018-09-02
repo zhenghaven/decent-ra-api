@@ -7,19 +7,24 @@
 #include "SGXServiceProviderBase.h"
 #include "../EnclaveServiceProviderBase.h"
 
+#include <memory>
+
+class IASConnector;
+
 class SGXEnclaveServiceProvider : public SGXEnclave, virtual public SGXServiceProviderBase, virtual public EnclaveServiceProviderBase
 {
 public:
 	SGXEnclaveServiceProvider() = delete;
 
-	SGXEnclaveServiceProvider(IASConnector ias, const std::string& enclavePath, const std::string& tokenPath);
-	SGXEnclaveServiceProvider(IASConnector ias, const std::string& enclavePath, const fs::path tokenPath);
-	SGXEnclaveServiceProvider(IASConnector ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	SGXEnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const std::string& tokenPath);
+	SGXEnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
+	SGXEnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	virtual ~SGXEnclaveServiceProvider();
 
 	virtual const char* GetPlatformType() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override; /*This is used to suppress the warnning*/
+	virtual std::string GetRAClientSignPubKey() const override; /*This is used to suppress the warnning*/
 	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override; /*This is used to suppress the warnning*/
 
 	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) const override;
@@ -33,7 +38,7 @@ public:
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 
 protected:
-	const IASConnector m_ias;
+	std::shared_ptr<const IASConnector> m_ias;
 };
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

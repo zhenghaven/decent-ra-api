@@ -85,14 +85,12 @@ SGXLASession::SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave &
 
 SGXLASession::SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const SGXLARequest & msg) :
 	LocalAttestationSession(connection, enclave),
-	m_sgxEnclave(enclave),
 	k_remoteSideID(msg.GetSenderID())
 {
 }
 
 SGXLASession::SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const SGXLAMessage1* msg) :
 	LocalAttestationSession(connection, enclave),
-	m_sgxEnclave(enclave),
 	k_remoteSideID(msg->GetSenderID()),
 	m_initorMsg1(msg)
 {
@@ -112,7 +110,7 @@ bool SGXLASession::PerformInitiatorSideLA()
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 
 	std::unique_ptr<sgx_dh_msg2_t> msg2Data(std::make_unique<sgx_dh_msg2_t>());
-	enclaveRet = m_sgxEnclave.InitiatorProcessLAMsg1(k_remoteSideID, m_initorMsg1->GetData(), *msg2Data);
+	enclaveRet = m_hwEnclave.InitiatorProcessLAMsg1(k_remoteSideID, m_initorMsg1->GetData(), *msg2Data);
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		m_connection->Send(SGXLAErrMsg(k_raSenderID, "Enclave process error!"));
@@ -128,7 +126,7 @@ bool SGXLASession::PerformInitiatorSideLA()
 	try
 	{
 		std::unique_ptr<SGXLAMessage3> msg3(ParseMessageExpected<SGXLAMessage3>(jsonRoot));
-		enclaveRet = m_sgxEnclave.InitiatorProcessLAMsg3(k_remoteSideID, msg3->GetData());
+		enclaveRet = m_hwEnclave.InitiatorProcessLAMsg3(k_remoteSideID, msg3->GetData());
 		if (enclaveRet != SGX_SUCCESS)
 		{
 			m_connection->Send(SGXLAErrMsg(k_raSenderID, "Enclave process error!"));
@@ -154,7 +152,7 @@ bool SGXLASession::PerformResponderSideLA()
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 
 	std::unique_ptr<sgx_dh_msg1_t> msg1Data(std::make_unique<sgx_dh_msg1_t>());
-	enclaveRet = m_sgxEnclave.ResponderGenerateLAMsg1(k_remoteSideID, *msg1Data);
+	enclaveRet = m_hwEnclave.ResponderGenerateLAMsg1(k_remoteSideID, *msg1Data);
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		m_connection->Send(SGXLAErrMsg(k_raSenderID, "Enclave process error!"));
@@ -172,7 +170,7 @@ bool SGXLASession::PerformResponderSideLA()
 		std::unique_ptr<SGXLAMessage2> msg2(ParseMessageExpected<SGXLAMessage2>(jsonRoot));
 
 		std::unique_ptr<sgx_dh_msg3_t> msg3Data(std::make_unique<sgx_dh_msg3_t>());
-		enclaveRet = m_sgxEnclave.ResponderProcessLAMsg2(k_remoteSideID, msg2->GetData(), *msg3Data);
+		enclaveRet = m_hwEnclave.ResponderProcessLAMsg2(k_remoteSideID, msg2->GetData(), *msg3Data);
 		if (enclaveRet != SGX_SUCCESS)
 		{
 			m_connection->Send(SGXLAErrMsg(k_raSenderID, "Enclave process error!"));

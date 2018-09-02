@@ -6,8 +6,9 @@
 #include "SGXMessages/SGXRAMessage.h"
 #include "SGXEnclaveRuntimeException.h"
 #include "SGXServiceProviderRASession.h"
+#include "IAS/IASConnector.h"
 
-SGXServiceProvider::SGXServiceProvider(IASConnector ias) :
+SGXServiceProvider::SGXServiceProvider(const std::shared_ptr<IASConnector>& ias) :
 	m_ias(ias)
 {
 	sgx_status_t retval = SGXRAEnclave::ServiceProviderInit();
@@ -26,7 +27,7 @@ const char * SGXServiceProvider::GetPlatformType() const
 
 std::shared_ptr<ServiceProviderRASession> SGXServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
 {
-	return std::make_shared<SGXServiceProviderRASession>(connection, *this, m_ias);
+	return std::make_shared<SGXServiceProviderRASession>(connection, *this, *m_ias);
 }
 
 void SGXServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) const
@@ -70,7 +71,7 @@ bool SGXServiceProvider::ProcessSmartMessage(const std::string & category, const
 {
 	if (category == SGXRASPMessage::sk_ValueCat)
 	{
-		return SGXServiceProviderRASession::SmartMsgEntryPoint(connection, *this, m_ias, jsonMsg);
+		return SGXServiceProviderRASession::SmartMsgEntryPoint(connection, *this, *m_ias, jsonMsg);
 	}
 	else
 	{

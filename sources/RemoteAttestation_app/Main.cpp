@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include <string>
+#include <memory>
 #include <iostream>
 
 #include <tclap/CmdLine.h>
@@ -76,7 +77,7 @@ int main(int argc, char ** argv)
 	sgx_status_t deviceStatusResErr = GetSGXDeviceStatus(deviceStatusRes);
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", GetSGXErrorMessage(deviceStatusResErr).c_str());
 
-	IASConnector iasConnector;
+	std::shared_ptr<IASConnector> iasConnector = std::make_shared<IASConnector>();
 
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;

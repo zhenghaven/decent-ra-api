@@ -26,6 +26,7 @@
 #include "SGXEnclaveRuntimeException.h"
 #include "SGXLASession.h"
 #include "SGXMessages/SGXLAMessage.h"
+#include "IAS/IASConnector.h"
 
 static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 {
@@ -35,8 +36,8 @@ static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
 }
 
-SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const std::string& tokenPath) :
-	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenPath)
+SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const bool isFirstNode, const std::string& enclavePath, const std::string& tokenPath) :
+	SGXEnclaveServiceProvider(ias, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 	if (isFirstNode)
@@ -45,8 +46,8 @@ SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConne
 	}
 }
 
-SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const fs::path tokenPath) :
-	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenPath)
+SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const bool isFirstNode, const fs::path& enclavePath, const fs::path& tokenPath) :
+	SGXEnclaveServiceProvider(ias, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 	if (isFirstNode)
@@ -55,8 +56,8 @@ SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConne
 	}
 }
 
-SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, IASConnector iasConnector, const bool isFirstNode, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
-	SGXEnclaveServiceProvider(iasConnector, enclavePath, tokenLocType, tokenFileName)
+SGXDecentEnclave::SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const bool isFirstNode, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
+	SGXEnclaveServiceProvider(ias, enclavePath, tokenLocType, tokenFileName)
 {
 	InitDecent(GetEnclaveId(), spid);
 	if (isFirstNode)
@@ -193,7 +194,7 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg0Resp);
 
 	/*TODO: Safety check here: */
-	int16_t webRet = m_ias.GetRevocationList(msg1.gid, sigRL);
+	int16_t webRet = m_ias->GetRevocationList(msg1.gid, sigRL);
 	std::vector<uint8_t> sigRLData;
 	DeserializeStruct(sigRLData, sigRL);
 	msg2.resize(sizeof(sgx_ra_msg2_t) + sigRLData.size());
@@ -215,7 +216,7 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	iasReqRoot["isvEnclaveQuote"] = static_cast<std::string>(SerializeStruct(msg3Ref.quote, msg3.size() - sizeof(sgx_ra_msg3_t)));
 	iasReqRoot["nonce"] = iasNonce;
 	/*TODO: Safety check here: */
-	webRet = m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, reportSign, reportCertChain);
+	webRet = m_ias->GetQuoteReport(iasReqRoot.toStyledString(), iasReport, reportSign, reportCertChain);
 
 	enclaveRet = ProcessRAMsg3(senderID, msg3, iasReport, reportSign, reportCertChain, msg4, msg4Sign, &oriReportData);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg3);

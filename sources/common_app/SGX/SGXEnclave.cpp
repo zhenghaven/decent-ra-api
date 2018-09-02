@@ -6,12 +6,16 @@
 #include <algorithm>
 
 #include <sgx_urts.h>
+#include <sgx_eid.h>
+#include <sgx_tcrypto.h>
 #include <sgx_uae_service.h>
 #include <sgx_ukey_exchange.h>
 
 #include <boost/filesystem/operations.hpp>
 
 #include "../Common.h"
+#include "../FileSystemUtil.h"
+#include "../EnclaveUtil.h"
 
 #include "../../common/DataCoding.h"
 #include "../../common/SGX/sgx_ra_msg4.h"
@@ -87,8 +91,7 @@ SGXEnclave::SGXEnclave(const std::string& enclavePath, const std::string& tokenP
 
 SGXEnclave::SGXEnclave(const fs::path& enclavePath, const fs::path& tokenPath) :
 	m_eid(SGXEnclave::LaunchEnclave(enclavePath, tokenPath)),
-	m_enclavePath(enclavePath),
-	m_tokenPath(tokenPath)
+	m_enclavePath(enclavePath.generic_string())
 {
 }
 
@@ -115,6 +118,13 @@ void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const
 	sgx_status_t enclaveRet = ecall_get_ra_client_pub_sig_key(GetEnclaveId(), &retval, &outKey);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_client_pub_sig_key);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_get_ra_client_pub_sig_key);
+}
+
+std::string SGXEnclave::GetRAClientSignPubKey() const
+{
+	sgx_ec256_public_t signPubKey;
+	GetRAClientSignPubKey(signPubKey);
+	return SerializePubKey(signPubKey);
 }
 
 std::shared_ptr<ClientRASession> SGXEnclave::GetRAClientSession(std::unique_ptr<Connection>& connection)

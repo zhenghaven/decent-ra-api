@@ -2,14 +2,16 @@
 
 #include "SGXServiceProviderBase.h"
 
-#include "IAS/IASConnector.h"
+#include <memory>
+
+class IASConnector;
 
 class SGXServiceProvider : virtual public SGXServiceProviderBase
 {
 public:
 	SGXServiceProvider() = delete;
 
-	SGXServiceProvider(IASConnector ias);
+	SGXServiceProvider(const std::shared_ptr<IASConnector>& ias);
 
 	virtual ~SGXServiceProvider(); 
 
@@ -26,5 +28,5 @@ public:
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
 
 protected:
-	const IASConnector m_ias;
+	std::shared_ptr<const IASConnector> m_ias;
 };

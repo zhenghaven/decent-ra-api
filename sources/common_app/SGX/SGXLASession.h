@@ -5,9 +5,11 @@
 
 #include "../LocalAttestationSession.h"
 
+#include "SGXEnclave.h"
+
 #include <memory>
 
-class SGXEnclave;
+//class SGXEnclave;
 class SGXLARequest;
 class SGXLAMessage1;
 namespace Json
@@ -15,7 +17,7 @@ namespace Json
 	class Value;
 }
 
-class SGXLASession : public LocalAttestationSession
+class SGXLASession : public LocalAttestationSession<SGXEnclave>
 {
 public:
 	static bool SendHandshakeMessage(std::unique_ptr<Connection>& connection, SGXEnclave& enclave);
@@ -35,7 +37,6 @@ public:
 	virtual bool PerformResponderSideLA() override;
 
 private:
-	SGXEnclave & m_sgxEnclave;
 	const std::string k_remoteSideID;
 	std::unique_ptr<const SGXLAMessage1> m_initorMsg1;
 };

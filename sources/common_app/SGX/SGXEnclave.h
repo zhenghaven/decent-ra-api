@@ -6,16 +6,31 @@
 #include "../EnclaveBase.h"
 
 #include <string>
+#include <memory>
+#include <vector>
+#include <cstdint>
 
-#include <sgx_eid.h>
-#include <sgx_tcrypto.h>
+#include <sgx_error.h>
 
-#include "../FileSystemUtil.h"
-#include "../EnclaveUtil.h"
-#include "IAS/IASConnector.h"
+#include "../FileSystemDefs.h"
+
+namespace boost
+{
+	namespace filesystem
+	{
+		class path;
+	}
+}
+namespace fs = boost::filesystem;
 
 class Server;
+
 typedef uint32_t sgx_ra_context_t;
+typedef uint64_t sgx_enclave_id_t;
+
+typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
+typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
+
 typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
 typedef struct _ra_msg3_t sgx_ra_msg3_t;
@@ -24,6 +39,10 @@ typedef struct _ra_msg4_t sgx_ra_msg4_t;
 typedef struct _sgx_dh_msg1_t sgx_dh_msg1_t;
 typedef struct _sgx_dh_msg2_t sgx_dh_msg2_t;
 typedef struct _sgx_dh_msg3_t sgx_dh_msg3_t;
+
+typedef struct _quote_nonce sgx_quote_nonce_t;
+typedef struct _target_info_t sgx_target_info_t;
+typedef struct _report_t sgx_report_t;
 
 typedef sgx_status_t(*sgx_ecall_proc_msg2_trusted_t)(
 	sgx_enclave_id_t eid,
@@ -58,6 +77,7 @@ public:
 
 	virtual const char* GetPlatformType() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override;
+	virtual std::string GetRAClientSignPubKey() const override;
 	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override;
 
 	virtual uint32_t GetExGroupID();
@@ -91,8 +111,8 @@ protected:
 
 private:
 	const sgx_enclave_id_t m_eid;
-	const fs::path m_enclavePath;
-	const fs::path m_tokenPath;
+	const std::string m_enclavePath;
+	//const fs::path m_tokenPath;
 
 };
 
