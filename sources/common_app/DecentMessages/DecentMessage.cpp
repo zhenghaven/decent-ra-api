@@ -192,6 +192,7 @@ Json::Value & DecentProtocolKeyReq::GetJsonMsg(Json::Value & outJson) const
 }
 
 constexpr char DecentTrustedMessage::sk_LabelTrustedMsg[];
+constexpr char DecentTrustedMessage::sk_LabelAppAttach[];
 constexpr char DecentTrustedMessage::sk_ValueType[];
 
 std::string DecentTrustedMessage::ParseTrustedMsg(const Json::Value & DecentRoot)
@@ -203,19 +204,19 @@ std::string DecentTrustedMessage::ParseTrustedMsg(const Json::Value & DecentRoot
 	throw MessageParseException();
 }
 
-DecentTrustedMessage::DecentTrustedMessage(const std::string & senderID, const std::string & trustedMsg) :
-	DecentMessage(senderID),
-	m_trustedMsg(trustedMsg)
+std::string DecentTrustedMessage::ParseAppAttach(const Json::Value & DecentRoot)
 {
+	if (DecentRoot.isMember(sk_LabelAppAttach) && DecentRoot[sk_LabelAppAttach].isString())
+	{
+		return DecentRoot[sk_LabelAppAttach].asString();
+	}
+	throw MessageParseException();
 }
 
 DecentTrustedMessage::DecentTrustedMessage(const Json::Value & msg) :
 	DecentMessage(msg, sk_ValueType),
-	m_trustedMsg(ParseTrustedMsg(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot]))
-{
-}
-
-DecentTrustedMessage::~DecentTrustedMessage()
+	m_trustedMsg(ParseTrustedMsg(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot])),
+	m_appAttach(ParseAppAttach(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot]))
 {
 }
 
@@ -224,17 +225,13 @@ std::string DecentTrustedMessage::GetMessageTypeStr() const
 	return sk_ValueType;
 }
 
-const std::string & DecentTrustedMessage::GetTrustedMsg() const
-{
-	return m_trustedMsg;
-}
-
 Json::Value & DecentTrustedMessage::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
 
 	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
 	parent[sk_LabelTrustedMsg] = m_trustedMsg;
+	parent[sk_LabelAppAttach] = m_appAttach;
 
 	return parent;
 }

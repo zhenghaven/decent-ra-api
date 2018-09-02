@@ -20,6 +20,7 @@
 #include "../common/DecentRAReport.h"
 
 #include "../DecentMessages/DecentMessage.h"
+#include "../DecentMessages/DecentAppMessage.h"
 #include "../DecentRASession.h"
 #include "../Networking/Connection.h"
 #include "SGXEnclaveRuntimeException.h"
@@ -246,7 +247,7 @@ extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* se
 		return 0;
 	}
 
-	DecentTrustedMessage trustedMsg(senderID, msg);
+	DecentTrustedMessage trustedMsg(senderID, msg, appAttach ? appAttach : "");
 	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
 	size_t sentLen = cnt->Send(trustedMsg.ToJsonString());
 
@@ -260,7 +261,7 @@ extern "C" int ocall_decent_la_send_trusted_msg(void* connectionPtr, const char*
 		return 0;
 	}
 
-	DecentTrustedMessage trustedMsg(senderID, msg);
+	DecentAppTrustedMessage trustedMsg(senderID, msg, appAttach ? appAttach : "");
 	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
 	size_t sentLen = cnt->Send(trustedMsg.ToJsonString());
 
