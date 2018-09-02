@@ -41,5 +41,4 @@ private:
 	std::unique_ptr<sgx_ec256_signature_t> m_sgxEnclaveReportSign;
 };
 
-
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

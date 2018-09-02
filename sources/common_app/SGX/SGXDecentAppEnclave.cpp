@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL
+
 #include "SGXDecentAppEnclave.h"
 
 #include <sgx_tcrypto.h>
@@ -91,3 +94,5 @@ bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, cons
 		return false;
 	}
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
