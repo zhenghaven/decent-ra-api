@@ -22,7 +22,6 @@
 #include "../Networking/Connection.h"
 #include "../../common/DataCoding.h"
 #include "../../common/JsonTools.h"
-#include "../../common/SGX/sgx_ra_msg4.h"
 
 template<class T>
 static T*  ParseMessageExpected(const Json::Value& json)
@@ -162,7 +161,7 @@ bool SGXClientRASession::ProcessClientSideRA()
 		m_connection->Receive(msgBuffer);
 		std::unique_ptr<SGXRAMessage4> msg4(ParseMessageExpected<SGXRAMessage4>(msgBuffer));
 
-		enclaveRes = m_hwEnclave.ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature(), raContextID);
+		enclaveRes = m_hwEnclave.ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature());
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			return false;

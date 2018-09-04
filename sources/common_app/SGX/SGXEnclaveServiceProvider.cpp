@@ -119,27 +119,17 @@ sgx_status_t SGXEnclaveServiceProvider::GetIasReportNonce(const std::string & cl
 	return retval;
 }
 
-sgx_status_t SGXEnclaveServiceProvider::ProcessRAMsg0Send(const std::string & clientID)
+sgx_status_t SGXEnclaveServiceProvider::ProcessRAMsg1(const std::string & clientID, const sgx_ec256_public_t& inKey, const sgx_ra_msg1_t & inMsg1, sgx_ra_msg2_t & outMsg2)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_process_ra_msg0_send(GetEnclaveId(), &retval, clientID.c_str());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg0_send);
-
-	return retval;
-}
-
-sgx_status_t SGXEnclaveServiceProvider::ProcessRAMsg1(const std::string & clientID, const sgx_ra_msg1_t & inMsg1, sgx_ra_msg2_t & outMsg2)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_process_ra_msg1(GetEnclaveId(), &retval, clientID.c_str(), &inMsg1, &outMsg2);
+	enclaveRet = ecall_process_ra_msg1(GetEnclaveId(), &retval, clientID.c_str(), &inKey, &inMsg1, &outMsg2);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg1);
 
 	return retval;
 }
 
-sgx_status_t SGXEnclaveServiceProvider::ProcessRAMsg3(const std::string & clientID, const std::vector<uint8_t> & inMsg3, const std::string & iasReport, const std::string & reportSign, const std::string & reportCertChain, sgx_ra_msg4_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign, sgx_report_data_t* outOriRD)
+sgx_status_t SGXEnclaveServiceProvider::ProcessRAMsg3(const std::string & clientID, const std::vector<uint8_t> & inMsg3, const std::string & iasReport, const std::string & reportSign, const std::string & reportCertChain, sgx_ias_report_t & outMsg4, sgx_ec256_signature_t & outMsg4Sign, sgx_report_data_t* outOriRD)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;

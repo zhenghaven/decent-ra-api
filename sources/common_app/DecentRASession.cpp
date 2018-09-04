@@ -117,8 +117,7 @@ bool DecentRASession::ProcessClientSideRA()
 		res = clientSession->ProcessClientSideRA();
 		clientSession->SwapConnection(m_connection);
 
-		if (!res ||
-			!m_decentEnclave.ToDecentNode(k_remoteSideId, false))
+		if (!res)
 		{
 			return false;
 		}
@@ -130,7 +129,7 @@ bool DecentRASession::ProcessClientSideRA()
 		m_connection->Receive(trustedMsgJson);
 
 		DecentTrustedMessage trustedMsg(trustedMsgJson);
-		m_decentEnclave.ProcessDecentTrustedMsg(k_remoteSideId, m_connection, trustedMsg.GetTrustedMsg(), nullptr);
+		m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection, trustedMsg.GetTrustedMsg());
 
 		return false;
 	}
@@ -157,8 +156,7 @@ bool DecentRASession::ProcessServerSideRA()
 		res = spSession->ProcessServerSideRA();
 		spSession->SwapConnection(m_connection);
 
-		if (!res ||
-			!m_decentEnclave.ToDecentNode(k_remoteSideId, true))
+		if (!res)
 		{
 			return false;
 		}

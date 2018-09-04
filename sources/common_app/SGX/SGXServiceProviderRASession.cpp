@@ -6,6 +6,7 @@
 
 #include "../../common/DataCoding.h"
 #include "../../common/JsonTools.h"
+#include "../../common/SGX/ias_report.h"
 
 #include "../Common.h"
 
@@ -131,13 +132,8 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 	try
 	{
 		SGXRAClientErrMsg enclaveErrMsg(k_senderId, "Enclave process error!");
-
-		enclaveRes = m_sgxSP.ProcessRAMsg0Send(k_remoteSideId);
-		if (enclaveRes != SGX_SUCCESS)
-		{
-			m_connection->Send(enclaveErrMsg);
-			return false;
-		}
+		sgx_ec256_public_t clientPubSignKey;
+		DeserializeStruct(clientPubSignKey, k_remoteSideId);
 
 		SGXRAMessage0Resp msg0r(k_senderId, k_senderId);
 		m_connection->Send(msg0r.ToJsonString());
@@ -162,7 +158,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		msg2Data.resize(sizeof(sgx_ra_msg2_t) + sigRLData.size());
 		sgx_ra_msg2_t& msg2Ref = *reinterpret_cast<sgx_ra_msg2_t*>(msg2Data.data());
 
-		enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), msg1->GetMsg1Data(), msg2Ref);
+		enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), clientPubSignKey, msg1->GetMsg1Data(), msg2Ref);
 		if (enclaveRes != SGX_SUCCESS)
 		{
 			m_connection->Send(enclaveErrMsg);
@@ -177,7 +173,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		m_connection->Receive(msgBuffer);
 		std::unique_ptr<SGXRAMessage3> msg3(ParseMessageExpected<SGXRAMessage3>(msgBuffer));
 
-		sgx_ra_msg4_t msg4Data;
+		sgx_ias_report_t msg4Data;
 		sgx_ec256_signature_t msg4Sign;
 	
 		std::string iasNonce;

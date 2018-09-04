@@ -60,7 +60,8 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* repor
 
 	std::shared_ptr<sgx_ec256_public_t> decentPubKey = std::make_shared<sgx_ec256_public_t>();
 
-	bool verifyRes = DecentEnclave::ProcessIasRaReport(reportStr, gk_decentHash, *decentPubKey, nullptr, nullptr);
+	sgx_ias_report_t iasReport;
+	bool verifyRes = DecentEnclave::ProcessIasRaReport(reportStr, gk_decentHash, *decentPubKey, nullptr, iasReport);
 	//Won't be successful now, since the decent hash is unknown.
 	//if (!verifyRes)
 	//{

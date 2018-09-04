@@ -34,7 +34,8 @@ typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
 typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
 typedef struct _ra_msg3_t sgx_ra_msg3_t;
-typedef struct _ra_msg4_t sgx_ra_msg4_t;
+
+typedef struct _ias_report_t sgx_ias_report_t;
 
 typedef struct _sgx_dh_msg1_t sgx_dh_msg1_t;
 typedef struct _sgx_dh_msg2_t sgx_dh_msg2_t;
@@ -94,7 +95,7 @@ public:
 	virtual sgx_status_t ProcessRAMsg0Resp(const std::string& ServerID, const sgx_ec256_public_t& inKey, int enablePSE, sgx_ra_context_t& outContextID, sgx_ra_msg1_t & outMsg1);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID, sgx_ecall_proc_msg2_trusted_t proc_msg2_func, sgx_ecall_get_msg3_trusted_t get_msg3_func);
-	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ra_msg4_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, sgx_ra_context_t inContextID);
+	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ias_report_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign);
 
 
 	//***************************************

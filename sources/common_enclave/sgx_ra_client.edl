@@ -1,6 +1,6 @@
 enclave {
 	
-	include "../common/SGX/sgx_ra_msg4.h"
+	include "../common/SGX/ias_report.h"
 	
 	from "sgx_tkey_exchange.edl" import *;
 	
@@ -11,15 +11,13 @@ enclave {
 		
 		public void ecall_sgx_ra_client_terminate();
 
-		public sgx_status_t ecall_get_ra_client_pub_sig_key([out] sgx_ec256_public_t* outKey);
-		
-		//public sgx_status_t ecall_get_ra_client_pub_enc_key(sgx_ra_context_t context, [out] sgx_ec256_public_t* outKey);
+		public sgx_status_t ecall_get_ra_client_pub_sig_key([out] sgx_ec256_public_t* out_key);
 
-		public sgx_status_t ecall_process_ra_msg0_resp([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
+		public void ecall_drop_ra_state_to_server([in, string] const char* server_id);
 
-		public sgx_status_t ecall_process_ra_msg2([in, string] const char* ServerID, [in] const sgx_ec256_public_t* p_g_b, sgx_ra_context_t inContextID);
+		public sgx_status_t ecall_process_ra_msg0_resp([in, string] const char* server_id, [in] const sgx_ec256_public_t* in_pub_key, int enable_pse, [out] sgx_ra_context_t* out_ctx_id);
 
-		public sgx_status_t ecall_process_ra_msg4([in, string] const char* ServerID, [in] const sgx_ra_msg4_t* inMsg4, [in] sgx_ec256_signature_t* inMsg4Sign, sgx_ra_context_t inContextID);
+		public sgx_status_t ecall_process_ra_msg4([in, string] const char* server_id, [in] const sgx_ias_report_t* in_msg4, [in] const sgx_ec256_signature_t* in_msg4_sign);
 	};
 
 };

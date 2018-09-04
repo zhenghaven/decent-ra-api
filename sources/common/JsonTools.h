@@ -9,8 +9,10 @@
 #define JSON_HAS_MEMBER HasMember
 #define JSON_IS_OBJECT IsObject
 #define JSON_IS_STRING IsString
+#define JSON_IS_NUMBER IsNumber
 #define JSON_AS_STRING GetString
 #define JSON_AS_CSTRING JSON_AS_STRING
+#define JSON_AS_INT32 GetInt
 #else
 #define JSON_EDITION Json
 #define JSON_DOCUMENT_TYPE Value
@@ -18,8 +20,10 @@
 #define JSON_HAS_MEMBER isMember
 #define JSON_IS_OBJECT isObject
 #define JSON_IS_STRING isString
+#define JSON_IS_NUMBER isNumeric
 #define JSON_AS_STRING asString
 #define JSON_AS_CSTRING asCString
+#define JSON_AS_INT32 asInt
 #endif
 
 #ifdef ENCLAVE_CODE

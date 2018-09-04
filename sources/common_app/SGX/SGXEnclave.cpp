@@ -18,7 +18,6 @@
 #include "../EnclaveUtil.h"
 
 #include "../../common/DataCoding.h"
-#include "../../common/SGX/sgx_ra_msg4.h"
 
 #include "SGXEnclaveRuntimeException.h"
 #include "SGXClientRASession.h"
@@ -209,19 +208,15 @@ sgx_status_t SGXEnclave::ProcessRAMsg2(const std::string & ServerID, const std::
 
 	std::free(outMsg3ptr);
 
-	enclaveRet = ecall_process_ra_msg2(GetEnclaveId(), &retval, ServerID.c_str(), &(msg2Ref.g_b), inContextID);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg2);
-
-	return retval;
+	return SGX_SUCCESS;
 }
 
-sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_ra_msg4_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign, sgx_ra_context_t inContextID)
+sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_ias_report_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	//const sgx_quote_t* quotePtr = reinterpret_cast<const sgx_quote_t*>(&(inMsg3.quote));
-	enclaveRet = ecall_process_ra_msg4(GetEnclaveId(), &retval, ServerID.c_str(), &inMsg4, const_cast<sgx_ec256_signature_t*>(&inMsg4Sign), inContextID);
+	enclaveRet = ecall_process_ra_msg4(GetEnclaveId(), &retval, ServerID.c_str(), &inMsg4, &inMsg4Sign);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg4);
 
 	return retval;

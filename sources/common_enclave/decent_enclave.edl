@@ -18,16 +18,21 @@ enclave {
 		public void ecall_decent_terminate();
 		
 		public int ecall_decent_process_ias_ra_report([in, string] const char* reportStr);
+
+		public sgx_status_t ecall_decent_become_root();
 		
-		public sgx_status_t ecall_process_ra_msg0_send_decent([in, string] const char* clientID);
-		
+		public sgx_status_t ecall_process_ra_msg1_decent([in, string] const char* client_id, 
+		                                                 [in] const sgx_ec256_public_t* in_key, 
+		                                                 [in] const sgx_ra_msg1_t *in_msg1, 
+		                                                 [out] sgx_ra_msg2_t *out_msg2);
+
 		public sgx_status_t ecall_process_ra_msg0_resp_decent([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
 		
-		public int ecall_to_decent_node([in, string] const char* nodeID, int isServer);
+		public sgx_status_t ecall_process_ra_msg4_decent([in, string] const char* ServerID, [in] const sgx_ias_report_t* inMsg4, [in] const sgx_ec256_signature_t* inMsg4Sign);
 		
-		public int ecall_proc_decent_trusted_msg([in, string] const char* nodeID, [user_check] void* connectionPtr, [in, string] const char* jsonMsg, [user_check] const char* appAttach);
+		public sgx_status_t ecall_proc_decent_proto_key_msg([in, string] const char* nodeID, [user_check] void* connectionPtr, [in, string] const char* jsonMsg);
 		
-		public int ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr, [user_check] const char* appAttach);
+		public sgx_status_t ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr, [user_check] const char* appAttach);
 	};
 
 };

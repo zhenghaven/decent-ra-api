@@ -13,12 +13,14 @@ typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 #define SGX_CMAC_KEY_SIZE               16
 typedef uint8_t sgx_ec_key_128bit_t[SGX_CMAC_KEY_SIZE];
 
+typedef struct _ias_report_t sgx_ias_report_t;
+
 namespace SGXRADecentralized
 {
 	void DropNode(const std::string& nodeID);
 	bool IsNodeAttested(const std::string& nodeID);
-	bool ReleaseNodeKeys(const std::string& nodeID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t* outSK, sgx_ec_key_128bit_t* outMK);
-	AESGCMCommLayer* ReleaseNodeKeys(const std::string& nodeID, SendFunctionType sendFunc);
+	bool ReleaseNodeKeys(const std::string& nodeID, sgx_ias_report_t& outIasReport, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t* outSK, sgx_ec_key_128bit_t* outMK);
+	AESGCMCommLayer* ReleaseNodeKeys(const std::string& nodeID, SendFunctionType sendFunc, sgx_ias_report_t& outIasReport);
 }
 
 #endif // USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENTRALIZED_ENCLAVE_INTERNAL

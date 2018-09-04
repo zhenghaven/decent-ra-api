@@ -4,8 +4,8 @@ enclave {
 	
 	trusted 
 	{
-		public sgx_status_t ecall_decentralized_init([in] const sgx_spid_t* inSpid);
+		public sgx_status_t ecall_decentralized_init([in] const sgx_spid_t* in_spid);
 		
-		public int ecall_to_decentralized_node([in, string] const char* id, int is_server);
+		public sgx_status_t ecall_to_decentralized_node([in, string] const char* id, int is_server);
 	};
 };

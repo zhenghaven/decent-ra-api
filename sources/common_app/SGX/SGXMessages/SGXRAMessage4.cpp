@@ -7,17 +7,16 @@
 #include "../../MessageException.h"
 
 #include "../../../common/DataCoding.h"
-#include "../../../common/SGX/sgx_ra_msg4.h"
 
 constexpr char SGXRAMessage4::sk_LabelData[];
 constexpr char SGXRAMessage4::sk_LabelSign[];
 constexpr char SGXRAMessage4::sk_ValueType[];
 
-sgx_ra_msg4_t SGXRAMessage4::ParseMsg4Data(const Json::Value & SGXRASPRoot)
+sgx_ias_report_t SGXRAMessage4::ParseMsg4Data(const Json::Value & SGXRASPRoot)
 {
 	if (SGXRASPRoot.isMember(SGXRAMessage4::sk_LabelData) && SGXRASPRoot[SGXRAMessage4::sk_LabelData].isString())
 	{
-		sgx_ra_msg4_t res;
+		sgx_ias_report_t res;
 		DeserializeStruct(res, SGXRASPRoot[SGXRAMessage4::sk_LabelData].asString());
 		return res;
 	}
@@ -35,7 +34,7 @@ sgx_ec256_signature_t SGXRAMessage4::ParseMsg4Sign(const Json::Value & SGXRASPRo
 	throw MessageParseException();
 }
 
-SGXRAMessage4::SGXRAMessage4(const std::string& senderID, const sgx_ra_msg4_t& msg4Data, const sgx_ec256_signature_t& signature) :
+SGXRAMessage4::SGXRAMessage4(const std::string& senderID, const sgx_ias_report_t& msg4Data, const sgx_ec256_signature_t& signature) :
 	SGXRAClientMessage(senderID),
 	m_msg4Data(msg4Data),
 	m_signature(signature)
@@ -58,7 +57,7 @@ std::string SGXRAMessage4::GetMessageTypeStr() const
 	return sk_ValueType;
 }
 
-const sgx_ra_msg4_t& SGXRAMessage4::GetMsg4Data() const
+const sgx_ias_report_t& SGXRAMessage4::GetMsg4Data() const
 {
 	return m_msg4Data;
 }
