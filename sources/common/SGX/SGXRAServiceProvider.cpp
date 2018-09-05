@@ -458,8 +458,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 	bool iasVerifyRes = SGXRAEnclave::VerifyIASReport(spCTX.m_iasReport, iasReport, reportCert, reportSign, report_data, spCTX.m_reportDataVerifier, spCTX.m_nonce.c_str());
 	if (!iasVerifyRes)
 	{
-		//Error return. (Error caused by invalid input.)
-		FUNC_ERR("Processing msg3, IAS report got rejected!");
+		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
 	std::memcpy(&outMsg4, &spCTX.m_iasReport, sizeof(spCTX.m_iasReport));

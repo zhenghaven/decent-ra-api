@@ -17,10 +17,10 @@ namespace Json
 class SGXLAMessage : public Messages
 {
 public:
-	static constexpr char sk_LabelRoot[] = "SGXLA";
-	static constexpr char sk_LabelType[] = "Type";
+	static constexpr char const sk_LabelRoot[] = "SGXLA";
+	static constexpr char const sk_LabelType[] = "Type";
 
-	static constexpr char sk_ValueCat[] = "SGXLA"; // = sk_LabelRoot;
+	static constexpr char const sk_ValueCat[] = "SGXLA"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -57,7 +57,7 @@ protected:
 class SGXLARequest : public SGXLAMessage
 {
 public:
-	static constexpr char sk_ValueType[] = "LAReq";
+	static constexpr char const sk_ValueType[] = "LAReq";
 
 public:
 	SGXLARequest() = delete;
@@ -77,7 +77,7 @@ template<typename T>
 class SGXLADataMessage : public SGXLAMessage
 {
 public:
-	static constexpr char sk_LabelData[] = "Data";
+	static constexpr char const sk_LabelData[] = "Data";
 
 	static T* ParseData(const Json::Value& SGXLARoot);
 
@@ -107,7 +107,7 @@ private:
 class SGXLAMessage1 : public SGXLADataMessage<sgx_dh_msg1_t>
 {
 public:
-	static constexpr char sk_ValueType[] = "MSG1";
+	static constexpr char const sk_ValueType[] = "MSG1";
 
 public:
 	SGXLAMessage1() = delete;
@@ -121,7 +121,7 @@ public:
 class SGXLAMessage2 : public SGXLADataMessage<sgx_dh_msg2_t>
 {
 public:
-	static constexpr char sk_ValueType[] = "MSG2";
+	static constexpr char const sk_ValueType[] = "MSG2";
 
 public:
 	SGXLAMessage2() = delete;
@@ -135,7 +135,7 @@ public:
 class SGXLAMessage3 : public SGXLADataMessage<sgx_dh_msg3_t>
 {
 public:
-	static constexpr char sk_ValueType[] = "MSG3";
+	static constexpr char const sk_ValueType[] = "MSG3";
 
 public:
 	SGXLAMessage3() = delete;

@@ -10,9 +10,9 @@ namespace Json
 class Messages
 {
 public:
-	static constexpr char sk_LabelRoot[]     = "SmartServerMsg";
-	static constexpr char sk_LabelSender[]   = "Sender";
-	static constexpr char sk_LabelCategory[] = "Cat";
+	static constexpr char const sk_LabelRoot[]     = "SmartServerMsg";
+	static constexpr char const sk_LabelSender[]   = "Sender";
+	static constexpr char const sk_LabelCategory[] = "Cat";
 
 	static std::string ParseSenderID(const Json::Value& msg);
 	static std::string ParseCat(const Json::Value& msg);
@@ -41,9 +41,9 @@ private:
 class ErrorMessage
 {
 public:
-	static constexpr char sk_LabelErrMsg[] = "ErrorMsg";
+	static constexpr char const sk_LabelErrMsg[] = "ErrorMsg";
 
-	static constexpr char sk_ValueType[] = "Error";
+	static constexpr char const sk_ValueType[] = "Error";
 
 	static std::string ParseErrorMsg(const Json::Value& typeRoot);
 

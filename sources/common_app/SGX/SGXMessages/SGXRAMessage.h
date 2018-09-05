@@ -10,10 +10,10 @@ namespace Json
 class SGXRAClientMessage :  public Messages
 {
 public:
-	static constexpr char sk_LabelRoot[] = "SGXRAClient";
-	static constexpr char sk_LabelType[] = "Type";
+	static constexpr char const sk_LabelRoot[] = "SGXRAClient";
+	static constexpr char const sk_LabelType[] = "Type";
 
-	static constexpr char sk_ValueCat[]  = "SGXRAClient"; // = sk_LabelRoot;
+	static constexpr char const sk_ValueCat[]  = "SGXRAClient"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -36,10 +36,10 @@ private:
 class SGXRASPMessage : public Messages
 {
 public:
-	static constexpr char sk_LabelRoot[] = "SGXRASP";
-	static constexpr char sk_LabelType[] = "Type";
+	static constexpr char const sk_LabelRoot[] = "SGXRASP";
+	static constexpr char const sk_LabelType[] = "Type";
 
-	static constexpr char sk_ValueCat[] = "SGXRASP"; // = sk_LabelRoot;
+	static constexpr char const sk_ValueCat[] = "SGXRASP"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 

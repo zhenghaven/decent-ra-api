@@ -89,11 +89,7 @@ int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t& gid, std::string &
 {
 	int16_t respCode = -1;
 
-#ifdef DEBUG
-	const std::string iasURL = GetIasUrlHostDev() + GetIasUrlSigRlPath() + GetGIDBigEndianStr(gid);
-#else
-	const std::string iasURL = GetIasUrlHostRelease() + GetIasUrlSigRlPath() + GetGIDBigEndianStr(gid);
-#endif // DEBUG
+	const std::string iasURL = GetIasUrlHost() + GetIasUrlSigRlPath() + GetGIDBigEndianStr(gid);
 
 	outRevcList = "";
 	std::string requestId;
@@ -161,11 +157,7 @@ int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & o
 {
 	int16_t respCode = -1;
 
-#ifdef DEBUG
-	const std::string iasURL = GetIasUrlHostDev() + GetIasUrlReportPath();
-#else
-	const std::string iasURL = GetIasUrlHostRelease() + GetIasUrlReportPath();
-#endif // DEBUG
+	const std::string iasURL = GetIasUrlHost() + GetIasUrlReportPath();
 
 	outReport = "";
 	std::string requestId;

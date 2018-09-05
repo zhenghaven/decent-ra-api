@@ -14,14 +14,13 @@ namespace IASUtil
 
 	//int16_t GetQuoteReport(const std::string& jsonReqBody, std::string& outReport, std::string& outSign, std::string& outCert);
 
-	inline std::string GetIasUrlHostDev()
+	inline std::string GetIasUrlHost()
 	{
+#if !defined(NDEBUG) || defined(EDEBUG)
 		return "https://test-as.sgx.trustedservices.intel.com:443";
-	}
-
-	inline std::string GetIasUrlHostRelease()
-	{
+#else
 		return "https://as.sgx.trustedservices.intel.com:443";
+#endif
 	}
 
 	inline std::string GetIasUrlSigRlPath()

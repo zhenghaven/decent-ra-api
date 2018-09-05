@@ -66,7 +66,7 @@ typedef sgx_status_t(*sgx_ecall_get_msg3_trusted_t)(
 class SGXEnclave : virtual public EnclaveBase
 {
 public:
-	static constexpr char sk_platformType[] = "SGX";
+	static constexpr char const sk_platformType[] = "SGX";
 
 public:
 	SGXEnclave() = delete;

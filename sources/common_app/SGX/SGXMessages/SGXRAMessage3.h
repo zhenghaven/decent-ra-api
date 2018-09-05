@@ -12,9 +12,9 @@ typedef _ra_msg3_t sgx_ra_msg3_t;
 class SGXRAMessage3 : public SGXRASPMessage
 {
 public:
-	static constexpr char sk_LabelData[] = "Msg3Data";
+	static constexpr char const sk_LabelData[] = "Msg3Data";
 
-	static constexpr char sk_ValueType[] = "MSG3_SEND";
+	static constexpr char const sk_ValueType[] = "MSG3_SEND";
 
 	static std::vector<uint8_t> ParseMsg3Data(const Json::Value& SGXRASPRoot);
 

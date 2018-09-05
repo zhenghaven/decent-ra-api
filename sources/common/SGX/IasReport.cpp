@@ -152,7 +152,7 @@ sgx_status_t ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, st
 	if (jsonDoc.JSON_HAS_MEMBER("epidPseudonym") && jsonDoc["epidPseudonym"].JSON_IS_STRING())
 	{
 		std::string epidPseHex(jsonDoc["epidPseudonym"].JSON_AS_STRING());
-		cppcodec::hex_upper::decode(reinterpret_cast<uint8_t*>(&outReport.m_epidPseudonym), sizeof(outReport.m_epidPseudonym), epidPseHex.c_str(), epidPseHex.size());
+		DeserializeStruct(outReport.m_epidPseudonym, epidPseHex);
 	}
 
 	//Quote Body:

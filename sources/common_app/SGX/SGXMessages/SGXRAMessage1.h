@@ -7,9 +7,9 @@
 class SGXRAMessage1 : public SGXRASPMessage
 {
 public:
-	static constexpr char sk_LabelData[] = "Msg1Data";
+	static constexpr char const sk_LabelData[] = "Msg1Data";
 
-	static constexpr char sk_ValueType[] = "MSG1_SEND";
+	static constexpr char const sk_ValueType[] = "MSG1_SEND";
 
 	static sgx_ra_msg1_t ParseMsg1Data(const Json::Value& SGXRASPRoot);
 

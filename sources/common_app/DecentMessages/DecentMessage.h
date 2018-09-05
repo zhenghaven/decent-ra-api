@@ -5,10 +5,10 @@
 class DecentMessage : public Messages
 {
 public:
-	static constexpr char sk_LabelRoot[] = "Decent";
-	static constexpr char sk_LabelType[] = "Type";
+	static constexpr char const sk_LabelRoot[] = "Decent";
+	static constexpr char const sk_LabelType[] = "Type";
 
-	static constexpr char sk_ValueCat[] = "Decent"; // = sk_LabelRoot;
+	static constexpr char const sk_ValueCat[] = "Decent"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -45,7 +45,7 @@ protected:
 class DecentRAHandshake : public DecentMessage
 {
 public:
-	static constexpr char sk_ValueType[] = "RAHandshake";
+	static constexpr char const sk_ValueType[] = "RAHandshake";
 
 public:
 	DecentRAHandshake() = delete;
@@ -64,9 +64,9 @@ private:
 class DecentRAHandshakeAck : public DecentMessage
 {
 public:
-	static constexpr char sk_LabelSelfReport[] = "SelfReport";
+	static constexpr char const sk_LabelSelfReport[] = "SelfReport";
 
-	static constexpr char sk_ValueType[] = "RAHandshakeAck";
+	static constexpr char const sk_ValueType[] = "RAHandshakeAck";
 
 	static std::string ParseSelfRAReport(const Json::Value& DecentRoot);
 
@@ -90,7 +90,7 @@ private:
 class DecentProtocolKeyReq : public DecentMessage
 {
 public:
-	static constexpr char sk_ValueType[] = "ProtoKeyReq";
+	static constexpr char const sk_ValueType[] = "ProtoKeyReq";
 
 public:
 	DecentProtocolKeyReq() = delete;
@@ -109,10 +109,10 @@ private:
 class DecentTrustedMessage : public DecentMessage
 {
 public:
-	static constexpr char sk_LabelTrustedMsg[] = "Msg";
-	static constexpr char sk_LabelAppAttach[] = "AppAttach";
+	static constexpr char const sk_LabelTrustedMsg[] = "Msg";
+	static constexpr char const sk_LabelAppAttach[] = "AppAttach";
 
-	static constexpr char sk_ValueType[] = "TrustedMsg";
+	static constexpr char const sk_ValueType[] = "TrustedMsg";
 
 	static std::string ParseTrustedMsg(const Json::Value& DecentRoot);
 	static std::string ParseAppAttach(const Json::Value& DecentRoot);

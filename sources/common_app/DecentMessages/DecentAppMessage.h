@@ -5,10 +5,10 @@
 class DecentAppMessage : public Messages
 {
 public:
-	static constexpr char sk_LabelRoot[] = "DecentApp";
-	static constexpr char sk_LabelType[] = "Type";
+	static constexpr char const sk_LabelRoot[] = "DecentApp";
+	static constexpr char const sk_LabelType[] = "Type";
 
-	static constexpr char sk_ValueCat[] = "DecentApp"; // = sk_LabelRoot;
+	static constexpr char const sk_ValueCat[] = "DecentApp"; // = sk_LabelRoot;
 
 	static std::string ParseType(const Json::Value& MsgRootContent);
 
@@ -50,10 +50,10 @@ protected:
 class DecentAppTrustedMessage : public DecentAppMessage
 {
 public:
-	static constexpr char sk_LabelTrustedMsg[] = "Msg";
-	static constexpr char sk_LabelAppAttach[] = "AppAttach";
+	static constexpr char const sk_LabelTrustedMsg[] = "Msg";
+	static constexpr char const sk_LabelAppAttach[] = "AppAttach";
 
-	static constexpr char sk_ValueType[] = "TrustedMsg";
+	static constexpr char const sk_ValueType[] = "TrustedMsg";
 
 	static std::string ParseTrustedMsg(const Json::Value& DecentAppRoot);
 	static std::string ParseAppAttach(const Json::Value& DecentAppRoot);

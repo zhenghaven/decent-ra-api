@@ -98,7 +98,7 @@ if(MSVC)
 	set(COMMON_OPTIONS /W3 /wd4996 /we4239 /we4002 /we4700 /we4305 /EHsc /MP)
 	set(DEBUG_OPTIONS /MTd /Od /Zi /DDEBUG)
 	set(SIMULATE_OPTIONS /DSIMULATING_ENCLAVE)
-	set(RELEASE_OPTIONS /MT /Ox /fp:fast /GL /GR- /DNDEBUG)
+	set(RELEASE_OPTIONS /MT /Ox /fp:fast /GL /GR-)# /DNDEBUG
 	
 	set(ENCLAVE_OPTIONS "/NODEFAULTLIB /NOENTRY")
 	
@@ -343,7 +343,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	### Enclave
 	###########################################################
 
-	set(${Proj_Name}_Enclave_File "${Enclave_Prog_Prefix}${Proj_Name}_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.signed.${Enclave_Prog_Postfix}")
+	set(${Proj_Name}_Enclave_File "${Enclave_Prog_Prefix}${Proj_Name}_Enclave.signed.${Enclave_Prog_Postfix}")
 	set(${Proj_Name}_Enclave_Lib "${Enclave_Prog_Prefix}${Proj_Name}_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.${Enclave_Prog_Postfix}")
 
 	add_library(${Proj_Name}_Enclave SHARED ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_${Proj_Name}_Enclave} ${SOURCES_${Proj_Name}_EDL})
