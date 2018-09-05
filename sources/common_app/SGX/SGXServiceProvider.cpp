@@ -43,7 +43,7 @@ const std::string SGXServiceProvider::GetRASPSignPubKey() const
 {
 	sgx_ec256_public_t signPubKey;
 	GetRASPSignPubKey(signPubKey);
-	return SerializePubKey(signPubKey);
+	return SerializeStruct(signPubKey);
 }
 
 sgx_status_t SGXServiceProvider::GetIasReportNonce(const std::string & clientID, std::string & outNonce)

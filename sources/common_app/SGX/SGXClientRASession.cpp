@@ -55,7 +55,7 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 static sgx_ec256_public_t ProcessHandshakeMsgKey(const SGXRAMessage0Resp & msg0r)
 {
 	sgx_ec256_public_t res;
-	DeserializePubKey(msg0r.GetRAPubKey(), res);
+	DeserializeStruct(res, msg0r.GetRAPubKey());
 	return res;
 }
 
@@ -79,7 +79,7 @@ void SGXClientRASession::SendHandshakeMessage(std::unique_ptr<Connection>& conne
 {
 	sgx_ec256_public_t signPubKey;
 	enclave.GetRAClientSignPubKey(signPubKey);
-	std::string senderID = SerializePubKey(signPubKey);
+	std::string senderID = SerializeStruct(signPubKey);
 
 	SGXRAMessage0Send msg0s(senderID, enclave.GetExGroupID());
 	connection->Send(msg0s.ToJsonString());

@@ -35,9 +35,7 @@ bool SGXLASession::SendHandshakeMessage(std::unique_ptr<Connection>& connection,
 	{
 		return false;
 	}
-	sgx_ec256_public_t signPubKey;
-	enclave.GetRAClientSignPubKey(signPubKey);
-	std::string senderID = SerializePubKey(signPubKey);
+	std::string senderID = enclave.GetRAClientSignPubKey();
 
 	SGXLARequest reqMsg(senderID);
 	connection->Send(reqMsg);

@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef SGX_RA_MSG4_H
-#define SGX_RA_MSG4_H
+#ifndef IAS_REPORT_H
+#define IAS_REPORT_H
 
 #include <stdint.h>
 #include <sgx_quote.h>
@@ -44,4 +44,4 @@ extern "C" {
 }
 #endif
 
-#endif //SGX_RA_MSG4_H
+#endif //IAS_REPORT_H

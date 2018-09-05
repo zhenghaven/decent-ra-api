@@ -14,18 +14,20 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
-#include "../../common/JsonTools.h"
-#include "../../common/CommonTool.h"
-#include "../../common/DataCoding.h"
-#include "../../common/OpenSSLTools.h"
-#include "../../common/NonceGenerator.h"
-#include "../../common/AESGCMCommLayer.h"
-#include "../../common/EnclaveAsyKeyContainer.h"
-#include "../../common/SGX/ias_report_cert.h"
-#include "../../common/SGX/sgx_crypto_tools.h"
-#include "../../common/SGX/sgx_constants.h"
-#include "../../common/SGX/ias_report.h"
-#include "../../common/SGX/IasReport.h"
+#include "../JsonTools.h"
+#include "../CommonTool.h"
+#include "../DataCoding.h"
+#include "../OpenSSLTools.h"
+#include "../NonceGenerator.h"
+#include "../AESGCMCommLayer.h"
+#include "../GeneralKeyTypes.h"
+#include "../EnclaveAsyKeyContainer.h"
+
+#include "../SGX/ias_report_cert.h"
+#include "../SGX/sgx_crypto_tools.h"
+#include "../SGX/sgx_constants.h"
+#include "../SGX/ias_report.h"
+#include "../SGX/IasReport.h"
 
 #ifdef ENCLAVE_CODE
 #include <rapidjson/document.h>
@@ -44,37 +46,42 @@ struct RASPContext
 {
 	std::shared_ptr<const sgx_ec256_public_t> m_mySignPub;
 	std::shared_ptr<const PrivateKeyWrap> m_mySignPrv;
+	std::unique_ptr<sgx_ec256_public_t> m_peerSignKey;
+
 	sgx_ec256_private_t m_prvKey;
+
+	//Do not move the following members:
 	sgx_ec256_public_t m_pubKey;
-	ClientRAState m_state;
+	sgx_ec256_public_t m_peerEncrKey;
+	//End Do Not Move.
+
 	std::string m_nonce;
 	ReportDataVerifier m_reportDataVerifier;
-	sgx_ec256_public_t m_peerSignKey;
-	sgx_ec256_public_t m_peerEncrKey;
 	sgx_ec256_dh_shared_t m_sharedKey;
 	sgx_ec_key_128bit_t m_smk = { 0 };
-	sgx_ec_key_128bit_t m_mk = { 0 };
-	sgx_ec_key_128bit_t m_sk = { 0 };
+	std::unique_ptr<GeneralAES128BitKey> m_mk;
+	std::unique_ptr<GeneralAES128BitKey> m_sk;
 	sgx_ec_key_128bit_t m_vk = { 0 };
-	sgx_ps_sec_prop_desc_t m_secProp;
+	//sgx_ps_sec_prop_desc_t m_secProp;
+	ClientRAState m_state;
 	std::mutex m_mutex;
-	sgx_ias_report_t m_iasReport;
+	std::unique_ptr<sgx_ias_report_t> m_iasReport;
 
 	RASPContext(const EnclaveAsyKeyContainer& keyContainer, const sgx_ec256_public_t& inSignPubKey) :
 		m_mySignPub(keyContainer.GetSignPubKey()),
 		m_mySignPrv(keyContainer.GetSignPrvKey()),
-		m_prvKey(),
-		m_pubKey(),
-		m_peerSignKey(inSignPubKey),
-		m_peerEncrKey({ {0}, {0} }),
+		m_peerSignKey(new sgx_ec256_public_t),
+		m_nonce(GenNonceForIASJson(IAS_REQUEST_NONCE_SIZE)),
 		m_sharedKey({ {0} }),
-		m_secProp({ {0} }),
+		m_mk(new GeneralAES128BitKey),
+		m_sk(new GeneralAES128BitKey),
+		//m_secProp({ {0} }),
 		m_state(ClientRAState::MSG0_DONE),
-		m_nonce(GenNonceForIASJson(IAS_REQUEST_NONCE_SIZE))
+		m_iasReport(new sgx_ias_report_t)
 	{
 		m_reportDataVerifier = [](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
 		{
-			return std::memcmp(initData, inData.data(), inData.size()) == 0;
+			return consttime_memequal(initData, inData.data(), inData.size()) == 1;
 		};
 	}
 
@@ -95,7 +102,7 @@ struct RASPContext
 		}
 		sgx_ecc256_close_context(ecState);
 
-		enclaveRet = derive_key_set(&m_sharedKey, &m_smk, &m_mk, &m_sk, &m_vk);
+		enclaveRet = derive_key_set(&m_sharedKey, &m_smk, reinterpret_cast<sgx_ec_key_128bit_t*>(m_mk->data()), reinterpret_cast<sgx_ec_key_128bit_t*>(m_sk->data()), &m_vk);
 		return enclaveRet;
 	}
 };
@@ -182,13 +189,8 @@ bool SGXRAEnclave::IsClientAttested(const std::string & clientID)
 	return it == k_clientsMap.cend() ? false : (it->second->m_state == ClientRAState::ATTESTED);
 }
 
-bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, sgx_ias_report_t& outIasReport, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
+bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK)
 {
-	if (!outSK && !outMK && !outSignPubKey)
-	{
-		return false;
-	}
-
 	std::shared_ptr<RASPContext> spCTXPtr(FetchSpCtx(clientID));
 	if (!spCTXPtr || spCTXPtr->m_state != ClientRAState::ATTESTED)
 	{
@@ -199,20 +201,10 @@ bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, sgx_ias_repor
 	{
 		std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
 
-		std::memcpy(&outIasReport, &spCTX.m_iasReport, sizeof(outIasReport));
-
-		if (outSK)
-		{
-			std::memcpy(outSK, &spCTX.m_sk, sizeof(sgx_ec_key_128bit_t));
-		}
-		if (outMK)
-		{
-			std::memcpy(outMK, &spCTX.m_mk, sizeof(sgx_ec_key_128bit_t));
-		}
-		if (outSignPubKey)
-		{
-			std::memcpy(outSignPubKey, &spCTX.m_peerSignKey, sizeof(sgx_ec256_public_t));
-		}
+		outIasReport.swap(spCTX.m_iasReport);
+		outSignPubKey.swap(spCTX.m_peerSignKey);
+		outSK.swap(spCTX.m_sk);
+		outMK.swap(spCTX.m_mk);
 	}
 
 	SGXRAEnclave::DropClientRAState(clientID);
@@ -220,7 +212,7 @@ bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, sgx_ias_repor
 	return true;
 }
 
-AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, SendFunctionType sendFunc, sgx_ias_report_t& outIasReport)
+AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, SendFunctionType sendFunc, std::unique_ptr<sgx_ias_report_t>& outIasReport)
 {
 	std::shared_ptr<RASPContext> spCTXPtr(FetchSpCtx(clientID));
 	if (!spCTXPtr || spCTXPtr->m_state != ClientRAState::ATTESTED)
@@ -233,9 +225,9 @@ AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, S
 	{
 		std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
 
-		std::memcpy(&outIasReport, &spCTX.m_iasReport, sizeof(outIasReport));
+		outIasReport.swap(spCTX.m_iasReport);
 
-		res = new AESGCMCommLayer(spCTX.m_sk, SerializeStruct(*spCTX.m_mySignPub), sendFunc);
+		res = new AESGCMCommLayer(*spCTX.m_sk, SerializeStruct(*spCTX.m_mySignPub), sendFunc);
 	}
 	SGXRAEnclave::DropClientRAState(clientID);
 	return res;
@@ -331,10 +323,6 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 	
 	outMsg2.kdf_id = SAMPLE_AES_CMAC_KDF_ID;
 
-	sgx_ec256_public_t gb_ga[2];
-	memcpy(&gb_ga[0], &(spCTX.m_pubKey), sizeof(sgx_ec256_public_t));
-	memcpy(&gb_ga[1], &(spCTX.m_peerEncrKey), sizeof(sgx_ec256_public_t));
-
 	{
 		sgx_ecc_state_handle_t eccState;
 		res = sgx_ecc256_open_context(&eccState);
@@ -342,7 +330,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 		{
 			return res; //Error return. (Error from SGX)
 		}
-		res = sgx_ecdsa_sign((uint8_t *)&gb_ga, sizeof(gb_ga), const_cast<sgx_ec256_private_t*>(&(spCTX.m_mySignPrv->m_prvKey)), &(outMsg2.sign_gb_ga), eccState);
+		res = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&spCTX.m_pubKey), 2 * sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&(spCTX.m_mySignPrv->m_prvKey)), &(outMsg2.sign_gb_ga), eccState);
 		if (res != SGX_SUCCESS)
 		{
 			return res; //Error return. (Error from SGX)
@@ -352,8 +340,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 
 	uint8_t mac[SGX_CMAC_MAC_SIZE] = { 0 };
 	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
-	res = sgx_rijndael128_cmac_msg(reinterpret_cast<sgx_cmac_128bit_key_t*>(&(spCTX.m_smk)), reinterpret_cast<uint8_t*>(&(outMsg2.g_b)), cmac_size, &mac);
-	memcpy(&(outMsg2.mac), mac, sizeof(mac));
+	res = sgx_rijndael128_cmac_msg(reinterpret_cast<sgx_cmac_128bit_key_t*>(&(spCTX.m_smk)), reinterpret_cast<uint8_t*>(&(outMsg2.g_b)), cmac_size, &outMsg2.mac);
 
 	outMsg2.sig_rl_size = 0;
 
@@ -404,7 +391,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 		return res; //Error return. (Error from SGX)
 	}
 
-	std::memcpy(&spCTX.m_secProp, &msg3.ps_sec_prop, sizeof(sgx_ps_sec_prop_desc_t));
+	//std::memcpy(&spCTX.m_secProp, &msg3.ps_sec_prop, sizeof(sgx_ps_sec_prop_desc_t));
 
 	//const sgx_quote_t* p_quote = reinterpret_cast<const sgx_quote_t *>(msg3->quote);
 
@@ -455,13 +442,13 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 		std::memcpy(outOriRD, &report_data, sizeof(sgx_report_data_t));
 	}
 
-	bool iasVerifyRes = SGXRAEnclave::VerifyIASReport(spCTX.m_iasReport, iasReport, reportCert, reportSign, report_data, spCTX.m_reportDataVerifier, spCTX.m_nonce.c_str());
+	bool iasVerifyRes = SGXRAEnclave::VerifyIASReport(*spCTX.m_iasReport, iasReport, reportCert, reportSign, report_data, spCTX.m_reportDataVerifier, spCTX.m_nonce.c_str());
 	if (!iasVerifyRes)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	std::memcpy(&outMsg4, &spCTX.m_iasReport, sizeof(spCTX.m_iasReport));
+	std::memcpy(&outMsg4, spCTX.m_iasReport.get(), sizeof(*spCTX.m_iasReport));
 
 	{
 		sgx_ecc_state_handle_t eccState;

@@ -137,7 +137,7 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* reportStr)
 		return 0;
 	}
 
-	g_decentProtoPubKey = SerializePubKey(decentPubKey);
+	g_decentProtoPubKey = SerializeStruct(decentPubKey);
 
 	COMMON_PRINTF("Accepted New Decent Node: %s\n", g_decentProtoPubKey.c_str());
 
@@ -305,19 +305,19 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	sgx_ias_report_t iasReport;
+	std::unique_ptr<sgx_ias_report_t> iasReport;
 	AESGCMCommLayer* commLayer = SGXRAEnclave::ReleaseClientKeys(nodeID, &CommLayerSendFunc, iasReport);
-	if (!commLayer)
+	if (!commLayer || !iasReport)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-	if (iasReport.m_status != static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK))
+	if (iasReport->m_status != static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	sgx_measurement_t targetHash;
 	DeserializeStruct(targetHash, GetSelfEnclaveHash());
-	if (!consttime_memequal(&iasReport.m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t)))
+	if (!consttime_memequal(&iasReport->m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t)))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}

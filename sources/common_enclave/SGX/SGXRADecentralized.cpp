@@ -19,16 +19,17 @@
 #include "../Common.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/DataCoding.h"
+#include "../../common/GeneralKeyTypes.h"
 
 struct DecentrNodeContext
 {
-	sgx_ec256_public_t m_pubKey;
-	sgx_ec_key_128bit_t m_sk;
-	sgx_ec_key_128bit_t m_mk;
-	sgx_ias_report_t m_iasReport;
+	std::unique_ptr<sgx_ec256_public_t> m_pubKey;
+	std::unique_ptr<GeneralAES128BitKey> m_sk;
+	std::unique_ptr<GeneralAES128BitKey> m_mk;
+	std::unique_ptr<sgx_ias_report_t> m_iasReport;
 };
 
-typedef std::map<std::string, std::shared_ptr<const DecentrNodeContext> > DecentrNodeMapType;
+typedef std::map<std::string, std::unique_ptr<DecentrNodeContext> > DecentrNodeMapType;
 
 namespace
 {
@@ -99,8 +100,8 @@ extern "C" sgx_status_t ecall_to_decentralized_node(const char* id, int is_serve
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	DecentrNodeContext* nodeCtx = new DecentrNodeContext;
-	bool getKeyRes = SGXRAEnclave::ReleaseClientKeys(id, nodeCtx->m_iasReport, &nodeCtx->m_pubKey, &nodeCtx->m_sk, &nodeCtx->m_mk);
+	std::unique_ptr<DecentrNodeContext> nodeCtx(new DecentrNodeContext);
+	bool getKeyRes = SGXRAEnclave::ReleaseClientKeys(id, nodeCtx->m_iasReport, nodeCtx->m_pubKey, nodeCtx->m_sk, nodeCtx->m_mk);
 
 	if (is_server)
 	{
@@ -108,17 +109,16 @@ extern "C" sgx_status_t ecall_to_decentralized_node(const char* id, int is_serve
 	}
 	else
 	{
-		getKeyRes = getKeyRes && SGXRAEnclave::ReleaseServerKeys(id, &nodeCtx->m_pubKey, &nodeCtx->m_sk, &nodeCtx->m_mk);
+		getKeyRes = getKeyRes && SGXRAEnclave::ReleaseServerKeys(id, nodeCtx->m_pubKey, nodeCtx->m_sk, nodeCtx->m_mk);
 	}
 	if (!getKeyRes)
 	{
-		delete nodeCtx;
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
 	sgx_measurement_t targetHash;
 	DeserializeStruct(targetHash, GetSelfEnclaveHash());
-	if (!consttime_memequal(&nodeCtx->m_iasReport.m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t)))
+	if (!consttime_memequal(&nodeCtx->m_iasReport->m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t)))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -126,7 +126,7 @@ extern "C" sgx_status_t ecall_to_decentralized_node(const char* id, int is_serve
 
 	{
 		std::lock_guard<std::mutex> mapLock(g_decentrNodesMapMutex);
-		g_decentrNodesMap.insert(std::make_pair(id, std::shared_ptr<const DecentrNodeContext>(nodeCtx)));
+		g_decentrNodesMap.insert(std::make_pair(id, std::move(nodeCtx)));
 	}
 
 	COMMON_PRINTF("Accepted New Decentralized Node: %s\n", id);
@@ -137,8 +137,8 @@ extern "C" sgx_status_t ecall_to_decentralized_node(const char* id, int is_serve
 void SGXRADecentralized::DropNode(const std::string & nodeID)
 {
 	std::lock_guard<std::mutex> mapLock(g_decentrNodesMapMutex);
-	auto it = g_decentrNodesMap.find(nodeID);
-	if (it != g_decentrNodesMap.cend())
+	auto it = k_decentrNodesMap.find(nodeID);
+	if (it != k_decentrNodesMap.cend())
 	{
 		g_decentrNodesMap.erase(it);
 	}
@@ -149,60 +149,48 @@ bool SGXRADecentralized::IsNodeAttested(const std::string & nodeID)
 	std::lock_guard<std::mutex> mapLock(g_decentrNodesMapMutex);
 	return k_decentrNodesMap.find(nodeID) != k_decentrNodesMap.cend();
 }
-
-static inline std::shared_ptr<const DecentrNodeContext> FetchNodeCtx(const std::string & nodeID)
+static inline std::unique_ptr<DecentrNodeContext> FetchNodeCtx(const std::string & nodeID)
 {
-	std::lock_guard<std::mutex> mapLock(g_decentrNodesMapMutex);
-	auto it = k_decentrNodesMap.find(nodeID);
-	return (it != k_decentrNodesMap.end()) ? it->second : nullptr;
-}
-
-bool SGXRADecentralized::ReleaseNodeKeys(const std::string & nodeID, sgx_ias_report_t& outIasReport, sgx_ec256_public_t * outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
-{
-	if (!outSK && !outMK && !outSignPubKey)
+	std::unique_ptr<DecentrNodeContext> nodeCtx;
 	{
-		return false;
+		std::lock_guard<std::mutex> mapLock(g_decentrNodesMapMutex);
+		auto it = g_decentrNodesMap.find(nodeID);
+		if (it == g_decentrNodesMap.end())
+		{
+			return false;
+		}
+		nodeCtx.swap(it->second);
+		g_decentrNodesMap.erase(it);
 	}
-	
-	std::shared_ptr<const DecentrNodeContext> nodeCtx(std::move(FetchNodeCtx(nodeID)));
+	return std::move(nodeCtx);
+}
+bool SGXRADecentralized::ReleaseNodeKeys(const std::string & nodeID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK)
+{
+	std::unique_ptr<DecentrNodeContext> nodeCtx(std::move(FetchNodeCtx(nodeID)));
 	if (!nodeCtx)
 	{
 		return false;
 	}
 
-	std::memcpy(&outIasReport, &nodeCtx->m_iasReport, sizeof(outIasReport));
-
-	if (outSK)
-	{
-		std::memcpy(outSK, &nodeCtx->m_sk, sizeof(sgx_ec_key_128bit_t));
-	}
-	if (outMK)
-	{
-		std::memcpy(outMK, &nodeCtx->m_mk, sizeof(sgx_ec_key_128bit_t));
-	}
-	if (outSignPubKey)
-	{
-		std::memcpy(outSignPubKey, &nodeCtx->m_pubKey, sizeof(sgx_ec256_public_t));
-	}
-
-	SGXRADecentralized::DropNode(nodeID);
+	outIasReport.swap(nodeCtx->m_iasReport);
+	outSignPubKey.swap(nodeCtx->m_pubKey);
+	outSK.swap(nodeCtx->m_sk);
+	outMK.swap(nodeCtx->m_mk);
 
 	return true;
 }
 
-AESGCMCommLayer * SGXRADecentralized::ReleaseNodeKeys(const std::string & nodeID, SendFunctionType sendFunc, sgx_ias_report_t& outIasReport)
+AESGCMCommLayer * SGXRADecentralized::ReleaseNodeKeys(const std::string & nodeID, SendFunctionType sendFunc, std::unique_ptr<sgx_ias_report_t>& outIasReport)
 {
-	std::shared_ptr<const DecentrNodeContext> nodeCtx(std::move(FetchNodeCtx(nodeID)));
+	std::unique_ptr<DecentrNodeContext> nodeCtx(std::move(FetchNodeCtx(nodeID)));
 	if (!nodeCtx)
 	{
 		return false;
 	}
 
-	std::memcpy(&outIasReport, &nodeCtx->m_iasReport, sizeof(outIasReport));
+	outIasReport.swap(nodeCtx->m_iasReport);
 
-	AESGCMCommLayer* res = new AESGCMCommLayer(nodeCtx->m_sk, SerializeStruct(nodeCtx->m_pubKey), sendFunc);
-
-	SGXRADecentralized::DropNode(nodeID);
+	AESGCMCommLayer* res = new AESGCMCommLayer(*nodeCtx->m_sk, SerializeStruct(nodeCtx->m_pubKey), sendFunc);
 
 	return res;
 }

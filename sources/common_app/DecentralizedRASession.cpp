@@ -48,16 +48,9 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 	return ParseMessageExpected<T>(jsonRoot);
 }
 
-static inline std::string ConstructSenderID(EnclaveServiceProviderBase & enclave)
-{
-	sgx_ec256_public_t signPubKey;
-	enclave.GetRAClientSignPubKey(signPubKey);
-	return SerializePubKey(signPubKey);
-}
-
 void DecentralizedRASession::SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & enclave)
 {
-	DecentralizedRAHandshake msg0s(ConstructSenderID(enclave));
+	DecentralizedRAHandshake msg0s(enclave.GetRAClientSignPubKey());
 	connection->Send(msg0s.ToJsonString());
 }
 
@@ -100,7 +93,7 @@ DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& conn
 
 DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const DecentralizedRAHandshake & hsMsg) :
 	m_hwEnclave(hwEnclave),
-	k_senderId(ConstructSenderID(hwEnclave)),
+	k_senderId(hwEnclave.GetRAClientSignPubKey()),
 	k_remoteSideId(hsMsg.GetSenderID()),
 	m_decentralizedEnc(enclave),
 	k_isServerSide(true)
@@ -112,7 +105,7 @@ DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& conn
 
 DecentralizedRASession::DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const DecentralizedRAHandshakeAck & ackMsg) :
 	m_hwEnclave(hwEnclave),
-	k_senderId(ConstructSenderID(hwEnclave)),
+	k_senderId(hwEnclave.GetRAClientSignPubKey()),
 	k_remoteSideId(ackMsg.GetSenderID()),
 	m_decentralizedEnc(enclave),
 	k_isServerSide(false)

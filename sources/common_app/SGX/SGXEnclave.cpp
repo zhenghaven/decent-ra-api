@@ -123,7 +123,7 @@ const std::string SGXEnclave::GetRAClientSignPubKey() const
 {
 	sgx_ec256_public_t signPubKey;
 	GetRAClientSignPubKey(signPubKey);
-	return SerializePubKey(signPubKey);
+	return SerializeStruct(signPubKey);
 }
 
 std::shared_ptr<ClientRASession> SGXEnclave::GetRAClientSession(std::unique_ptr<Connection>& connection)

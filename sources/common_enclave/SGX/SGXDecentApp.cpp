@@ -81,9 +81,9 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	sgx_dh_session_enclave_identity_t identity;
-	sgx_ec_key_128bit_t aesKey;
-	if (!SGXLAEnclave::ReleasePeerKey(decentId, identity, aesKey))
+	std::unique_ptr<sgx_dh_session_enclave_identity_t> identity;
+	std::unique_ptr<GeneralAES128BitKey> aesKey;
+	if (!SGXLAEnclave::ReleasePeerKey(decentId, identity, aesKey) || !identity || !aesKey)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -91,7 +91,7 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 	//=============== Not used now 
 	//sgx_measurement_t targetHash;
 	//DeserializeStruct(targetHash, gk_decentHash);
-	//const sgx_measurement_t& testHash = identity.mr_enclave;
+	//const sgx_measurement_t& testHash = identity->mr_enclave;
 
 	//if (!consttime_memequal(&targetHash, &testHash, sizeof(sgx_measurement_t)))
 	//{
@@ -101,7 +101,7 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 
 	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer = EnclaveAsyKeyContainer::GetInstance();
 	std::shared_ptr<const sgx_ec256_public_t> pubKey = keyContainer->GetSignPubKey();
-	std::shared_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
+	std::shared_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(*aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
 
 	sgx_report_data_t reportData;
 	std::memset(&reportData, 0, sizeof(sgx_report_data_t));
@@ -111,7 +111,7 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 	ECKeyPubSGX2Pem(*keyContainer->GetSignPubKey(), pubPem);
 
 	sgx_sha_state_handle_t shaState;
-	sgx_sha256_hash_t tmpHash;
+	//sgx_sha256_hash_t tmpHash;
 	sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
 	if (enclaveRet != SGX_SUCCESS)
 	{
@@ -123,14 +123,14 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 		sgx_sha256_close(shaState);
 		return enclaveRet;
 	}
-	enclaveRet = sgx_sha256_get_hash(shaState, &tmpHash);
+	enclaveRet = sgx_sha256_get_hash(shaState, reinterpret_cast<sgx_sha256_hash_t*>(&reportData));
 	sgx_sha256_close(shaState);
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		return enclaveRet;
 	}
 
-	std::memcpy(&reportData, &tmpHash, sizeof(sgx_sha256_hash_t));
+	//std::memcpy(&reportData, &tmpHash, sizeof(sgx_sha256_hash_t));
 
 	rapidjson::Document doc;
 	rapidjson::Value jsonRoot;

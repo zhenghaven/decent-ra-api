@@ -16,12 +16,13 @@ struct LAContext
 {
 	bool m_isAttested;
 	sgx_dh_session_t m_session;
-	sgx_key_128bit_t m_key;
-	sgx_dh_session_enclave_identity_t m_identity;
+	std::unique_ptr<GeneralAES128BitKey> m_key;
+	std::unique_ptr<sgx_dh_session_enclave_identity_t> m_identity;
 
 	LAContext() :
 		m_isAttested(false),
-		m_key{ 0 }
+		m_key(new GeneralAES128BitKey),
+		m_identity(new sgx_dh_session_enclave_identity_t)
 	{}
 };
 
@@ -110,24 +111,26 @@ extern "C" sgx_status_t ecall_sgx_la_initiator_proc_msg1(const char* peerId, con
 	return enclaveRet;
 }
 
+static inline std::shared_ptr<LAContext> FetchUnattestedCtx(const std::string& peerId)
+{
+	std::lock_guard<std::mutex> mapLock(g_peerMapMutex);
+	auto it = g_peerMap.find(peerId);
+	return (it != g_peerMap.end() && !it->second->m_isAttested) ? it->second : nullptr;
+}
+
 extern "C" sgx_status_t ecall_sgx_la_responder_proc_msg2(const char* peerId, const sgx_dh_msg2_t* const inMsg2, sgx_dh_msg3_t* const outMsg3)
 {
-	std::shared_ptr<LAContext> peerCtx;
+	std::shared_ptr<LAContext> peerCtx(std::move(FetchUnattestedCtx(peerId)));
+	if (!peerCtx)
 	{
-		std::lock_guard<std::mutex> mapLock(g_peerMapMutex);
-		auto it = g_peerMap.find(peerId);
-		if (it == g_peerMap.end())
-		{
-			return SGX_ERROR_INVALID_PARAMETER;
-		}
-		peerCtx = it->second;
+		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
 	sgx_status_t enclaveRet = SGX_SUCCESS;
-	enclaveRet = sgx_dh_responder_proc_msg2(inMsg2, outMsg3, &(peerCtx->m_session), &(peerCtx->m_key), &(peerCtx->m_identity));
+	enclaveRet = sgx_dh_responder_proc_msg2(inMsg2, outMsg3, &(peerCtx->m_session), reinterpret_cast<sgx_ec_key_128bit_t*>(peerCtx->m_key->data()), peerCtx->m_identity.get());
 	if (enclaveRet != SGX_SUCCESS)
 	{
-		SGXLAEnclave::DropPeer(peerId);
+		return enclaveRet;
 	}
 	peerCtx->m_isAttested = true;
 
@@ -136,26 +139,26 @@ extern "C" sgx_status_t ecall_sgx_la_responder_proc_msg2(const char* peerId, con
 
 extern "C" sgx_status_t ecall_sgx_la_initiator_proc_msg3(const char* peerId, const sgx_dh_msg3_t* const inMsg3)
 {
-	std::shared_ptr<LAContext> peerCtx;
+	std::shared_ptr<LAContext> peerCtx(std::move(FetchUnattestedCtx(peerId)));
+	if (!peerCtx)
 	{
-		std::lock_guard<std::mutex> mapLock(g_peerMapMutex);
-		auto it = g_peerMap.find(peerId);
-		if (it == g_peerMap.end())
-		{
-			return SGX_ERROR_INVALID_PARAMETER;
-		}
-		peerCtx = it->second;
+		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
 	sgx_status_t enclaveRet = SGX_SUCCESS;
-	enclaveRet = sgx_dh_initiator_proc_msg3(inMsg3, &(peerCtx->m_session), &(peerCtx->m_key), &(peerCtx->m_identity));
+	enclaveRet = sgx_dh_initiator_proc_msg3(inMsg3, &(peerCtx->m_session), reinterpret_cast<sgx_ec_key_128bit_t*>(peerCtx->m_key->data()), peerCtx->m_identity.get());
 	if (enclaveRet != SGX_SUCCESS)
 	{
-		SGXLAEnclave::DropPeer(peerId);
+		return enclaveRet;
 	}
 	peerCtx->m_isAttested = true;
 
 	return enclaveRet;
+}
+
+extern "C" void ecall_sgx_la_drop_peer(const char* peerId)
+{
+	SGXLAEnclave::DropPeer(peerId);
 }
 
 void SGXLAEnclave::DropPeer(const std::string & peerId)
@@ -168,28 +171,30 @@ void SGXLAEnclave::DropPeer(const std::string & peerId)
 	}
 }
 
-bool SGXLAEnclave::ReleasePeerKey(const std::string & peerId, sgx_dh_session_enclave_identity_t & outIdentity, sgx_ec_key_128bit_t & outKey)
+static inline std::shared_ptr<LAContext> FetchAndDropCtx(const std::string& peerId)
 {
 	std::shared_ptr<LAContext> peerCtx;
+	std::lock_guard<std::mutex> mapLock(g_peerMapMutex);
+	auto it = g_peerMap.find(peerId);
+	if (it == g_peerMap.end() || !it->second->m_isAttested)
 	{
-		std::lock_guard<std::mutex> mapLock(g_peerMapMutex);
-		auto it = g_peerMap.find(peerId);
-		if (it == g_peerMap.end())
-		{
-			return false;
-		}
-		peerCtx = it->second;
+		return nullptr;
 	}
+	peerCtx.swap(it->second);
+	g_peerMap.erase(it);
+	return std::move(peerCtx);
+}
 
-	if (!peerCtx->m_isAttested)
+bool SGXLAEnclave::ReleasePeerKey(const std::string & peerId, std::unique_ptr<sgx_dh_session_enclave_identity_t>& outIdentity, std::unique_ptr<GeneralAES128BitKey>& outKey)
+{
+	std::shared_ptr<LAContext> peerCtx(std::move(FetchAndDropCtx(peerId)));
+	if (!peerCtx)
 	{
 		return false;
 	}
 
-	std::memcpy(outKey, (peerCtx->m_key), sizeof(sgx_ec_key_128bit_t));
-	std::memcpy(&outIdentity, &(peerCtx->m_identity), sizeof(sgx_ec_key_128bit_t));
-
-	SGXLAEnclave::DropPeer(peerId);
+	outIdentity.swap(peerCtx->m_identity);
+	outKey.swap(peerCtx->m_key);
 
 	return true;
 }

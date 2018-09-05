@@ -7,10 +7,6 @@
 struct _sgx_ec256_public_t;
 typedef _sgx_ec256_public_t sgx_ec256_public_t;
 
-std::string SerializePubKey(const sgx_ec256_public_t& pubKey);
-
-void DeserializePubKey(const std::string& inPubKeyStr, sgx_ec256_public_t& outPubKey);
-
 std::string SerializeStruct(const void* ptr, size_t size);
 template<typename T>
 inline std::string SerializeStruct(const T& data)

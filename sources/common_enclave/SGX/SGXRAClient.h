@@ -10,13 +10,12 @@
 #include <sgx_error.h>
 #include <sgx_key_exchange.h>
 
+#include "../../common/GeneralKeyTypes.h"
+
 class AESGCMCommLayer;
 
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
-
-#define SGX_CMAC_KEY_SIZE               16
-typedef uint8_t sgx_ec_key_128bit_t[SGX_CMAC_KEY_SIZE];
 
 typedef struct _ias_report_t sgx_ias_report_t;
 
@@ -53,7 +52,7 @@ namespace SGXRAEnclave
 	bool AddNewServerRAState(const std::string& ServerID, const sgx_ec256_public_t& inPubKey, std::unique_ptr<CtxIdWrapper>& sgxCtxId);
 	void DropRAStateToServer(const std::string& serverID);
 	bool IsAttestedToServer(const std::string& serverID);
-	bool ReleaseServerKeys(const std::string& serverID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t* outSK, sgx_ec_key_128bit_t* outMK);
+	bool ReleaseServerKeys(const std::string& serverID, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK);
 	AESGCMCommLayer* ReleaseServerKeys(const std::string& serverID, SendFunctionType sendFunc);
 
 	sgx_status_t ProcessRaMsg4(const std::string& serverID, const sgx_ias_report_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, RaGetKeyFuncType raGetKeyFuncType);

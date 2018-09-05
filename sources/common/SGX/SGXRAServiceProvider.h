@@ -1,10 +1,13 @@
 #pragma once
 
-#include "stdint.h"
+#include <cstdint>
 #include <string>
 #include <utility>
+#include <memory>
 
 #include <sgx_error.h>
+
+#include "../../common/GeneralKeyTypes.h"
 
 #include <functional>
 #include <vector>
@@ -18,8 +21,6 @@ typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 typedef struct _sgx_report_data_t sgx_report_data_t;
 typedef struct _spid_t sgx_spid_t;
 typedef uint32_t sgx_ra_context_t;
-#define SGX_CMAC_KEY_SIZE               16
-typedef uint8_t sgx_ec_key_128bit_t[SGX_CMAC_KEY_SIZE];
 
 typedef struct _ias_report_t sgx_ias_report_t;
 
@@ -31,8 +32,8 @@ namespace SGXRAEnclave
 	bool SetReportDataVerifier(const std::string& clientID, ReportDataVerifier func);
 	void DropClientRAState(const std::string& clientID);
 	bool IsClientAttested(const std::string& clientID);
-	bool ReleaseClientKeys(const std::string& clientID, sgx_ias_report_t& outIasReport, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t* outSK, sgx_ec_key_128bit_t* outMK);
-	AESGCMCommLayer* ReleaseClientKeys(const std::string& clientID, SendFunctionType sendFunc, sgx_ias_report_t& outIasReport);
+	bool ReleaseClientKeys(const std::string& clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK);
+	AESGCMCommLayer* ReleaseClientKeys(const std::string& clientID, SendFunctionType sendFunc, std::unique_ptr<sgx_ias_report_t>& outIasReport);
 	void SetSPID(const sgx_spid_t& spid);
 	bool VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce);
 

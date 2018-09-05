@@ -21,11 +21,11 @@ constexpr char AESGCMCommLayer::sk_LabelNonce[];
 constexpr char AESGCMCommLayer::sk_LabelMac[];
 constexpr char AESGCMCommLayer::sk_LabelMsg[];
 
-AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[AES_GCM_128BIT_KEY_SIZE], const std::string& senderID, SendFunctionType sendFunc) :
+AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[GENERAL_128BIT_16BYTE_SIZE], const std::string& senderID, SendFunctionType sendFunc) :
 	m_senderID(senderID),
 	m_sendFunc(sendFunc)
 {
-	std::copy(sKey, sKey + AES_GCM_128BIT_KEY_SIZE, m_sk.begin());
+	std::copy(sKey, sKey + GENERAL_128BIT_16BYTE_SIZE, m_sk.begin());
 }
 
 AESGCMCommLayer::AESGCMCommLayer(const AesGcm128bKeyType & sKey, const std::string& senderID, SendFunctionType sendFunc) :

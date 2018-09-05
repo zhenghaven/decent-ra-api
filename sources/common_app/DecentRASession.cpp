@@ -24,7 +24,7 @@ static inline std::string ConstructSenderID(EnclaveServiceProviderBase & enclave
 {
 	sgx_ec256_public_t signPubKey;
 	enclave.GetRAClientSignPubKey(signPubKey);
-	return SerializePubKey(signPubKey);
+	return SerializeStruct(signPubKey);
 }
 
 void DecentRASession::SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & enclave)

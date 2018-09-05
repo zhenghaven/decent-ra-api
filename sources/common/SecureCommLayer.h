@@ -5,6 +5,8 @@
 class SecureCommLayer
 {
 public:
+	virtual ~SecureCommLayer() {}
+
 	virtual bool DecryptMsg(std::string& outMsg, const char* msg) const = 0;
 	virtual bool DecryptMsg(std::string& outMsg, const std::string& msg) const = 0;
 

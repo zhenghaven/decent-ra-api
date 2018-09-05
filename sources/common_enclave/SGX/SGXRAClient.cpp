@@ -16,23 +16,26 @@
 #include "../Common.h"
 
 #include "../../common/DataCoding.h"
-#include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/GeneralKeyTypes.h"
 #include "../../common/AESGCMCommLayer.h"
+#include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/SGX/ias_report.h"
 #include "../../common/SGX/IasReport.h"
 
 struct RAClientContext
 {
-	sgx_ec256_public_t m_peerSignKey;
-	sgx_ec_key_128bit_t m_mk = { 0 };
-	sgx_ec_key_128bit_t m_sk = { 0 };
+	std::unique_ptr<sgx_ec256_public_t> m_peerSignKey;
+	std::unique_ptr<GeneralAES128BitKey> m_mk;
+	std::unique_ptr<GeneralAES128BitKey> m_sk;
 	std::unique_ptr<const CtxIdWrapper> m_sgxCtxId;
 	bool m_isAttested;
 	std::mutex m_mutex;
 
 	RAClientContext(const sgx_ec256_public_t& signPub, std::unique_ptr<CtxIdWrapper>& sgxCtxId) noexcept :
-		m_peerSignKey(signPub),
-			m_isAttested(false),
+		m_peerSignKey(new sgx_ec256_public_t(signPub)),
+		m_mk(new GeneralAES128BitKey),
+		m_sk(new GeneralAES128BitKey),
+		m_isAttested(false),
 		m_sgxCtxId(std::move(sgxCtxId))
 	{
 	}
@@ -82,20 +85,26 @@ static inline std::shared_ptr<RAClientContext> FetchServerCtx(const std::string&
 {
 	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
 	auto it = g_serversMap.find(serverID);
-	if (it != g_serversMap.end())
-	{
-		return it->second;
-	}
-	return nullptr;
+	return (it != g_serversMap.end()) ? (it->second) : nullptr;
 }
 
-bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, sgx_ec256_public_t* outSignPubKey, sgx_ec_key_128bit_t * outSK, sgx_ec_key_128bit_t * outMK)
+static inline std::shared_ptr<RAClientContext> FetchAndDropServerCtx(const std::string& serverID)
 {
-	if (!outSK && !outMK && !outSignPubKey)
+	std::shared_ptr<RAClientContext> clientCTXPtr;
+	std::lock_guard<std::mutex> mapLock(g_serversMapMutex);
+	auto it = g_serversMap.find(serverID);
+	if (it == g_serversMap.end())
 	{
-		return false;
+		return nullptr;
 	}
-	std::shared_ptr<RAClientContext> clientCTXPtr = FetchServerCtx(serverID);
+	clientCTXPtr.swap(it->second);
+	g_serversMap.erase(it);
+	return std::move(clientCTXPtr);
+}
+
+bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK)
+{
+	std::shared_ptr<RAClientContext> clientCTXPtr(std::move(FetchAndDropServerCtx(serverID)));
 	if (!clientCTXPtr)
 	{
 		return false;
@@ -106,52 +115,40 @@ bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, sgx_ec256_pub
 	{
 		std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
 
-		if (outSK)
-		{
-			std::memcpy(outSK, &clientCTX.m_sk, sizeof(sgx_ec_key_128bit_t));
-		}
-		if (outMK)
-		{
-			std::memcpy(outMK, &clientCTX.m_mk, sizeof(sgx_ec_key_128bit_t));
-		}
-		if (outSignPubKey)
-		{
-			std::memcpy(outSignPubKey, &clientCTX.m_peerSignKey, sizeof(sgx_ec256_public_t));
-		}
+		outSignPubKey.swap(clientCTX.m_peerSignKey);
+		outSK.swap(clientCTX.m_sk);
+		outMK.swap(clientCTX.m_mk);
 	}
-
-	SGXRAEnclave::DropRAStateToServer(serverID);
 
 	return true;
 }
 
 AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, SendFunctionType sendFunc)
 {
-	std::shared_ptr<RAClientContext> clientCTXPtr = FetchServerCtx(serverID);
+	std::shared_ptr<RAClientContext> clientCTXPtr(std::move(FetchAndDropServerCtx(serverID)));
 	if (!clientCTXPtr)
 	{
-		return nullptr;
+		return false;
 	}
 
 	RAClientContext& clientCTX = *clientCTXPtr;
 	AESGCMCommLayer* res = nullptr;
 	{
 		std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
-		res = new AESGCMCommLayer(clientCTX.m_sk, SerializeStruct(*EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey()), sendFunc);
+		res = new AESGCMCommLayer(*clientCTX.m_sk, SerializeStruct(*EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey()), sendFunc);
 	}
-	SGXRAEnclave::DropRAStateToServer(serverID);
 	return res;
 }
 
 static inline sgx_status_t GetCommKeys(RAClientContext& clientCtx, RaGetKeyFuncType raGetKeyFuncType)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
-	enclaveRet = (*raGetKeyFuncType)(clientCtx.m_sgxCtxId->m_ctxId, SGX_RA_KEY_SK, &clientCtx.m_sk);
+	enclaveRet = (*raGetKeyFuncType)(clientCtx.m_sgxCtxId->m_ctxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(clientCtx.m_sk->data()));
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		return enclaveRet; //Error return. (Error from SGX)	
 	}
-	enclaveRet = (*raGetKeyFuncType)(clientCtx.m_sgxCtxId->m_ctxId, SGX_RA_KEY_MK, &clientCtx.m_mk);
+	enclaveRet = (*raGetKeyFuncType)(clientCtx.m_sgxCtxId->m_ctxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(clientCtx.m_mk->data()));
 	if (enclaveRet != SGX_SUCCESS)
 	{
 		return enclaveRet; //Error return. (Error from SGX)	
@@ -186,7 +183,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg4(const std::string & serverID, const sgx
 		}
 
 		uint8_t signVerifyRes = SGX_EC_INVALID_SIGNATURE;
-		enclaveRet = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(&inMsg4), sizeof(inMsg4), &(clientCTX.m_peerSignKey), const_cast<sgx_ec256_signature_t*>(&inMsg4Sign), &signVerifyRes, eccState);
+		enclaveRet = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(&inMsg4), sizeof(inMsg4), (clientCTX.m_peerSignKey.get()), const_cast<sgx_ec256_signature_t*>(&inMsg4Sign), &signVerifyRes, eccState);
 		sgx_ecc256_close_context(eccState);
 
 		if (enclaveRet != SGX_SUCCESS)

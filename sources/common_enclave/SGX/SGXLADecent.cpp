@@ -113,16 +113,16 @@ extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, 
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-
-	sgx_dh_session_enclave_identity_t identity;
-	sgx_ec_key_128bit_t aesKey;
+	
+	std::unique_ptr<sgx_dh_session_enclave_identity_t> identity;
+	std::unique_ptr<GeneralAES128BitKey> aesKey;
 	if (!SGXLAEnclave::ReleasePeerKey(peerId, identity, aesKey))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
 	std::shared_ptr<const sgx_ec256_public_t> pubKey = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
-	std::unique_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
+	std::unique_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(*aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
 
 	std::string plainMsg;
 	if (!commLayer->DecryptMsg(plainMsg, jsonMsg))
@@ -150,7 +150,7 @@ extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, 
 		sgx_report_data_t reportData;
 		DeserializeStruct(reportData, jsonRoot[SGXLADecent::gsk_LabelReportData].GetString());
 
-		return ecall_decent_send_app_report_sign(identity, reportData, commLayer, connectionPtr, appAttach);
+		return ecall_decent_send_app_report_sign(*identity, reportData, commLayer, connectionPtr, appAttach);
 	}
 
 	return SGX_ERROR_INVALID_PARAMETER;
