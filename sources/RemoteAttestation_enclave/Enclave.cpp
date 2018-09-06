@@ -6,7 +6,6 @@
 #include "Enclave_t.h"  /* print_string */
 
 #include "../common_enclave/Common.h"
-#include "../common_enclave/SGX/SGXRADecent.h"
 #include "../common_enclave/DecentError.h"
 
 #include "../common/DataCoding.h"

@@ -10,7 +10,7 @@
 
 #include <sgx_tcrypto.h>
 
-#include "../common_app/EnclaveUtil.h"
+#include "../common_app/SGX/SGXEnclaveUtil.h"
 #include "../common_app/Common.h"
 #include "../common_app/SGX/SGXDecentAppEnclave.h"
 #include "../common_app/DecentAppLASession.h"
