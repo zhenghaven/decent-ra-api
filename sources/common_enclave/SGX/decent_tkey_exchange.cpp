@@ -29,6 +29,9 @@
  *
  */
 
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
+
 #include "decent_tkey_exchange.h"
 
 #include <stdint.h>
@@ -808,3 +811,5 @@ sgx_status_t SGXAPI decent_ra_close(
 	sgx_spin_unlock(&g_ra_db_lock);
 	return SGX_SUCCESS;
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

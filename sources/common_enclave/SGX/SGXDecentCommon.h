@@ -1,7 +1,7 @@
+#pragma once
+
 #include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
-
-#pragma once
 
 #include <string>
 #include <vector>

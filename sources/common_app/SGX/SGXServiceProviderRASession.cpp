@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "SGXServiceProviderRASession.h"
 
 #include <type_traits>
@@ -218,3 +221,5 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		return false;
 	}
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

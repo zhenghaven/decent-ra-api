@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #pragma once
 
 #include "SGXServiceProviderBase.h"
@@ -30,3 +33,5 @@ public:
 protected:
 	std::shared_ptr<const IASConnector> m_ias;
 };
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

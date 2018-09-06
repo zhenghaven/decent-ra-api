@@ -15,7 +15,7 @@
 
 #include "../Common.h"
 #include "../FileSystemUtil.h"
-#include "../EnclaveUtil.h"
+#include "../SGX/SGXEnclaveUtil.h"
 
 #include "../../common/DataCoding.h"
 

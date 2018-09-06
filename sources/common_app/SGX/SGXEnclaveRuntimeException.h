@@ -1,5 +1,8 @@
 #pragma once
 
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "../EnclaveException.h"
 
 #include <string>
@@ -13,15 +16,24 @@ class SGXEnclaveRuntimeException : public EnclaveException
 {
 public:
 	SGXEnclaveRuntimeException() = delete;
-	SGXEnclaveRuntimeException(sgx_status_t errCode, const std::string& funcName);
-	virtual ~SGXEnclaveRuntimeException();
+	SGXEnclaveRuntimeException(sgx_status_t errCode, const std::string& funcName) :
+		m_errCode(errCode),
+		m_funcName(funcName)
+	{}
 
-	virtual const char* what() const throw();
+	virtual ~SGXEnclaveRuntimeException() {}
 
-	sgx_status_t GetErrorCode() const;
-	std::string GetFuncName() const;
+	virtual const char* what() const throw()
+	{
+		return "SGX Enclave Runtime Exception";
+	}
+
+	sgx_status_t GetErrorCode() const { return m_errCode; }
+	std::string GetFuncName() const { return m_funcName; }
 
 private:
 	sgx_status_t m_errCode;
 	std::string m_funcName;
 };
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

@@ -14,10 +14,10 @@
 
 #include <Enclave_t.h>
 
-#include "../common_enclave/DecentError.h"
+#include "../DecentError.h"
+#include "../Common.h"
 
 #include "../common/JsonTools.h"
-#include "../common/CommonTool.h"
 #include "../common/DataCoding.h"
 #include "../common/DecentRAReport.h"
 #include "../common/AESGCMCommLayer.h"
@@ -30,7 +30,8 @@
 #include "../common/SGX/SGXRAServiceProvider.h"
 #include "../common/SGX/SGXOpenSSLConversions.h"
 
-#include "sgx_ra_tools.h"
+#include "decent_ra_tools.h"
+#include "decent_tkey_exchange.h"
 #include "SGXRAClient.h"
 #include "SGXDecentCommon.h"
 

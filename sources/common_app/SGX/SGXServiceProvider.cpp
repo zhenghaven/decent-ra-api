@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #include "SGXServiceProvider.h"
 
 #include <sgx_tcrypto.h>
@@ -80,3 +83,5 @@ bool SGXServiceProvider::ProcessSmartMessage(const std::string & category, const
 		return false;
 	}
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

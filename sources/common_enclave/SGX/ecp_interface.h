@@ -30,6 +30,9 @@
  */
 
 
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
+
 #ifndef _ECP_INTERFACE_H
 #define _ECP_INTERFACE_H
 
@@ -51,3 +54,4 @@ sgx_status_t derive_key(
 
 #endif
 
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

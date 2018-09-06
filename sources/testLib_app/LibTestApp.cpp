@@ -58,24 +58,6 @@ int main() {
 	obj["D"] = 4;
 	std::cout << obj.toStyledString() << std::endl;
 	std::cout << "================================" << std::endl << std::endl << std::endl;
-
-#ifdef _MSC_VER
-
-	std::cout << "Intel SGX test:" << std::endl;
-	std::cout << "================================" << std::endl;
-	sgx_device_status_t sgx_device_status;
-	sgx_status_t sgx_ret = sgx_enable_device(&sgx_device_status);
-	if (sgx_ret != SGX_SUCCESS) 
-	{
-		std::cout << "Failed to get SGX device status." << std::endl << std::endl << std::endl;
-	}
-	else
-	{
-		std::cout << GetSGXDeviceStatusStr(sgx_device_status) << std::endl;
-	}
-	std::cout << "================================" << std::endl;
-
-#endif
 	
 	CURL *hnd = curl_easy_init();
 

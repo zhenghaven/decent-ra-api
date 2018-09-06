@@ -31,6 +31,9 @@
 
 #pragma once
 
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
+
 #ifndef _DECENT_TKEY_EXCHANGE_H_
 #define _DECENT_TKEY_EXCHANGE_H_
 
@@ -191,3 +194,5 @@ extern "C" {
 #endif
 
 #endif
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

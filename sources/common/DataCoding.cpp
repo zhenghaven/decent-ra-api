@@ -8,9 +8,6 @@
 #include <cstring>
 #include <vector>
 
-#include <sgx_tcrypto.h>
-#include <sgx_ecp_types.h>
-
 #include <cppcodec/base64_rfc4648.hpp>
 
 std::string SerializeStruct(const void * ptr, size_t size)

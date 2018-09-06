@@ -1,3 +1,6 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
 #pragma once
 
 #include "../ServiceProviderRASession.h"
@@ -36,3 +39,5 @@ protected:
 	SGXServiceProviderBase& m_sgxSP;
 	const IASConnector& m_ias;
 };
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

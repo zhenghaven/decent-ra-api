@@ -302,13 +302,7 @@ target_include_directories(LibTest_App PRIVATE ${COMMON_APP_INCLUDE_DIRS}
 
 target_compile_definitions(LibTest_App PRIVATE ${COMMON_APP_DEFINES})
 
-target_link_libraries(LibTest_App 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
-					"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
-					"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
-					"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
+target_link_libraries(LibTest_App  
 					${COMMON_STANDARD_LIBRARIES}
 					#${Boost_LIBRARIES}
 					jsoncpp_lib_static

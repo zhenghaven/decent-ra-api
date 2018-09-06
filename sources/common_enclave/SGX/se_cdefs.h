@@ -29,6 +29,8 @@
  *
  */
 
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
 
 #ifndef _SE_CDEFS_H_
 #define _SE_CDEFS_H_
@@ -114,3 +116,5 @@
 #endif
 
 #endif
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

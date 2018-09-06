@@ -29,6 +29,9 @@
  *
  */
 
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
+
 #ifndef _SGX_LFENCE_H_
 #define _SGX_LFENCE_H_
 
@@ -55,3 +58,4 @@ extern void _mm_lfence(void);
 
 #endif /* !_SGX_LFENCE_H_ */
 
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

@@ -29,6 +29,8 @@
  *
  */
 
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
 
 #ifndef _SIMPLE_VECOTR_H
 #define _SIMPLE_VECOTR_H
@@ -69,3 +71,5 @@ void vector_free(simple_vector* vector);
 #endif
 
 #endif
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

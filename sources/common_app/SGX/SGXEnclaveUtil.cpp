@@ -1,10 +1,13 @@
-#include "EnclaveUtil.h"
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL
+
+#include "SGXEnclaveUtil.h"
 
 #include <map>
 
 #include <sgx_uae_service.h>
 
-#include "Common.h"
+#include "../Common.h"
 
 namespace
 {
@@ -152,3 +155,5 @@ sgx_status_t GetSGXDeviceStatus(sgx_device_status_t & res)
     return SGX_SUCCESS;
 #endif
 }
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

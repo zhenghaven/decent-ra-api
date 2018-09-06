@@ -15,7 +15,7 @@
 #include "../common/OpenSSLTools.h"
 #include "../common/SGX/SGXOpenSSLConversions.h"
 
-#include "../common_app/EnclaveUtil.h"
+#include "../common_app/SGX/SGXEnclaveUtil.h"
 #include "../common_app/Common.h"
 #include "../common_app/Messages.h"
 #include "../common_app/DecentRASession.h"

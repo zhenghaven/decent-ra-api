@@ -2,11 +2,11 @@
 
 namespace SGXLADecent
 {
-	static constexpr char gsk_LabelFunc[] = "Func";
-	static constexpr char gsk_LabelReport[] = "Report";
-	static constexpr char gsk_LabelSign[] = "Sign";
-	static constexpr char gsk_LabelReportData[] = "ReportData";
+	static constexpr char const gsk_LabelFunc[] = "Func";
+	static constexpr char const gsk_LabelReport[] = "Report";
+	static constexpr char const gsk_LabelSign[] = "Sign";
+	static constexpr char const gsk_LabelReportData[] = "ReportData";
 
-	static constexpr char gsk_ValueFuncAppSign[] = "AppSign";
-	static constexpr char gsk_ValueFuncReportData[] = "ReportData";
+	static constexpr char const gsk_ValueFuncAppSign[] = "AppSign";
+	static constexpr char const gsk_ValueFuncReportData[] = "ReportData";
 }

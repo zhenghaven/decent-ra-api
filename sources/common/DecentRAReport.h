@@ -4,15 +4,15 @@ namespace Decent
 {
 	namespace RAReport
 	{
-		constexpr char sk_LabelRoot[]           = "DecentSelfRAReport";
+		constexpr char const sk_LabelRoot[]           = "DecentSelfRAReport";
 
-		constexpr char sk_LabelType[]           = "Type";
-		constexpr char sk_LabelPubKey[]        = "PublicKey";
-		constexpr char sk_LabelIasReport[]     = "IASReport";
-		constexpr char sk_LabelIasSign[]       = "IASSignature";
-		constexpr char sk_LabelIasCertChain[] = "IASCertChain";
-		constexpr char sk_LabelOriRepData[]   = "OriReportData";
+		constexpr char const sk_LabelType[]           = "Type";
+		constexpr char const sk_LabelPubKey[]        = "PublicKey";
+		constexpr char const sk_LabelIasReport[]     = "IASReport";
+		constexpr char const sk_LabelIasSign[]       = "IASSignature";
+		constexpr char const sk_LabelIasCertChain[] = "IASCertChain";
+		constexpr char const sk_LabelOriRepData[]   = "OriReportData";
 
-		constexpr char sk_ValueReportType[]    = "IAS";
+		constexpr char const sk_ValueReportType[]    = "IAS";
 	}
 }
