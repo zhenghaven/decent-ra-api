@@ -56,7 +56,7 @@ DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase
 	k_senderId(laSession->GetSenderID()),
 	k_remoteSideId(laSession->GetRemoteReceiverID()),
 	m_decentEnclave(enclave),
-	m_laSession(std::move(laSession))
+	m_laSession(laSession)
 {
 }
 
@@ -132,7 +132,7 @@ DecentAppLASession::DecentAppLASession(Connection& connection, EnclaveBase& hwEn
 	k_senderId(laSession->GetSenderID()),
 	k_remoteSideId(laSession->GetRemoteReceiverID()),
 	m_appEnclave(enclave),
-	m_laSession(std::move(laSession))
+	m_laSession(laSession)
 {
 }
 
