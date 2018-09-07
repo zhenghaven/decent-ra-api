@@ -35,7 +35,7 @@ public:
 	virtual void ShutdownServer(ServerHandle handle) noexcept;
 
 	//Thread safe.
-	virtual void AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler, JobAtCompletedType job);
+	virtual void AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler, JobAtCompletedType sameThrJob, JobAtCompletedType mainThrJob);
 
 	virtual bool IsTerminated() const noexcept;
 
@@ -59,9 +59,10 @@ private:
 	std::mutex m_cleanningMutex;
 	std::condition_variable m_cleaningSignal;
 	std::queue<std::pair<std::unique_ptr<Server>, std::thread*> > m_terminatedServers;
-	std::queue<std::pair<std::unique_ptr<Connection>, std::thread*> > m_terminatedConnections;
+	std::queue<ConnectionHandle> m_terminatedConnections;
 
 	std::mutex m_mainThrJobMutex;
+	std::condition_variable m_mainThrSignal;
 	std::queue<JobAtCompletedType> m_mainThreadJob;
 
 	std::thread* m_cleanningThread;
@@ -70,5 +71,8 @@ private:
 
 	void CleanAll() noexcept;
 	void AddToCleanQueue(std::pair<std::unique_ptr<Server>, std::thread*> server) noexcept;
-	void AddToCleanQueue(std::pair<std::unique_ptr<Connection>, std::thread*> server) noexcept;
+	void AddToCleanQueue(ConnectionHandle connection) noexcept;
+	void AddMainThreadJob(JobAtCompletedType mainThrJob);
+
+	void RunMainThrJobs();
 };

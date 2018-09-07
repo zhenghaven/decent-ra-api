@@ -2,6 +2,8 @@
 
 #include <thread>
 
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/io_service.hpp>
 #include <json/json.h>
 
 #include "../Messages.h"
@@ -22,16 +24,31 @@ DecentSmartServer::DecentSmartServer() :
 			//Clean servers:
 			while(m_terminatedServers.size() > 0)
 			{
-				std::pair<std::unique_ptr<Server>, std::thread*> pair(std::move(m_terminatedServers.front()));
+				m_terminatedServers.front().second->join();
+				delete m_terminatedServers.front().second;
+				m_terminatedServers.front().first.reset();
 				m_terminatedServers.pop();
-				pair.second->join();
-				delete pair.second;
-				pair.first.reset();
 			}
 			//Clean connections:
-
+			{
+				std::unique_lock<std::mutex> connectionLock(m_connectionMapMutex);
+				while (m_terminatedConnections.size() > 0)
+				{
+					auto it = m_connectionMap.find(m_terminatedConnections.front());
+					if (it != m_connectionMap.end())
+					{
+						it->second.second->join();
+						delete it->second.second;
+						m_connectionMap.erase(it);
+					}
+					m_terminatedConnections.pop();
+				}
+			}
 			//Done.
-			m_cleaningSignal.wait(cleaningLock);
+			if (!m_isTerminated)
+			{
+				m_cleaningSignal.wait(cleaningLock);
+			}
 		}
 	});
 }
@@ -39,10 +56,10 @@ DecentSmartServer::DecentSmartServer() :
 DecentSmartServer::~DecentSmartServer()
 {
 	Terminate();
+	CleanAll();
 	m_cleaningSignal.notify_all();
 	m_cleanningThread->join();
 	delete m_cleanningThread;
-	CleanAll();
 }
 
 DecentSmartServer::ServerHandle DecentSmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler)
@@ -71,9 +88,9 @@ DecentSmartServer::ServerHandle DecentSmartServer::AddServer(std::unique_ptr<Ser
 		while (!serverPtr->IsTerminated())
 		{
 			std::unique_ptr<Connection> connection = serverPtr->AcceptConnection();
-			if (!connection)
+			if (connection)
 			{
-				this->AddConnection(connection, handler, JobAtCompletedType());
+				this->AddConnection(connection, handler, JobAtCompletedType(), JobAtCompletedType());
 			}
 		}
 	});
@@ -114,7 +131,7 @@ void DecentSmartServer::ShutdownServer(ServerHandle handle) noexcept
 	}
 }
 
-void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler, JobAtCompletedType job)
+void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler, JobAtCompletedType sameThrJob, JobAtCompletedType mainThrJob)
 {
 	if (m_isTerminated)
 	{
@@ -135,7 +152,7 @@ void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, s
 	ConnectionHandle hdl = connection.get();
 	Connection* connectionPtr = connection.get();
 
-	std::thread* thr = new std::thread([this, hdl, connectionPtr, handler]()
+	std::thread* thr = new std::thread([this, hdl, connectionPtr, handler, sameThrJob, mainThrJob]()
 	{
 		bool isEnded = false;
 		do
@@ -158,6 +175,17 @@ void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, s
 			}
 			
 		} while (!isEnded);
+
+		if (sameThrJob)
+		{
+			sameThrJob();
+		}
+		if (mainThrJob)
+		{
+			AddMainThreadJob(mainThrJob);
+		}
+
+		AddToCleanQueue(hdl);
 	});
 
 	m_connectionMap.insert(std::make_pair(hdl, std::make_pair(std::move(connection), thr)));
@@ -175,43 +203,106 @@ void DecentSmartServer::Terminate() noexcept
 		return;
 	}
 
-	std::lock_guard<std::mutex> serverLock(m_serverMapMutex);
+	std::unique_lock<std::mutex> serverLock(m_serverMapMutex, std::defer_lock);
+	std::unique_lock<std::mutex> connectionLock(m_connectionMapMutex, std::defer_lock);
+	std::lock(serverLock, connectionLock);
+
 	m_isTerminated = 1;
 
 	for (auto it = m_serverMap.begin(); it != m_serverMap.end(); ++it)
 	{
 		it->second.first->Terminate();
 	}
+	for (auto it = m_connectionMap.begin(); it != m_connectionMap.end(); ++it)
+	{
+		it->second.first->Terminate();
+	}
+
+	m_mainThrSignal.notify_all();
 }
 
 void DecentSmartServer::Update()
 {
+	if (m_isTerminated)
+	{
+		return;
+	}
+
+	std::unique_lock<std::mutex> mainThrJobLock(m_mainThrJobMutex);
+	RunMainThrJobs();
 }
 
 void DecentSmartServer::RunUtilUserTerminate()
 {
+	boost::asio::io_service io_service;
+
+	std::thread* intSignalThread = new std::thread([this, &io_service]()
+	{
+		boost::asio::signal_set signals(io_service, SIGINT);
+		signals.async_wait([this](const boost::system::error_code& error, int signal_number)
+		{
+			Terminate();
+		});
+
+		io_service.run();
+	});
+
+	{
+		std::unique_lock<std::mutex> mainThrJobLock(m_mainThrJobMutex);
+		while (!m_isTerminated)
+		{
+			RunMainThrJobs();
+			m_mainThrSignal.wait(mainThrJobLock);
+		}
+		if (!io_service.stopped())
+		{
+			io_service.stop();
+		}
+	}
+
+	intSignalThread->join();
+	delete intSignalThread;
 }
 
 void DecentSmartServer::CleanAll() noexcept
 {
-	std::lock_guard<std::mutex> serverLock(m_serverMapMutex);
+	std::unique_lock<std::mutex> serverLock(m_serverMapMutex, std::defer_lock);
+	std::unique_lock<std::mutex> connectionLock(m_connectionMapMutex, std::defer_lock);
+	std::lock(serverLock, connectionLock);
 
 	//Clean server Map
-	auto it = m_serverMap.begin();
-	while (it != m_serverMap.end())
+	auto its = m_serverMap.begin();
+	while (its != m_serverMap.end())
 	{
 		try
 		{
 			//Usually will not throw here. Thread should be joinable here.
-			it->second.second->join();
+			its->second.second->join();
 		}
 		catch (...)
 		{
 		}
 
-		delete it->second.second;
+		delete its->second.second;
 
-		it = m_serverMap.erase(it);
+		its = m_serverMap.erase(its);
+	}
+	//Clean connection Map
+	auto itc = m_connectionMap.begin();
+	while (itc != m_connectionMap.end())
+	{
+		try
+		{
+			//Usually will not throw here. Thread should be joinable here.
+			itc->second.second->join();
+		}
+		catch (...)
+		{
+		}
+
+		delete itc->second.second;
+
+		itc = m_connectionMap.erase(itc);
 	}
 }
 
@@ -221,4 +312,37 @@ void DecentSmartServer::AddToCleanQueue(std::pair<std::unique_ptr<Server>, std::
 
 	m_terminatedServers.push(std::move(server));
 	m_cleaningSignal.notify_all();
+}
+
+void DecentSmartServer::AddToCleanQueue(ConnectionHandle connection) noexcept
+{
+	if (!connection)
+	{
+		return;
+	}
+
+	std::unique_lock<std::mutex> cleaningLock(m_cleanningMutex);
+
+	m_terminatedConnections.push(connection);
+	m_cleaningSignal.notify_all();
+}
+
+void DecentSmartServer::AddMainThreadJob(JobAtCompletedType mainThrJob)
+{
+	std::unique_lock<std::mutex> mainThrJobLock(m_mainThrJobMutex);
+
+	m_mainThreadJob.push(mainThrJob);
+	m_mainThrSignal.notify_all();
+}
+
+void DecentSmartServer::RunMainThrJobs()
+{
+	while (m_mainThreadJob.size() > 0)
+	{
+		if (m_mainThreadJob.front())
+		{
+			m_mainThreadJob.front()();
+		}
+		m_mainThreadJob.pop();
+	}
 }

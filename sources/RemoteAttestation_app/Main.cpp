@@ -7,7 +7,6 @@
 
 #include <tclap/CmdLine.h>
 #include <boost/asio/ip/address_v4.hpp>
-#include <boost/asio/signal_set.hpp>
 #include <json/json.h>
 
 #include <sgx_tcrypto.h>
@@ -26,6 +25,7 @@
 #include "../common_app/Networking/TCPServer.h"
 #include "../common_app/Networking/LocalConnection.h"
 #include "../common_app/Networking/LocalServer.h"
+#include "../common_app/Networking/DecentSmartServer.h"
 
 #include "../common_app/SGX/IAS/IASConnector.h"
 
@@ -50,13 +50,6 @@ static sgx_spid_t g_sgxSPID = { {
 		0x58,
 		0xBE,
 	} };
-
-void ExitSignalHandler(const boost::system::error_code& error, int signal_number)
-{
-	std::cout << "Exiting Program... " << std::endl;
-
-	exit(0);
-}
 
 /**
  * \brief	Main entry-point for this application
@@ -90,30 +83,27 @@ int main(int argc, char ** argv)
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;
 
-	boost::asio::io_service io_service;
-
-	boost::asio::signal_set signals(io_service, SIGINT);
-	signals.async_wait(ExitSignalHandler);
-
-	//io_service.run();
-
 	std::cout << "================ This is server side ================" << std::endl;
+
+	DecentSmartServer smartServer;
 
 	switch (testOpt.getValue())
 	{
 	case 0:
 	{
-		ExampleEnclave expEnc(g_sgxSPID, iasConnector, true, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
-		std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
-		expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
+		std::shared_ptr<SGXDecentEnclave> enclave(
+			std::make_shared<SGXDecentEnclave>(
+				g_sgxSPID, iasConnector, true, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
+		
+		enclave->DecentBecomeRoot();
+		//std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
+		//expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
 
 		//TCPServer ser(hostIP, hostPort);
-		LocalServer ser("TestLocalConnection");
+		std::unique_ptr<Server> server(std::make_unique<LocalServer>("TestLocalConnection"));
 
-		std::unique_ptr<Connection> connection = ser.AcceptConnection();
-		Json::Value jsonRoot;
-		connection->Receive(jsonRoot);
-		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
+		smartServer.AddServer(server, enclave);
+		smartServer.RunUtilUserTerminate();
 
 	}
 	break;
