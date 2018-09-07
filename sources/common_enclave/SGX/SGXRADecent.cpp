@@ -138,7 +138,7 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* reportStr)
 
 	g_decentProtoPubKey = SerializeStruct(decentPubKey);
 
-	COMMON_PRINTF("Accepted New Decent Node: %s\n", g_decentProtoPubKey.c_str());
+	//COMMON_PRINTF("Accepted New Decent Node: %s\n", g_decentProtoPubKey.c_str());
 
 	return 1;
 }
@@ -191,7 +191,7 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* serverID, 
 			return false;
 		}
 
-		COMMON_PRINTF("Generating report data with Public Key:\n%s\n", pubKeyPem.c_str());
+		//COMMON_PRINTF("Generating report data with Public Key:\n%s\n", pubKeyPem.c_str());
 		sgx_sha_state_handle_t shaState;
 		sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
 		if (enclaveRet != SGX_SUCCESS)
@@ -321,7 +321,7 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	COMMON_PRINTF("Accepted New Decent Node: %s\n", nodeID);
+	//COMMON_PRINTF("Accepted New Decent Node: %s\n", nodeID);
 
 	JSON_EDITION::JSON_DOCUMENT_TYPE doc;
 	rapidjson::Value jsonRoot;

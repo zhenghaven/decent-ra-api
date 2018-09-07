@@ -20,18 +20,26 @@ TCPServer::~TCPServer()
 	//delete m_RAServerAcc;
 }
 
-std::unique_ptr<Connection> TCPServer::AcceptConnection()
+std::unique_ptr<Connection> TCPServer::AcceptConnection() noexcept
 {
 	if (m_isTerminated)
 	{
 		return nullptr;
 	}
-	std::unique_ptr<Connection> ptr = std::make_unique<TCPConnection>(m_serverIO, *m_serverAcc);
-	if (m_isTerminated)
+
+	try
+	{
+		std::unique_ptr<Connection> ptr = std::make_unique<TCPConnection>(m_serverIO, *m_serverAcc);
+		if (m_isTerminated)
+		{
+			return nullptr;
+		}
+		return std::move(ptr);
+	}
+	catch (const std::exception&)
 	{
 		return nullptr;
 	}
-	return std::move(ptr);
 }
 
 bool TCPServer::IsTerminated() noexcept
@@ -50,6 +58,8 @@ void TCPServer::Terminate() noexcept
 	try
 	{
 		m_serverIO->stop(); //Can't find doc about exception on this call.
+		m_serverAcc->cancel();
+		m_serverAcc->close();
 	}
 	catch (...)
 	{

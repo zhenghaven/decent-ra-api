@@ -11,7 +11,7 @@
 
 #include "../../common/JsonTools.h"
 
-#include "../Common.h"
+//#include "../Common.h"
 #include "../Messages.h"
 
 #include "LocalServer.h"
@@ -89,7 +89,7 @@ size_t LocalConnection::Send(const Messages & msg)
 size_t LocalConnection::Send(const std::string & msg)
 {
 	size_t sentSize = Send(msg.data(), msg.size());
-	LOGI("Sent Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(sentSize), msg.c_str());
+	//LOGI("Sent Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(sentSize), msg.c_str());
 	return sentSize;
 }
 
@@ -101,7 +101,7 @@ size_t LocalConnection::Send(const Json::Value & msg)
 size_t LocalConnection::Send(const std::vector<uint8_t>& msg)
 {
 	size_t sentSize = Send(msg.data(), msg.size());
-	LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(sentSize));
+	//LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(sentSize));
 	return sentSize;
 }
 
@@ -179,7 +179,7 @@ size_t LocalConnection::Receive(std::string & msg)
 		m_dataRef.m_emptySignal.notify_one();
 	}
 
-	LOGI("Recv Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(recvSize), msg.c_str());
+	//LOGI("Recv Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(recvSize), msg.c_str());
 	return recvSize;
 }
 
@@ -234,7 +234,7 @@ size_t LocalConnection::Receive(std::vector<uint8_t>& msg)
 		m_dataRef.m_emptySignal.notify_one();
 	}
 
-	LOGI("Recv Binary with size %llu\n", recvSize);
+	//LOGI("Recv Binary with size %llu\n", recvSize);
 	return recvSize;
 }
 

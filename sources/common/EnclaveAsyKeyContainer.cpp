@@ -127,9 +127,9 @@ std::shared_ptr<const sgx_ec256_public_t> EnclaveAsyKeyContainer::GetSignPubKey(
 
 void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const sgx_ec256_public_t> pub)
 {
-	COMMON_PRINTF("Updating Pub Sign Key for %s Side to: %s\n",
-		IS_IN_ENCLAVE_SIDE ? "Enclave" : "App",
-		SerializeStruct(*pub).c_str());
+	//COMMON_PRINTF("Updating Pub Sign Key for %s Side to: %s\n",
+	//	IS_IN_ENCLAVE_SIDE ? "Enclave" : "App",
+	//	SerializeStruct(*pub).c_str());
 //	COMMON_PRINTF("Updating Prv Sign Key for %s Side to: %s\n",
 //		IS_IN_ENCLAVE_SIDE ? "Enclave" : "App",
 //		SerializeStruct(prv->m_prvKey).c_str());

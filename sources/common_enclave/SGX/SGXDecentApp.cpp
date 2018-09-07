@@ -69,7 +69,7 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* repor
 	//}
 
 	g_decentPubKey = decentPubKey;
-	COMMON_PRINTF("Accepted Decent Server %s.\n", SerializeStruct(*g_decentPubKey).c_str());
+	//COMMON_PRINTF("Accepted Decent Server %s.\n", SerializeStruct(*g_decentPubKey).c_str());
 
 	return SGX_SUCCESS;
 }

@@ -31,7 +31,7 @@ public:
 	virtual ~TCPServer() noexcept;
 	
 	///Warning: Blocking method! This method will be blocked until a connection is accepted.
-	virtual std::unique_ptr<Connection> AcceptConnection() override;
+	virtual std::unique_ptr<Connection> AcceptConnection() noexcept override;
 
 	virtual bool IsTerminated() noexcept override;
 	virtual void Terminate() noexcept override;

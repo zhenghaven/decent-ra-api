@@ -80,7 +80,7 @@ int main(int argc, char ** argv)
 
 	std::shared_ptr<IASConnector> iasConnector = std::make_shared<IASConnector>();
 
-	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
+	uint32_t hostIP = boost::asio::ip::address_v4::from_string("128.114.52.211").to_uint();
 	uint16_t hostPort = 57755U;
 
 	std::cout << "================ This is server side ================" << std::endl;
@@ -99,8 +99,8 @@ int main(int argc, char ** argv)
 		//std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
 		//expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
 
-		//TCPServer ser(hostIP, hostPort);
-		std::unique_ptr<Server> server(std::make_unique<LocalServer>("TestLocalConnection"));
+		std::unique_ptr<Server> server(std::make_unique<TCPServer>(hostIP, hostPort));
+		//std::unique_ptr<Server> server(std::make_unique<LocalServer>("TestLocalConnection"));
 
 		smartServer.AddServer(server, enclave);
 		smartServer.RunUtilUserTerminate();
@@ -111,8 +111,8 @@ int main(int argc, char ** argv)
 	{
 		ExampleEnclave expEnc(g_sgxSPID, iasConnector, false, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 
-		//std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
-		std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
+		std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
+		//std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
 		DecentRASession::SendHandshakeMessage(*connection, expEnc);
 		Json::Value jsonRoot;
 		connection->Receive(jsonRoot);

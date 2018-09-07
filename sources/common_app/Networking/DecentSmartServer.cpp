@@ -166,15 +166,19 @@ void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, s
 			catch (const std::exception& e)
 			{
 				LOGI("Exception Caught when process connection: %s\n", e.what());
+				LOGI("Connection will be closed.\n");
 				isEnded = true;
 			}
 			catch (...)
 			{
 				LOGI("Unknown Exception Caught when process connection.\n");
+				LOGI("Connection will be closed.\n");
 				isEnded = true;
 			}
 			
 		} while (!isEnded);
+
+		connectionPtr->Terminate();
 
 		if (sameThrJob)
 		{

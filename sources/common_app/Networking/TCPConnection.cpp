@@ -7,7 +7,7 @@
 
 #include <json/json.h>
 
-#include "../Common.h"
+//#include "../Common.h"
 #include "../Messages.h"
 #include "../../common/JsonTools.h"
 
@@ -39,7 +39,7 @@ size_t TCPConnection::Send(const Messages & msg)
 size_t TCPConnection::Send(const std::string & msg)
 {
 	size_t sentSize = Send(msg.data(), msg.size());
-	LOGI("Sent Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(sentSize), msg.c_str());
+	//LOGI("Sent Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(sentSize), msg.c_str());
 	return sentSize;
 }
 
@@ -51,7 +51,7 @@ size_t TCPConnection::Send(const Json::Value & msg)
 size_t TCPConnection::Send(const std::vector<uint8_t>& msg)
 {
 	size_t sentSize = Send(msg.data(), msg.size());
-	LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(sentSize));
+	//LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(sentSize));
 	return sentSize;
 }
 
@@ -77,7 +77,7 @@ size_t TCPConnection::Receive(std::string & msg)
 	{
 		receivedSize += m_socket->receive(boost::asio::buffer(&msg[receivedSize], (msgSize - receivedSize)));
 	}
-	LOGI("Recv Msg (len=%llu): \n%s\n", receivedSize, msg.c_str());
+	//LOGI("Recv Msg (len=%llu): \n%s\n", receivedSize, msg.c_str());
 	return receivedSize;
 }
 
@@ -99,7 +99,7 @@ size_t TCPConnection::Receive(std::vector<uint8_t>& msg)
 	{
 		receivedSize += m_socket->receive(boost::asio::buffer(&msg[receivedSize], (msgSize - receivedSize)));
 	}
-	LOGI("Recv Binary with size %llu\n", receivedSize);
+	//LOGI("Recv Binary with size %llu\n", receivedSize);
 	return receivedSize;
 }
 
