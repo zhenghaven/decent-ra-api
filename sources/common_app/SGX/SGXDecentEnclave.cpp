@@ -147,40 +147,40 @@ bool SGXDecentEnclave::DecentBecomeRoot()
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentEnclave::ProcessDecentProtoKeyMsg(const std::string & nodeID, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg)
+bool SGXDecentEnclave::ProcessDecentProtoKeyMsg(const std::string & nodeID, Connection& connection, const std::string & jsonMsg)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_proc_decent_proto_key_msg(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), jsonMsg.c_str());
+	enclaveRet = ecall_proc_decent_proto_key_msg(GetEnclaveId(), &retval, nodeID.c_str(), &connection, jsonMsg.c_str());
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_proto_key_msg);
 
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentEnclave::SendProtocolKey(const std::string & nodeID, const std::unique_ptr<Connection>& connection)
+bool SGXDecentEnclave::SendProtocolKey(const std::string & nodeID, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_decent_send_protocol_key(GetEnclaveId(), &retval, nodeID.c_str(), connection.get(), nullptr);
+	enclaveRet = ecall_decent_send_protocol_key(GetEnclaveId(), &retval, nodeID.c_str(), &connection, nullptr);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_send_protocol_key);
 
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentEnclave::ProcessAppReportSignReq(const std::string & appId, const std::unique_ptr<Connection>& connection, const std::string & jsonMsg, const char * appAttach)
+bool SGXDecentEnclave::ProcessAppReportSignReq(const std::string & appId, Connection& connection, const std::string & jsonMsg, const char * appAttach)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_decent_proc_send_app_sign_req(GetEnclaveId(), &retval, appId.c_str(), connection.get(), jsonMsg.c_str(), appAttach);
+	enclaveRet = ecall_decent_proc_send_app_sign_req(GetEnclaveId(), &retval, appId.c_str(), &connection, jsonMsg.c_str(), appAttach);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_proc_send_app_sign_req);
 
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	if (category == DecentMessage::sk_ValueCat)
 	{

@@ -6,7 +6,6 @@
 #include "../EnclaveBase.h"
 
 #include <string>
-#include <memory>
 #include <vector>
 #include <cstdint>
 
@@ -79,12 +78,12 @@ public:
 	virtual const char* GetPlatformType() const override;
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const override;
 	virtual const std::string GetRAClientSignPubKey() const override;
-	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) override;
+	virtual ClientRASession* GetRAClientSession(Connection& connection) override;
 
-	virtual bool SendLARequest(std::unique_ptr<Connection>& connection) override;
-	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection) override;
-	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value& ackMsg) override;
-	virtual std::shared_ptr<LocalAttestationSession> GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value& initMsg) override;
+	virtual bool SendLARequest(Connection& connection) override;
+	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection) override;
+	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection, const Json::Value& ackMsg) override;
+	virtual LocalAttestationSession* GetLAResponderSession(Connection& connection, const Json::Value& initMsg) override;
 
 	virtual uint32_t GetExGroupID();
 
@@ -107,7 +106,7 @@ public:
 	virtual sgx_status_t ResponderProcessLAMsg2(const std::string& peerID, const sgx_dh_msg2_t& inMsg2, sgx_dh_msg3_t& outMsg3);
 	virtual sgx_status_t InitiatorProcessLAMsg3(const std::string& peerID, const sgx_dh_msg3_t& inMsg3);
 
-	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
 
 protected:
 	const sgx_enclave_id_t GetEnclaveId() const;

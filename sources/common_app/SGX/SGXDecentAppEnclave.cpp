@@ -33,11 +33,11 @@ bool SGXDecentAppEnclave::ProcessDecentSelfRAReport(std::string & inReport)
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentAppEnclave::SendReportDataToServer(const std::string & decentId, const std::unique_ptr<Connection>& connection)
+bool SGXDecentAppEnclave::SendReportDataToServer(const std::string & decentId, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_decent_app_send_report_data(GetEnclaveId(), &retval, decentId.c_str(), connection.get(), nullptr);
+	enclaveRet = ecall_decent_app_send_report_data(GetEnclaveId(), &retval, decentId.c_str(), &connection, nullptr);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_process_ias_ra_report);
 
 	return retval == SGX_SUCCESS;
@@ -83,7 +83,7 @@ const std::string & SGXDecentAppEnclave::GetEnclaveReportSign() const
 	return m_enclaveReportSign;
 }
 
-bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	if (category == SGXLAMessage::sk_ValueCat)
 	{

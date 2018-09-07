@@ -6,8 +6,9 @@
 
 class ClientRASession : public CommSession
 {
-
 public:
+	using CommSession::CommSession;
+
 	virtual ~ClientRASession() {}
 
 	virtual bool ProcessClientSideRA() = 0;

@@ -4,6 +4,7 @@
 #include "SGXServiceProviderRASession.h"
 
 #include <type_traits>
+#include <memory>
 
 #include <json/json.h>
 
@@ -77,10 +78,10 @@ static std::string ProcessHandshakeMsg(const SGXRAMessage0Send & msg0s)
 	return res;
 }
 
-static const Json::Value ReceiveHandshakeMsg(std::unique_ptr<Connection>& connection)
+static const Json::Value ReceiveHandshakeMsg(Connection& connection)
 {
 	std::string msgBuffer;
-	connection->Receive(msgBuffer);
+	connection.Receive(msgBuffer);
 
 	Json::Value jsonRoot;
 	if (!ParseStr2Json(jsonRoot, msgBuffer))
@@ -91,32 +92,30 @@ static const Json::Value ReceiveHandshakeMsg(std::unique_ptr<Connection>& connec
 	return jsonRoot;
 }
 
-bool SGXServiceProviderRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias, const Json::Value & jsonMsg)
+bool SGXServiceProviderRASession::SmartMsgEntryPoint(Connection& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias, const Json::Value & jsonMsg)
 {
 	if (SGXRASPMessage::ParseType(jsonMsg[Messages::sk_LabelRoot]) == SGXRAMessage0Send::sk_ValueType)
 	{
 		SGXRAMessage0Send msg0s(jsonMsg);
 		SGXServiceProviderRASession raSession(connection, serviceProviderBase, ias, msg0s);
 		bool res = raSession.ProcessServerSideRA();
-		raSession.SwapConnection(connection);
 		return res;
 	}
 	return false;
 }
 
-SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias) :
+SGXServiceProviderRASession::SGXServiceProviderRASession(Connection& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias) :
 	SGXServiceProviderRASession(connection, serviceProviderBase, ias, ReceiveHandshakeMsg(connection))
 {
 }
 
-SGXServiceProviderRASession::SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias, const SGXRAMessage0Send & msg0s) :
+SGXServiceProviderRASession::SGXServiceProviderRASession(Connection& connection, SGXServiceProviderBase & serviceProviderBase, const IASConnector & ias, const SGXRAMessage0Send & msg0s) :
+	ServiceProviderRASession(connection),
 	k_senderId(serviceProviderBase.GetRASPSignPubKey()),
 	k_remoteSideId(ProcessHandshakeMsg(msg0s)),
 	m_sgxSP(serviceProviderBase),
 	m_ias(ias)
 {
-	//At this point, everything went well, no exeception thrown. Now acquire the connection.
-	m_connection.swap(connection);
 }
 
 SGXServiceProviderRASession::~SGXServiceProviderRASession()
@@ -125,10 +124,6 @@ SGXServiceProviderRASession::~SGXServiceProviderRASession()
 
 bool SGXServiceProviderRASession::ProcessServerSideRA()
 {
-	if (!m_connection)
-	{
-		return false;
-	}
 	sgx_status_t enclaveRes = SGX_SUCCESS;
 	std::string msgBuffer;
 
@@ -139,9 +134,9 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		DeserializeStruct(clientPubSignKey, k_remoteSideId);
 
 		SGXRAMessage0Resp msg0r(k_senderId, k_senderId);
-		m_connection->Send(msg0r.ToJsonString());
+		m_connection.Send(msg0r.ToJsonString());
 
-		m_connection->Receive(msgBuffer);
+		m_connection.Receive(msgBuffer);
 		std::unique_ptr<SGXRAMessage1> msg1(ParseMessageExpected<SGXRAMessage1>(msgBuffer));
 
 		std::string sigRlStr;
@@ -151,7 +146,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		if (respCode != 200)
 		{
 			SGXRAClientErrMsg errMsg(k_senderId, "Failed to get Revocation List from IAS!");
-			m_connection->Send(errMsg.ToJsonString());
+			m_connection.Send(errMsg.ToJsonString());
 			return false;
 		}
 
@@ -164,16 +159,16 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		enclaveRes = m_sgxSP.ProcessRAMsg1(msg1->GetSenderID(), clientPubSignKey, msg1->GetMsg1Data(), msg2Ref);
 		if (enclaveRes != SGX_SUCCESS)
 		{
-			m_connection->Send(enclaveErrMsg);
+			m_connection.Send(enclaveErrMsg);
 			return false;
 		}
 		msg2Ref.sig_rl_size = static_cast<uint32_t>(sigRLData.size());
 		std::memcpy(msg2Data.data() + sizeof(sgx_ra_msg2_t), sigRLData.data(), sigRLData.size());
 
 		SGXRAMessage2 msg2(k_senderId, msg2Data);
-		m_connection->Send(msg2.ToJsonString());
+		m_connection.Send(msg2.ToJsonString());
 
-		m_connection->Receive(msgBuffer);
+		m_connection.Receive(msgBuffer);
 		std::unique_ptr<SGXRAMessage3> msg3(ParseMessageExpected<SGXRAMessage3>(msgBuffer));
 
 		sgx_ias_report_t msg4Data;
@@ -183,7 +178,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		enclaveRes = m_sgxSP.GetIasReportNonce(msg3->GetSenderID(), iasNonce);
 		if (enclaveRes != SGX_SUCCESS)
 		{
-			m_connection->Send(enclaveErrMsg);
+			m_connection.Send(enclaveErrMsg);
 			return false;
 		}
 
@@ -198,26 +193,26 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		if (respCode != 200)
 		{
 			SGXRAClientErrMsg errMsg(k_senderId, "Failed to get report from IAS!");
-			m_connection->Send(errMsg.ToJsonString());
+			m_connection.Send(errMsg.ToJsonString());
 			return false;
 		}
 
 		enclaveRes = m_sgxSP.ProcessRAMsg3(msg3->GetSenderID(), msg3->GetMsg3Data(), iasReport, iasReportSign, iasCert, msg4Data, msg4Sign);
 		if (enclaveRes != SGX_SUCCESS)
 		{
-			m_connection->Send(enclaveErrMsg);
+			m_connection.Send(enclaveErrMsg);
 			return false;
 		}
 
 		SGXRAMessage4 msg4(k_senderId, msg4Data, msg4Sign);
-		m_connection->Send(msg4.ToJsonString());
+		m_connection.Send(msg4.ToJsonString());
 
 		return true;
 	}
 	catch (const MessageParseException&)
 	{
 		SGXRAClientErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection->Send(errMsg);
+		m_connection.Send(errMsg);
 		return false;
 	}
 }

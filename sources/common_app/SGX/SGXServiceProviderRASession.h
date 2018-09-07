@@ -6,7 +6,6 @@
 #include "../ServiceProviderRASession.h"
 
 #include <string>
-#include <memory>
 
 class SGXServiceProviderBase;
 class IASConnector;
@@ -19,12 +18,12 @@ namespace Json
 class SGXServiceProviderRASession : public ServiceProviderRASession
 {
 public:
-	static bool SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXServiceProviderBase& serviceProviderBase, const IASConnector& ias, const Json::Value& jsonMsg);
+	static bool SmartMsgEntryPoint(Connection& connection, SGXServiceProviderBase& serviceProviderBase, const IASConnector& ias, const Json::Value& jsonMsg);
 
 public:
 	SGXServiceProviderRASession() = delete;
-	SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProviderBase& serviceProviderBase, const IASConnector& ias);
-	SGXServiceProviderRASession(std::unique_ptr<Connection>& connection, SGXServiceProviderBase& serviceProviderBase, const IASConnector& ias, const SGXRAMessage0Send& msg0s);
+	SGXServiceProviderRASession(Connection& connection, SGXServiceProviderBase& serviceProviderBase, const IASConnector& ias);
+	SGXServiceProviderRASession(Connection& connection, SGXServiceProviderBase& serviceProviderBase, const IASConnector& ias, const SGXRAMessage0Send& msg0s);
 	virtual ~SGXServiceProviderRASession();
 
 	virtual bool ProcessServerSideRA() override;

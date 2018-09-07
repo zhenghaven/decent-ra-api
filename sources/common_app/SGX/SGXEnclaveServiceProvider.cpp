@@ -47,9 +47,9 @@ SGXEnclaveServiceProvider::~SGXEnclaveServiceProvider()
 	ecall_sgx_ra_sp_terminate(GetEnclaveId());
 }
 
-std::shared_ptr<ServiceProviderRASession> SGXEnclaveServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
+ServiceProviderRASession* SGXEnclaveServiceProvider::GetRASPSession(Connection& connection)
 {
-	return std::make_shared<SGXServiceProviderRASession>(connection, *this, *m_ias);
+	return new SGXServiceProviderRASession(connection, *this, *m_ias);
 }
 
 const char * SGXEnclaveServiceProvider::GetPlatformType() const
@@ -67,27 +67,27 @@ const std::string SGXEnclaveServiceProvider::GetRAClientSignPubKey() const
 	return SGXEnclave::GetRAClientSignPubKey();
 }
 
-std::shared_ptr<ClientRASession> SGXEnclaveServiceProvider::GetRAClientSession(std::unique_ptr<Connection>& connection)
+ClientRASession* SGXEnclaveServiceProvider::GetRAClientSession(Connection& connection)
 {
 	return SGXEnclave::GetRAClientSession(connection);
 }
 
-bool SGXEnclaveServiceProvider::SendLARequest(std::unique_ptr<Connection>& connection)
+bool SGXEnclaveServiceProvider::SendLARequest(Connection& connection)
 {
 	return SGXEnclave::SendLARequest(connection);
 }
 
-std::shared_ptr<LocalAttestationSession> SGXEnclaveServiceProvider::GetLAInitiatorSession(std::unique_ptr<Connection>& connection)
+LocalAttestationSession* SGXEnclaveServiceProvider::GetLAInitiatorSession(Connection& connection)
 {
 	return SGXEnclave::GetLAInitiatorSession(connection);
 }
 
-std::shared_ptr<LocalAttestationSession> SGXEnclaveServiceProvider::GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value & ackMsg)
+LocalAttestationSession* SGXEnclaveServiceProvider::GetLAInitiatorSession(Connection& connection, const Json::Value & ackMsg)
 {
 	return SGXEnclave::GetLAInitiatorSession(connection, ackMsg);
 }
 
-std::shared_ptr<LocalAttestationSession> SGXEnclaveServiceProvider::GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value & initMsg)
+LocalAttestationSession* SGXEnclaveServiceProvider::GetLAResponderSession(Connection& connection, const Json::Value & initMsg)
 {
 	return SGXEnclave::GetLAResponderSession(connection, initMsg);
 }
@@ -140,7 +140,7 @@ sgx_status_t SGXEnclaveServiceProvider::ProcessRAMsg3(const std::string & client
 	return retval;
 }
 
-bool SGXEnclaveServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+bool SGXEnclaveServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	if (category == SGXRASPMessage::sk_ValueCat)
 	{

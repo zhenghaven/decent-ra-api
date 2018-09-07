@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <string>
 
 #include "Networking/ConnectionHandler.h"
@@ -20,5 +19,5 @@ public:
 
 	virtual const std::string GetRASPSignPubKey() const = 0;
 
-	virtual std::shared_ptr<ServiceProviderRASession> GetRASPSession(std::unique_ptr<Connection>& connection) = 0;
+	virtual ServiceProviderRASession* GetRASPSession(Connection& connection) = 0;
 };

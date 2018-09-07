@@ -31,9 +31,9 @@ const char * SGXServiceProvider::GetPlatformType() const
 	return SGXServiceProviderBase::sk_platformType;
 }
 
-std::shared_ptr<ServiceProviderRASession> SGXServiceProvider::GetRASPSession(std::unique_ptr<Connection>& connection)
+ServiceProviderRASession* SGXServiceProvider::GetRASPSession(Connection& connection)
 {
-	return std::make_shared<SGXServiceProviderRASession>(connection, *this, *m_ias);
+	return new SGXServiceProviderRASession(connection, *this, *m_ias);
 }
 
 void SGXServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) const
@@ -72,7 +72,7 @@ sgx_status_t SGXServiceProvider::ProcessRAMsg3(const std::string & clientID, con
 	return retval;
 }
 
-bool SGXServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+bool SGXServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	if (category == SGXRASPMessage::sk_ValueCat)
 	{

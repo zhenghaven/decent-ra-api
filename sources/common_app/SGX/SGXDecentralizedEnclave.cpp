@@ -48,7 +48,7 @@ bool SGXDecentralizedEnclave::ToDecentralizedNode(const std::string & id, bool i
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentralizedEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+bool SGXDecentralizedEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	return false;
 }

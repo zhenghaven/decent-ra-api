@@ -29,28 +29,23 @@ static inline T*  ParseMessageExpected(const Json::Value& json)
 	return new T(json);
 }
 
-bool SGXLASession::SendHandshakeMessage(std::unique_ptr<Connection>& connection, SGXEnclave & enclave)
+bool SGXLASession::SendHandshakeMessage(Connection& connection, SGXEnclave & enclave)
 {
-	if (!connection)
-	{
-		return false;
-	}
 	std::string senderID = enclave.GetRAClientSignPubKey();
 
 	SGXLARequest reqMsg(senderID);
-	connection->Send(reqMsg);
+	connection.Send(reqMsg);
 
 	return true;
 }
 
-bool SGXLASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const Json::Value & msg)
+bool SGXLASession::SmartMsgEntryPoint(Connection& connection, SGXEnclave & enclave, const Json::Value & msg)
 {
 	if (SGXLAMessage::ParseType(msg[Messages::sk_LabelRoot]) == SGXLARequest::sk_ValueType)
 	{
 		SGXLARequest reqMsg(msg);
 		SGXLASession laSession(connection, enclave, reqMsg);
 		bool res = laSession.PerformResponderSideLA();
-		laSession.SwapConnection(connection);
 		return res;
 	}
 	else if (SGXLAMessage::ParseType(msg[Messages::sk_LabelRoot]) == SGXLAMessage1::sk_ValueType)
@@ -58,44 +53,43 @@ bool SGXLASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, S
 		SGXLAMessage1* msg1 = new SGXLAMessage1(msg);
 		SGXLASession laSession(connection, enclave, msg1);
 		bool res = laSession.PerformInitiatorSideLA();
-		laSession.SwapConnection(connection);
 		return res;
 	}
 	return false;
 }
 
-static inline const SGXLAMessage1* SendAndReceiveHandshakeMsg(std::unique_ptr<Connection>& connection, SGXEnclave& enclave)
+static inline const SGXLAMessage1* SendAndReceiveHandshakeMsg(Connection& connection, SGXEnclave& enclave)
 {
 	SGXLASession::SendHandshakeMessage(connection, enclave);
 
 	Json::Value jsonRoot;
-	connection->Receive(jsonRoot);
+	connection.Receive(jsonRoot);
 
 	SGXLAMessage1* msg1 = ParseMessageExpected<SGXLAMessage1>(jsonRoot);
 
 	return msg1;
 }
 
-SGXLASession::SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave) :
+SGXLASession::SGXLASession(Connection& connection, SGXEnclave & enclave) :
 	SGXLASession(connection, enclave, SendAndReceiveHandshakeMsg(connection, enclave))
 {
 }
 
-SGXLASession::SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const SGXLARequest & msg) :
+SGXLASession::SGXLASession(Connection& connection, SGXEnclave & enclave, const SGXLARequest & msg) :
+	LocalAttestationSession(connection),
 	k_senderId(enclave.GetRAClientSignPubKey()),
 	k_remoteSideId(msg.GetSenderID()),
 	m_hwEnclave(enclave)
 {
-	m_connection.swap(connection);
 }
 
-SGXLASession::SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave & enclave, const SGXLAMessage1* msg) :
+SGXLASession::SGXLASession(Connection& connection, SGXEnclave & enclave, const SGXLAMessage1* msg) :
+	LocalAttestationSession(connection),
 	k_senderId(enclave.GetRAClientSignPubKey()),
 	k_remoteSideId(msg->GetSenderID()),
 	m_hwEnclave(enclave),
 	m_initorMsg1(msg)
 {
-	m_connection.swap(connection);
 }
 
 SGXLASession::~SGXLASession()
@@ -104,7 +98,7 @@ SGXLASession::~SGXLASession()
 
 bool SGXLASession::PerformInitiatorSideLA()
 {
-	if (!m_connection || !m_initorMsg1)
+	if (!m_initorMsg1)
 	{
 		return false;
 	}
@@ -115,15 +109,15 @@ bool SGXLASession::PerformInitiatorSideLA()
 	enclaveRet = m_hwEnclave.InitiatorProcessLAMsg1(k_remoteSideId, m_initorMsg1->GetData(), *msg2Data);
 	if (enclaveRet != SGX_SUCCESS)
 	{
-		m_connection->Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
+		m_connection.Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
 		return false;
 	}
 
 	SGXLAMessage2 msg2(k_senderId, msg2Data);
-	m_connection->Send(msg2);
+	m_connection.Send(msg2);
 
 	Json::Value jsonRoot;
-	m_connection->Receive(jsonRoot);
+	m_connection.Receive(jsonRoot);
 
 	try
 	{
@@ -131,13 +125,13 @@ bool SGXLASession::PerformInitiatorSideLA()
 		enclaveRet = m_hwEnclave.InitiatorProcessLAMsg3(k_remoteSideId, msg3->GetData());
 		if (enclaveRet != SGX_SUCCESS)
 		{
-			m_connection->Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
+			m_connection.Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
 			return false;
 		}
 	}
 	catch (const MessageParseException&)
 	{
-		m_connection->Send(SGXLAErrMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol."));
+		m_connection.Send(SGXLAErrMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol."));
 		return false;
 	}
 
@@ -146,7 +140,7 @@ bool SGXLASession::PerformInitiatorSideLA()
 
 bool SGXLASession::PerformResponderSideLA()
 {
-	if (!m_connection || m_initorMsg1)
+	if (m_initorMsg1)
 	{
 		return false;
 	}
@@ -157,15 +151,15 @@ bool SGXLASession::PerformResponderSideLA()
 	enclaveRet = m_hwEnclave.ResponderGenerateLAMsg1(k_remoteSideId, *msg1Data);
 	if (enclaveRet != SGX_SUCCESS)
 	{
-		m_connection->Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
+		m_connection.Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
 		return false;
 	}
 
 	SGXLAMessage1 msg1(k_senderId, msg1Data);
-	m_connection->Send(msg1);
+	m_connection.Send(msg1);
 
 	Json::Value jsonRoot;
-	m_connection->Receive(jsonRoot);
+	m_connection.Receive(jsonRoot);
 
 	try
 	{
@@ -175,16 +169,16 @@ bool SGXLASession::PerformResponderSideLA()
 		enclaveRet = m_hwEnclave.ResponderProcessLAMsg2(k_remoteSideId, msg2->GetData(), *msg3Data);
 		if (enclaveRet != SGX_SUCCESS)
 		{
-			m_connection->Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
+			m_connection.Send(SGXLAErrMsg(k_senderId, "Enclave process error!"));
 			return false;
 		}
 
 		SGXLAMessage3 msg3(k_senderId, msg3Data);
-		m_connection->Send(msg3);
+		m_connection.Send(msg3);
 	}
 	catch (const MessageParseException&)
 	{
-		m_connection->Send(SGXLAErrMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol."));
+		m_connection.Send(SGXLAErrMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol."));
 		return false;
 	}
 

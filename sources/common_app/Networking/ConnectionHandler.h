@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <memory>
 
 class Connection;
 namespace Json
@@ -12,5 +11,7 @@ namespace Json
 class ConnectionHandler
 {
 public:
-	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) = 0;
+	virtual ~ConnectionHandler() {}
+
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) = 0;
 };

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <string>
 
 #include "CommSession.h"
@@ -18,14 +17,14 @@ namespace Json
 class DecentralizedRASession : public CommSession
 {
 public:
-	static void SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& enclave);
-	static bool SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const Json::Value& jsonMsg);
+	static void SendHandshakeMessage(Connection& connection, EnclaveServiceProviderBase& enclave);
+	static bool SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const Json::Value& jsonMsg);
 
 public:
 	DecentralizedRASession() = delete;
-	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave);
-	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const DecentralizedRAHandshake& hsMsg);
-	DecentralizedRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const DecentralizedRAHandshakeAck& ackMsg);
+	DecentralizedRASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave);
+	DecentralizedRASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const DecentralizedRAHandshake& hsMsg);
+	DecentralizedRASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentralizedEnclave& enclave, const DecentralizedRAHandshakeAck& ackMsg);
 	
 	virtual ~DecentralizedRASession();
 

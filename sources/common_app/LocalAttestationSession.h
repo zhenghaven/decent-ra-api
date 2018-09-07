@@ -9,6 +9,7 @@ class Connection;
 class LocalAttestationSession : public CommSession
 {
 public:
+	using CommSession::CommSession;
 
 	virtual ~LocalAttestationSession() {}
 

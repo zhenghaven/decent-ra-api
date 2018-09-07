@@ -20,15 +20,15 @@ namespace Json
 class SGXLASession : public LocalAttestationSession
 {
 public:
-	static bool SendHandshakeMessage(std::unique_ptr<Connection>& connection, SGXEnclave& enclave);
-	static bool SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXEnclave& enclave, const Json::Value& msg);
+	static bool SendHandshakeMessage(Connection& connection, SGXEnclave& enclave);
+	static bool SmartMsgEntryPoint(Connection& connection, SGXEnclave& enclave, const Json::Value& msg);
 
 public:
 	SGXLASession() = delete;
 	//Caution: blocking constructor:
-	SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave);
-	SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave, const SGXLARequest& msg);
-	SGXLASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave, const SGXLAMessage1* msg);
+	SGXLASession(Connection& connection, SGXEnclave& enclave);
+	SGXLASession(Connection& connection, SGXEnclave& enclave, const SGXLARequest& msg);
+	SGXLASession(Connection& connection, SGXEnclave& enclave, const SGXLAMessage1* msg);
 
 	virtual ~SGXLASession();
 

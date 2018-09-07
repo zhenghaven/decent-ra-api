@@ -53,10 +53,10 @@ int main(int argc, char ** argv)
 	SGXDecentAppEnclave enclave(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 
 	std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
-	DecentAppLASession::SendHandshakeMessage(connection, enclave);
+	DecentAppLASession::SendHandshakeMessage(*connection, enclave);
 	Json::Value jsonRoot;
 	connection->Receive(jsonRoot);
-	enclave.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
+	enclave.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
 
 	printf("Enter a character before exit ...\n");
 	getchar();

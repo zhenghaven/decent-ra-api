@@ -27,13 +27,13 @@ static inline std::string ConstructSenderID(EnclaveServiceProviderBase & enclave
 	return SerializeStruct(signPubKey);
 }
 
-void DecentRASession::SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & enclave)
+void DecentRASession::SendHandshakeMessage(Connection& connection, EnclaveServiceProviderBase & enclave)
 {
 	DecentRAHandshake hs(ConstructSenderID(enclave));
-	connection->Send(hs.ToJsonString());
+	connection.Send(hs.ToJsonString());
 }
 
-bool DecentRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
+bool DecentRASession::SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
 {
 	const std::string inType = DecentMessage::ParseType(jsonMsg[Messages::sk_LabelRoot]);
 	if (inType == DecentRAHandshake::sk_ValueType)
@@ -41,7 +41,6 @@ bool DecentRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection
 		DecentRAHandshake hsMsg(jsonMsg);
 		DecentRASession raSession(connection, hwEnclave, enclave, hsMsg);
 		bool res = raSession.ProcessServerSideRA();
-		raSession.SwapConnection(connection);
 		return res;
 	}
 	else if (inType == DecentRAHandshakeAck::sk_ValueType)
@@ -49,28 +48,28 @@ bool DecentRASession::SmartMsgEntryPoint(std::unique_ptr<Connection>& connection
 		DecentRAHandshakeAck ackMsg(jsonMsg);
 		DecentRASession raSession(connection, hwEnclave, enclave, ackMsg);
 		bool res = raSession.ProcessClientSideRA();
-		raSession.SwapConnection(connection);
 		return res;
 	}
 	return false;
 }
 
-static const DecentRAHandshakeAck SendAndReceiveHandshakeAck(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& enclave)
+static const DecentRAHandshakeAck SendAndReceiveHandshakeAck(Connection& connection, EnclaveServiceProviderBase& enclave)
 {
 	DecentRASession::SendHandshakeMessage(connection, enclave);
 
 	Json::Value jsonMsg;
-	connection->Receive(jsonMsg);
+	connection.Receive(jsonMsg);
 	
 	return DecentRAHandshakeAck(jsonMsg);
 }
 
-DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave) :
+DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave) :
 	DecentRASession(connection, hwEnclave, enclave, SendAndReceiveHandshakeAck(connection, hwEnclave))
 {
 }
 
-DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const DecentRAHandshake & hsMsg) :
+DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const DecentRAHandshake & hsMsg) :
+	CommSession(connection),
 	k_senderId(ConstructSenderID(hwEnclave)),
 	k_remoteSideId(hsMsg.GetSenderID()),
 	m_hwEnclave(hwEnclave),
@@ -78,12 +77,12 @@ DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, Enclav
 	k_isServerSide(true)
 {
 	DecentRAHandshakeAck hsAck(k_senderId, enclave.GetDecentSelfRAReport());
-	connection->Send(hsAck.ToJsonString());
+	connection.Send(hsAck.ToJsonString());
 
-	m_connection.swap(connection);
 }
 
-DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const DecentRAHandshakeAck & ackMsg) :
+DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const DecentRAHandshakeAck & ackMsg) :
+	CommSession(connection),
 	k_senderId(ConstructSenderID(hwEnclave)),
 	k_remoteSideId(ackMsg.GetSenderID()),
 	m_hwEnclave(hwEnclave),
@@ -94,8 +93,6 @@ DecentRASession::DecentRASession(std::unique_ptr<Connection>& connection, Enclav
 	{
 		throw MessageInvalidException();
 	}
-
-	m_connection.swap(connection);
 }
 
 DecentRASession::~DecentRASession()
@@ -104,7 +101,7 @@ DecentRASession::~DecentRASession()
 
 bool DecentRASession::ProcessClientSideRA()
 {
-	if (!m_connection || k_isServerSide)
+	if (k_isServerSide)
 	{
 		return false;
 	}
@@ -113,9 +110,8 @@ bool DecentRASession::ProcessClientSideRA()
 
 	try
 	{
-		std::shared_ptr<ClientRASession> clientSession = m_hwEnclave.GetRAClientSession(m_connection);
+		std::unique_ptr<ClientRASession> clientSession(m_hwEnclave.GetRAClientSession(m_connection));
 		res = clientSession->ProcessClientSideRA();
-		clientSession->SwapConnection(m_connection);
 
 		if (!res)
 		{
@@ -123,10 +119,10 @@ bool DecentRASession::ProcessClientSideRA()
 		}
 
 		DecentProtocolKeyReq keyReq(k_senderId);
-		m_connection->Send(keyReq.ToJsonString());
+		m_connection.Send(keyReq.ToJsonString());
 
 		Json::Value trustedMsgJson;
-		m_connection->Receive(trustedMsgJson);
+		m_connection.Receive(trustedMsgJson);
 
 		DecentTrustedMessage trustedMsg(trustedMsgJson);
 		m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection, trustedMsg.GetTrustedMsg());
@@ -136,14 +132,14 @@ bool DecentRASession::ProcessClientSideRA()
 	catch (const MessageParseException&)
 	{
 		DecentErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection->Send(errMsg);
+		m_connection.Send(errMsg);
 		return false;
 	}
 }
 
 bool DecentRASession::ProcessServerSideRA()
 {
-	if (!m_connection || !k_isServerSide)
+	if (!k_isServerSide)
 	{
 		return false;
 	}
@@ -152,9 +148,8 @@ bool DecentRASession::ProcessServerSideRA()
 
 	try
 	{
-		std::shared_ptr<ServiceProviderRASession> spSession = m_hwEnclave.GetRASPSession(m_connection);
+		std::unique_ptr<ServiceProviderRASession> spSession(m_hwEnclave.GetRASPSession(m_connection));
 		res = spSession->ProcessServerSideRA();
-		spSession->SwapConnection(m_connection);
 
 		if (!res)
 		{
@@ -162,7 +157,7 @@ bool DecentRASession::ProcessServerSideRA()
 		}
 
 		Json::Value keyReqJson;
-		m_connection->Receive(keyReqJson);
+		m_connection.Receive(keyReqJson);
 		DecentProtocolKeyReq keyReq(keyReqJson);
 
 		m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
@@ -172,7 +167,7 @@ bool DecentRASession::ProcessServerSideRA()
 	catch (const std::exception&)
 	{
 		DecentErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection->Send(errMsg);
+		m_connection.Send(errMsg);
 		return false;
 	}
 }

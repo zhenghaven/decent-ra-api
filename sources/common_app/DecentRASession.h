@@ -17,14 +17,14 @@ namespace Json
 class DecentRASession : public CommSession
 {
 public:
-	static void SendHandshakeMessage(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& enclave);
-	static bool SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
+	static void SendHandshakeMessage(Connection& connection, EnclaveServiceProviderBase& enclave);
+	static bool SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
 
 public:
 	DecentRASession() = delete;
-	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave);
-	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentRAHandshake& hsMsg);
-	DecentRASession(std::unique_ptr<Connection>& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentRAHandshakeAck& ackMsg);
+	DecentRASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave);
+	DecentRASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentRAHandshake& hsMsg);
+	DecentRASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentRAHandshakeAck& ackMsg);
 
 	virtual ~DecentRASession();
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <string>
 
 #include "Networking/ConnectionHandler.h"
@@ -26,11 +25,11 @@ public:
 	virtual void GetRAClientSignPubKey(sgx_ec256_public_t& outKey) const = 0;
 	virtual const std::string GetRAClientSignPubKey() const = 0;
 
-	virtual std::shared_ptr<ClientRASession> GetRAClientSession(std::unique_ptr<Connection>& connection) = 0;
+	virtual ClientRASession* GetRAClientSession(Connection& connection) = 0;
 	//Return false only when Connectino is empty.
-	virtual bool SendLARequest(std::unique_ptr<Connection>& connection) = 0;
-	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection) = 0;
-	virtual std::shared_ptr<LocalAttestationSession> GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value& ackMsg) = 0;
-	virtual std::shared_ptr<LocalAttestationSession> GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value& initMsg) = 0;
+	virtual bool SendLARequest(Connection& connection) = 0;
+	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection) = 0;
+	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection, const Json::Value& ackMsg) = 0;
+	virtual LocalAttestationSession* GetLAResponderSession(Connection& connection, const Json::Value& initMsg) = 0;
 };
 

@@ -126,31 +126,31 @@ const std::string SGXEnclave::GetRAClientSignPubKey() const
 	return SerializeStruct(signPubKey);
 }
 
-std::shared_ptr<ClientRASession> SGXEnclave::GetRAClientSession(std::unique_ptr<Connection>& connection)
+ClientRASession* SGXEnclave::GetRAClientSession(Connection& connection)
 {
-	return std::make_shared<SGXClientRASession>(connection, *this);
+	return new SGXClientRASession(connection, *this);
 }
 
-bool SGXEnclave::SendLARequest(std::unique_ptr<Connection>& connection)
+bool SGXEnclave::SendLARequest(Connection& connection)
 {
 	return SGXLASession::SendHandshakeMessage(connection, *this);
 }
 
-std::shared_ptr<LocalAttestationSession> SGXEnclave::GetLAInitiatorSession(std::unique_ptr<Connection>& connection)
+LocalAttestationSession* SGXEnclave::GetLAInitiatorSession(Connection& connection)
 {
-	return std::make_shared<SGXLASession>(connection, *this);
+	return new SGXLASession(connection, *this);
 }
 
-std::shared_ptr<LocalAttestationSession> SGXEnclave::GetLAInitiatorSession(std::unique_ptr<Connection>& connection, const Json::Value & ackMsg)
+LocalAttestationSession* SGXEnclave::GetLAInitiatorSession(Connection& connection, const Json::Value & ackMsg)
 {
 	SGXLAMessage1* msg1 = new SGXLAMessage1(ackMsg);
-	return std::make_shared<SGXLASession>(connection, *this, msg1);
+	return new SGXLASession(connection, *this, msg1);
 }
 
-std::shared_ptr<LocalAttestationSession> SGXEnclave::GetLAResponderSession(std::unique_ptr<Connection>& connection, const Json::Value & initMsg)
+LocalAttestationSession* SGXEnclave::GetLAResponderSession(Connection& connection, const Json::Value & initMsg)
 {
 	SGXLARequest req(initMsg);
-	return std::make_shared<SGXLASession>(connection, *this, req);
+	return new SGXLASession(connection, *this, req);
 }
 
 uint32_t SGXEnclave::GetExGroupID()
@@ -266,7 +266,7 @@ sgx_status_t SGXEnclave::InitiatorProcessLAMsg3(const std::string & peerID, cons
 	return retval;
 }
 
-bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, std::unique_ptr<Connection>& connection)
+bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	if (category == SGXRAClientMessage::sk_ValueCat)
 	{

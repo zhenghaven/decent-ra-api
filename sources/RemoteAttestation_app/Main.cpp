@@ -95,7 +95,7 @@ int main(int argc, char ** argv)
 	boost::asio::signal_set signals(io_service, SIGINT);
 	signals.async_wait(ExitSignalHandler);
 
-	io_service.run();
+	//io_service.run();
 
 	std::cout << "================ This is server side ================" << std::endl;
 
@@ -113,7 +113,7 @@ int main(int argc, char ** argv)
 		std::unique_ptr<Connection> connection = ser.AcceptConnection();
 		Json::Value jsonRoot;
 		connection->Receive(jsonRoot);
-		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
+		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
 
 	}
 	break;
@@ -123,10 +123,10 @@ int main(int argc, char ** argv)
 
 		//std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
 		std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
-		DecentRASession::SendHandshakeMessage(connection, expEnc);
+		DecentRASession::SendHandshakeMessage(*connection, expEnc);
 		Json::Value jsonRoot;
 		connection->Receive(jsonRoot);
-		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, connection);
+		expEnc.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
 	}
 	break;
 	default:

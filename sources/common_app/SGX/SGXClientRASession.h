@@ -19,14 +19,14 @@ namespace Json
 class SGXClientRASession : public ClientRASession
 {
 public:
-	static void SendHandshakeMessage(std::unique_ptr<Connection>& connection, SGXEnclave& enclave);
-	static bool SmartMsgEntryPoint(std::unique_ptr<Connection>& connection, SGXEnclave& enclave, const Json::Value& msg);
+	static void SendHandshakeMessage(Connection& connection, SGXEnclave& enclave);
+	static bool SmartMsgEntryPoint(Connection& connection, SGXEnclave& enclave, const Json::Value& msg);
 
 public:
 	SGXClientRASession() = delete;
 	//Caution: blocking constructor:
-	SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave);
-	SGXClientRASession(std::unique_ptr<Connection>& connection, SGXEnclave& enclave, const SGXRAMessage0Resp& msg0r);
+	SGXClientRASession(Connection& connection, SGXEnclave& enclave);
+	SGXClientRASession(Connection& connection, SGXEnclave& enclave, const SGXRAMessage0Resp& msg0r);
 
 	virtual ~SGXClientRASession();
 

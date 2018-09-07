@@ -29,11 +29,11 @@ public:
 	virtual std::string GetDecentSelfRAReport() const override;
 	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
 	virtual bool DecentBecomeRoot() override;
-	virtual bool ProcessDecentProtoKeyMsg(const std::string& nodeID, const std::unique_ptr<Connection>& connection, const std::string& jsonMsg) override;
-	virtual bool SendProtocolKey(const std::string& nodeID, const std::unique_ptr<Connection>& connection) override;
-	virtual bool ProcessAppReportSignReq(const std::string& appId, const std::unique_ptr<Connection>& connection, const std::string& jsonMsg, const char* appAttach) override;
+	virtual bool ProcessDecentProtoKeyMsg(const std::string& nodeID, Connection& connection, const std::string& jsonMsg) override;
+	virtual bool SendProtocolKey(const std::string& nodeID, Connection& connection) override;
+	virtual bool ProcessAppReportSignReq(const std::string& appId, Connection& connection, const std::string& jsonMsg, const char* appAttach) override;
 
-	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, std::unique_ptr<Connection>& connection) override;
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
 
 protected:
 	virtual std::string GenerateDecentSelfRAReport() override;
