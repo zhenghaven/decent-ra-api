@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+//#include <atomic>
 
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
@@ -8,18 +9,12 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
-#include <boost/interprocess/detail/atomic.hpp>
-
 #include "../Common.h"
 
 template<typename T>
-struct SharedObject
+class SharedObject
 {
-	boost::interprocess::shared_memory_object* m_sharedObj;
-	boost::interprocess::mapped_region* m_mapReg;
-	T* m_objPtr;
-	bool m_isOwner;
-
+public:
 	SharedObject(const std::string& objName, const bool isCreate) :
 		m_isOwner(isCreate)
 	{
@@ -48,18 +43,18 @@ struct SharedObject
 	}
 
 	SharedObject(const SharedObject& other) = delete;
-
-	SharedObject(SharedObject&& other) :
-		m_sharedObj(other.m_sharedObj),
-		m_mapReg(other.m_mapReg),
-		m_objPtr(other.m_objPtr),
-		m_isOwner(other.m_isOwner)
-	{
-		other.m_sharedObj = nullptr;
-		other.m_mapReg = nullptr;
-		other.m_objPtr = nullptr;
-		other.m_isOwner = false;
-	}
+	SharedObject(SharedObject&& other) = delete;
+	//SharedObject(SharedObject&& other) noexcept :
+	//	m_sharedObj(other.m_sharedObj),
+	//	m_mapReg(other.m_mapReg),
+	//	m_objPtr(other.m_objPtr),
+	//	m_isOwner(other.m_isOwner)
+	//{
+	//	other.m_sharedObj = nullptr;
+	//	other.m_mapReg = nullptr;
+	//	other.m_objPtr = nullptr;
+	//	other.m_isOwner = false;
+	//}
 
 	T& GetObject()
 	{
@@ -88,13 +83,28 @@ struct SharedObject
 			LOGI("Attempted to close shared object, %s - %s!\n", objName.c_str(), isClosed ? "Successful!" : "Failed!");
 		}
 	}
+
+	//bool IsValid() const
+	//{
+	//	return m_objPtr && m_mapReg;
+	//}
+
+private:
+	boost::interprocess::shared_memory_object* m_sharedObj;
+	boost::interprocess::mapped_region* m_mapReg;
+	T* m_objPtr;
+	bool m_isOwner;
 };
 
 struct LocalConnectStruct
 {
+private:
+	//std::atomic<uint8_t> m_isClosed;
+	volatile uint8_t m_isClosed;
+
+public:
 	enum { UUID_STR_LEN = (16 * 2) + 1 };
 
-	uint32_t m_isClosed; //used as atomic variable.
 
 	boost::interprocess::interprocess_mutex m_connectLock;
 	boost::interprocess::interprocess_mutex m_writeLock;
@@ -104,38 +114,41 @@ struct LocalConnectStruct
 
 	char m_msg[UUID_STR_LEN];
 
-	LocalConnectStruct() :
+	LocalConnectStruct() noexcept :
 		m_isClosed(false),
 		m_msg{ 0 }
 	{}
 
-	void SetClose()
+	void SetClose() volatile noexcept
 	{
-		boost::interprocess::ipcdetail::atomic_inc32(&m_isClosed);
+		m_isClosed = 1;
 	}
 
-	bool IsClosed() const
+	bool IsClosed() const volatile noexcept
 	{
-		return boost::interprocess::ipcdetail::atomic_read32(const_cast<uint32_t*>(&m_isClosed));
+		return m_isClosed;
 	}
 };
 
 struct LocalSessionStruct
 {
+private:
+	//std::atomic<uint8_t> m_isClosed;
+	volatile uint8_t m_isClosed;
+
+public:
 	enum { MSG_SIZE = 65536 };
 
 	boost::interprocess::interprocess_mutex m_msgLock;
 	boost::interprocess::interprocess_condition m_emptySignal;
 	boost::interprocess::interprocess_condition m_readySignal;
 
-	uint32_t m_isClosed; //used as atomic variable.
-
-	uint8_t m_isMsgReady;
-	uint64_t m_totalSize;
-	uint32_t m_sentSize;
+	volatile uint8_t m_isMsgReady;
+	volatile uint64_t m_totalSize;
+	volatile uint32_t m_sentSize;
 	uint8_t m_msg[MSG_SIZE];
 
-	LocalSessionStruct() :
+	LocalSessionStruct() noexcept:
 		m_isClosed(false),
 		m_isMsgReady(false),
 		m_totalSize(0),
@@ -145,13 +158,13 @@ struct LocalSessionStruct
 		static_assert(sizeof(m_sentSize) < MSG_SIZE, "The MSG_SIZE must not exceed the size of m_sentSize!");
 	}
 
-	void SetClose()
+	void SetClose() volatile noexcept
 	{
-		boost::interprocess::ipcdetail::atomic_inc32(&m_isClosed);
+		m_isClosed = 1;
 	}
 
-	bool IsClosed() const
+	bool IsClosed() const volatile noexcept
 	{
-		return boost::interprocess::ipcdetail::atomic_read32(const_cast<uint32_t*>(&m_isClosed));
+		return m_isClosed;
 	}
 };

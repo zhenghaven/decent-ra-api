@@ -34,7 +34,7 @@ public:
 	TCPConnection() = delete;
 	TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor& acceptor);
 	TCPConnection(uint32_t ipAddr, uint16_t portNum);
-	virtual ~TCPConnection();
+	virtual ~TCPConnection() noexcept;
 
 	virtual size_t Send(const Messages& msg) override;
 	virtual size_t Send(const std::string& msg) override;
@@ -45,6 +45,8 @@ public:
 	virtual size_t Receive(std::string& msg) override;
 	virtual size_t Receive(Json::Value& msg) override;
 	virtual size_t Receive(std::vector<uint8_t>& msg) override;
+
+	virtual void Terminate() noexcept override;
 
 	uint32_t GetIPv4Addr() const;
 	uint16_t GetIPPort() const;

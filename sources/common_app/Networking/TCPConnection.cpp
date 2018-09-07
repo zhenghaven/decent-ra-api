@@ -28,6 +28,7 @@ TCPConnection::TCPConnection(uint32_t ipAddr, uint16_t portNum) :
 
 TCPConnection::~TCPConnection()
 {
+	Terminate();
 }
 
 size_t TCPConnection::Send(const Messages & msg)
@@ -100,6 +101,26 @@ size_t TCPConnection::Receive(std::vector<uint8_t>& msg)
 	}
 	LOGI("Recv Binary with size %llu\n", receivedSize);
 	return receivedSize;
+}
+
+void TCPConnection::Terminate() noexcept
+{
+	try
+	{
+		if (m_ioService->stopped())
+		{
+			m_ioService->stop();
+		}
+		if (m_socket->is_open())
+		{
+			m_socket->close();
+		}
+	}
+	catch (...)
+	{
+		//Just close the connection, no need to throw any exception.
+		return;
+	}
 }
 
 uint32_t TCPConnection::GetIPv4Addr() const

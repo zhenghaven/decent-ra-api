@@ -36,12 +36,14 @@ static std::string GenerateSessionId()
 }
 
 LocalAcceptor::LocalAcceptor(const std::string & serverName) :
-	m_sharedObj(std::make_shared<SharedObject<LocalConnectStruct> >(serverName, true))
+	m_sharedObj(std::make_shared<SharedObject<LocalConnectStruct> >(serverName, true)),
+	m_isTerminated(0)
 {
 }
 
 LocalAcceptor::LocalAcceptor(LocalAcceptor && other) :
-	m_sharedObj(std::move(other.m_sharedObj))
+	m_sharedObj(std::move(other.m_sharedObj)),
+	m_isTerminated(static_cast<uint8_t>(other.m_isTerminated))
 {
 }
 
@@ -54,27 +56,40 @@ LocalAcceptor & LocalAcceptor::operator=(LocalAcceptor && other)
 	if (this != &other)
 	{
 		m_sharedObj = std::move(other.m_sharedObj);
+		m_isTerminated = static_cast<uint8_t>(other.m_isTerminated);
 	}
 	return *this;
 }
 
-bool LocalAcceptor::IsTerminate() const
+bool LocalAcceptor::IsTerminate() const noexcept
 {
-	std::shared_ptr<const SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
-	return obj->GetObject().IsClosed();
+	return m_isTerminated.load();
 }
 
-void LocalAcceptor::Terminate()
+void LocalAcceptor::Terminate() noexcept
 {
-	std::shared_ptr<SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
-	obj->GetObject().SetClose();
+	if (m_isTerminated)
+	{
+		return;
+	}
 
-	obj->GetObject().m_idReadySignal.notify_all();
-	obj->GetObject().m_connectSignal.notify_all();
+	std::shared_ptr<SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
+	if (obj)
+	{
+		obj->GetObject().SetClose();
+
+		obj->GetObject().m_idReadySignal.notify_all();
+		obj->GetObject().m_connectSignal.notify_all();
+	}
 }
 
 std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > > LocalAcceptor::Accept()
 {
+	if (m_isTerminated)
+	{
+		return std::make_pair(nullptr, nullptr);
+	}
+
 	std::shared_ptr<SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
 
 	scoped_lock<interprocess_mutex> lock(obj->GetObject().m_writeLock);
@@ -93,12 +108,14 @@ std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<Sh
 }
 
 LocalServer::LocalServer(const std::string & serverName) :
-	m_acceptor(serverName)
+	m_acceptor(serverName),
+	m_isTerminated(0)
 {
 }
 
 LocalServer::LocalServer(LocalServer && other) :
-	m_acceptor(std::move(other.m_acceptor))
+	m_acceptor(std::move(other.m_acceptor)),
+	m_isTerminated(static_cast<uint8_t>(other.m_isTerminated))
 {
 }
 
@@ -111,11 +128,36 @@ LocalServer & LocalServer::operator=(LocalServer && other)
 	if (this != &other)
 	{
 		m_acceptor = std::move(other.m_acceptor);
+		m_isTerminated = static_cast<uint8_t>(other.m_isTerminated);
 	}
 	return *this;
 }
 
 std::unique_ptr<Connection> LocalServer::AcceptConnection()
 {
-	return std::make_unique<LocalConnection>(m_acceptor);
+	if (m_isTerminated)
+	{
+		return nullptr;
+	}
+	std::unique_ptr<Connection> ptr = std::make_unique<LocalConnection>(m_acceptor);
+	if (m_isTerminated)
+	{
+		return nullptr;
+	}
+	return std::move(ptr);
+}
+
+bool LocalServer::IsTerminated() noexcept
+{
+	return m_isTerminated.load();
+}
+
+void LocalServer::Terminate() noexcept
+{
+	if (m_isTerminated)
+	{
+		return;
+	}
+	m_isTerminated = 1;
+	m_acceptor.Terminate();
 }

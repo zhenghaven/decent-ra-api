@@ -54,13 +54,13 @@ LocalConnection::LocalConnection(LocalAcceptor & acceptor) :
 {
 }
 
-LocalConnection::LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs) :
-	m_inSharedObj(sharedObjs.first),
-	m_outSharedObj(sharedObjs.second)
+LocalConnection::LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs) noexcept :
+	m_inSharedObj(std::move(sharedObjs.first)),
+	m_outSharedObj(std::move(sharedObjs.second))
 {
 }
 
-LocalConnection::LocalConnection(LocalConnection && other) :
+LocalConnection::LocalConnection(LocalConnection && other) noexcept:
 	m_inSharedObj(std::move(other.m_inSharedObj)),
 	m_outSharedObj(std::move(other.m_outSharedObj))
 {
@@ -238,25 +238,35 @@ size_t LocalConnection::Receive(std::vector<uint8_t>& msg)
 	return recvSize;
 }
 
-bool LocalConnection::IsTerminate() const
+bool LocalConnection::IsTerminate() const noexcept
 {
-	std::shared_ptr<const SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
-	std::shared_ptr<const SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj);
+	std::shared_ptr<const SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj); //noexcept based on cppreference.
+	std::shared_ptr<const SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj); //noexcept
 	
-	return inSharedObj->GetObject().IsClosed() || inSharedObj->GetObject().IsClosed();
+	return (!inSharedObj || inSharedObj->GetObject().IsClosed()) && (!outSharedObj || inSharedObj->GetObject().IsClosed()); //noexcept
 }
 
-void LocalConnection::Terminate()
+void LocalConnection::Terminate() noexcept
 {
+	if (IsTerminate())
+	{
+		return;
+	}
+
 	std::shared_ptr<SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
 	std::shared_ptr<SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj);
 
-	inSharedObj->GetObject().SetClose();
-	outSharedObj->GetObject().SetClose();
+	if (inSharedObj)
+	{
+		inSharedObj->GetObject().SetClose();
+		inSharedObj->GetObject().m_emptySignal.notify_all();
+		inSharedObj->GetObject().m_readySignal.notify_all();
+	}
 
-	inSharedObj->GetObject().m_emptySignal.notify_all();
-	inSharedObj->GetObject().m_readySignal.notify_all();
-
-	outSharedObj->GetObject().m_emptySignal.notify_all();
-	outSharedObj->GetObject().m_readySignal.notify_all();
+	if (outSharedObj)
+	{
+		outSharedObj->GetObject().SetClose();
+		outSharedObj->GetObject().m_emptySignal.notify_all();
+		outSharedObj->GetObject().m_readySignal.notify_all();
+	}
 }

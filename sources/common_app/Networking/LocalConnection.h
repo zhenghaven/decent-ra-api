@@ -13,7 +13,7 @@ namespace boost
 };
 
 template<typename T>
-struct SharedObject;
+class SharedObject;
 
 class LocalAcceptor;
 struct LocalSessionStruct;
@@ -27,8 +27,8 @@ public:
 	LocalConnection() = delete;
 	LocalConnection(LocalAcceptor& acceptor);
 	LocalConnection(const LocalConnection& other) = delete;
-	LocalConnection(LocalConnection&& other);
-	virtual ~LocalConnection();
+	LocalConnection(LocalConnection&& other) noexcept;
+	virtual ~LocalConnection() noexcept;
 
 	LocalConnection& operator=(const LocalConnection& other) = delete;
 	LocalConnection& operator=(LocalConnection&& other);
@@ -43,14 +43,13 @@ public:
 	virtual size_t Receive(Json::Value& msg) override;
 	virtual size_t Receive(std::vector<uint8_t>& msg) override;
 
-	virtual bool IsTerminate() const;
+	virtual bool IsTerminate() const noexcept;
 
-protected:
-	void Terminate();
+	virtual void Terminate() noexcept override;
 
 private:
 	LocalConnection(const std::string& sessionId);
-	LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs);
+	LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs) noexcept;
 
 private:
 	std::shared_ptr<SharedObject<LocalSessionStruct> > m_inSharedObj;

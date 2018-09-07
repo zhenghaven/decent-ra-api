@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 #include <memory>
+#include <atomic>
 
 namespace boost
 {
@@ -14,7 +15,7 @@ namespace boost
 };
 
 template<typename T>
-struct SharedObject;
+class SharedObject;
 
 struct LocalConnectStruct;
 struct LocalSessionStruct;
@@ -26,21 +27,22 @@ public:
 	LocalAcceptor(const std::string& serverName);
 	LocalAcceptor(const LocalAcceptor& other) = delete; //Copy is not allowed.
 	LocalAcceptor(LocalAcceptor&& other);
-	virtual ~LocalAcceptor();
+	virtual ~LocalAcceptor() noexcept;
 
 	LocalAcceptor& operator=(const LocalAcceptor& other) = delete;
 	LocalAcceptor& operator=(LocalAcceptor&& other);
 
-	bool IsTerminate() const;
+	bool IsTerminate() const noexcept;
 
 	std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >,
 		std::shared_ptr<SharedObject<LocalSessionStruct> > > Accept();
 
-protected:
-	void Terminate();
+	void Terminate() noexcept;
 
 private:
 	std::shared_ptr<SharedObject<LocalConnectStruct> > m_sharedObj;
+
+	std::atomic<uint8_t> m_isTerminated;
 };
 
 class LocalServer : virtual public Server
@@ -50,13 +52,18 @@ public:
 	LocalServer(const std::string& serverName);
 	LocalServer(const LocalServer& other) = delete; //Copy is not allowed.
 	LocalServer(LocalServer&& other);
-	virtual ~LocalServer();
+	virtual ~LocalServer() noexcept;
 
 	LocalServer& operator=(const LocalServer& other) = delete;
 	LocalServer& operator=(LocalServer&& other);
 
 	virtual std::unique_ptr<Connection> AcceptConnection() override;
 
+	virtual bool IsTerminated() noexcept override;
+	virtual void Terminate() noexcept override;
+
 private:
 	LocalAcceptor m_acceptor;
+
+	std::atomic<uint8_t> m_isTerminated;
 };
