@@ -245,12 +245,12 @@ file(GLOB_RECURSE SOURCES_COMMON_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/common_en
 set(SOURCESDIR_LibTest_App ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app)
 file(GLOB_RECURSE SOURCES_LibTest_App ${SOURCESDIR_LibTest_App}/*.[ch]*)
 
-# RemoteAttestation Files:
-set(SOURCEDIR_RemoteAttestation_App ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_app)
-set(SOURCEDIR_RemoteAttestation_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/RemoteAttestation_enclave)
-file(GLOB_RECURSE SOURCES_RemoteAttestation_App ${SOURCEDIR_RemoteAttestation_App}/*.[ch]*)
-file(GLOB_RECURSE SOURCES_RemoteAttestation_Enclave ${SOURCEDIR_RemoteAttestation_Enclave}/*.[ch]*)
-file(GLOB_RECURSE SOURCES_RemoteAttestation_EDL ${SOURCEDIR_RemoteAttestation_Enclave}/*.edl)
+# DecentServer Files:
+set(SOURCEDIR_DecentServer_App ${CMAKE_CURRENT_LIST_DIR}/sources/DecentServer_app)
+set(SOURCEDIR_DecentServer_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/DecentServer_enclave)
+file(GLOB_RECURSE SOURCES_DecentServer_App ${SOURCEDIR_DecentServer_App}/*.[ch]*)
+file(GLOB_RECURSE SOURCES_DecentServer_Enclave ${SOURCEDIR_DecentServer_Enclave}/*.[ch]*)
+file(GLOB_RECURSE SOURCES_DecentServer_EDL ${SOURCEDIR_DecentServer_Enclave}/*.edl)
 
 # DecentApp Files:
 set(SOURCEDIR_DecentApp_App ${CMAKE_CURRENT_LIST_DIR}/sources/DecentApp_app)
@@ -272,10 +272,10 @@ source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/sources FILES ${SOURCES})
 # source_group(Common_EDLs FILES ${SOURCES_COMMON_EDL})
 # # LibTest_App Groups
 # source_group(LibTest_App FILES ${SOURCES_LibTest_App})
-# # RemoteAttestation Groups
-# source_group(RemoteAttestation_App FILES ${SOURCES_RemoteAttestation_App})
-# source_group(RemoteAttestation_Enclave FILES ${SOURCES_RemoteAttestation_Enclave})
-# source_group(RemoteAttestation_EDLs FILES ${SOURCES_RemoteAttestation_EDL})
+# # DecentServer Groups
+# source_group(DecentServer_App FILES ${SOURCES_DecentServer_App})
+# source_group(DecentServer_Enclave FILES ${SOURCES_DecentServer_Enclave})
+# source_group(DecentServer_EDLs FILES ${SOURCES_DecentServer_EDL})
 
 #==========================================================
 #   G++ linking flags
@@ -329,7 +329,7 @@ endif()
 #   Enclave Projects
 #==========================================================
 
-set(Enclave_Project_List RemoteAttestation DecentApp)
+set(Enclave_Project_List DecentServer DecentApp)
 
 foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	
