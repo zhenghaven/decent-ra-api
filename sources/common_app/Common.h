@@ -43,7 +43,6 @@ void SetConsoleColor(ConsoleColors foreground, ConsoleColors background);
 					printf("\n"); \
 					SetConsoleColor(ConsoleColors::Default, ConsoleColors::Default); \
 					assert(false);
-#define LOGP(...)   (void)printf(__VA_ARGS__);printf("\n");
 #define ASSERT(Condition, ...) if(!(Condition)){LOGE(__VA_ARGS__);}
 #define ASSERTP(Condition, ...)  if(!(Condition)){LOGE(__VA_ARGS__);}
 
@@ -62,8 +61,13 @@ void SetConsoleColor(ConsoleColors foreground, ConsoleColors background);
 
 #define LOGI(...) 
 #define LOGW(...) 
-#define LOGE(...) 
-#define LOGP(...)   (void)printf(__VA_ARGS__);printf("\n");
+#define LOGE(...)   SetConsoleColor(ConsoleColors::Red, ConsoleColors::Black); \
+					printf("File:%s\nline:%d\n", __FILE__, __LINE__); \
+					printf(" E: "); \
+					(void)printf(__VA_ARGS__); \
+					printf("\n"); \
+					SetConsoleColor(ConsoleColors::Default, ConsoleColors::Default); \
+					assert(false);
 #define ASSERT(Condition, ...) 
 #define ASSERTP(Condition, ...)  if(!(Condition)){LOGE(__VA_ARGS__);}
 

@@ -12,6 +12,7 @@ class DecentEnclave;
 class DecentAppEnclave;
 class EnclaveBase;
 class LocalAttestationSession;
+class DecentLogger;
 
 class DecentServerLASession : public CommSession
 {
@@ -24,7 +25,7 @@ public:
 
 	virtual ~DecentServerLASession();
 
-	virtual bool PerformDecentServerSideLA();
+	virtual bool PerformDecentServerSideLA(DecentLogger* logger = nullptr);
 
 	virtual const std::string GetSenderID() const override { return k_senderId; }
 

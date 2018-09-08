@@ -27,6 +27,8 @@
 #include "../common_app/Networking/LocalServer.h"
 #include "../common_app/Networking/DecentSmartServer.h"
 
+#include "../common_app/Logger/LoggerManager.h"
+
 #include "../common_app/SGX/IAS/IASConnector.h"
 
 #include "ExampleEnclave.h"
@@ -100,9 +102,10 @@ int main(int argc, char ** argv)
 		//expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
 
 		std::unique_ptr<Server> server(std::make_unique<TCPServer>(hostIP, hostPort));
-		//std::unique_ptr<Server> server(std::make_unique<LocalServer>("TestLocalConnection"));
+		//std::unique_ptr<Server> localServer(std::make_unique<LocalServer>("TestLocalConnection"));
 
 		smartServer.AddServer(server, enclave);
+		//smartServer.AddServer(localServer, enclave);
 		smartServer.RunUtilUserTerminate();
 
 	}
