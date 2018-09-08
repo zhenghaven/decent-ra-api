@@ -163,9 +163,9 @@ void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, s
 				connectionPtr->Receive(jsonRoot);
 				isEnded = !(handler->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connectionPtr));
 			}
-			catch (const std::exception& e)
+			catch (const std::exception&)
 			{
-				LOGI("Exception Caught when process connection: %s\n", e.what());
+				LOGI("Exception Caught when process connection.\n");
 				LOGI("Connection will be closed.\n");
 				isEnded = true;
 			}
