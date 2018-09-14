@@ -3,6 +3,7 @@
 #include <openssl/ec.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include <openssl/evp.h>
 
 
@@ -160,4 +161,196 @@ void FreeX509Cert(std::vector<X509*>& certs)
 		X509_free(*it);
 	}
 	certs.clear();
+}
+
+X509_NAME* ConstructX509NameList(const std::map<std::string, std::string>& inNameMap)
+{
+	X509_NAME* certName = X509_NAME_new();
+	if (!certName)
+	{
+		return nullptr;
+	}
+	int opensslRet = 1;
+	for (auto it = inNameMap.begin(); it != inNameMap.end() && opensslRet; ++it)
+	{
+		opensslRet = X509_NAME_add_entry_by_txt(certName, it->first.c_str(), MBSTRING_ASC, 
+			reinterpret_cast<const uint8_t*>(it->second.c_str()), static_cast<int>(it->second.size()),
+			-1, 0);
+	}
+	if (!opensslRet)
+	{
+		X509_NAME_free(certName);
+		return nullptr;
+	}
+	
+	return certName;
+}
+
+X509NameWrapper::X509NameWrapper(const std::map<std::string, std::string>& inNameMap) :
+	OpenSSLObjWrapper(ConstructX509NameList(inNameMap))
+{
+}
+
+X509NameWrapper::~X509NameWrapper()
+{
+	X509_NAME_free(m_ptr);
+}
+
+static int CertAddExtension(X509* cert, X509V3_CTX& ctx, int nid, const char* value)
+{
+	if (!cert || !value)
+	{
+		return 0;
+	}
+
+	X509_EXTENSION *ext = nullptr;
+	int res = 1;
+	ext = X509V3_EXT_conf_nid(nullptr, &ctx, nid, value);
+	if (!ext)
+	{
+		return 0;
+	}
+	res = X509_add_ext(cert, ext, -1);
+	X509_EXTENSION_free(ext);
+	return res;
+}
+
+static X509* ConstructX509Cert(X509 * caCert, EVP_PKEY * prvKey, EVP_PKEY * pubKey, const long validTime, const long serialNum, const X509NameWrapper & x509Names, const std::map<int, std::string>& extMap)
+{
+	if (!prvKey || !pubKey || !x509Names.GetInstance())
+	{
+		return nullptr;
+	}
+	EC_KEY* testPrv = EVP_PKEY_get1_EC_KEY(prvKey);
+	EC_KEY* testPub = EVP_PKEY_get1_EC_KEY(pubKey);
+	if (!testPrv ||
+		!testPub ||
+		!EC_KEY_get0_private_key(testPrv) ||
+		!EC_KEY_get0_public_key(testPub))
+	{
+		return nullptr;
+	}
+	if (caCert && !X509_verify(caCert, prvKey))
+	{
+		return nullptr;
+	}
+
+	X509* cert = X509_new();
+	if (!cert)
+	{
+		return nullptr;
+	}
+	if (!caCert)
+	{//Self Sign
+		caCert = cert;
+	}
+
+	if (!X509_set_version(cert, 2) ||
+		!X509_set_pubkey(cert, pubKey) ||
+		!X509_set_subject_name(cert, x509Names.GetInstance()) ||
+		!X509_set_issuer_name(cert, X509_get_subject_name(caCert)))
+	{
+		X509_free(cert);
+		return nullptr;
+	}
+
+
+	if (!ASN1_INTEGER_set(X509_get_serialNumber(cert), serialNum) ||
+		!X509_gmtime_adj(X509_get_notBefore(cert), 0) ||
+		!X509_gmtime_adj(X509_get_notAfter(cert), validTime))
+	{
+		X509_free(cert);
+		return nullptr;
+	}
+
+	X509V3_CTX ctx;
+
+	X509V3_set_ctx_nodb(&ctx);
+	X509V3_set_ctx(&ctx, caCert, cert, NULL, NULL, 0);
+
+	int opensslRet = 1;
+	for (auto it = extMap.begin(); it != extMap.end() && opensslRet; ++it)
+	{
+		opensslRet = CertAddExtension(cert, ctx, it->first, it->second.c_str());
+	}
+	if (!opensslRet)
+	{
+		X509_free(cert);
+		return nullptr;
+	}
+	
+	opensslRet = X509_sign(cert, prvKey, EVP_sha256());
+	if (!opensslRet)
+	{
+		X509_free(cert);
+		return nullptr;
+	}
+	else
+	{
+		return cert;
+	}
+}
+
+static X509* ConstructX509Cert(BIO * pemStr)
+{
+	if (!pemStr)
+	{
+		return nullptr;
+	}
+	return PEM_read_bio_X509(pemStr, nullptr, nullptr, nullptr);
+}
+
+static X509* ConstructX509Cert(const std::string& pemStr)
+{
+	if (!pemStr.size())
+	{
+		return nullptr;
+	}
+
+	BIO* certBio = BIO_new_mem_buf(pemStr.c_str(), static_cast<int>(pemStr.size()));
+
+	X509* cert = ConstructX509Cert(certBio);
+
+	BIO_free_all(certBio);
+	return cert;
+}
+
+X509Wrapper::X509Wrapper(const std::string & pemStr) :
+	OpenSSLObjWrapper(ConstructX509Cert(pemStr))
+{
+}
+
+X509Wrapper::X509Wrapper(BIO * pemStr) :
+	OpenSSLObjWrapper(ConstructX509Cert(pemStr))
+{
+}
+
+X509Wrapper::X509Wrapper(X509 * caCert, EVP_PKEY * prvKey, EVP_PKEY * pubKey, const long validTime, const long serialNum, const X509NameWrapper & x509Names, const std::map<int, std::string>& extMap) :
+	OpenSSLObjWrapper(ConstructX509Cert(caCert, prvKey, pubKey, validTime, serialNum, x509Names, extMap))
+{
+}
+
+X509Wrapper::~X509Wrapper()
+{
+	X509_free(m_ptr);
+}
+
+std::string X509Wrapper::ToPemString() const
+{
+	if (!m_ptr)
+	{
+		return std::string();
+	}
+	BIO* bio = BIO_new(BIO_s_mem());
+	if (!bio || !PEM_write_bio_X509(bio, m_ptr))
+	{
+		return std::string();
+	}
+
+	char* bufPtr = nullptr;
+	size_t len = BIO_get_mem_data(bio, &bufPtr);
+	std::string res(bufPtr, len);
+	BIO_free(bio);
+
+	return res;
 }
