@@ -197,19 +197,25 @@ const FileHandler::Mode FileHandler::GetMode() const
 	return m_mode;
 }
 
-bool FileHandler::ReadBlock(std::vector<uint8_t>& dest, size_t size)
+bool FileHandler::ReadBlock(std::vector<uint8_t>& binary, size_t size)
 {
-	dest.resize(size);
-	size_t resSize = std::fread(&dest[0], sizeof(uint8_t), size, m_file);
-	dest.resize(resSize);
+	binary.resize(size);
+	size_t resSize = std::fread(&binary[0], sizeof(uint8_t), size, m_file);
+	binary.resize(resSize);
 
 	return resSize == size;
 }
 
-bool FileHandler::WriteBlock(const std::vector<uint8_t>& dest)
+bool FileHandler::WriteBlock(const std::vector<uint8_t>& binary)
 {
-	size_t resSize = std::fwrite(&dest[0], 1, dest.size(), m_file);
-	return resSize == dest.size();
+	size_t resSize = std::fwrite(binary.data(), 1, binary.size(), m_file);
+	return resSize == binary.size();
+}
+
+bool FileHandler::WriteString(const std::string & str)
+{
+	size_t resSize = std::fwrite(str.data(), 1, str.size(), m_file);
+	return resSize == str.size();
 }
 
 int FileHandler::FSeek(size_t pos)

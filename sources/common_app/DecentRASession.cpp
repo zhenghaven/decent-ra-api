@@ -6,8 +6,6 @@
 
 #include <sgx_tcrypto.h>
 
-#include "Common.h"
-
 #include "EnclaveServiceProviderBase.h"
 #include "DecentEnclave.h"
 
@@ -18,6 +16,8 @@
 #include "MessageException.h"
 
 #include "Networking/Connection.h"
+#include "Logger/LoggerManager.h"
+
 #include "../common/DataCoding.h"
 
 static inline std::string ConstructSenderID(EnclaveServiceProviderBase & enclave)
@@ -39,8 +39,12 @@ bool DecentRASession::SmartMsgEntryPoint(Connection& connection, EnclaveServiceP
 	if (inType == DecentRAHandshake::sk_ValueType)
 	{
 		DecentRAHandshake hsMsg(jsonMsg);
+		std::unique_ptr<DecentLogger> logger(std::make_unique<DecentLogger>(hsMsg.GetSenderID()));
+		logger->AddMessage('I', "Received Decent Join Request.");
 		DecentRASession raSession(connection, hwEnclave, enclave, hsMsg);
-		bool res = raSession.ProcessServerSideRA();
+		bool res = raSession.ProcessServerSideRA(logger.get());
+		logger->AddMessage('I', "Completed Processing Decent Join Request.");
+		DecentLoggerManager::GetInstance().AddLogger(logger);
 		return res;
 	}
 	else if (inType == DecentRAHandshakeAck::sk_ValueType)
@@ -99,7 +103,7 @@ DecentRASession::~DecentRASession()
 {
 }
 
-bool DecentRASession::ProcessClientSideRA()
+bool DecentRASession::ProcessClientSideRA(DecentLogger* logger)
 {
 	if (k_isServerSide)
 	{
@@ -125,7 +129,7 @@ bool DecentRASession::ProcessClientSideRA()
 		m_connection.Receive(trustedMsgJson);
 
 		DecentTrustedMessage trustedMsg(trustedMsgJson);
-		m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection, trustedMsg.GetTrustedMsg());
+		bool res = m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection, trustedMsg.GetTrustedMsg());
 
 		return false;
 	}
@@ -137,7 +141,7 @@ bool DecentRASession::ProcessClientSideRA()
 	}
 }
 
-bool DecentRASession::ProcessServerSideRA()
+bool DecentRASession::ProcessServerSideRA(DecentLogger* logger)
 {
 	if (!k_isServerSide)
 	{
@@ -160,8 +164,15 @@ bool DecentRASession::ProcessServerSideRA()
 		m_connection.Receive(keyReqJson);
 		DecentProtocolKeyReq keyReq(keyReqJson);
 
-		m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
-
+		bool res = m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
+		if (res && logger)
+		{
+			logger->AddMessage('I', "New Node Attested Successfully!");
+		}
+		else if(logger)
+		{
+			logger->AddMessage('I', "New Node Failed Attestion!");
+		}
 		return false;
 	}
 	catch (const std::exception&)

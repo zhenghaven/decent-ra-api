@@ -95,10 +95,10 @@ bool DecentEnclave::ProcessIasRaReport(const std::string & inReport, const std::
 	DeserializeStruct(targetHash, inHashStr);
 
 	reportVerifyRes = reportVerifyRes && consttime_memequal(&outIasReport.m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t));
-	COMMON_PRINTF("IAS Report Is Hash Match:           %s \n", reportVerifyRes ? "Yes!" : "No!");
+	//COMMON_PRINTF("IAS Report Is Hash Match:           %s \n", reportVerifyRes ? "Yes!" : "No!");
 
 	reportVerifyRes = reportVerifyRes && (outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK));
-	COMMON_PRINTF("IAS Report Is Quote Status Valid:   %s \n", reportVerifyRes ? "Yes!" : "No!");
+	//COMMON_PRINTF("IAS Report Is Quote Status Valid:   %s \n", reportVerifyRes ? "Yes!" : "No!");
 
 	if (outPubKeyPem)
 	{

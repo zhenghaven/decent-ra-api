@@ -62,7 +62,7 @@ AESGCMCommLayer::~AESGCMCommLayer()
 
 bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg) const
 {
-	COMMON_PRINTF("Recv Encrypted Message: %s\n", inMsg);
+	//COMMON_PRINTF("Recv Encrypted Message: %s\n", inMsg);
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
 	if (!ParseStr2Json(jsonRoot, inMsg))
 	{
@@ -145,7 +145,7 @@ std::string AESGCMCommLayer::EncryptMsg(const std::string & msg) const
 	JsonCommonSetObject(doc, jsonRootRoot, sk_LabelRoot, jsonRoot);
 	
 	std::string res = Json2StyleString(jsonRootRoot);
-	COMMON_PRINTF("Send Encrypted Message: %s\n", res.c_str());
+	//COMMON_PRINTF("Send Encrypted Message: %s\n", res.c_str());
 
 	return res;
 }

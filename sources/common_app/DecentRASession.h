@@ -9,6 +9,8 @@ class Connection;
 class EnclaveServiceProviderBase;
 class DecentRAHandshake;
 class DecentRAHandshakeAck;
+class DecentLogger;
+
 namespace Json
 {
 	class Value;
@@ -38,7 +40,7 @@ public:
 	 *
 	 * \return	True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessClientSideRA();
+	virtual bool ProcessClientSideRA(DecentLogger* logger = nullptr);
 
 	/**
 	 * \brief	Process the server side Remote Attestation.
@@ -49,7 +51,7 @@ public:
 	 *
 	 * \return	True if it succeeds, false if it fails.
 	 */
-	virtual bool ProcessServerSideRA();
+	virtual bool ProcessServerSideRA(DecentLogger* logger = nullptr);
 
 	virtual const std::string GetSenderID() const override { return k_senderId; }
 

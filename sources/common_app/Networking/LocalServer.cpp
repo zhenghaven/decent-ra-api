@@ -133,18 +133,25 @@ LocalServer & LocalServer::operator=(LocalServer && other)
 	return *this;
 }
 
-std::unique_ptr<Connection> LocalServer::AcceptConnection()
+std::unique_ptr<Connection> LocalServer::AcceptConnection() noexcept
 {
 	if (m_isTerminated)
 	{
 		return nullptr;
 	}
-	std::unique_ptr<Connection> ptr = std::make_unique<LocalConnection>(m_acceptor);
-	if (m_isTerminated)
+	try
+	{
+		std::unique_ptr<Connection> ptr = std::make_unique<LocalConnection>(m_acceptor);
+		if (m_isTerminated)
+		{
+			return nullptr;
+		}
+		return std::move(ptr);
+	}
+	catch (const std::exception&)
 	{
 		return nullptr;
 	}
-	return std::move(ptr);
 }
 
 bool LocalServer::IsTerminated() noexcept

@@ -9,6 +9,7 @@
 #include "DecentMessages/DecentAppMessage.h"
 #include "MessageException.h"
 #include "Networking/Connection.h"
+#include "Logger/LoggerManager.h"
 
 template<class T>
 static inline T*  ParseMessageExpected(const Json::Value& json)
@@ -28,9 +29,12 @@ static inline T*  ParseMessageExpected(const Json::Value& json)
 bool DecentServerLASession::SmartMsgEntryPoint(Connection& connection, EnclaveBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
 {
 	std::unique_ptr<DecentServerLASession> serverSession;
+	std::unique_ptr<DecentLogger> logger;
 	try
 	{
 		serverSession.reset(new DecentServerLASession(connection, hwEnclave, enclave, jsonMsg));
+		logger = std::make_unique<DecentLogger>(serverSession->GetRemoteReceiverID());
+		logger->AddMessage('I', "Received DecentApp LA Request.");
 	}
 	catch (const MessageParseException&)
 	{
@@ -38,7 +42,9 @@ bool DecentServerLASession::SmartMsgEntryPoint(Connection& connection, EnclaveBa
 	}
 
 	bool res = false;
-	res = serverSession->PerformDecentServerSideLA();
+	res = serverSession->PerformDecentServerSideLA(logger.get());
+	logger->AddMessage('I', "Completed Processing DecentApp LA Request.");
+	DecentLoggerManager::GetInstance().AddLogger(logger);
 	return res;
 }
 
@@ -60,7 +66,7 @@ DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase
 {
 }
 
-bool DecentServerLASession::PerformDecentServerSideLA()
+bool DecentServerLASession::PerformDecentServerSideLA(DecentLogger* logger)
 {
 	if (!m_laSession)
 	{
@@ -83,7 +89,15 @@ bool DecentServerLASession::PerformDecentServerSideLA()
 		if (!res)
 		{
 			m_connection.Send(DecentAppErrMsg(k_senderId, "Enclave process error!"));
+			if (logger)
+			{
+				logger->AddMessage('I', "New App Failed Attestion!");
+			}
 			return false;
+		}
+		if (logger)
+		{
+			logger->AddMessage('I', "New App Attested Successfully!");
 		}
 	}
 	catch (const MessageParseException&)

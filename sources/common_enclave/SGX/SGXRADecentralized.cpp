@@ -129,7 +129,7 @@ extern "C" sgx_status_t ecall_to_decentralized_node(const char* id, int is_serve
 		g_decentrNodesMap.insert(std::make_pair(id, std::move(nodeCtx)));
 	}
 
-	COMMON_PRINTF("Accepted New Decentralized Node: %s\n", id);
+	//COMMON_PRINTF("Accepted New Decentralized Node: %s\n", id);
 
 	return SGX_SUCCESS;
 }

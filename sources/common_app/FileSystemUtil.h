@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <vector>
+#include <string>
 
 #include <boost/filesystem/path.hpp>
 
@@ -35,8 +36,9 @@ public:
 	bool IsOpen() const;
 	const Mode GetMode() const;
 
-	bool ReadBlock(std::vector<uint8_t>& dest, size_t size);
-	bool WriteBlock(const std::vector<uint8_t>& dest);
+	bool ReadBlock(std::vector<uint8_t>& binary, size_t size);
+	bool WriteBlock(const std::vector<uint8_t>& binary);
+	bool WriteString(const std::string& str);
 
 	int FSeek(size_t pos);
 	int FSeek(size_t pos, int origin);

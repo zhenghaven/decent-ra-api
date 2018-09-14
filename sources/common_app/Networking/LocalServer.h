@@ -57,7 +57,7 @@ public:
 	LocalServer& operator=(const LocalServer& other) = delete;
 	LocalServer& operator=(LocalServer&& other);
 
-	virtual std::unique_ptr<Connection> AcceptConnection() override;
+	virtual std::unique_ptr<Connection> AcceptConnection() noexcept override;
 
 	virtual bool IsTerminated() noexcept override;
 	virtual void Terminate() noexcept override;
