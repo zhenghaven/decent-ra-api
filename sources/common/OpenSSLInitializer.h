@@ -11,3 +11,24 @@ private:
 	OpenSSLInitializer();
 
 };
+
+class DecentOpenSSLInitializer
+{
+public:
+	//thread-safe since c++11.
+	static const DecentOpenSSLInitializer& Initialize();
+	~DecentOpenSSLInitializer();
+
+	//OpenSSLInitializer& GetOpenSSLInitializer();
+	const OpenSSLInitializer& GetOpenSSLInitializer() const;
+
+	int GetSelfRAReportNID() const;
+	int GetLocalAttestationIdNID() const;
+
+private:
+	DecentOpenSSLInitializer();
+
+	const OpenSSLInitializer& k_baseInit;
+	const int k_selfRAReportNID;
+	const int k_laIdNID;
+};

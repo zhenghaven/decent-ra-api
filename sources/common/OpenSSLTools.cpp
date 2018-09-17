@@ -291,37 +291,34 @@ static X509* ConstructX509Cert(X509 * caCert, EVP_PKEY * prvKey, EVP_PKEY * pubK
 	}
 }
 
-static X509* ConstructX509Cert(BIO * pemStr)
-{
-	if (!pemStr)
-	{
-		return nullptr;
-	}
-	return PEM_read_bio_X509(pemStr, nullptr, nullptr, nullptr);
-}
+#define DefConstructFromPemFunc(TypeX, FuncX) static TypeX* Construct_##FuncX(const std::string& pemStr) \
+									   {\
+										   if (!pemStr.size()) \
+										   { \
+											   return nullptr; \
+										   } \
+										   BIO* certBio = BIO_new_mem_buf(pemStr.c_str(), static_cast<int>(pemStr.size())); \
+										   TypeX* cert = PEM_read_bio_##FuncX(certBio, nullptr, nullptr, nullptr); \
+										   BIO_free_all(certBio);\
+										   return cert;\
+									   }
 
-static X509* ConstructX509Cert(const std::string& pemStr)
-{
-	if (!pemStr.size())
-	{
-		return nullptr;
-	}
+#define ToPemStringForType(FuncX, PTR) BIO* bio = BIO_new(BIO_s_mem()); \
+									   if (!bio || !PEM_write_bio_##FuncX(bio, PTR)){ return std::string(); } \
+									   char* bufPtr = nullptr; \
+									   size_t len = BIO_get_mem_data(bio, &bufPtr); \
+									   std::string res(bufPtr, len); \
+									   BIO_free_all(bio);
 
-	BIO* certBio = BIO_new_mem_buf(pemStr.c_str(), static_cast<int>(pemStr.size()));
-
-	X509* cert = ConstructX509Cert(certBio);
-
-	BIO_free_all(certBio);
-	return cert;
-}
+DefConstructFromPemFunc(X509, X509)
 
 X509Wrapper::X509Wrapper(const std::string & pemStr) :
-	OpenSSLObjWrapper(ConstructX509Cert(pemStr))
+	OpenSSLObjWrapper(Construct_X509(pemStr))
 {
 }
 
-X509Wrapper::X509Wrapper(BIO * pemStr) :
-	OpenSSLObjWrapper(ConstructX509Cert(pemStr))
+X509Wrapper::X509Wrapper(BIO& pemStr) :
+	OpenSSLObjWrapper(PEM_read_bio_X509(&pemStr, nullptr, nullptr, nullptr))
 {
 }
 
@@ -341,16 +338,152 @@ std::string X509Wrapper::ToPemString() const
 	{
 		return std::string();
 	}
-	BIO* bio = BIO_new(BIO_s_mem());
-	if (!bio || !PEM_write_bio_X509(bio, m_ptr))
+
+	ToPemStringForType(X509, m_ptr);
+
+	return res;
+}
+
+static X509_REQ* ConstructX509Req()
+{
+
+}
+
+DefConstructFromPemFunc(X509_REQ, X509_REQ)
+
+X509ReqWrapper::X509ReqWrapper(const std::string & pemStr) :
+	OpenSSLObjWrapper(Construct_X509_REQ(pemStr))
+{
+}
+
+X509ReqWrapper::X509ReqWrapper(BIO & pemStr) :
+	OpenSSLObjWrapper(PEM_read_bio_X509_REQ(&pemStr, nullptr, nullptr, nullptr))
+{
+}
+
+static X509_REQ* ConstructX509Req(const ECKeyPair& prvKey)
+{
+	if (!prvKey)
+	{
+		return nullptr;
+	}
+	return nullptr;
+}
+
+X509ReqWrapper::X509ReqWrapper(const ECKeyPair& prvKey) :
+	OpenSSLObjWrapper(ConstructX509Req(prvKey))
+{
+}
+
+X509ReqWrapper::~X509ReqWrapper()
+{
+	X509_REQ_free(m_ptr);
+}
+
+std::string X509ReqWrapper::ToPemString() const
+{
+	if (!m_ptr)
 	{
 		return std::string();
 	}
 
-	char* bufPtr = nullptr;
-	size_t len = BIO_get_mem_data(bio, &bufPtr);
-	std::string res(bufPtr, len);
-	BIO_free(bio);
+	ToPemStringForType(X509_REQ, m_ptr);
 
 	return res;
+}
+
+DefConstructFromPemFunc(EC_KEY, ECPrivateKey)
+
+static EVP_PKEY* ConstructPrivateKey(const std::string & pemStr)
+{
+	EC_KEY* ecKey = Construct_ECPrivateKey(pemStr);
+	if (!ecKey)
+	{
+		return nullptr;
+	}
+	EVP_PKEY* pKey = EVP_PKEY_new();
+	if (pKey && EVP_PKEY_assign_EC_KEY(pKey, ecKey))
+	{
+		return pKey;
+	}
+	return nullptr;
+}
+
+ECKeyPair::ECKeyPair(const std::string & pemStr) :
+	OpenSSLObjWrapper(ConstructPrivateKey(pemStr))
+{
+}
+
+ECKeyPair::~ECKeyPair()
+{
+	EVP_PKEY_free(m_ptr);
+}
+
+std::string ECKeyPair::ToPemString() const
+{
+	if (!m_ptr)
+	{
+		return std::string();
+	}
+
+	ToPemStringForType(EC_PUBKEY, GetInternalECKey());
+
+	return res;
+}
+
+EC_KEY * ECKeyPair::GetInternalECKey() const
+{
+	if (!m_ptr)
+	{
+		return nullptr;
+	}
+	return EVP_PKEY_get0_EC_KEY(m_ptr);
+}
+
+DefConstructFromPemFunc(EC_KEY, EC_PUBKEY)
+
+static EVP_PKEY* ConstructPublicKey(const std::string & pemStr)
+{
+	EC_KEY* ecKey = Construct_EC_PUBKEY(pemStr);
+	if (!ecKey)
+	{
+		return nullptr;
+	}
+	EVP_PKEY* pKey = EVP_PKEY_new();
+	if (pKey && EVP_PKEY_assign_EC_KEY(pKey, ecKey))
+	{
+		return pKey;
+	}
+	return nullptr;
+}
+
+ECKeyPublic::ECKeyPublic(const std::string & pemStr) :
+	OpenSSLObjWrapper(ConstructPublicKey(pemStr))
+{
+}
+
+ECKeyPublic::~ECKeyPublic()
+{
+	EVP_PKEY_free(m_ptr);
+}
+
+std::string ECKeyPublic::ToPemString() const
+{
+	if (!m_ptr)
+	{
+		return std::string();
+	}
+
+	ToPemStringForType(EC_PUBKEY, GetInternalECKey());
+
+	return res;
+}
+
+EC_KEY * ECKeyPublic::GetInternalECKey() const
+{
+	if (!m_ptr)
+	{
+		return nullptr;
+	}
+	return EVP_PKEY_get0_EC_KEY(m_ptr);
 }
