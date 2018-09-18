@@ -35,8 +35,8 @@ extern "C" {
 
 	typedef struct _general_secp256r1_signature_t
 	{
-		uint32_t x[GENERAL_256BIT_32BYTE_SIZE];
-		uint32_t y[GENERAL_256BIT_32BYTE_SIZE];
+		uint8_t x[GENERAL_256BIT_32BYTE_SIZE];
+		uint8_t y[GENERAL_256BIT_32BYTE_SIZE];
 	} general_secp256r1_signature_t;
 
 	typedef uint8_t general_aes_128bit_key[GENERAL_128BIT_16BYTE_SIZE];

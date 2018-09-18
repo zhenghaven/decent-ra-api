@@ -254,7 +254,7 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 
 	/*TODO: Safety check here: */
 	EC_KEY* pubECKey = EC_KEY_new();
-	bool opensslRet = ECKeyPubSGX2OpenSSL(&pubKey, pubECKey, nullptr);
+	bool opensslRet = ECKeyPubGeneral2OpenSSL(SgxEc256Type2General(&pubKey), pubECKey, nullptr);
 
 	Json::Value root;
 	Json::Value& decentReportBody = root[Decent::RAReport::sk_LabelRoot];

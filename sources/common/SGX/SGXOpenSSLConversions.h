@@ -2,15 +2,16 @@
 
 #include <string>
 
-#include <openssl/obj_mac.h>
+//#include <openssl/obj_mac.h>
+#include "../OpenSSLConversions.h"
 
 #define SGX_ECC256_CURVE_NAME NID_X9_62_prime256v1
 
-typedef struct bignum_st BIGNUM;
-typedef struct ec_point_st EC_POINT;
-typedef struct ec_key_st EC_KEY;
-typedef struct evp_pkey_st EVP_PKEY;
-typedef struct ECDSA_SIG_st ECDSA_SIG;
+//typedef struct bignum_st BIGNUM;
+//typedef struct ec_point_st EC_POINT;
+//typedef struct ec_key_st EC_KEY;
+//typedef struct evp_pkey_st EVP_PKEY;
+//typedef struct ECDSA_SIG_st ECDSA_SIG;
 
 typedef struct _sgx_ec256_private_t sgx_ec256_private_t;
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
@@ -18,27 +19,46 @@ typedef struct _sgx_ec256_dh_shared_t sgx_ec256_dh_shared_t;
 typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
 typedef void* sgx_ecc_state_handle_t;
 
-bool ECKeyOpenContext(sgx_ecc_state_handle_t* ctxPtr);
+__forceinline const general_secp256r1_public_t* SgxEc256Type2General(const sgx_ec256_public_t* x)
+{
+	return reinterpret_cast<const general_secp256r1_public_t*>(x);
+}
 
-void ECKeyCloseContext(sgx_ecc_state_handle_t inCtx);
+__forceinline const general_secp256r1_private_t* SgxEc256Type2General(const sgx_ec256_private_t* x)
+{
+	return reinterpret_cast<const general_secp256r1_private_t*>(x);
+}
 
-bool ECKeyPrvOpenSSL2SGX(const BIGNUM *inPrv, sgx_ec256_private_t *outPrv);
+__forceinline const general_secp256r1_shared_t* SgxEc256Type2General(const sgx_ec256_dh_shared_t* x)
+{
+	return reinterpret_cast<const general_secp256r1_shared_t*>(x);
+}
 
-bool ECKeyPubOpenSSL2SGX(const EC_POINT *inPub, sgx_ec256_public_t *outPub, sgx_ecc_state_handle_t inCtx);
+__forceinline const general_secp256r1_signature_t* SgxEc256Type2General(const sgx_ec256_signature_t* x)
+{
+	return reinterpret_cast<const general_secp256r1_signature_t*>(x);
+}
 
-bool ECKeyPrvSGX2OpenSSL(const sgx_ec256_private_t *inPrv, BIGNUM *outPrv);
+__forceinline general_secp256r1_public_t* SgxEc256Type2General(sgx_ec256_public_t* x)
+{
+	return reinterpret_cast<general_secp256r1_public_t*>(x);
+}
 
-bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_POINT *outPub, sgx_ecc_state_handle_t inCtx);
+__forceinline general_secp256r1_private_t* SgxEc256Type2General(sgx_ec256_private_t* x)
+{
+	return reinterpret_cast<general_secp256r1_private_t*>(x);
+}
 
-bool ECKeyGetPubFromPrv(const BIGNUM* inPrv, EC_POINT* outPub, sgx_ecc_state_handle_t inCtx);
+__forceinline general_secp256r1_shared_t* SgxEc256Type2General(sgx_ec256_dh_shared_t* x)
+{
+	return reinterpret_cast<general_secp256r1_shared_t*>(x);
+}
 
-bool ECKeyPairOpenSSL2SGX(const EC_KEY *inKeyPair, sgx_ec256_private_t *outPrv, sgx_ec256_public_t *outPub, sgx_ecc_state_handle_t inCtx);
+__forceinline general_secp256r1_signature_t* SgxEc256Type2General(sgx_ec256_signature_t* x)
+{
+	return reinterpret_cast<general_secp256r1_signature_t*>(x);
+}
 
-bool ECKeyPairSGX2OpenSSL(const sgx_ec256_private_t *inPrv, const sgx_ec256_public_t *inPub, EC_KEY *outKeyPair, sgx_ecc_state_handle_t inCtx);
-
-bool ECKeyPairSGX2OpenSSL(const sgx_ec256_private_t *inPrv, EC_KEY *outKeyPair, sgx_ecc_state_handle_t inCtx);
-
-bool ECKeyPubSGX2OpenSSL(const sgx_ec256_public_t *inPub, EC_KEY *outKeyPair, sgx_ecc_state_handle_t inCtx);
 
 bool ECKeyCalcSharedKey(EVP_PKEY* inKey, EVP_PKEY* inPeerKey, sgx_ec256_dh_shared_t *outSharedkey);
 
