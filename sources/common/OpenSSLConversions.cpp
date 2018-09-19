@@ -190,26 +190,38 @@ int ECKeyPairOpenSSL2General(const EC_KEY *inKeyPair, general_secp256r1_private_
 	return C_TRUE;
 }
 
-int ECKeyPrvGeneral2OpenSSL(const general_secp256r1_private_t * inPrv, BIGNUM * outPrv)
+BIGNUM* ECKeyPrvGeneral2OpenSSL(const general_secp256r1_private_t * inPrv)
 {
-	if (!inPrv || !outPrv)
+	BIGNUM* outPrv = nullptr;
+	if (!inPrv ||
+		!(outPrv = BN_new()))
 	{
-		return C_FALSE;
+		return nullptr;
 	}
 
 	std::vector<uint8_t> buffer(std::rbegin(inPrv->r), std::rend(inPrv->r));
 
-	return BN_bin2bn(buffer.data(), GENERAL_256BIT_32BYTE_SIZE, outPrv) != nullptr ? C_TRUE : C_FALSE;
+	if (BN_bin2bn(buffer.data(), GENERAL_256BIT_32BYTE_SIZE, outPrv))
+	{
+		return outPrv;
+	}
+	else
+	{
+		BN_clear_free(outPrv);
+		return nullptr;
+	}
 }
 
-int ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, EC_POINT *outPub, ecc_state_handle_t inCtx)
+EC_POINT* ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, ecc_state_handle_t inCtx)
 {
 	DecentEccContext* eccCtx = (inCtx == nullptr) ? OpenTempContext() : reinterpret_cast<DecentEccContext*>(inCtx);
+	EC_POINT* outPub = EC_POINT_new(eccCtx->m_grp);
 
 	if (!eccCtx || !inPub || !outPub)
 	{
+		EC_POINT_free(outPub);
 		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
+		return nullptr;
 	}
 
 	std::vector<uint8_t> buffer(std::rbegin(inPub->x), std::rend(inPub->x));
@@ -222,8 +234,9 @@ int ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, EC_POINT *o
 	{
 		BN_free(pubX);
 		BN_free(pubY);
+		EC_POINT_free(outPub);
 		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
+		return nullptr;
 	}
 
 	buffer.assign(std::rbegin(inPub->y), std::rend(inPub->y));
@@ -233,104 +246,87 @@ int ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, EC_POINT *o
 	{
 		BN_free(pubX);
 		BN_free(pubY);
+		EC_POINT_free(outPub);
 		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
+		return nullptr;
 	}
 
 	BN_free(pubX);
 	BN_free(pubY);
 	CloseTempContext(inCtx, eccCtx);
 
-	return C_TRUE;
+	return outPub;
 }
 
-int ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, EC_KEY *outKeyPair, ecc_state_handle_t inCtx)
+EC_KEY* ECKeyGeneral2OpenSSL(const general_secp256r1_public_t *inPub, ecc_state_handle_t inCtx)
 {
 	DecentEccContext* eccCtx = (inCtx == nullptr) ? OpenTempContext() : reinterpret_cast<DecentEccContext*>(inCtx);
 
-	int opensslRes = 0;
+	EC_KEY* outKeyPair = EC_KEY_new();
 
 	if (!eccCtx || !inPub || !outKeyPair ||
 		!EC_KEY_set_group(outKeyPair, eccCtx->m_grp))
 	{
+		EC_KEY_free(outKeyPair);
 		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
+		return nullptr;
 	}
 
-	EC_POINT* pub = EC_POINT_new(eccCtx->m_grp);
+	EC_POINT* pub = ECKeyPubGeneral2OpenSSL(inPub, eccCtx);
 	if (!pub ||
-		!ECKeyPubGeneral2OpenSSL(inPub, pub, eccCtx) ||
 		!EC_KEY_set_public_key(outKeyPair, pub))
 	{
 		EC_POINT_free(pub);
+		EC_KEY_free(outKeyPair);
 		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
+		return nullptr;
 	}
 
 	EC_POINT_free(pub);
 	CloseTempContext(inCtx, eccCtx);
-	return C_TRUE;
+	return outKeyPair;
 }
 
-int ECKeyPairGeneral2OpenSSL(const general_secp256r1_private_t *inPrv, const general_secp256r1_public_t *inPub, EC_KEY *outKeyPair, ecc_state_handle_t inCtx)
+EC_KEY* ECKeyGeneral2OpenSSL(const general_secp256r1_private_t *inPrv, const general_secp256r1_public_t *inPub, ecc_state_handle_t inCtx)
 {
 	DecentEccContext* eccCtx = (inCtx == nullptr) ? OpenTempContext() : reinterpret_cast<DecentEccContext*>(inCtx);
 
-	if (!eccCtx || !inPrv || !outKeyPair ||
-		!EC_KEY_set_group(outKeyPair, eccCtx->m_grp))
+	if (!eccCtx || !inPrv)
 	{
 		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
+		return nullptr;
 	}
 
-	BIGNUM* prvR = BN_new();
-	EC_POINT* pub = EC_POINT_new(eccCtx->m_grp);
-	if (!prvR || !pub)
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
-	}
-
-	if (!ECKeyPrvGeneral2OpenSSL(inPrv, prvR))
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
-	}
-
-	if ((!inPub && !ECKeyGetPubFromPrv(prvR, pub, eccCtx)) ||
-		(inPub && !ECKeyPubGeneral2OpenSSL(inPub, pub, eccCtx)))
-	{
-		BN_free(prvR);
-		EC_POINT_free(pub);
-		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
-	}
-
-	if (!EC_KEY_set_private_key(outKeyPair, prvR) ||
+	EC_KEY* outKeyPair = EC_KEY_new();
+	BIGNUM* prvR = ECKeyPrvGeneral2OpenSSL(inPrv);
+	EC_POINT* pub = inPub ? ECKeyPubGeneral2OpenSSL(inPub, eccCtx) : ECKeyGetPubFromPrv(prvR, eccCtx);
+	if (!prvR || !pub || !outKeyPair ||
+		!EC_KEY_set_group(outKeyPair, eccCtx->m_grp) ||
+		!EC_KEY_set_private_key(outKeyPair, prvR) ||
 		!EC_KEY_set_public_key(outKeyPair, pub))
 	{
-		BN_free(prvR);
+		BN_clear_free(prvR);
 		EC_POINT_free(pub);
+		EC_KEY_free(outKeyPair);
 		CloseTempContext(inCtx, eccCtx);
-		return C_FALSE;
+		return nullptr;
 	}
 
-	BN_free(prvR);
+	BN_clear_free(prvR);
 	EC_POINT_free(pub);
 	CloseTempContext(inCtx, eccCtx);
-	return C_TRUE;
+	return outKeyPair;
 }
 
-int ECKeyGetPubFromPrv(const BIGNUM* inPrv, EC_POINT* outPub, ecc_state_handle_t inCtx)
+EC_POINT* ECKeyGetPubFromPrv(const BIGNUM* inPrv, ecc_state_handle_t inCtx)
 {
 	DecentEccContext* eccCtx = (inCtx == nullptr) ? OpenTempContext() : reinterpret_cast<DecentEccContext*>(inCtx);
+	
+	EC_POINT* outPub = EC_POINT_new(eccCtx->m_grp);
 
 	if (!eccCtx || !inPrv || !outPub)
 	{
+		EC_POINT_free(outPub);
 		CloseTempContext(inCtx, eccCtx);
 		return C_FALSE;
 	}
@@ -338,7 +334,15 @@ int ECKeyGetPubFromPrv(const BIGNUM* inPrv, EC_POINT* outPub, ecc_state_handle_t
 	int opensslRes = EC_POINT_mul(eccCtx->m_grp, outPub, inPrv, NULL, NULL, eccCtx->m_bnCtx);
 	CloseTempContext(inCtx, eccCtx);
 
-	return opensslRes;
+	if (opensslRes)
+	{
+		return outPub;
+	}
+	else
+	{
+		EC_POINT_free(outPub);
+		return nullptr;
+	}
 }
 
 

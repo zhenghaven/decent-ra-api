@@ -253,8 +253,7 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	//ToDecentralizedNode(senderID, true);
 
 	/*TODO: Safety check here: */
-	EC_KEY* pubECKey = EC_KEY_new();
-	bool opensslRet = ECKeyPubGeneral2OpenSSL(SgxEc256Type2General(&pubKey), pubECKey, nullptr);
+	EC_KEY* pubECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(&pubKey), nullptr);
 
 	Json::Value root;
 	Json::Value& decentReportBody = root[Decent::RAReport::sk_LabelRoot];

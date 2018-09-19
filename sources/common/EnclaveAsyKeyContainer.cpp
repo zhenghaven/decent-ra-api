@@ -6,6 +6,8 @@
 #include "DataCoding.h"
 #include "SGX/SGXOpenSSLConversions.h"
 
+#include "OpenSSLTools.h"
+
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
@@ -72,21 +74,26 @@ EnclaveAsyKeyContainer::EnclaveAsyKeyContainer()
 		IS_IN_ENCLAVE_SIDE ? "Enclave" : "App", 
 		SerializeStruct(*tmpPub).c_str());
 
-	//std::shared_ptr<std::string> pubPem = std::make_shared<std::string>();
-	//std::string testStr;
-	//ECKeyPubSGX2Pem(*tmpPub, testStr);
+	std::unique_ptr<ECKeyPublic> tmpPubOpen(new ECKeyPublic(SgxEc256Type2General(*tmpPub)));
+	std::unique_ptr<ECKeyPair> tmpPrvOpen(new ECKeyPair(SgxEc256Type2General(tmpPrv->m_prvKey)));
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPriKey, std::shared_ptr<const PrivateKeyWrap>(tmpPrv.release()));
 	std::atomic_store(&m_signPubKey, std::shared_ptr<const sgx_ec256_public_t>(tmpPub.release()));
-	//std::atomic_store(&m_signPubPem, pubPem);
+	std::atomic_store(&m_signPriKeyOpen, std::shared_ptr<const ECKeyPair>(tmpPrvOpen.release()));
+	std::atomic_store(&m_signPubKeyOpen, std::shared_ptr<const ECKeyPublic>(tmpPubOpen.release()));
 #else
 	m_signPriKey.reset(tmpPrv.release());
 	m_signPubKey.reset(tmpPub.release());
-	//m_signPubPem = pubPem;
+	m_signPriKeyOpen.reset(tmpPrvOpen.release());
+	m_signPubKeyOpen.reset(tmpPubOpen.release());
 #endif // DECENT_THREAD_SAFETY_HIGH
 
 	m_isValid = true;
+}
+
+EnclaveAsyKeyContainer::EnclaveAsyKeyContainer(std::pair<std::unique_ptr<sgx_ec256_public_t>, std::unique_ptr<PrivateKeyWrap>> keyPair)
+{
 }
 
 EnclaveAsyKeyContainer::~EnclaveAsyKeyContainer()
@@ -116,6 +123,24 @@ std::shared_ptr<const sgx_ec256_public_t> EnclaveAsyKeyContainer::GetSignPubKey(
 #endif // !DECENT_THREAD_SAFETY_HIGH
 }
 
+std::shared_ptr<const ECKeyPublic> EnclaveAsyKeyContainer::GetSignPubKeyOpenSSL() const
+{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	return std::atomic_load(&m_signPubKeyOpen);
+#else
+	return m_signPubKeyOpen;
+#endif // !DECENT_THREAD_SAFETY_HIGH
+}
+
+std::shared_ptr<const ECKeyPair> EnclaveAsyKeyContainer::GetSignPrvKeyOpenSSL() const
+{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	return std::atomic_load(&m_signPriKeyOpen);
+#else
+	return m_signPriKeyOpen;
+#endif // !DECENT_THREAD_SAFETY_HIGH
+}
+
 //std::shared_ptr<const std::string> EnclaveAsyKeyContainer::GetSignPubPem() const
 //{
 //#ifdef DECENT_THREAD_SAFETY_HIGH
@@ -134,16 +159,18 @@ void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyW
 //		IS_IN_ENCLAVE_SIDE ? "Enclave" : "App",
 //		SerializeStruct(prv->m_prvKey).c_str());
 
-	//std::shared_ptr<std::string> pubPem(new std::string);
-	//ECKeyPubSGX2Pem(*pub, *pubPem);
+	std::unique_ptr<ECKeyPublic> tmpPubOpen(new ECKeyPublic(SgxEc256Type2General(*pub)));
+	std::unique_ptr<ECKeyPair> tmpPrvOpen(new ECKeyPair(SgxEc256Type2General(prv->m_prvKey)));
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPriKey, prv);
 	std::atomic_store(&m_signPubKey, pub);
-	//std::atomic_store(&m_signPubPem, pubPem);
+	std::atomic_store(&m_signPriKeyOpen, std::shared_ptr<const ECKeyPair>(tmpPrvOpen.release()));
+	std::atomic_store(&m_signPubKeyOpen, std::shared_ptr<const ECKeyPublic>(tmpPubOpen.release()));
 #else
 	m_signPriKey = prv;
 	m_signPubKey = pub;
-	//m_signPubPem = pubPem;
+	m_signPriKeyOpen.reset(tmpPrvOpen.release());
+	m_signPubKeyOpen.reset(tmpPubOpen.release());
 #endif // !DECENT_THREAD_SAFETY_HIGH
 }

@@ -23,7 +23,8 @@ OpenSSLInitializer::~OpenSSLInitializer()
 DecentOpenSSLInitializer::DecentOpenSSLInitializer() :
 	k_baseInit(OpenSSLInitializer::Initialize()),
 	k_selfRAReportNID(OBJ_create("2.25.210204819921761154072721866869208165061", "SelfRaReport", "Decent Self Remote Attestation Report")),
-	k_laIdNID(OBJ_create("2.25.128165920542469106824459777090692906263", "LaId", "Decent Local Attestation Identity"))
+	k_laIdNID(OBJ_create("2.25.128165920542469106824459777090692906263", "LaId", "Decent Local Attestation Identity")),
+	k_platformTypeNID(OBJ_create("2.25.294010332531314719175946865483017979201", "PlatformType", "Decent Enclave Platform Type"))
 {
 }
 
@@ -50,4 +51,9 @@ int DecentOpenSSLInitializer::GetSelfRAReportNID() const
 int DecentOpenSSLInitializer::GetLocalAttestationIdNID() const
 {
 	return k_laIdNID;
+}
+
+int DecentOpenSSLInitializer::GetPlatformTypeNID() const
+{
+	return k_platformTypeNID;
 }

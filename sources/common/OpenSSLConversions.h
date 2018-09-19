@@ -28,14 +28,14 @@ int ECKeyPairOpenSSL2General(const EC_KEY *inKeyPair, general_secp256r1_private_
 
 //General -> OpenSSL
 
-int ECKeyPrvGeneral2OpenSSL(const general_secp256r1_private_t *inPrv, BIGNUM *outPrv);
+BIGNUM*   ECKeyPrvGeneral2OpenSSL(const general_secp256r1_private_t *inPrv);
 
-int ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, EC_POINT *outPub, ecc_state_handle_t inCtx);
+EC_POINT* ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, ecc_state_handle_t inCtx);
 
-int ECKeyPubGeneral2OpenSSL(const general_secp256r1_public_t *inPub, EC_KEY *outKeyPair, ecc_state_handle_t inCtx);
+EC_KEY* ECKeyGeneral2OpenSSL(const general_secp256r1_public_t *inPub, ecc_state_handle_t inCtx);
 
-int ECKeyPairGeneral2OpenSSL(const general_secp256r1_private_t *inPrv, const general_secp256r1_public_t *inPub, EC_KEY *outKeyPair, ecc_state_handle_t inCtx);
+EC_KEY* ECKeyGeneral2OpenSSL(const general_secp256r1_private_t *inPrv, const general_secp256r1_public_t *inPub, ecc_state_handle_t inCtx);
 
 //Misc
 
-int ECKeyGetPubFromPrv(const BIGNUM* inPrv, EC_POINT* outPub, ecc_state_handle_t inCtx);
+EC_POINT* ECKeyGetPubFromPrv(const BIGNUM* inPrv, ecc_state_handle_t inCtx);

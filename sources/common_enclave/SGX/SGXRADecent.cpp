@@ -15,18 +15,19 @@
 #include "../DecentError.h"
 #include "../Common.h"
 
-#include "../common/JsonTools.h"
-#include "../common/DataCoding.h"
-#include "../common/DecentRAReport.h"
-#include "../common/AESGCMCommLayer.h"
-#include "../common/EnclaveAsyKeyContainer.h"
+#include "../../common/JsonTools.h"
+#include "../../common/DataCoding.h"
+#include "../../common/DecentRAReport.h"
+#include "../../common/AESGCMCommLayer.h"
+#include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/OpenSSLInitializer.h"
 
-#include "../common/SGX/sgx_constants.h"
-#include "../common/SGX/sgx_crypto_tools.h"
-#include "../common/SGX/ias_report.h"
-#include "../common/SGX/IasReport.h"
-#include "../common/SGX/SGXRAServiceProvider.h"
-#include "../common/SGX/SGXOpenSSLConversions.h"
+#include "../../common/SGX/sgx_constants.h"
+#include "../../common/SGX/sgx_crypto_tools.h"
+#include "../../common/SGX/ias_report.h"
+#include "../../common/SGX/IasReport.h"
+#include "../../common/SGX/SGXRAServiceProvider.h"
+#include "../../common/SGX/SGXOpenSSLConversions.h"
 
 #include "decent_ra_tools.h"
 #include "decent_tkey_exchange.h"
@@ -94,6 +95,7 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	ocall_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
 	SetSelfEnclaveHash(SerializeStruct(enclaveHash));
 
+	DecentOpenSSLInitializer::Initialize();
 	return SGX_SUCCESS;
 }
 

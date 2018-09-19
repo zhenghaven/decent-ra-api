@@ -24,6 +24,7 @@ public:
 
 	int GetSelfRAReportNID() const;
 	int GetLocalAttestationIdNID() const;
+	int GetPlatformTypeNID() const;
 
 private:
 	DecentOpenSSLInitializer();
@@ -31,4 +32,5 @@ private:
 	const OpenSSLInitializer& k_baseInit;
 	const int k_selfRAReportNID;
 	const int k_laIdNID;
+	const int k_platformTypeNID;
 };

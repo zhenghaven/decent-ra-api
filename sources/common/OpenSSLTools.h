@@ -22,9 +22,10 @@ public:
 	{}
 
 	OpenSSLObjWrapper(const OpenSSLObjWrapper& other) = delete;
-	OpenSSLObjWrapper(OpenSSLObjWrapper&& other) :
-		m_ptr(other.m_ptr)
+	OpenSSLObjWrapper(OpenSSLObjWrapper&& other)
 	{
+		this->~OpenSSLObjWrapper();
+		this->m_ptr = other.m_ptr;
 		other.m_ptr = nullptr;
 	}
 
@@ -33,6 +34,7 @@ public:
 	{
 		if (this != &other)
 		{
+			this->~OpenSSLObjWrapper();
 			this->m_ptr = other.m_ptr;
 			other.m_ptr = nullptr;
 		}
@@ -46,7 +48,7 @@ public:
 		return m_ptr;
 	}
 
-	T* GetInstance() const
+	T* GetInternalPtr() const
 	{
 		return m_ptr;
 	}
@@ -74,6 +76,9 @@ public:
 	std::string ToPemString() const;
 
 	EC_KEY* GetInternalECKey() const;
+
+private:
+	ECKeyPair(EC_KEY* keyPair);
 };
 
 class ECKeyPublic : public OpenSSLObjWrapper<EVP_PKEY>
@@ -87,6 +92,9 @@ public:
 	std::string ToPemString() const;
 
 	EC_KEY* GetInternalECKey() const;
+
+private:
+	ECKeyPublic(EC_KEY* key);
 };
 
 class X509NameWrapper : public OpenSSLObjWrapper<X509_NAME>
@@ -95,9 +103,6 @@ public:
 	X509NameWrapper() = delete;
 	X509NameWrapper(const std::map<std::string, std::string>& inNameMap);
 	X509NameWrapper(const X509NameWrapper& other) = delete;
-	X509NameWrapper(X509NameWrapper&& other) :
-		OpenSSLObjWrapper(std::move(other))
-	{}
 	virtual ~X509NameWrapper();
 };
 
@@ -107,15 +112,17 @@ public:
 	X509Wrapper() = delete;
 	X509Wrapper(const std::string& pemStr);
 	X509Wrapper(BIO& pemStr);
-	X509Wrapper(X509* caCert, EVP_PKEY* prvKey, EVP_PKEY* pubKey, const long validTime, const long serialNum,
+	X509Wrapper(const ECKeyPair& prvKey, const long validTime, const long serialNum,
+		const X509NameWrapper& x509Names, const std::map<int, std::string>& extMap);
+	X509Wrapper(const X509Wrapper& caCert, const ECKeyPair& prvKey, const ECKeyPublic& pubKey, const long validTime, const long serialNum,
 		const X509NameWrapper& x509Names, const std::map<int, std::string>& extMap);
 	X509Wrapper(const X509Wrapper& other) = delete;
-	X509Wrapper(X509Wrapper&& other) :
-		OpenSSLObjWrapper(std::move(other))
-	{}
 	virtual ~X509Wrapper();
 
 	std::string ToPemString() const;
+
+protected:
+	const std::string ParseExtensionString(int nid) const;
 };
 
 class X509ReqWrapper : public OpenSSLObjWrapper<X509_REQ>
@@ -132,6 +139,25 @@ public:
 	virtual ~X509ReqWrapper();
 
 	std::string ToPemString() const;
+};
+
+class DecentServerX509 : public X509Wrapper
+{
+public:
+	DecentServerX509() = delete;
+	DecentServerX509(const std::string& pemStr);
+	DecentServerX509(const ECKeyPair& prvKey, const std::string& platformType, const std::string& selfRaReport);
+	DecentServerX509(const X509Wrapper& other) = delete;
+	virtual ~DecentServerX509() {}
+
+	const std::string& GetPlatformType() const;
+	const std::string& GetSelfRaReport() const;
+
+private:
+	const std::string ParsePlatformType() const;
+	const std::string ParseSelfRaReport() const;
+	const std::string k_platformType;
+	const std::string k_selfRaReport;
 };
 
 std::string ECKeyPubGetPEMStr(const EC_KEY* inKey);

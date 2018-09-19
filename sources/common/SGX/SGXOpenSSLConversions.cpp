@@ -180,10 +180,9 @@ bool ECKeySignSGX2OpenSSL(const sgx_ec256_signature_t * inSign, ECDSA_SIG * outS
 
 bool ECKeyPubSGX2Pem(const sgx_ec256_public_t & inPub, std::string & outPem)
 {
-	EC_KEY* pubKey = EC_KEY_new();
-	if (!pubKey || !ECKeyPubGeneral2OpenSSL(SgxEc256Type2General(&inPub), pubKey, nullptr))
+	EC_KEY* pubKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(&inPub), nullptr);
+	if (!pubKey)
 	{
-		EC_KEY_free(pubKey);
 		return false;
 	}
 	outPem = ECKeyPubGetPEMStr(pubKey);

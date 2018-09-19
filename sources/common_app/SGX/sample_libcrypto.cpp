@@ -392,14 +392,10 @@ sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, s
 
 	EVP_PKEY* myKey = EVP_PKEY_new();
 	EVP_PKEY* peerKey = EVP_PKEY_new();
-	EC_KEY* myECKey = EC_KEY_new();
-	EC_KEY* peerECKey = EC_KEY_new();
+	EC_KEY* myECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(p_private_b), nullptr, ecc_handle);
+	EC_KEY* peerECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(p_public_ga), ecc_handle);
 	if (!myKey || !peerKey || !myECKey || !peerECKey ||
-		!ECKeyPairGeneral2OpenSSL(SgxEc256Type2General(p_private_b), nullptr, myECKey, ecc_handle) ||
-		!ECKeyPubGeneral2OpenSSL(SgxEc256Type2General(p_public_ga), peerECKey, ecc_handle) ||
-		!EVP_PKEY_set1_EC_KEY(myKey, myECKey) ||
-		!EVP_PKEY_set1_EC_KEY(peerKey, peerECKey)||
-		!ECKeyCalcSharedKey(myKey, peerKey, p_shared_key))
+		!EVP_PKEY_assign_EC_KEY(myKey, myECKey))
 	{
 		EVP_PKEY_free(myKey);
 		EVP_PKEY_free(peerKey);
@@ -408,10 +404,23 @@ sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, s
 		return SGX_ERROR_UNEXPECTED;
 	}
 
+	if (!EVP_PKEY_assign_EC_KEY(peerKey, peerECKey))
+	{
+		EVP_PKEY_free(myKey);
+		EVP_PKEY_free(peerKey);
+		EC_KEY_free(peerECKey);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if (!ECKeyCalcSharedKey(myKey, peerKey, p_shared_key))
+	{
+		EVP_PKEY_free(myKey);
+		EVP_PKEY_free(peerKey);
+		return SGX_ERROR_UNEXPECTED;
+	}
+
 	EVP_PKEY_free(myKey);
 	EVP_PKEY_free(peerKey);
-	EC_KEY_free(myECKey);
-	EC_KEY_free(peerECKey);
 	return SGX_SUCCESS;
 }
 
@@ -429,15 +438,9 @@ sgx_status_t sgx_ecdsa_sign(const uint8_t *p_data, uint32_t data_size, sgx_ec256
 		return sgxRes;
 	}
 
-	EC_KEY* prvECKey = EC_KEY_new();
+	EC_KEY* prvECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(p_private), nullptr, ecc_handle);
 	if (!prvECKey)
 	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	if (!ECKeyPairGeneral2OpenSSL(SgxEc256Type2General(p_private), nullptr, prvECKey, ecc_handle))
-	{
-		EC_KEY_free(prvECKey);
 		return SGX_ERROR_UNEXPECTED;
 	}
 
@@ -474,7 +477,7 @@ sgx_status_t sgx_ecdsa_verify(const uint8_t *p_data, uint32_t data_size, const s
 		return sgxRes;
 	}
 
-	EC_KEY* pubECKey = EC_KEY_new();
+	EC_KEY* pubECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(p_public), ecc_handle);
 	ECDSA_SIG* sign = ECDSA_SIG_new();
 	if (!pubECKey || !sign)
 	{
@@ -490,34 +493,25 @@ sgx_status_t sgx_ecdsa_verify(const uint8_t *p_data, uint32_t data_size, const s
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	if (!ECKeyPubGeneral2OpenSSL(SgxEc256Type2General(p_public), pubECKey, ecc_handle))
-	{
-		EC_KEY_free(pubECKey);
-		ECDSA_SIG_free(sign);
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	int opensslRes = 0;
+	sgx_status_t ret = SGX_SUCCESS;
 	
-	opensslRes = ECDSA_do_verify(hash, SGX_SHA256_HASH_SIZE, sign, pubECKey);
-	if (opensslRes == 1)
+	switch (ECDSA_do_verify(hash, SGX_SHA256_HASH_SIZE, sign, pubECKey))
 	{
-		*p_result = SGX_EC_VALID;
-	}
-	else if (opensslRes == 0)
-	{
+	case 0:
 		*p_result = SGX_EC_INVALID_SIGNATURE;
-	}
-	else
-	{
-		EC_KEY_free(pubECKey);
-		ECDSA_SIG_free(sign);
-		return SGX_ERROR_UNEXPECTED;
+		break;
+	case 1:
+		*p_result = SGX_EC_VALID;
+		break;
+	default:
+		ret = SGX_ERROR_UNEXPECTED;
+		break;
 	}
 
 	EC_KEY_free(pubECKey);
 	ECDSA_SIG_free(sign);
-	return SGX_SUCCESS;
+	
+	return ret;
 }
 
 //Copied from SDK code.

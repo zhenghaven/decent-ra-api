@@ -5,6 +5,9 @@
 #include <string>
 #include <cstring>
 
+class ECKeyPublic;
+class ECKeyPair;
+
 struct PrivateKeyWrap
 {
 	sgx_ec256_private_t m_prvKey;
@@ -39,16 +42,24 @@ public:
 
 	virtual std::shared_ptr<const sgx_ec256_public_t> GetSignPubKey() const;
 
+	virtual std::shared_ptr<const ECKeyPublic> GetSignPubKeyOpenSSL() const;
+
+	virtual std::shared_ptr<const ECKeyPair> GetSignPrvKeyOpenSSL() const;
+
 	//virtual std::shared_ptr<const std::string> GetSignPubPem() const;
 
 	virtual void UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const sgx_ec256_public_t> pub);
 
 private:
+	EnclaveAsyKeyContainer(std::pair<std::unique_ptr<sgx_ec256_public_t>, std::unique_ptr<PrivateKeyWrap> > keyPair);
+
 	std::shared_ptr<const sgx_ec256_public_t> m_signPubKey;
 
 	std::shared_ptr<const PrivateKeyWrap> m_signPriKey;
 
-	//std::shared_ptr<const std::string> m_signPubPem;
+	std::shared_ptr<const ECKeyPublic> m_signPubKeyOpen;
+
+	std::shared_ptr<const ECKeyPair> m_signPriKeyOpen;
 
 	bool m_isValid;
 };
