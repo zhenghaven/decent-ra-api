@@ -597,12 +597,12 @@ DecentServerX509::DecentServerX509(const std::string & pemStr) :
 {
 }
 
-DecentServerX509::DecentServerX509(const ECKeyPair & prvKey, const std::string& platformType, const std::string& selfRaReport) :
+DecentServerX509::DecentServerX509(const ECKeyPair & prvKey, const std::string& enclaveHash, const std::string& platformType, const std::string& selfRaReport) :
 	X509Wrapper(prvKey, 
 		LONG_MAX, 
 		GetDecentSerialNumber(), 
 		X509NameWrapper(std::map<std::string, std::string>({
-			std::pair<std::string, std::string>("CN", "DecentServer"),
+			std::pair<std::string, std::string>("CN", enclaveHash),
 		})), 
 		std::map<int, std::string>{
 			std::pair<int, std::string>(NID_basic_constraints, "critical,CA:TRUE"),
@@ -610,8 +610,8 @@ DecentServerX509::DecentServerX509(const ECKeyPair & prvKey, const std::string& 
 			std::pair<int, std::string>(NID_ext_key_usage, "serverAuth,clientAuth"),
 			std::pair<int, std::string>(NID_subject_key_identifier, "hash"),
 			std::pair<int, std::string>(NID_netscape_cert_type, "sslCA,client,server"),
-			std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID(), platformType),
-			std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetSelfRAReportNID(), selfRaReport),
+			std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID(), "critical," + platformType),
+			std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetSelfRAReportNID(), "critical," + selfRaReport),
 		}),
 	k_platformType(platformType),
 	k_selfRaReport(selfRaReport)

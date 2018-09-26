@@ -2,6 +2,7 @@
 
 #include <openssl/ssl.h>
 #include <openssl/objects.h>
+#include <openssl/x509v3.h>
 
 const OpenSSLInitializer & OpenSSLInitializer::Initialize()
 {
@@ -26,6 +27,9 @@ DecentOpenSSLInitializer::DecentOpenSSLInitializer() :
 	k_laIdNID(OBJ_create("2.25.128165920542469106824459777090692906263", "LaId", "Decent Local Attestation Identity")),
 	k_platformTypeNID(OBJ_create("2.25.294010332531314719175946865483017979201", "PlatformType", "Decent Enclave Platform Type"))
 {
+	X509V3_EXT_add_alias(k_selfRAReportNID, NID_netscape_comment);
+	X509V3_EXT_add_alias(k_laIdNID, NID_netscape_comment);
+	X509V3_EXT_add_alias(k_platformTypeNID, NID_netscape_comment);
 }
 
 const DecentOpenSSLInitializer & DecentOpenSSLInitializer::Initialize()

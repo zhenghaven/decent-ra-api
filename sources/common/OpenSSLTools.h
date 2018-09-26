@@ -146,7 +146,7 @@ class DecentServerX509 : public X509Wrapper
 public:
 	DecentServerX509() = delete;
 	DecentServerX509(const std::string& pemStr);
-	DecentServerX509(const ECKeyPair& prvKey, const std::string& platformType, const std::string& selfRaReport);
+	DecentServerX509(const ECKeyPair& prvKey, const std::string& enclaveHash, const std::string& platformType, const std::string& selfRaReport);
 	DecentServerX509(const X509Wrapper& other) = delete;
 	virtual ~DecentServerX509() {}
 
