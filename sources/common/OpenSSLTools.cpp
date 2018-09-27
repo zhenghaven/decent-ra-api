@@ -318,23 +318,32 @@ static X509* ConstructX509Cert(X509 * caCert, EVP_PKEY * prvKey, EVP_PKEY * pubK
 
 DefConstructFromPemFunc(X509, X509)
 
+static inline EVP_PKEY* GetPubkeyFromX509Const(const X509* cert)
+{
+	return cert ? X509_get0_pubkey(cert) : nullptr;
+}
+
 X509Wrapper::X509Wrapper(const std::string & pemStr) :
-	OpenSSLObjWrapper(Construct_X509(pemStr))
+	OpenSSLObjWrapper(Construct_X509(pemStr)),
+	k_pubKey(GetPubkeyFromX509Const(m_ptr), false)
 {
 }
 
 X509Wrapper::X509Wrapper(BIO& pemStr) :
-	OpenSSLObjWrapper(PEM_read_bio_X509(&pemStr, nullptr, nullptr, nullptr))
+	OpenSSLObjWrapper(PEM_read_bio_X509(&pemStr, nullptr, nullptr, nullptr)),
+	k_pubKey(GetPubkeyFromX509Const(m_ptr), false)
 {
 }
 
 X509Wrapper::X509Wrapper(const ECKeyPair & prvKey, const long validTime, const long serialNum, const X509NameWrapper & x509Names, const std::map<int, std::string>& extMap) :
-	OpenSSLObjWrapper(ConstructX509Cert(nullptr, prvKey.GetInternalPtr(), prvKey.GetInternalPtr(), validTime, serialNum, x509Names, extMap))
+	OpenSSLObjWrapper(ConstructX509Cert(nullptr, prvKey.GetInternalPtr(), prvKey.GetInternalPtr(), validTime, serialNum, x509Names, extMap)),
+	k_pubKey(GetPubkeyFromX509Const(m_ptr), false)
 {
 }
 
 X509Wrapper::X509Wrapper(const X509Wrapper & caCert, const ECKeyPair & prvKey, const ECKeyPublic & pubKey, const long validTime, const long serialNum, const X509NameWrapper & x509Names, const std::map<int, std::string>& extMap) :
-	OpenSSLObjWrapper(ConstructX509Cert(caCert.GetInternalPtr(), prvKey.GetInternalPtr(), pubKey.GetInternalPtr(), validTime, serialNum, x509Names, extMap))
+	OpenSSLObjWrapper(ConstructX509Cert(caCert.GetInternalPtr(), prvKey.GetInternalPtr(), pubKey.GetInternalPtr(), validTime, serialNum, x509Names, extMap)),
+	k_pubKey(GetPubkeyFromX509Const(m_ptr), false)
 {
 }
 
@@ -353,6 +362,21 @@ std::string X509Wrapper::ToPemString() const
 	ToPemStringForType(X509, m_ptr);
 
 	return res;
+}
+
+const ECKeyPublic & X509Wrapper::GetPublicKey() const
+{
+	return k_pubKey;
+}
+
+bool X509Wrapper::VerifySignature() const
+{
+	return VerifySignature(k_pubKey);
+}
+
+bool X509Wrapper::VerifySignature(const ECKeyPublic & pubKey) const
+{
+	return X509_verify(m_ptr, pubKey.GetInternalPtr()) == 1;
 }
 
 const std::string X509Wrapper::ParseExtensionString(int nid) const
@@ -385,20 +409,22 @@ const std::string X509Wrapper::ParseExtensionString(int nid) const
 	return res;
 }
 
-static X509_REQ* ConstructX509Req()
-{
-
-}
-
 DefConstructFromPemFunc(X509_REQ, X509_REQ)
 
+static inline EVP_PKEY* GetPubkeyFromX509ReqConst(X509_REQ* cert)
+{
+	return cert ? X509_REQ_get0_pubkey(cert) : nullptr;
+}
+
 X509ReqWrapper::X509ReqWrapper(const std::string & pemStr) :
-	OpenSSLObjWrapper(Construct_X509_REQ(pemStr))
+	OpenSSLObjWrapper(Construct_X509_REQ(pemStr)),
+	k_pubKey(GetPubkeyFromX509ReqConst(m_ptr), false)
 {
 }
 
 X509ReqWrapper::X509ReqWrapper(BIO & pemStr) :
-	OpenSSLObjWrapper(PEM_read_bio_X509_REQ(&pemStr, nullptr, nullptr, nullptr))
+	OpenSSLObjWrapper(PEM_read_bio_X509_REQ(&pemStr, nullptr, nullptr, nullptr)),
+	k_pubKey(GetPubkeyFromX509ReqConst(m_ptr), false)
 {
 }
 
@@ -423,7 +449,8 @@ static X509_REQ* ConstructX509Req(const ECKeyPair& prvKey)
 }
 
 X509ReqWrapper::X509ReqWrapper(const ECKeyPair& prvKey) :
-	OpenSSLObjWrapper(ConstructX509Req(prvKey))
+	OpenSSLObjWrapper(ConstructX509Req(prvKey)),
+	k_pubKey(GetPubkeyFromX509ReqConst(m_ptr), false)
 {
 }
 
@@ -442,6 +469,21 @@ std::string X509ReqWrapper::ToPemString() const
 	ToPemStringForType(X509_REQ, m_ptr);
 
 	return res;
+}
+
+const ECKeyPublic & X509ReqWrapper::GetPublicKey() const
+{
+	return k_pubKey;
+}
+
+bool X509ReqWrapper::VerifySignature() const
+{
+	return VerifySignature(k_pubKey);
+}
+
+bool X509ReqWrapper::VerifySignature(const ECKeyPublic & pubKey) const
+{
+	return X509_REQ_verify(m_ptr, pubKey.GetInternalPtr()) == 1;
 }
 
 DefConstructFromPemFunc(EC_KEY, ECPrivateKey)
@@ -480,6 +522,12 @@ static EVP_PKEY* ConstructECKeyPair(EC_KEY* keyPair)
 	return ret;
 }
 
+ECKeyPair::ECKeyPair(EVP_PKEY * ptr, bool isOwner) :
+	OpenSSLObjWrapper(ptr),
+	m_isOwner(isOwner)
+{
+}
+
 ECKeyPair::ECKeyPair(const std::string & pemStr) :
 	OpenSSLObjWrapper(ConstructPrivateKey(pemStr))
 {
@@ -502,7 +550,10 @@ ECKeyPair::ECKeyPair(EC_KEY* keyPair) :
 
 ECKeyPair::~ECKeyPair()
 {
-	EVP_PKEY_free(m_ptr);
+	if (m_isOwner)
+	{
+		EVP_PKEY_free(m_ptr);
+	}
 }
 
 std::string ECKeyPair::ToPemString() const
@@ -543,6 +594,12 @@ static EVP_PKEY* ConstructPublicKey(const std::string & pemStr)
 	return nullptr;
 }
 
+ECKeyPublic::ECKeyPublic(EVP_PKEY * ptr, bool isOwner) :
+	OpenSSLObjWrapper(ptr),
+	m_isOwner(isOwner)
+{
+}
+
 ECKeyPublic::ECKeyPublic(const std::string & pemStr) :
 	OpenSSLObjWrapper(ConstructPublicKey(pemStr))
 {
@@ -560,7 +617,10 @@ ECKeyPublic::ECKeyPublic(EC_KEY * key) :
 
 ECKeyPublic::~ECKeyPublic()
 {
-	EVP_PKEY_free(m_ptr);
+	if (m_isOwner)
+	{
+		EVP_PKEY_free(m_ptr);
+	}
 }
 
 std::string ECKeyPublic::ToPemString() const
@@ -636,4 +696,52 @@ const std::string DecentServerX509::ParsePlatformType() const
 const std::string DecentServerX509::ParseSelfRaReport() const
 {
 	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetSelfRAReportNID());
+}
+
+DecentAppX509::DecentAppX509(const std::string & pemStr) :
+	X509Wrapper(pemStr),
+	k_platformType(ParsePlatformType()),
+	k_appId(ParseAppId())
+{
+}
+
+DecentAppX509::DecentAppX509(const ECKeyPublic & pubKey, const DecentServerX509& caCert, const ECKeyPair & serverPrvKey, const std::string & enclaveHash, const std::string & platformType, const std::string & appId) :
+	X509Wrapper(caCert, serverPrvKey, pubKey, 
+		LONG_MAX,
+		GetDecentSerialNumber(),
+		X509NameWrapper(std::map<std::string, std::string>({
+			std::pair<std::string, std::string>("CN", enclaveHash),
+			})),
+			std::map<int, std::string>{
+	std::pair<int, std::string>(NID_basic_constraints, "critical,CA:TRUE"),
+		std::pair<int, std::string>(NID_key_usage, "critical,nonRepudiation,digitalSignature,keyAgreement,keyCertSign,cRLSign"),
+		std::pair<int, std::string>(NID_ext_key_usage, "serverAuth,clientAuth"),
+		std::pair<int, std::string>(NID_subject_key_identifier, "hash"),
+		std::pair<int, std::string>(NID_netscape_cert_type, "sslCA,client,server"),
+		std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID(), "critical," + platformType),
+		std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetLocalAttestationIdNID(), "critical," + appId),
+	}),
+	k_platformType(platformType),
+	k_appId(appId)
+{
+}
+
+const std::string & DecentAppX509::GetPlatformType() const
+{
+	return k_platformType;
+}
+
+const std::string & DecentAppX509::GetAppId() const
+{
+	return k_appId;
+}
+
+const std::string DecentAppX509::ParsePlatformType() const
+{
+	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID());
+}
+
+const std::string DecentAppX509::ParseAppId() const
+{
+	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetLocalAttestationIdNID());
 }

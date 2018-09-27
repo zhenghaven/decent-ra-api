@@ -28,7 +28,6 @@ public:
 	//DecentEnclave methods:
 	virtual std::string GetDecentSelfRAReport() const override;
 	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
-	virtual bool DecentBecomeRoot() override;
 	virtual bool ProcessDecentProtoKeyMsg(const std::string& nodeID, Connection& connection, const std::string& jsonMsg) override;
 	virtual bool SendProtocolKey(const std::string& nodeID, Connection& connection) override;
 	virtual bool ProcessAppReportSignReq(const std::string& appId, Connection& connection, const std::string& jsonMsg, const char* appAttach) override;

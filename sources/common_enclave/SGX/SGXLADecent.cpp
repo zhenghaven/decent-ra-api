@@ -27,6 +27,8 @@
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 
+#include "../../common_enclave/DecentCertContainer.h"
+
 static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg, const char* appAttach)
 {
 	int retVal = 0;
@@ -61,42 +63,29 @@ static_assert(offsetof(sgx_report_body_t, isv_prod_id) == offsetof(sgx_dh_sessio
 static_assert(offsetof(sgx_report_body_t, isv_svn) == offsetof(sgx_dh_session_enclave_identity_t, isv_svn), STRUCT_ASSERT_ERROR_MSG);
 static_assert(offsetof(sgx_report_body_t, reserved4) == sizeof(sgx_dh_session_enclave_identity_t), STRUCT_ASSERT_ERROR_MSG);
 
-static inline sgx_status_t ecall_decent_send_app_report_sign(const sgx_dh_session_enclave_identity_t& identity, const sgx_report_data_t& reportData, std::unique_ptr<const SecureCommLayer>& commLayer, void* const connectionPtr, const char* appAttach)
+static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity_t& identity, const X509ReqWrapper& x509Req, std::unique_ptr<const SecureCommLayer>& commLayer, void* const connectionPtr, const char* appAttach)
 {
-	sgx_report_body_t report = { 0 };
+	std::shared_ptr<const ECKeyPair> signKey = EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKeyOpenSSL();
+	std::shared_ptr<const DecentServerX509> serverCert = DecentCertContainer::Get().GetServerCert();
 
-	//If we can sure the structure of sgx_dh_session_enclave_identity_t and sgx_report_body_t are similar, we can do a faster copy.
-	std::memcpy(&(report.cpu_svn), &(identity.cpu_svn), sizeof(sgx_dh_session_enclave_identity_t));
-	std::memcpy(&(report.report_data), &reportData, sizeof(sgx_report_data_t));
-
-	std::shared_ptr<const PrivateKeyWrap> signKey = EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKey();
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_ec256_signature_t signature;
-	sgx_ecc_state_handle_t ecState;
-
-	enclaveRet = sgx_ecc256_open_context(&ecState);
-	if (enclaveRet != SGX_SUCCESS)
+	if (!x509Req.VerifySignature())
 	{
-		return enclaveRet;
+		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	enclaveRet = sgx_ecdsa_sign(reinterpret_cast<uint8_t*>(&report), sizeof(report), const_cast<sgx_ec256_private_t*>(&signKey->m_prvKey), &signature, ecState);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return enclaveRet;
-	}
+	DecentAppX509 appX509(x509Req.GetPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), SGXLADecent::gsk_ValuePlatformType, SerializeStruct(identity));
 
-	sgx_ecc256_close_context(ecState);
+	if (!appX509)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
 
 	rapidjson::Document doc;
 	rapidjson::Value jsonRoot;
 
-	std::string reportB64 = SerializeStruct(report);
-	std::string signB64 = SerializeStruct(signature);
 
-	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelFunc, SGXLADecent::gsk_ValueFuncAppSign);
-	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelReport, reportB64);
-	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelSign, signB64);
+	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelFunc, SGXLADecent::gsk_ValueFuncAppX509);
+	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelAppX509, appX509.ToPemString());
 
 	if (!commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot), appAttach))
 	{
@@ -109,7 +98,9 @@ static inline sgx_status_t ecall_decent_send_app_report_sign(const sgx_dh_sessio
 
 extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, void* const connectionPtr, const char* jsonMsg, const char* appAttach)
 {
-	if (!peerId || !connectionPtr || !jsonMsg)
+	auto serverCert = DecentCertContainer::Get().GetServerCert();
+
+	if (!peerId || !connectionPtr || !jsonMsg || !serverCert || !*serverCert)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -130,7 +121,7 @@ extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, 
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
+	rapidjson::Document jsonRoot;
 	if (!ParseStr2Json(jsonRoot, plainMsg) ||
 		!jsonRoot.HasMember(SGXLADecent::gsk_LabelFunc) ||
 		!jsonRoot[SGXLADecent::gsk_LabelFunc].IsString())
@@ -140,17 +131,21 @@ extern "C" sgx_status_t ecall_decent_proc_send_app_sign_req(const char* peerId, 
 
 	std::string funcType(jsonRoot[SGXLADecent::gsk_LabelFunc].GetString());
 
-	if (funcType == SGXLADecent::gsk_ValueFuncReportData)
+	if (funcType == SGXLADecent::gsk_ValueFuncAppX509Req)
 	{
-		if (!jsonRoot.HasMember(SGXLADecent::gsk_LabelReportData) || !jsonRoot[SGXLADecent::gsk_LabelReportData].IsString())
+		if (!jsonRoot.HasMember(SGXLADecent::gsk_LabelX509Req) || !jsonRoot[SGXLADecent::gsk_LabelX509Req].IsString())
 		{
 			return SGX_ERROR_INVALID_PARAMETER;
 		}
 
-		sgx_report_data_t reportData;
-		DeserializeStruct(reportData, jsonRoot[SGXLADecent::gsk_LabelReportData].GetString());
+		X509ReqWrapper appX509Req(jsonRoot[SGXLADecent::gsk_LabelX509Req].GetString());
 
-		return ecall_decent_send_app_report_sign(*identity, reportData, commLayer, connectionPtr, appAttach);
+		if (!appX509Req)
+		{
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
+
+		return SendAppX509Cert(*identity, appX509Req, commLayer, connectionPtr, appAttach);
 	}
 
 	return SGX_ERROR_INVALID_PARAMETER;

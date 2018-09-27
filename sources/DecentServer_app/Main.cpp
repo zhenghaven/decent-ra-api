@@ -97,7 +97,6 @@ int main(int argc, char ** argv)
 			std::make_shared<SGXDecentEnclave>(
 				g_sgxSPID, iasConnector, true, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
 		
-		enclave->DecentBecomeRoot();
 		//std::string decentSelfRaReport = expEnc.GetDecentSelfRAReport();
 		//expEnc.ProcessDecentSelfRAReport(decentSelfRaReport);
 

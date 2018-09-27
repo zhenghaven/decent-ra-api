@@ -57,10 +57,17 @@ bool DecentEnclave::DecentReportDataVerifier(const std::string& pubSignKey, cons
 	return std::memcmp(tmpHash, inData.data(), sizeof(sgx_sha256_hash_t)) == 0;
 }
 
-bool DecentEnclave::ProcessIasRaReport(const std::string & inReport, const std::string& inHashStr, sgx_ec256_public_t& outPubKey, std::string* outPubKeyPem, sgx_ias_report_t& outIasReport)
+bool DecentEnclave::ProcessIasRaReport(const DecentServerX509 & inX509, const std::string& inHashStr, sgx_ias_report_t& outIasReport)
 {
+	if (!inX509 
+		|| inX509.GetPlatformType() != Decent::RAReport::sk_ValueReportType
+		|| !inX509.VerifySignature())
+	{
+		return false;
+	}
+
 	rapidjson::Document jsonDoc;
-	jsonDoc.Parse(inReport.c_str());
+	jsonDoc.Parse(inX509.GetSelfRaReport().c_str());
 
 	if (!jsonDoc.HasMember(Decent::RAReport::sk_LabelRoot))
 	{
@@ -68,13 +75,6 @@ bool DecentEnclave::ProcessIasRaReport(const std::string & inReport, const std::
 	}
 	rapidjson::Value& jsonRoot = jsonDoc[Decent::RAReport::sk_LabelRoot];
 
-	if (!jsonRoot.HasMember(Decent::RAReport::sk_LabelType) || 
-		!(std::string(jsonRoot[Decent::RAReport::sk_LabelType].GetString()) == Decent::RAReport::sk_ValueReportType))
-	{
-		return false;
-	}
-
-	std::string pubKey = jsonRoot[Decent::RAReport::sk_LabelPubKey].GetString();
 	std::string iasReportStr = jsonRoot[Decent::RAReport::sk_LabelIasReport].GetString();
 	std::string iasSign = jsonRoot[Decent::RAReport::sk_LabelIasSign].GetString();
 	std::string iasCertChain = jsonRoot[Decent::RAReport::sk_LabelIasCertChain].GetString();
@@ -82,14 +82,13 @@ bool DecentEnclave::ProcessIasRaReport(const std::string & inReport, const std::
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);
 
-	ReportDataVerifier reportDataVerifier = [pubKey](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
+	std::string pubKeyPem = inX509.GetPublicKey().ToPemString();
+	ReportDataVerifier reportDataVerifier = [pubKeyPem](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
 	{
-		return DecentReportDataVerifier(pubKey, initData, inData);
+		return DecentReportDataVerifier(pubKeyPem, initData, inData);
 	};
 	/*TODO: determine if we need to add nonce in here.*/
 	bool reportVerifyRes = SGXRAEnclave::VerifyIASReport(outIasReport, iasReportStr, iasCertChain, iasSign, oriReportData, reportDataVerifier, nullptr);
-
-	reportVerifyRes = (ECKeyPubPem2SGX(pubKey, outPubKey) && reportVerifyRes);
 
 	sgx_measurement_t targetHash;
 	DeserializeStruct(targetHash, inHashStr);
@@ -99,11 +98,6 @@ bool DecentEnclave::ProcessIasRaReport(const std::string & inReport, const std::
 
 	reportVerifyRes = reportVerifyRes && (outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK));
 	//COMMON_PRINTF("IAS Report Is Quote Status Valid:   %s \n", reportVerifyRes ? "Yes!" : "No!");
-
-	if (outPubKeyPem)
-	{
-		pubKey.swap(*outPubKeyPem);
-	}
 
 	return reportVerifyRes;
 }

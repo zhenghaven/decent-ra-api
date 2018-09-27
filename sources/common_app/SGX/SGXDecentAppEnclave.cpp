@@ -33,12 +33,12 @@ bool SGXDecentAppEnclave::ProcessDecentSelfRAReport(std::string & inReport)
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentAppEnclave::SendReportDataToServer(const std::string & decentId, Connection& connection)
+bool SGXDecentAppEnclave::SendCertReqToServer(const std::string & decentId, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_decent_app_send_report_data(GetEnclaveId(), &retval, decentId.c_str(), &connection, nullptr);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_process_ias_ra_report);
+	enclaveRet = ecall_decent_app_send_x509_req(GetEnclaveId(), &retval, decentId.c_str(), &connection, nullptr);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_send_x509_req);
 
 	return retval == SGX_SUCCESS;
 }
@@ -48,22 +48,30 @@ bool SGXDecentAppEnclave::ProcessAppReportSignMsg(const std::string & trustedMsg
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	m_sgxEnclaveReport.reset(new sgx_report_body_t);
-	m_sgxEnclaveReportSign.reset(new sgx_ec256_signature_t);
+	enclaveRet = ecall_decent_app_proc_app_x509_msg(GetEnclaveId(), &retval, trustedMsg.c_str());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_proc_app_x509_msg);
 
-	enclaveRet = ecall_decent_app_proc_app_sign_msg(GetEnclaveId(), &retval, trustedMsg.c_str(), m_sgxEnclaveReport.get(), m_sgxEnclaveReportSign.get());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_proc_app_sign_msg);
+	if (retval != SGX_SUCCESS)
+	{
+		return false;
+	}
 
-	if (retval == SGX_SUCCESS)
+
+	size_t certLen = 0;
+	std::string retReport(5000, '\0');
+
+	enclaveRet = ecall_decent_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_get_x509_pem);
+
+	if (certLen > retReport.size())
 	{
-		m_enclaveReport = SerializeStruct(*m_sgxEnclaveReport);
-		m_enclaveReportSign = SerializeStruct(*m_sgxEnclaveReportSign);
+		retReport.resize(certLen);
+
+		enclaveRet = ecall_decent_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
+		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_get_x509_pem);
 	}
-	else
-	{
-		m_sgxEnclaveReport.reset();
-		m_sgxEnclaveReportSign.reset();
-	}
+
+	retReport.resize(certLen);
 
 	return retval == SGX_SUCCESS;
 }
@@ -73,14 +81,9 @@ const std::string & SGXDecentAppEnclave::GetDecentRAReport() const
 	return m_decentRAReport;
 }
 
-const std::string & SGXDecentAppEnclave::GetEnclaveReport() const
+const std::string & SGXDecentAppEnclave::GetAppCert() const
 {
-	return m_enclaveReport;
-}
-
-const std::string & SGXDecentAppEnclave::GetEnclaveReportSign() const
-{
-	return m_enclaveReportSign;
+	return m_appCert;
 }
 
 bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)

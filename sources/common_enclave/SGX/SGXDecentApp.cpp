@@ -20,14 +20,17 @@
 #include "SGXDecentCommon.h"
 
 #include "../Common.h"
-#include "../../common/DataCoding.h"
 #include "../../common/JsonTools.h"
-#include "../../common/SGX/SGXOpenSSLConversions.h"
+#include "../../common/DataCoding.h"
+#include "../../common/OpenSSLTools.h"
+#include "../../common/DecentRAReport.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
-#include "../../common/DecentRAReport.h"
 
+#include "../../common/SGX/SGXOpenSSLConversions.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
+
+#include "../../common_enclave/DecentCertContainer.h"
 
 namespace
 {
@@ -37,7 +40,7 @@ namespace
 	//Hardcoded decent enclave's hash. (Not used until decent program is stable)
 	static constexpr char gk_decentHash[] = "";
 
-	static std::shared_ptr<const sgx_ec256_public_t> g_decentPubKey;
+	//static std::shared_ptr<const sgx_ec256_public_t> g_decentPubKey;
 }
 
 static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg, const char* attach)
@@ -51,30 +54,37 @@ static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, c
 	return retVal == 1;
 }
 
-extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* reportStr)
+extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509Pem)
 {
-	if (!reportStr)
+	auto serverCert = DecentCertContainer::Get().GetServerCert();
+
+	if (!x509Pem || serverCert)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	std::shared_ptr<sgx_ec256_public_t> decentPubKey = std::make_shared<sgx_ec256_public_t>();
+	std::shared_ptr<DecentServerX509> inCert(new DecentServerX509(x509Pem));
+	if (!inCert || !(*inCert))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
 
 	sgx_ias_report_t iasReport;
-	bool verifyRes = DecentEnclave::ProcessIasRaReport(reportStr, gk_decentHash, *decentPubKey, nullptr, iasReport);
+	bool verifyRes = DecentEnclave::ProcessIasRaReport(*inCert, gk_decentHash, iasReport);
 	//Won't be successful now, since the decent hash is unknown.
 	//if (!verifyRes)
 	//{
 	//	return SGX_ERROR_INVALID_PARAMETER;
 	//}
 
-	g_decentPubKey = decentPubKey;
-	//COMMON_PRINTF("Accepted Decent Server %s.\n", SerializeStruct(*g_decentPubKey).c_str());
+	DecentCertContainer::Get().SetServerCert(inCert);
+	//COMMON_PRINTF("Accepted Decent Server.\n%s\n", DecentCertContainer::Get().GetServerCert()->ToPemString().c_str());
 
 	return SGX_SUCCESS;
 }
 
-extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, void* const connectionPtr, const char* const appAttach)
+//Send x509 req to decent server.
+extern "C" sgx_status_t ecall_decent_app_send_x509_req(const char* decentId, void* const connectionPtr, const char* const appAttach)
 {
 	if (!decentId || !connectionPtr)
 	{
@@ -101,44 +111,17 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 
 	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer = EnclaveAsyKeyContainer::GetInstance();
 	std::shared_ptr<const sgx_ec256_public_t> pubKey = keyContainer->GetSignPubKey();
+	std::shared_ptr<const ECKeyPair> prvKeyOpenSSL = keyContainer->GetSignPrvKeyOpenSSL();
+
 	std::shared_ptr<const SecureCommLayer> commLayer(new AESGCMCommLayer(*aesKey, SerializeStruct(*pubKey), &CommLayerSendFunc));
 
-	sgx_report_data_t reportData;
-	std::memset(&reportData, 0, sizeof(sgx_report_data_t));
-
-	//std::shared_ptr<const std::string> pubPem = EnclaveAsyKeyContainer::GetInstance().GetSignPubPem();
-	std::string pubPem;
-	ECKeyPubSGX2Pem(*keyContainer->GetSignPubKey(), pubPem);
-
-	sgx_sha_state_handle_t shaState;
-	//sgx_sha256_hash_t tmpHash;
-	sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return enclaveRet;
-	}
-	enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubPem.data()), static_cast<uint32_t>(pubPem.size()), shaState);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		sgx_sha256_close(shaState);
-		return enclaveRet;
-	}
-	enclaveRet = sgx_sha256_get_hash(shaState, reinterpret_cast<sgx_sha256_hash_t*>(&reportData));
-	sgx_sha256_close(shaState);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return enclaveRet;
-	}
-
-	//std::memcpy(&reportData, &tmpHash, sizeof(sgx_sha256_hash_t));
-
+	X509ReqWrapper certReq(*prvKeyOpenSSL);
+	
 	rapidjson::Document doc;
 	rapidjson::Value jsonRoot;
 
-	std::string reportDataB64 = SerializeStruct(reportData);
-
-	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelFunc, SGXLADecent::gsk_ValueFuncReportData);
-	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelReportData, reportDataB64);
+	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelFunc, SGXLADecent::gsk_ValueFuncAppX509Req);
+	JsonCommonSetString(doc, jsonRoot, SGXLADecent::gsk_LabelX509Req, certReq.ToPemString());
 
 	if (!commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot), appAttach))
 	{
@@ -150,9 +133,12 @@ extern "C" sgx_status_t ecall_decent_app_send_report_data(const char* decentId, 
 	return SGX_SUCCESS;
 }
 
-extern "C" sgx_status_t ecall_decent_app_proc_app_sign_msg(const char* jsonMsg, sgx_report_body_t* outReport, sgx_ec256_signature_t* outSign)
+//Proc application's x509 msg received from server. 
+extern "C" sgx_status_t ecall_decent_app_proc_app_x509_msg(const char* jsonMsg)
 {
-	if (!g_decentCommLayer || !g_decentPubKey)
+	auto serverCert = DecentCertContainer::Get().GetServerCert();
+
+	if (!g_decentCommLayer || !serverCert || !*serverCert)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -168,51 +154,47 @@ extern "C" sgx_status_t ecall_decent_app_proc_app_sign_msg(const char* jsonMsg, 
 
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
 	if (!ParseStr2Json(jsonRoot, plainMsg) ||
-		!jsonRoot.HasMember(SGXLADecent::gsk_LabelFunc) ||
-		!jsonRoot[SGXLADecent::gsk_LabelFunc].IsString())
+		!jsonRoot.HasMember(SGXLADecent::gsk_LabelFunc) || !jsonRoot[SGXLADecent::gsk_LabelFunc].IsString())
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
 	std::string funcType(jsonRoot[SGXLADecent::gsk_LabelFunc].GetString());
 
-	if (funcType == SGXLADecent::gsk_ValueFuncAppSign)
+	if (funcType == SGXLADecent::gsk_ValueFuncAppX509)
 	{
-		if (!jsonRoot.HasMember(SGXLADecent::gsk_LabelReport) || !jsonRoot[SGXLADecent::gsk_LabelReport].IsString() ||
-		!jsonRoot.HasMember(SGXLADecent::gsk_LabelSign) || !jsonRoot[SGXLADecent::gsk_LabelSign].IsString() )
+		if (!jsonRoot.HasMember(SGXLADecent::gsk_LabelAppX509) || !jsonRoot[SGXLADecent::gsk_LabelAppX509].IsString())
 		{
 			return SGX_ERROR_INVALID_PARAMETER;
 		}
 
-		DeserializeStruct(*outReport, jsonRoot[SGXLADecent::gsk_LabelReport].GetString());
-		DeserializeStruct(*outSign, jsonRoot[SGXLADecent::gsk_LabelSign].GetString());
-
-		sgx_ecc_state_handle_t ecState;
-		sgx_status_t enclaveRet = SGX_SUCCESS;
-
-		enclaveRet = sgx_ecc256_open_context(&ecState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return enclaveRet;
-		}
-
-		uint8_t ecdsaRes = SGX_EC_INVALID_SIGNATURE;
-		enclaveRet = sgx_ecdsa_verify(reinterpret_cast<uint8_t*>(outReport), sizeof(sgx_report_body_t), g_decentPubKey.get(), outSign, &ecdsaRes, ecState);
-		sgx_ecc256_close_context(ecState);
-
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return enclaveRet;
-		}
-		if (ecdsaRes != SGX_EC_VALID)
+		std::shared_ptr<DecentAppX509> cert(new DecentAppX509(jsonRoot[SGXLADecent::gsk_LabelAppX509].GetString()));
+		if (!cert || !*cert)
 		{
 			return SGX_ERROR_UNEXPECTED;
 		}
+
+		DecentCertContainer::Get().SetCert(cert);
+		//COMMON_PRINTF("Received X509 from Decent Server. \n%s\n", DecentCertContainer::Get().GetCert()->ToPemString().c_str());
 
 		return SGX_SUCCESS;
 	}
 
 	return SGX_ERROR_INVALID_PARAMETER;
+}
+
+extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)
+{
+	auto cert = DecentCertContainer::Get().GetCert();
+	if (!cert || !(*cert))
+	{
+		return 0;
+	}
+
+	std::string x509Pem = cert->ToPemString();
+	std::memcpy(buf, x509Pem.data(), buf_len > x509Pem.size() ? x509Pem.size() : buf_len);
+
+	return x509Pem.size();
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL

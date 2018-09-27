@@ -17,10 +17,11 @@
 
 #include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
+#include "../../common/OpenSSLTools.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/AESGCMCommLayer.h"
-#include "../../common/EnclaveAsyKeyContainer.h"
 #include "../../common/OpenSSLInitializer.h"
+#include "../../common/EnclaveAsyKeyContainer.h"
 
 #include "../../common/SGX/sgx_constants.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
@@ -28,6 +29,8 @@
 #include "../../common/SGX/IasReport.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
 #include "../../common/SGX/SGXOpenSSLConversions.h"
+
+#include "../../common_enclave/DecentCertContainer.h"
 
 #include "decent_ra_tools.h"
 #include "decent_tkey_exchange.h"
@@ -44,7 +47,7 @@ namespace
 	//Assume this is set correctly during init and no change afterwards.
 	static std::shared_ptr<const std::string> g_selfHash = std::make_shared<const std::string>("");
 
-	std::string g_decentProtoPubKey;
+	//std::string g_decentProtoPubKey;
 }
 
 static inline void SetSelfEnclaveHash(const std::string & hashBase64)
@@ -104,16 +107,26 @@ extern "C" void ecall_decent_terminate()
 
 }
 
-extern "C" sgx_status_t ecall_decent_become_root()
+extern "C" sgx_status_t ecall_decent_server_generate_x509(const char* selfReport)
 {
 	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
+	std::shared_ptr<const ECKeyPair> signPubOpenSSL = EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKeyOpenSSL();
+
 	std::string selfId(SerializeStruct(*signPub));
 	bool isClientAttested = SGXRAEnclave::IsClientAttested(selfId);
 	bool isServerAttested = SGXRAEnclave::IsAttestedToServer(selfId);
 
 	if (isClientAttested && isServerAttested)
 	{
-		g_decentProtoPubKey = selfId;
+		//g_decentProtoPubKey = selfId;
+		std::shared_ptr<const DecentServerX509> serverCert(new DecentServerX509(*signPubOpenSSL, *g_selfHash, Decent::RAReport::sk_ValueReportType, selfReport));
+		if (!serverCert)
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
+		DecentCertContainer::Get().SetCert(serverCert);
+		DecentCertContainer::Get().SetServerCert(serverCert);
+
 		SGXRAEnclave::DropClientRAState(selfId);
 		SGXRAEnclave::DropRAStateToServer(selfId);
 		return SGX_SUCCESS;
@@ -122,24 +135,42 @@ extern "C" sgx_status_t ecall_decent_become_root()
 	return SGX_ERROR_INVALID_PARAMETER;
 }
 
-extern "C" int ecall_decent_process_ias_ra_report(const char* reportStr)
+extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
 {
-	if (!reportStr || g_decentProtoPubKey.size() > 0)
+	auto serverCert = DecentCertContainer::Get().GetServerCert();
+	if (!serverCert || !(*serverCert))
 	{
 		return 0;
 	}
 
-	sgx_ec256_public_t decentPubKey;
-	std::string decentPubKeyPem;
+	std::string x509Pem = serverCert->ToPemString();
+	std::memcpy(buf, x509Pem.data(), buf_len > x509Pem.size() ? x509Pem.size() : buf_len);
+
+	return x509Pem.size();
+}
+
+extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
+{
+	auto serverCert = DecentCertContainer::Get().GetServerCert();
+
+	if (!x509Pem || serverCert)
+	{
+		return 0;
+	}
+
+	std::shared_ptr<DecentServerX509> inCert(new DecentServerX509(x509Pem));
+	if (!inCert || !(*inCert))
+	{
+		return 0;
+	}
+
 	sgx_ias_report_t iasReport;
 
-	if (!DecentEnclave::ProcessIasRaReport(reportStr, GetSelfEnclaveHash(), decentPubKey, &decentPubKeyPem, iasReport))
+	if (!DecentEnclave::ProcessIasRaReport(*inCert, GetSelfEnclaveHash(), iasReport))
 	{
 		return 0;
 	}
-
-	g_decentProtoPubKey = SerializeStruct(decentPubKey);
-
+	DecentCertContainer::Get().SetServerCert(inCert);
 	//COMMON_PRINTF("Accepted New Decent Node: %s\n", g_decentProtoPubKey.c_str());
 
 	return 1;
@@ -248,15 +279,16 @@ extern "C" sgx_status_t ecall_process_ra_msg4_decent(const char* serverID, const
 //This function will be call at new node side.
 extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void* const connectionPtr, const char* jsonMsg)
 {
-	if (!nodeID || !connectionPtr || !jsonMsg || g_decentProtoPubKey.size() == 0 || g_decentProtoPubKey != nodeID)
+	auto serverCert = DecentCertContainer::Get().GetServerCert();
+
+	if (!nodeID || !connectionPtr || !jsonMsg || 
+		!serverCert ||
+		!(*serverCert) ||
+		!SGXRAEnclave::IsAttestedToServer(nodeID))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	if (!SGXRAEnclave::IsAttestedToServer(nodeID))
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
 	AESGCMCommLayer* commLayer = SGXRAEnclave::ReleaseServerKeys(nodeID, &CommLayerSendFunc);
 	if (!commLayer)
 	{
@@ -287,6 +319,9 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 		std::shared_ptr<const sgx_ec256_public_t> pubKeyPtr = std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(pubKey));
 		std::shared_ptr<const PrivateKeyWrap> prvKeyPtr = std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(prvKey));
 		EnclaveAsyKeyContainer::GetInstance()->UpdateSignKeyPair(prvKeyPtr, pubKeyPtr);
+		DecentCertContainer::Get().SetCert(serverCert);
+
+		//COMMON_PRINTF("Joined Decent network.\n");
 
 		return SGX_SUCCESS;
 	}
@@ -297,7 +332,11 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 //This function will be call at existing node side.
 extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void* const connectionPtr, const char* appAttach)
 {
-	if (!nodeID || !connectionPtr || g_decentProtoPubKey.size() == 0)
+	auto serverCert = DecentCertContainer::Get().GetServerCert();
+
+	if (!nodeID || !connectionPtr ||
+		!serverCert ||
+		!(*serverCert))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}

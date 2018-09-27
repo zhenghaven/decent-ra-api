@@ -136,17 +136,6 @@ bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
 	return retval != 0;
 }
 
-bool SGXDecentEnclave::DecentBecomeRoot()
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_decent_become_root(GetEnclaveId(), &retval);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_become_root);
-
-	return retval == SGX_SUCCESS;
-}
-
 bool SGXDecentEnclave::ProcessDecentProtoKeyMsg(const std::string & nodeID, Connection& connection, const std::string & jsonMsg)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
@@ -199,6 +188,7 @@ bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const J
 std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
+	sgx_status_t retval = SGX_SUCCESS;
 	sgx_ec256_public_t pubKey;
 	GetRAClientSignPubKey(pubKey);
 	std::string senderID = SerializeStruct(pubKey);
@@ -257,14 +247,32 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 
 	Json::Value root;
 	Json::Value& decentReportBody = root[Decent::RAReport::sk_LabelRoot];
-	decentReportBody[Decent::RAReport::sk_LabelType] = Decent::RAReport::sk_ValueReportType;
-	decentReportBody[Decent::RAReport::sk_LabelPubKey] = ECKeyPubGetPEMStr(pubECKey);
 	decentReportBody[Decent::RAReport::sk_LabelIasReport] = iasReport;
 	decentReportBody[Decent::RAReport::sk_LabelIasSign] = reportSign;
 	decentReportBody[Decent::RAReport::sk_LabelIasCertChain] = reportCertChain;
 	decentReportBody[Decent::RAReport::sk_LabelOriRepData] = SerializeStruct(oriReportData);
 
-	return root.toStyledString();
+	enclaveRet = ecall_decent_server_generate_x509(GetEnclaveId(), &retval, root.toStyledString().c_str());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_generate_x509);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_server_generate_x509);
+
+	size_t certLen = 0;
+	std::string retReport(5000, '\0');
+
+	enclaveRet = ecall_decent_server_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_get_x509_pem);
+
+	if (certLen > retReport.size())
+	{
+		retReport.resize(certLen);
+
+		enclaveRet = ecall_decent_server_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
+		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_get_x509_pem);
+	}
+
+	retReport.resize(certLen);
+
+	return retReport;
 }
 
 extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg, const char* appAttach)

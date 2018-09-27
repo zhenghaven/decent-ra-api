@@ -163,7 +163,7 @@ bool DecentAppLASession::PerformDecentAppSideLA()
 		return false;
 	}
 
-	res = m_appEnclave.SendReportDataToServer(k_remoteSideId, m_connection);
+	res = m_appEnclave.SendCertReqToServer(k_remoteSideId, m_connection);
 	if (!res)
 	{
 		return false;

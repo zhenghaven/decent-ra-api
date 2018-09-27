@@ -18,7 +18,9 @@ enclave {
 		
 		public int ecall_decent_process_ias_ra_report([in, string] const char* reportStr);
 
-		public sgx_status_t ecall_decent_become_root();
+		public sgx_status_t ecall_decent_server_generate_x509([in, string] const char* selfReport);
+
+		public size_t ecall_decent_server_get_x509_pem([out, size = buf_len] char* buf, size_t buf_len);
 		
 		public sgx_status_t ecall_process_ra_msg1_decent([in, string] const char* client_id, 
 		                                                 [in] const sgx_ec256_public_t* in_key, 

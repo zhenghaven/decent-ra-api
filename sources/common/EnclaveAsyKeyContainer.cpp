@@ -111,7 +111,7 @@ std::shared_ptr<const PrivateKeyWrap> EnclaveAsyKeyContainer::GetSignPrvKey() co
 	return std::atomic_load(&m_signPriKey);
 #else
 	return m_signPriKey;
-#endif // !DECENT_THREAD_SAFETY_HIGH
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
 
 std::shared_ptr<const sgx_ec256_public_t> EnclaveAsyKeyContainer::GetSignPubKey() const
@@ -120,7 +120,7 @@ std::shared_ptr<const sgx_ec256_public_t> EnclaveAsyKeyContainer::GetSignPubKey(
 	return std::atomic_load(&m_signPubKey);
 #else
 	return m_signPubKey;
-#endif // !DECENT_THREAD_SAFETY_HIGH
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
 
 std::shared_ptr<const ECKeyPublic> EnclaveAsyKeyContainer::GetSignPubKeyOpenSSL() const
@@ -129,7 +129,7 @@ std::shared_ptr<const ECKeyPublic> EnclaveAsyKeyContainer::GetSignPubKeyOpenSSL(
 	return std::atomic_load(&m_signPubKeyOpen);
 #else
 	return m_signPubKeyOpen;
-#endif // !DECENT_THREAD_SAFETY_HIGH
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
 
 std::shared_ptr<const ECKeyPair> EnclaveAsyKeyContainer::GetSignPrvKeyOpenSSL() const
@@ -138,7 +138,7 @@ std::shared_ptr<const ECKeyPair> EnclaveAsyKeyContainer::GetSignPrvKeyOpenSSL() 
 	return std::atomic_load(&m_signPriKeyOpen);
 #else
 	return m_signPriKeyOpen;
-#endif // !DECENT_THREAD_SAFETY_HIGH
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
 
 //std::shared_ptr<const std::string> EnclaveAsyKeyContainer::GetSignPubPem() const
@@ -147,7 +147,7 @@ std::shared_ptr<const ECKeyPair> EnclaveAsyKeyContainer::GetSignPrvKeyOpenSSL() 
 //	return std::atomic_load(&m_signPubPem);
 //#else
 //	return m_signPubPem;
-//#endif // !DECENT_THREAD_SAFETY_HIGH
+//#endif // DECENT_THREAD_SAFETY_HIGH
 //}
 
 void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const sgx_ec256_public_t> pub)
@@ -172,5 +172,5 @@ void EnclaveAsyKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyW
 	m_signPubKey = pub;
 	m_signPriKeyOpen.reset(tmpPrvOpen.release());
 	m_signPubKeyOpen.reset(tmpPubOpen.release());
-#endif // !DECENT_THREAD_SAFETY_HIGH
+#endif // DECENT_THREAD_SAFETY_HIGH
 }
