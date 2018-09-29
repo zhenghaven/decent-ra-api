@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "../common/OpenSSLTools.h"
+#include "../common/DecentOpenSSL.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>

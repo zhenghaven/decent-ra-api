@@ -99,13 +99,8 @@ __forceinline general_secp256r1_signature_t& SgxEc256Type2General(sgx_ec256_sign
 	return reinterpret_cast<general_secp256r1_signature_t&>(x);
 }
 
-
 bool ECKeyCalcSharedKey(EVP_PKEY* inKey, EVP_PKEY* inPeerKey, sgx_ec256_dh_shared_t *outSharedkey);
 
 bool ECKeySignOpenSSL2SGX(const ECDSA_SIG* inSign, sgx_ec256_signature_t* outSign);
 
 bool ECKeySignSGX2OpenSSL(const sgx_ec256_signature_t* inSign, ECDSA_SIG* outSign);
-
-bool ECKeyPubSGX2Pem(const sgx_ec256_public_t& inPub, std::string& outPem);
-
-bool ECKeyPubPem2SGX(const std::string& inPem, sgx_ec256_public_t& outPub);

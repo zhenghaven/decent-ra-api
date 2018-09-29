@@ -177,29 +177,3 @@ bool ECKeySignSGX2OpenSSL(const sgx_ec256_signature_t * inSign, ECDSA_SIG * outS
 
 	return true;
 }
-
-bool ECKeyPubSGX2Pem(const sgx_ec256_public_t & inPub, std::string & outPem)
-{
-	EC_KEY* pubKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(&inPub), nullptr);
-	if (!pubKey)
-	{
-		return false;
-	}
-	outPem = ECKeyPubGetPEMStr(pubKey);
-	EC_KEY_free(pubKey);
-
-	return true;
-}
-
-bool ECKeyPubPem2SGX(const std::string & inPem, sgx_ec256_public_t & outPub)
-{
-	EC_KEY* pubECKey = ECKeyPubFromPEMStr(inPem);
-	if (!pubECKey || 
-		!ECKeyPairOpenSSL2General(pubECKey, nullptr, SgxEc256Type2General(&outPub), nullptr))
-	{
-		return false;
-	}
-	EC_KEY_free(pubECKey);
-
-	return true;
-}

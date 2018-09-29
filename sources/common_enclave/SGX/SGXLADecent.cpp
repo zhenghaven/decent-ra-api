@@ -24,6 +24,7 @@
 
 #include "../../common/DataCoding.h"
 #include "../../common/JsonTools.h"
+#include "../../common/DecentOpenSSL.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/EnclaveAsyKeyContainer.h"
 

@@ -17,7 +17,7 @@
 
 #include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
-#include "../../common/OpenSSLTools.h"
+#include "../../common/DecentOpenSSL.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/OpenSSLInitializer.h"
@@ -192,8 +192,8 @@ extern "C" sgx_status_t ecall_process_ra_msg1_decent(const char* client_id, cons
 	sgx_ec256_public_t clientSignkey(*in_key);
 	ReportDataVerifier reportDataVerifier = [clientSignkey](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
 	{
-		std::string pubKeyPem;
-		ECKeyPubSGX2Pem(clientSignkey, pubKeyPem);
+		ECKeyPublic pubKey(SgxEc256Type2General(clientSignkey));
+		std::string pubKeyPem = pubKey.ToPemString();
 		if (pubKeyPem.size() == 0)
 		{
 			return false;
@@ -216,10 +216,10 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* serverID, 
 	ReportDataGenerator rdGenerator = [](const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen) -> bool
 	{
 		std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
-		std::string pubKeyPem;
 
-		bool res = ECKeyPubSGX2Pem(*signPub, pubKeyPem);
-		if (!res || pubKeyPem.size() == 0)
+		ECKeyPublic pubKey(SgxEc256Type2General(*signPub));
+		std::string pubKeyPem = pubKey.ToPemString();
+		if (pubKeyPem.size() == 0)
 		{
 			return false;
 		}

@@ -11,7 +11,7 @@
 
 #include "../Common.h"
 
-#include "../../common/OpenSSLTools.h"
+#include "../../common/DecentOpenSSL.h"
 #include "../../common/DataCoding.h"
 #include "../../common/DecentRAReport.h"
 

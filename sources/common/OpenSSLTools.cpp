@@ -13,57 +13,6 @@
 #include "OpenSSLConversions.h"
 #include "OpenSSLInitializer.h"
 
-std::string ECKeyPubGetPEMStr(const EC_KEY * inKey)
-{
-	if (!inKey)
-	{
-		return std::string();
-	}
-
-	BIO *bioMem = BIO_new(BIO_s_mem());
-	if (bioMem == nullptr)
-	{
-		return std::string();
-	}
-
-	int opensslRet = PEM_write_bio_EC_PUBKEY(bioMem, const_cast<EC_KEY *>(inKey));
-
-	if (opensslRet != 1)
-	{
-		return std::string();
-	}
-
-	char* bioMemPtr = nullptr;
-	size_t bioMemLen = BIO_get_mem_data(bioMem, &bioMemPtr);
-
-	std::string res(bioMemPtr, bioMemLen);
-
-	BIO_free(bioMem);
-
-	return res;
-}
-
-EC_KEY* ECKeyPubFromPEMStr(const std::string & inPem)
-{
-	BIO *bioMem = BIO_new(BIO_s_mem());
-	if (bioMem == nullptr)
-	{
-		return nullptr;
-	}
-
-	int opensslRet = BIO_puts(bioMem, inPem.c_str());
-	if (opensslRet != inPem.size())
-	{
-		return nullptr;
-	}
-
-	EC_KEY* ret = PEM_read_bio_EC_PUBKEY(bioMem, nullptr, nullptr, nullptr);
-
-	BIO_free(bioMem);
-
-	return ret;
-}
-
 void LoadX509CertsFromStr(std::vector<X509*>& outCerts, const std::string& certStr)
 {
 	BIO* certBio;
@@ -568,6 +517,21 @@ std::string ECKeyPair::ToPemString() const
 	return res;
 }
 
+bool ECKeyPair::ToGeneralPublicKey(general_secp256r1_public_t & outKey) const
+{
+	return ECKeyPairOpenSSL2General(GetInternalECKey(), nullptr, &outKey, nullptr);
+}
+
+bool ECKeyPair::ToGeneralPrivateKey(general_secp256r1_private_t & outKey) const
+{
+	return ECKeyPairOpenSSL2General(GetInternalECKey(), &outKey, nullptr, nullptr);
+}
+
+bool ECKeyPair::ToGeneralKeyPair(general_secp256r1_private_t & outPrv, general_secp256r1_public_t & outPub) const
+{
+	return ECKeyPairOpenSSL2General(GetInternalECKey(), &outPrv, &outPub, nullptr);
+}
+
 EC_KEY * ECKeyPair::GetInternalECKey() const
 {
 	if (!m_ptr)
@@ -635,6 +599,11 @@ std::string ECKeyPublic::ToPemString() const
 	return res;
 }
 
+bool ECKeyPublic::ToGeneralPublicKey(general_secp256r1_public_t & outKey) const
+{
+	return ECKeyPairOpenSSL2General(GetInternalECKey(), nullptr, &outKey, nullptr);
+}
+
 EC_KEY * ECKeyPublic::GetInternalECKey() const
 {
 	if (!m_ptr)
@@ -642,106 +611,4 @@ EC_KEY * ECKeyPublic::GetInternalECKey() const
 		return nullptr;
 	}
 	return EVP_PKEY_get0_EC_KEY(m_ptr);
-}
-
-static long GetDecentSerialNumber()
-{
-	long ret = 0;
-	return sgx_read_rand(reinterpret_cast<uint8_t*>(&ret), sizeof(ret)) == SGX_SUCCESS ? ret : 0;
-}
-
-DecentServerX509::DecentServerX509(const std::string & pemStr) :
-	X509Wrapper(pemStr),
-	k_platformType(ParsePlatformType()),
-	k_selfRaReport(ParseSelfRaReport())
-{
-}
-
-DecentServerX509::DecentServerX509(const ECKeyPair & prvKey, const std::string& enclaveHash, const std::string& platformType, const std::string& selfRaReport) :
-	X509Wrapper(prvKey, 
-		LONG_MAX, 
-		GetDecentSerialNumber(), 
-		X509NameWrapper(std::map<std::string, std::string>({
-			std::pair<std::string, std::string>("CN", enclaveHash),
-		})), 
-		std::map<int, std::string>{
-			std::pair<int, std::string>(NID_basic_constraints, "critical,CA:TRUE"),
-			std::pair<int, std::string>(NID_key_usage, "critical,nonRepudiation,digitalSignature,keyAgreement,keyCertSign,cRLSign"),
-			std::pair<int, std::string>(NID_ext_key_usage, "serverAuth,clientAuth"),
-			std::pair<int, std::string>(NID_subject_key_identifier, "hash"),
-			std::pair<int, std::string>(NID_netscape_cert_type, "sslCA,client,server"),
-			std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID(), "critical," + platformType),
-			std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetSelfRAReportNID(), "critical," + selfRaReport),
-		}),
-	k_platformType(platformType),
-	k_selfRaReport(selfRaReport)
-{
-}
-
-const std::string & DecentServerX509::GetPlatformType() const
-{
-	return k_platformType;
-}
-
-const std::string & DecentServerX509::GetSelfRaReport() const
-{
-	return k_selfRaReport;
-}
-
-const std::string DecentServerX509::ParsePlatformType() const
-{
-	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID());
-}
-
-const std::string DecentServerX509::ParseSelfRaReport() const
-{
-	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetSelfRAReportNID());
-}
-
-DecentAppX509::DecentAppX509(const std::string & pemStr) :
-	X509Wrapper(pemStr),
-	k_platformType(ParsePlatformType()),
-	k_appId(ParseAppId())
-{
-}
-
-DecentAppX509::DecentAppX509(const ECKeyPublic & pubKey, const DecentServerX509& caCert, const ECKeyPair & serverPrvKey, const std::string & enclaveHash, const std::string & platformType, const std::string & appId) :
-	X509Wrapper(caCert, serverPrvKey, pubKey, 
-		LONG_MAX,
-		GetDecentSerialNumber(),
-		X509NameWrapper(std::map<std::string, std::string>({
-			std::pair<std::string, std::string>("CN", enclaveHash),
-			})),
-			std::map<int, std::string>{
-	std::pair<int, std::string>(NID_basic_constraints, "critical,CA:TRUE"),
-		std::pair<int, std::string>(NID_key_usage, "critical,nonRepudiation,digitalSignature,keyAgreement,keyCertSign,cRLSign"),
-		std::pair<int, std::string>(NID_ext_key_usage, "serverAuth,clientAuth"),
-		std::pair<int, std::string>(NID_subject_key_identifier, "hash"),
-		std::pair<int, std::string>(NID_netscape_cert_type, "sslCA,client,server"),
-		std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID(), "critical," + platformType),
-		std::pair<int, std::string>(DecentOpenSSLInitializer::Initialize().GetLocalAttestationIdNID(), "critical," + appId),
-	}),
-	k_platformType(platformType),
-	k_appId(appId)
-{
-}
-
-const std::string & DecentAppX509::GetPlatformType() const
-{
-	return k_platformType;
-}
-
-const std::string & DecentAppX509::GetAppId() const
-{
-	return k_appId;
-}
-
-const std::string DecentAppX509::ParsePlatformType() const
-{
-	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetPlatformTypeNID());
-}
-
-const std::string DecentAppX509::ParseAppId() const
-{
-	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetLocalAttestationIdNID());
 }
