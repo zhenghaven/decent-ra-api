@@ -9,6 +9,8 @@
 #define GENERAL_256BIT_32BYTE_SIZE 32
 #define GENERAL_512BIT_64BYTE_SIZE 64
 
+#define SUGGESTED_AESGCM_IV_SIZE   12
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,6 +42,8 @@ extern "C" {
 	} general_secp256r1_signature_t;
 
 	typedef uint8_t general_aes_128bit_key[GENERAL_128BIT_16BYTE_SIZE];
+
+	typedef uint8_t suggested_aesgcm_iv[SUGGESTED_AESGCM_IV_SIZE];
 
 #pragma pack(pop)
 

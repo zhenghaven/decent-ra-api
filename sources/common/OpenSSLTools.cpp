@@ -7,6 +7,7 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/evp.h>
+#include <openssl/ssl.h>
 
 #include <sgx_trts.h>
 
@@ -612,3 +613,31 @@ EC_KEY * ECKeyPublic::GetInternalECKey() const
 	}
 	return EVP_PKEY_get0_EC_KEY(m_ptr);
 }
+
+//SSLWrapper::SSLWrapper(SSL * ptr, bool isOwner) :
+//	OpenSSLObjWrapper(ptr),
+//	m_isOwner(isOwner)
+//{
+//}
+//
+//SSLWrapper::~SSLWrapper()
+//{
+//	if (m_isOwner)
+//	{
+//		SSL_free(m_ptr);
+//	}
+//}
+
+//SSLCTXWrapper::SSLCTXWrapper(SSL_CTX * ptr, bool isOwner) :
+//	OpenSSLObjWrapper(ptr),
+//	m_isOwner(isOwner)
+//{
+//}
+//
+//SSLCTXWrapper::~SSLCTXWrapper()
+//{
+//	if (m_isOwner)
+//	{
+//		SSL_CTX_free(m_ptr);
+//	}
+//}

@@ -28,170 +28,87 @@ static inline T*  ParseMessageExpected(const Json::Value& json)
 
 bool DecentServerLASession::SmartMsgEntryPoint(Connection& connection, EnclaveBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
 {
-	std::unique_ptr<DecentServerLASession> serverSession;
 	std::unique_ptr<DecentLogger> logger;
-	try
+
+	const std::string inType = DecentAppMessage::ParseType(jsonMsg[Messages::sk_LabelRoot]);
+	if (inType == DecentAppHandshake::sk_ValueType)
 	{
-		serverSession.reset(new DecentServerLASession(connection, hwEnclave, enclave, jsonMsg));
-		logger = std::make_unique<DecentLogger>(serverSession->GetRemoteReceiverID());
+		DecentAppHandshake hsMsg(jsonMsg);
+		logger = std::make_unique<DecentLogger>(hsMsg.GetSenderID());
 		logger->AddMessage('I', "Received DecentApp LA Request.");
+		DecentServerLASession laSession(connection, hwEnclave, enclave, hsMsg);
+		bool res = laSession.PerformDecentServerSideLA(logger.get());
+		logger->AddMessage('I', "Completed Processing DecentApp LA Request.");
+		DecentLoggerManager::GetInstance().AddLogger(logger);
+		return res;
 	}
-	catch (const MessageParseException&)
-	{
-		return false;
-	}
-
-	bool res = false;
-	res = serverSession->PerformDecentServerSideLA(logger.get());
-	logger->AddMessage('I', "Completed Processing DecentApp LA Request.");
-	DecentLoggerManager::GetInstance().AddLogger(logger);
-	return res;
-}
-
-DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg) :
-	DecentServerLASession(connection, hwEnclave, enclave, hwEnclave.GetLAResponderSession(connection, jsonMsg))
-{
+	return false;
 }
 
 DecentServerLASession::~DecentServerLASession()
 {
 }
 
-DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, LocalAttestationSession* laSession) :
+DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const DecentAppHandshake& hsMsh) :
 	CommSession(connection),
-	k_senderId(laSession->GetSenderID()),
-	k_remoteSideId(laSession->GetRemoteReceiverID()),
-	m_decentEnclave(enclave),
-	m_laSession(laSession)
+	k_senderId(hwEnclave.GetRAClientSignPubKey()),
+	k_remoteSideId(hsMsh.GetSenderID()),
+	m_decentEnclave(enclave)
 {
+	DecentAppHandshakeAck hsAck(k_senderId, enclave.GetDecentSelfRAReport());
+	connection.Send(hsAck);
 }
 
 bool DecentServerLASession::PerformDecentServerSideLA(DecentLogger* logger)
 {
-	if (!m_laSession)
-	{
-		return false;
-	}
+	bool res = m_decentEnclave.ProcessAppX509Req(k_remoteSideId, m_connection);
 
-	bool res = m_laSession->PerformResponderSideLA();
-	if (!res)
-	{
-		return false;
-	}
-
-	Json::Value jsonRoot;
-	m_connection.Receive(jsonRoot);
-
-	try
-	{
-		std::unique_ptr<DecentAppTrustedMessage> reqMsg(ParseMessageExpected<DecentAppTrustedMessage>(jsonRoot));
-		res = m_decentEnclave.ProcessAppReportSignReq(k_remoteSideId, m_connection, reqMsg->GetTrustedMsg(), m_decentEnclave.GetDecentSelfRAReport().c_str());
-		if (!res)
-		{
-			m_connection.Send(DecentAppErrMsg(k_senderId, "Enclave process error!"));
-			if (logger)
-			{
-				logger->AddMessage('I', "New App Failed Attestion!");
-			}
-			return false;
-		}
-		if (logger)
-		{
-			logger->AddMessage('I', "New App Attested Successfully!");
-		}
-	}
-	catch (const MessageParseException&)
-	{
-		m_connection.Send(DecentAppErrMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol."));
-		return false;
-	}
+	logger->AddMessage('I', res ? "New App Attested Successfully!" : "New App Failed Attestion!");
 
 	//Job done, we need to close the connection, so return false;
 	return false;
 }
 
-bool DecentAppLASession::SendHandshakeMessage(Connection& connection, EnclaveBase & hwEnclave)
+void DecentAppLASession::SendHandshakeMessage(Connection& connection, EnclaveBase & hwEnclave)
 {
-	return hwEnclave.SendLARequest(connection);
+	DecentAppHandshake hsMsg(hwEnclave.GetRAClientSignPubKey());
+	connection.Send(hsMsg);
 }
 
 bool DecentAppLASession::SmartMsgEntryPoint(Connection& connection, EnclaveBase & hwEnclave, DecentAppEnclave & enclave, const Json::Value & jsonMsg)
 {
-	std::unique_ptr<DecentAppLASession> appSession;
-	try
+	const std::string inType = DecentAppMessage::ParseType(jsonMsg[Messages::sk_LabelRoot]);
+	if (inType == DecentAppHandshakeAck::sk_ValueType)
 	{
-		appSession.reset(new DecentAppLASession(connection, hwEnclave, enclave, jsonMsg));
+		DecentAppHandshakeAck hsAckMsg(jsonMsg);
+		DecentAppLASession laSession(connection, hwEnclave, enclave, hsAckMsg);
+		bool res = laSession.PerformDecentAppSideLA();
+		return res;
 	}
-	catch (const MessageParseException&)
-	{
-		return false;
-	}
-
-	bool res = false;
-	res = appSession->PerformDecentAppSideLA();
-	return res;
-}
-
-DecentAppLASession::DecentAppLASession(Connection& connection, EnclaveBase & hwEnclave, DecentAppEnclave & enclave, const Json::Value & jsonMsg) :
-	DecentAppLASession(connection, hwEnclave, enclave, hwEnclave.GetLAInitiatorSession(connection, jsonMsg))
-{
+	return false;
 }
 
 DecentAppLASession::~DecentAppLASession()
 {
 }
 
-DecentAppLASession::DecentAppLASession(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, LocalAttestationSession* laSession) :
+DecentAppLASession::DecentAppLASession(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, const DecentAppHandshakeAck& hsAck) :
 	CommSession(connection),
-	k_senderId(laSession->GetSenderID()),
-	k_remoteSideId(laSession->GetRemoteReceiverID()),
+	k_senderId(hwEnclave.GetRAClientSignPubKey()),
+	k_remoteSideId(hsAck.GetSenderID()),
 	m_appEnclave(enclave),
-	m_laSession(laSession)
+	k_selfReport(hsAck.GetSelfRAReport())
 {
 }
 
 bool DecentAppLASession::PerformDecentAppSideLA()
 {
-	if (!m_laSession)
+	if (!m_appEnclave.ProcessDecentSelfRAReport(k_selfReport))
 	{
 		return false;
 	}
 
-	bool res = m_laSession->PerformInitiatorSideLA();
-	if (!res)
-	{
-		return false;
-	}
-
-	res = m_appEnclave.SendCertReqToServer(k_remoteSideId, m_connection);
-	if (!res)
-	{
-		return false;
-	}
-
-	Json::Value jsonRoot;
-	m_connection.Receive(jsonRoot);
-
-	try
-	{
-		std::unique_ptr<DecentAppTrustedMessage> trustedMsg(ParseMessageExpected<DecentAppTrustedMessage>(jsonRoot));
-		std::string decentSelfRAReport = trustedMsg->GetAppAttach();
-		res = m_appEnclave.ProcessDecentSelfRAReport(decentSelfRAReport);
-		if (!res)
-		{
-			return false;
-		}
-
-		res = m_appEnclave.ProcessAppReportSignMsg(trustedMsg->GetTrustedMsg());
-		if (!res)
-		{
-			return false;
-		}
-	}
-	catch (const MessageParseException&)
-	{//Don't need to send error message. The remote side may already close the connection.
-		return false;
-	}
+	m_appEnclave.GetX509FromServer(k_remoteSideId, m_connection);
 
 	//Job done, we need to close the connection, so return false;
 	return false;

@@ -12,6 +12,8 @@ typedef struct bio_st BIO;
 typedef struct x509_st X509;
 typedef struct X509_req_st X509_REQ;
 typedef struct X509_name_st X509_NAME;
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct ssl_st SSL;
 
 template<typename T>
 class OpenSSLObjWrapper
@@ -72,7 +74,7 @@ public:
 	ECKeyPair(const std::string& pemStr);
 	ECKeyPair(const general_secp256r1_private_t& prv);
 	ECKeyPair(const general_secp256r1_private_t& prv, const general_secp256r1_public_t& pub);
-	~ECKeyPair();
+	virtual ~ECKeyPair();
 
 	std::string ToPemString() const;
 	bool ToGeneralPublicKey(general_secp256r1_public_t& outKey) const;
@@ -94,7 +96,7 @@ public:
 	ECKeyPublic(EVP_PKEY* ptr, bool isOwner);
 	ECKeyPublic(const std::string& pemStr);
 	ECKeyPublic(const general_secp256r1_public_t& pub);
-	~ECKeyPublic();
+	virtual ~ECKeyPublic();
 
 	std::string ToPemString() const;
 	bool ToGeneralPublicKey(general_secp256r1_public_t& outKey) const;
@@ -159,6 +161,28 @@ public:
 private:
 	const ECKeyPublic k_pubKey;
 };
+
+//class SSLWrapper : public OpenSSLObjWrapper<SSL>
+//{
+//public:
+//	SSLWrapper() = delete;
+//	SSLWrapper(SSL* ptr, bool isOwner);
+//	virtual ~SSLWrapper();
+//
+//private:
+//	bool m_isOwner;
+//};
+
+//class SSLCTXWrapper : public OpenSSLObjWrapper<SSL_CTX>
+//{
+//public:
+//	SSLCTXWrapper() = delete;
+//	SSLCTXWrapper(SSL_CTX* ptr, bool isOwner);
+//	virtual ~SSLCTXWrapper();
+//
+//private:
+//	bool m_isOwner;
+//};
 
 void LoadX509CertsFromStr(std::vector<X509*>& outCerts, const std::string& certStr);
 

@@ -1,6 +1,0 @@
-enclave {
-	untrusted 
-	{
-		int ocall_decent_la_send_trusted_msg([user_check] void* connectionPtr, [in, string] const char* senderID, [in, string] const char *msg, [user_check] const char* appAttach);
-	};
-};

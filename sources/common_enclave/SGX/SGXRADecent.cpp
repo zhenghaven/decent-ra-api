@@ -68,17 +68,6 @@ static inline const std::string GetSelfEnclaveHash()
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-static bool CommLayerSendFunc(void* const connectionPtr, const char* senderID, const char *msg, const char* appAttach)
-{
-	int retVal = 0;
-	sgx_status_t enclaveRet = ocall_decent_send_trusted_msg(&retVal, connectionPtr, senderID, msg, appAttach);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return false;
-	}
-	return retVal == 1;
-}
-
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 {
 	if (!inSpid)
@@ -277,11 +266,11 @@ extern "C" sgx_status_t ecall_process_ra_msg4_decent(const char* serverID, const
 }
 
 //This function will be call at new node side.
-extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void* const connectionPtr, const char* jsonMsg)
+extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void* const connectionPtr)
 {
 	auto serverCert = DecentCertContainer::Get().GetServerCert();
 
-	if (!nodeID || !connectionPtr || !jsonMsg || 
+	if (!nodeID || !connectionPtr || 
 		!serverCert ||
 		!(*serverCert) ||
 		!SGXRAEnclave::IsAttestedToServer(nodeID))
@@ -289,14 +278,14 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	AESGCMCommLayer* commLayer = SGXRAEnclave::ReleaseServerKeys(nodeID, &CommLayerSendFunc);
+	std::unique_ptr<AESGCMCommLayer> commLayer(SGXRAEnclave::ReleaseServerKeys(nodeID));
 	if (!commLayer)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
 
 	std::string plainMsg;
-	if (!commLayer->DecryptMsg(plainMsg, jsonMsg))
+	if (!commLayer->ReceiveMsg(connectionPtr, plainMsg))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -321,7 +310,7 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 		EnclaveAsyKeyContainer::GetInstance()->UpdateSignKeyPair(prvKeyPtr, pubKeyPtr);
 		DecentCertContainer::Get().SetCert(serverCert);
 
-		//COMMON_PRINTF("Joined Decent network.\n");
+		COMMON_PRINTF("Joined Decent network.\n");
 
 		return SGX_SUCCESS;
 	}
@@ -330,7 +319,7 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 }
 
 //This function will be call at existing node side.
-extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void* const connectionPtr, const char* appAttach)
+extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void* const connectionPtr)
 {
 	auto serverCert = DecentCertContainer::Get().GetServerCert();
 
@@ -346,7 +335,8 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	std::unique_ptr<sgx_ias_report_t> iasReport;
-	AESGCMCommLayer* commLayer = SGXRAEnclave::ReleaseClientKeys(nodeID, &CommLayerSendFunc, iasReport);
+	std::unique_ptr<AESGCMCommLayer> commLayer(SGXRAEnclave::ReleaseClientKeys(nodeID, iasReport));
+
 	if (!commLayer || !iasReport)
 	{
 		return SGX_ERROR_UNEXPECTED;
@@ -362,7 +352,7 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	//COMMON_PRINTF("Accepted New Decent Node: %s\n", nodeID);
+	COMMON_PRINTF("Accepted New Decent Node: %s\n", nodeID);
 
 	JSON_EDITION::JSON_DOCUMENT_TYPE doc;
 	rapidjson::Value jsonRoot;
@@ -372,7 +362,7 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelFunc, gsk_ValueFuncSetProtoKey);
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelPrvKey, prvKeyB64);
 
-	return commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot), appAttach) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
+	return commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot)) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

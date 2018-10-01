@@ -47,37 +47,45 @@ protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 };
 
-class DecentAppTrustedMessage : public DecentAppMessage
+class DecentAppHandshake : public DecentAppMessage
 {
 public:
-	static constexpr char const sk_LabelTrustedMsg[] = "Msg";
-	static constexpr char const sk_LabelAppAttach[] = "AppAttach";
-
-	static constexpr char const sk_ValueType[] = "TrustedMsg";
-
-	static std::string ParseTrustedMsg(const Json::Value& DecentAppRoot);
-	static std::string ParseAppAttach(const Json::Value& DecentAppRoot);
+	static constexpr char const sk_ValueType[] = "AppHandshake";
 
 public:
-	DecentAppTrustedMessage() = delete;
-	explicit DecentAppTrustedMessage(const std::string& senderID, const std::string& trustedMsg, const std::string& appAttach) :
-		DecentAppMessage(senderID),
-		m_trustedMsg(trustedMsg),
-		m_appAttach(appAttach)
-	{}
+	DecentAppHandshake() = delete;
+	explicit DecentAppHandshake(const std::string& senderID);
+	explicit DecentAppHandshake(const Json::Value& msg);
+	virtual ~DecentAppHandshake();
 
-	explicit DecentAppTrustedMessage(const Json::Value& msg);
-	virtual ~DecentAppTrustedMessage() {}
+	virtual std::string GetMessageTypeStr() const override;
 
-	virtual std::string GetMessageTypeStr() const override { return sk_ValueType; }
+protected:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
+};
 
-	virtual const std::string& GetTrustedMsg() const { return m_trustedMsg; }
-	virtual const std::string& GetAppAttach() const { return m_appAttach; }
+class DecentAppHandshakeAck : public DecentAppMessage
+{
+public:
+	static constexpr char const sk_LabelSelfReport[] = "SelfReport";
+
+	static constexpr char const sk_ValueType[] = "AppHandshakeAck";
+
+	static std::string ParseSelfRAReport(const Json::Value& DecentRoot);
+
+public:
+	DecentAppHandshakeAck() = delete;
+	explicit DecentAppHandshakeAck(const std::string& senderID, const std::string& selfRAReport);
+	explicit DecentAppHandshakeAck(const Json::Value& msg);
+	virtual ~DecentAppHandshakeAck();
+
+	virtual std::string GetMessageTypeStr() const override;
+
+	virtual const std::string& GetSelfRAReport() const;
 
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
 
 private:
-	const std::string m_trustedMsg;
-	const std::string m_appAttach;
+	const std::string m_selfRAReport;
 };

@@ -4,11 +4,6 @@ enclave {
 	
 	from "decent_tkey_exchange.edl" import *;
 	
-	untrusted 
-	{
-		int ocall_decent_send_trusted_msg([user_check] void* connectionPtr, [in, string] const char* senderID, [in, string] const char *msg, [user_check] const char* appAttach);
-	};
-	
 	trusted 
 	{
 		//Decent Functions:
@@ -31,9 +26,9 @@ enclave {
 		
 		public sgx_status_t ecall_process_ra_msg4_decent([in, string] const char* ServerID, [in] const sgx_ias_report_t* inMsg4, [in] const sgx_ec256_signature_t* inMsg4Sign);
 		
-		public sgx_status_t ecall_proc_decent_proto_key_msg([in, string] const char* nodeID, [user_check] void* connectionPtr, [in, string] const char* jsonMsg);
+		public sgx_status_t ecall_proc_decent_proto_key_msg([in, string] const char* nodeID, [user_check] void* connectionPtr);
 		
-		public sgx_status_t ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr, [user_check] const char* appAttach);
+		public sgx_status_t ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr);
 	};
 
 };

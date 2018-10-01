@@ -3,6 +3,7 @@
 #include <sgx_trts.h>
 
 #include <openssl/x509.h>
+#include <openssl/ssl.h>
 
 #include "OpenSSLInitializer.h"
 
@@ -107,3 +108,29 @@ const std::string DecentAppX509::ParseAppId() const
 {
 	return ParseExtensionString(DecentOpenSSLInitializer::Initialize().GetLocalAttestationIdNID());
 }
+
+//DecentTlsCtx & DecentTlsCtx::GetInst()
+//{
+//	static DecentTlsCtx instance;
+//	return instance;
+//}
+//
+//DecentTlsCtx::DecentTlsCtx() :
+//	SSLCTXWrapper(SSL_CTX_new(TLSv1_2_method()), true)
+//{
+//	if (!m_ptr)
+//	{
+//		return;
+//	}
+//
+//	if (
+//		!SSL_CTX_set_cipher_list(m_ptr, "ECDHE-ECDSA-AES128-GCM-SHA256") ||
+//		!SSL_CTX_set_min_proto_version(m_ptr, TLS1_2_VERSION)
+//		)
+//	{
+//		this->~DecentTlsCtx();
+//		return;
+//	}
+//
+//	SSL_CTX_set_verify_depth(m_ptr, 0);
+//}

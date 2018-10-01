@@ -112,33 +112,20 @@ bool DecentRASession::ProcessClientSideRA(DecentLogger* logger)
 
 	bool res = true;
 
-	try
+	std::unique_ptr<ClientRASession> clientSession(m_hwEnclave.GetRAClientSession(m_connection));
+	res = clientSession->ProcessClientSideRA();
+
+	if (!res)
 	{
-		std::unique_ptr<ClientRASession> clientSession(m_hwEnclave.GetRAClientSession(m_connection));
-		res = clientSession->ProcessClientSideRA();
-
-		if (!res)
-		{
-			return false;
-		}
-
-		DecentProtocolKeyReq keyReq(k_senderId);
-		m_connection.Send(keyReq.ToJsonString());
-
-		Json::Value trustedMsgJson;
-		m_connection.Receive(trustedMsgJson);
-
-		DecentTrustedMessage trustedMsg(trustedMsgJson);
-		bool res = m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection, trustedMsg.GetTrustedMsg());
-
 		return false;
 	}
-	catch (const MessageParseException&)
-	{
-		DecentErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection.Send(errMsg);
-		return false;
-	}
+
+	DecentProtocolKeyReq keyReq(k_senderId);
+	m_connection.Send(keyReq.ToJsonString());
+
+	res = m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection);
+
+	return false;
 }
 
 bool DecentRASession::ProcessServerSideRA(DecentLogger* logger)
@@ -150,35 +137,25 @@ bool DecentRASession::ProcessServerSideRA(DecentLogger* logger)
 
 	bool res = true;
 
-	try
+	std::unique_ptr<ServiceProviderRASession> spSession(m_hwEnclave.GetRASPSession(m_connection));
+	res = spSession->ProcessServerSideRA();
+	if (!res)
 	{
-		std::unique_ptr<ServiceProviderRASession> spSession(m_hwEnclave.GetRASPSession(m_connection));
-		res = spSession->ProcessServerSideRA();
-
-		if (!res)
-		{
-			return false;
-		}
-
-		Json::Value keyReqJson;
-		m_connection.Receive(keyReqJson);
-		DecentProtocolKeyReq keyReq(keyReqJson);
-
-		bool res = m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
-		if (res && logger)
-		{
-			logger->AddMessage('I', "New Node Attested Successfully!");
-		}
-		else if(logger)
-		{
-			logger->AddMessage('I', "New Node Failed Attestion!");
-		}
 		return false;
 	}
-	catch (const std::exception&)
+
+	Json::Value keyReqJson;
+	m_connection.Receive(keyReqJson);
+	DecentProtocolKeyReq keyReq(keyReqJson);
+
+	res = m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
+	if (res && logger)
 	{
-		DecentErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection.Send(errMsg);
-		return false;
+		logger->AddMessage('I', "New Node Attested Successfully!");
 	}
+	else if (logger)
+	{
+		logger->AddMessage('I', "New Node Failed Attestion!");
+	}
+	return false;
 }

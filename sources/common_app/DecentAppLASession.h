@@ -13,6 +13,8 @@ class DecentAppEnclave;
 class EnclaveBase;
 class LocalAttestationSession;
 class DecentLogger;
+class DecentAppHandshake;
+class DecentAppHandshakeAck;
 
 class DecentServerLASession : public CommSession
 {
@@ -21,7 +23,8 @@ public:
 
 public:
 	DecentServerLASession() = delete;
-	DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
+	DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const DecentAppHandshake& hsMsh);
+	//DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
 
 	virtual ~DecentServerLASession();
 
@@ -32,25 +35,21 @@ public:
 	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
 
 private:
-	DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, LocalAttestationSession* laSession);
-
-private:
 	const std::string k_senderId;
 	const std::string k_remoteSideId;
 	DecentEnclave& m_decentEnclave;
-
-	std::unique_ptr<LocalAttestationSession> m_laSession;
 };
 
 class DecentAppLASession : public CommSession
 {
 public:
-	static bool SendHandshakeMessage(Connection& connection, EnclaveBase& hwEnclave);
+	static void SendHandshakeMessage(Connection& connection, EnclaveBase& hwEnclave);
 	static bool SmartMsgEntryPoint(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, const Json::Value& jsonMsg);
 
 public:
 	DecentAppLASession() = delete;
-	DecentAppLASession(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, const Json::Value& jsonMsg);
+	DecentAppLASession(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, const DecentAppHandshakeAck& hsAck);
+	//DecentAppLASession(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, const Json::Value& jsonMsg);
 
 	virtual ~DecentAppLASession();
 
@@ -61,12 +60,9 @@ public:
 	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
 
 private:
-	DecentAppLASession(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, LocalAttestationSession* laSession);
-
-private:
 	const std::string k_senderId;
 	const std::string k_remoteSideId;
 	DecentAppEnclave& m_appEnclave;
 
-	std::unique_ptr<LocalAttestationSession> m_laSession;
+	const std::string k_selfReport;
 };

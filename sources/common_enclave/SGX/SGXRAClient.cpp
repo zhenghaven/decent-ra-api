@@ -124,7 +124,7 @@ bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, std::unique_p
 	return true;
 }
 
-AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, SendFunctionType sendFunc)
+AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID)
 {
 	std::shared_ptr<RAClientContext> clientCTXPtr(std::move(FetchAndDropServerCtx(serverID)));
 	if (!clientCTXPtr)
@@ -136,7 +136,7 @@ AESGCMCommLayer* SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, S
 	AESGCMCommLayer* res = nullptr;
 	{
 		std::lock_guard<std::mutex> ctxLock(clientCTX.m_mutex);
-		res = new AESGCMCommLayer(*clientCTX.m_sk, SerializeStruct(*EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey()), sendFunc);
+		res = new AESGCMCommLayer(*clientCTX.m_sk);
 	}
 	return res;
 }

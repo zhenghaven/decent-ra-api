@@ -1,12 +1,5 @@
 #include "../../common/ModuleConfigInternal.h"
 
-#if USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)
-
-#include "../DecentMessages/DecentAppMessage.h"
-#include "../Networking/Connection.h"
-
-#endif // USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)
-
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
 
 #include "SGXDecentEnclave.h"
@@ -28,10 +21,10 @@
 #include "../common/DecentRAReport.h"
 
 #include "../DecentMessages/DecentMessage.h"
+#include "../DecentMessages/DecentAppMessage.h"
 #include "../DecentRASession.h"
 #include "../DecentAppLASession.h"
 
-#include "SGXMessages/SGXLAMessage.h"
 #include "IAS/IASConnector.h"
 #include "SGXEnclaveRuntimeException.h"
 
@@ -136,12 +129,12 @@ bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
 	return retval != 0;
 }
 
-bool SGXDecentEnclave::ProcessDecentProtoKeyMsg(const std::string & nodeID, Connection& connection, const std::string & jsonMsg)
+bool SGXDecentEnclave::ProcessDecentProtoKeyMsg(const std::string & nodeID, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_proc_decent_proto_key_msg(GetEnclaveId(), &retval, nodeID.c_str(), &connection, jsonMsg.c_str());
+	enclaveRet = ecall_proc_decent_proto_key_msg(GetEnclaveId(), &retval, nodeID.c_str(), &connection);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_proc_decent_proto_key_msg);
 
 	return retval == SGX_SUCCESS;
@@ -152,19 +145,19 @@ bool SGXDecentEnclave::SendProtocolKey(const std::string & nodeID, Connection& c
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_decent_send_protocol_key(GetEnclaveId(), &retval, nodeID.c_str(), &connection, nullptr);
+	enclaveRet = ecall_decent_send_protocol_key(GetEnclaveId(), &retval, nodeID.c_str(), &connection);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_send_protocol_key);
 
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentEnclave::ProcessAppReportSignReq(const std::string & appId, Connection& connection, const std::string & jsonMsg, const char * appAttach)
+bool SGXDecentEnclave::ProcessAppX509Req(const std::string & appId, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_decent_proc_send_app_sign_req(GetEnclaveId(), &retval, appId.c_str(), &connection, jsonMsg.c_str(), appAttach);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_proc_send_app_sign_req);
+	enclaveRet = ecall_decent_proc_app_x509_req(GetEnclaveId(), &retval, appId.c_str(), &connection);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_proc_app_x509_req);
 
 	return retval == SGX_SUCCESS;
 }
@@ -175,7 +168,7 @@ bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const J
 	{
 		return DecentRASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
 	}
-	else if (category == SGXLAMessage::sk_ValueCat)
+	else if (category == DecentAppMessage::sk_ValueCat)
 	{
 		return DecentServerLASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
 	}
@@ -275,38 +268,4 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	return retReport;
 }
 
-extern "C" int ocall_decent_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg, const char* appAttach)
-{
-	if (!connectionPtr || !msg)
-	{
-		return 0;
-	}
-
-	DecentTrustedMessage trustedMsg(senderID, msg, appAttach ? appAttach : "");
-	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
-	std::string sentMsg = trustedMsg.ToJsonString();
-	size_t sentLen = cnt->Send(sentMsg);
-
-	return (sentLen == sentMsg.size()) ? 1 : 0;
-}
-
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
-
-#if USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)
-
-extern "C" int ocall_decent_la_send_trusted_msg(void* connectionPtr, const char* senderID, const char *msg, const char* appAttach)
-{
-	if (!connectionPtr || !msg)
-	{
-		return 0;
-	}
-
-	DecentAppTrustedMessage trustedMsg(senderID, msg, appAttach ? appAttach : "");
-	Connection* cnt = reinterpret_cast<Connection*>(connectionPtr);
-	std::string sentMsg = trustedMsg.ToJsonString();
-	size_t sentLen = cnt->Send(sentMsg);
-
-	return (sentLen == sentMsg.size()) ? 1 : 0;
-}
-
-#endif // USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENT_ENCLAVE_SERVER_INTERNAL || USE_DECENT_ENCLAVE_APP_INTERNAL)

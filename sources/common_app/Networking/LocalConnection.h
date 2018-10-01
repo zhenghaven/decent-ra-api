@@ -42,6 +42,7 @@ public:
 	virtual size_t Receive(std::string& msg) override;
 	virtual size_t Receive(Json::Value& msg) override;
 	virtual size_t Receive(std::vector<uint8_t>& msg) override;
+	virtual size_t Receive(char*& dest) override;
 
 	virtual bool IsTerminate() const noexcept;
 

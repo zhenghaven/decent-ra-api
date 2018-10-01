@@ -10,7 +10,7 @@
 
 #include "../../common/DataCoding.h"
 #include "../DecentAppLASession.h"
-#include "SGXMessages/SGXLAMessage.h"
+#include "../DecentMessages/DecentAppMessage.h"
 
 #include <Enclave_u.h>
 
@@ -33,23 +33,19 @@ bool SGXDecentAppEnclave::ProcessDecentSelfRAReport(std::string & inReport)
 	return retval == SGX_SUCCESS;
 }
 
-bool SGXDecentAppEnclave::SendCertReqToServer(const std::string & decentId, Connection& connection)
+bool SGXDecentAppEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
 {
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_decent_app_send_x509_req(GetEnclaveId(), &retval, decentId.c_str(), &connection, nullptr);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_send_x509_req);
+	std::string reportCopy(inReport);
 
-	return retval == SGX_SUCCESS;
+	return ProcessDecentSelfRAReport(reportCopy);
 }
 
-bool SGXDecentAppEnclave::ProcessAppReportSignMsg(const std::string & trustedMsg)
+bool SGXDecentAppEnclave::GetX509FromServer(const std::string & decentId, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_decent_app_proc_app_x509_msg(GetEnclaveId(), &retval, trustedMsg.c_str());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_proc_app_x509_msg);
+	enclaveRet = ecall_decent_app_get_x509(GetEnclaveId(), &retval, decentId.c_str(), &connection);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_send_x509_req);
 
 	if (retval != SGX_SUCCESS)
 	{
@@ -88,7 +84,7 @@ const std::string & SGXDecentAppEnclave::GetAppCert() const
 
 bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
-	if (category == SGXLAMessage::sk_ValueCat)
+	if (category == DecentAppMessage::sk_ValueCat)
 	{
 		return DecentAppLASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
 	}

@@ -54,42 +54,75 @@ Json::Value & DecentAppErrMsg::GetJsonMsg(Json::Value & outJson) const
 	return parent;
 }
 
-constexpr char DecentAppTrustedMessage::sk_LabelTrustedMsg[];
-constexpr char DecentAppTrustedMessage::sk_LabelAppAttach[];
-constexpr char DecentAppTrustedMessage::sk_ValueType[];
+constexpr char DecentAppHandshake::sk_ValueType[];
 
-std::string DecentAppTrustedMessage::ParseTrustedMsg(const Json::Value & DecentAppRoot)
+DecentAppHandshake::DecentAppHandshake(const std::string & senderID) :
+	DecentAppMessage(senderID)
 {
-	if (DecentAppRoot.isMember(sk_LabelTrustedMsg) && DecentAppRoot[sk_LabelTrustedMsg].isString())
+}
+
+DecentAppHandshake::DecentAppHandshake(const Json::Value & msg) :
+	DecentAppMessage(msg, sk_ValueType)
+{
+}
+
+DecentAppHandshake::~DecentAppHandshake()
+{
+}
+
+std::string DecentAppHandshake::GetMessageTypeStr() const
+{
+	return sk_ValueType;
+}
+
+Json::Value & DecentAppHandshake::GetJsonMsg(Json::Value & outJson) const
+{
+	return DecentAppMessage::GetJsonMsg(outJson);
+}
+
+constexpr char DecentAppHandshakeAck::sk_LabelSelfReport[];
+constexpr char DecentAppHandshakeAck::sk_ValueType[];
+
+std::string DecentAppHandshakeAck::ParseSelfRAReport(const Json::Value & DecentAppRoot)
+{
+	if (DecentAppRoot.isMember(sk_LabelSelfReport) && DecentAppRoot[sk_LabelSelfReport].isString())
 	{
-		return DecentAppRoot[sk_LabelTrustedMsg].asString();
+		return DecentAppRoot[sk_LabelSelfReport].asString();
 	}
 	throw MessageParseException();
 }
 
-std::string DecentAppTrustedMessage::ParseAppAttach(const Json::Value & DecentAppRoot)
+DecentAppHandshakeAck::DecentAppHandshakeAck(const std::string & senderID, const std::string & selfRAReport) :
+	DecentAppMessage(senderID),
+	m_selfRAReport(selfRAReport)
 {
-	if (DecentAppRoot.isMember(sk_LabelAppAttach) && DecentAppRoot[sk_LabelAppAttach].isString())
-	{
-		return DecentAppRoot[sk_LabelAppAttach].asString();
-	}
-	throw MessageParseException();
 }
 
-DecentAppTrustedMessage::DecentAppTrustedMessage(const Json::Value & msg) :
+DecentAppHandshakeAck::DecentAppHandshakeAck(const Json::Value & msg) :
 	DecentAppMessage(msg, sk_ValueType),
-	m_trustedMsg(ParseTrustedMsg(msg[Messages::sk_LabelRoot][DecentAppMessage::sk_LabelRoot])),
-	m_appAttach(ParseAppAttach(msg[Messages::sk_LabelRoot][DecentAppMessage::sk_LabelRoot]))
+	m_selfRAReport(ParseSelfRAReport(msg[Messages::sk_LabelRoot][DecentAppMessage::sk_LabelRoot]))
 {
 }
 
-Json::Value & DecentAppTrustedMessage::GetJsonMsg(Json::Value & outJson) const
+DecentAppHandshakeAck::~DecentAppHandshakeAck()
+{
+}
+
+std::string DecentAppHandshakeAck::GetMessageTypeStr() const
+{
+	return sk_ValueType;
+}
+
+const std::string & DecentAppHandshakeAck::GetSelfRAReport() const
+{
+	return m_selfRAReport;
+}
+
+Json::Value & DecentAppHandshakeAck::GetJsonMsg(Json::Value & outJson) const
 {
 	Json::Value& parent = DecentAppMessage::GetJsonMsg(outJson);
 
-	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
-	parent[sk_LabelTrustedMsg] = m_trustedMsg;
-	parent[sk_LabelAppAttach] = m_appAttach;
+	parent[sk_LabelSelfReport] = m_selfRAReport;
 
 	return parent;
 }

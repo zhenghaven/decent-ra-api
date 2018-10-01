@@ -238,6 +238,53 @@ size_t LocalConnection::Receive(std::vector<uint8_t>& msg)
 	return recvSize;
 }
 
+size_t LocalConnection::Receive(char *& dest)
+{
+	uint64_t recvSize = 0;
+	uint64_t totalSize = 0;
+
+	std::shared_ptr<SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
+	LocalSessionStruct& m_dataRef = inSharedObj->GetObject();
+
+	{
+		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
+		if (!m_dataRef.m_isMsgReady)
+		{
+			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
+			m_dataRef.m_readySignal.wait(writelock);
+		}
+		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
+		totalSize = m_dataRef.m_totalSize;
+		dest = new char[totalSize];
+
+		std::memcpy(dest + recvSize, m_dataRef.m_msg, m_dataRef.m_sentSize);
+		recvSize += m_dataRef.m_sentSize;
+		m_dataRef.m_isMsgReady = false;
+
+		m_dataRef.m_emptySignal.notify_one();
+	}
+
+	while (recvSize < totalSize)
+	{
+		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
+		if (!m_dataRef.m_isMsgReady)
+		{
+			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
+			m_dataRef.m_readySignal.wait(writelock);
+		}
+		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
+
+		std::memcpy(dest + recvSize, m_dataRef.m_msg, m_dataRef.m_sentSize);
+		recvSize += m_dataRef.m_sentSize;
+		m_dataRef.m_isMsgReady = false;
+
+		m_dataRef.m_emptySignal.notify_one();
+	}
+
+	//LOGI("Recv Binary with size %llu\n", recvSize);
+	return recvSize;
+}
+
 bool LocalConnection::IsTerminate() const noexcept
 {
 	std::shared_ptr<const SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj); //noexcept based on cppreference.

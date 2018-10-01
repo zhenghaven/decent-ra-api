@@ -25,6 +25,7 @@ public:
 	virtual size_t Receive(std::string& msg) = 0;
 	virtual size_t Receive(Json::Value& msg) = 0;
 	virtual size_t Receive(std::vector<uint8_t>& msg) = 0;
+	virtual size_t Receive(char*& dest) = 0;
 
 	virtual void Terminate() noexcept = 0;
 };

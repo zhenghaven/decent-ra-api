@@ -6,6 +6,12 @@ enclave {
 		void ocall_print_string_w([in, string] const char *str);
 
 		void ocall_print_string_e([in, string] const char *str);
+		
+		size_t ocall_connection_send([user_check] void* ptr, [in, size = size] const char* msg, size_t size);
+		
+		size_t ocall_connection_receive([user_check] void* ptr, [out] char** msg);
+		
+		void ocall_connection_clean_recv_buffer([user_check] char* ptr);
 	};
 
 };

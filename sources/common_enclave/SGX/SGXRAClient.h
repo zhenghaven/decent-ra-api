@@ -21,7 +21,6 @@ typedef struct _ias_report_t sgx_ias_report_t;
 
 typedef uint32_t sgx_ra_context_t;
 
-typedef bool(*SendFunctionType)(void* const connectionPtr, const char* senderID, const char *msg, const char* appAttach);
 typedef sgx_status_t(*RaCloseCtxFuncType)(sgx_ra_context_t ctxId);
 typedef sgx_status_t(*RaGetKeyFuncType)(sgx_ra_context_t, sgx_ra_key_type_t, sgx_ra_key_128_t*);
 
@@ -53,7 +52,7 @@ namespace SGXRAEnclave
 	void DropRAStateToServer(const std::string& serverID);
 	bool IsAttestedToServer(const std::string& serverID);
 	bool ReleaseServerKeys(const std::string& serverID, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK);
-	AESGCMCommLayer* ReleaseServerKeys(const std::string& serverID, SendFunctionType sendFunc);
+	AESGCMCommLayer* ReleaseServerKeys(const std::string& serverID);
 
 	sgx_status_t ProcessRaMsg4(const std::string& serverID, const sgx_ias_report_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, RaGetKeyFuncType raGetKeyFuncType);
 }

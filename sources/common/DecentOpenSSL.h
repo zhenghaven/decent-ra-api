@@ -39,3 +39,13 @@ private:
 	const std::string k_platformType;
 	const std::string k_appId;
 };
+
+//class DecentTlsCtx : public SSLCTXWrapper
+//{
+//public:
+//	static DecentTlsCtx & GetInst();
+//	~DecentTlsCtx() {}
+//
+//private:
+//	DecentTlsCtx();
+//};

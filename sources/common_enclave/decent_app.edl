@@ -3,9 +3,7 @@ enclave {
 	{
 		public sgx_status_t ecall_decent_app_process_ias_ra_report([in, string] const char* reportStr);
 		
-		public sgx_status_t ecall_decent_app_send_x509_req([in, string] const char* decentId, [user_check] void* connectionPtr, [user_check] const char* appAttach);
-		
-		public sgx_status_t ecall_decent_app_proc_app_x509_msg([in, string] const char* jsonMsg);
+		public sgx_status_t ecall_decent_app_get_x509([in, string] const char* decentId, [user_check] void* connectionPtr);
 
 		public size_t ecall_decent_app_get_x509_pem([out, size = buf_len] char* buf, size_t buf_len);
 	};

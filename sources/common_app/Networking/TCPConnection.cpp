@@ -103,6 +103,20 @@ size_t TCPConnection::Receive(std::vector<uint8_t>& msg)
 	return receivedSize;
 }
 
+size_t TCPConnection::Receive(char *& dest)
+{
+	uint64_t msgSize = 0;
+	uint64_t receivedSize = 0;
+	m_socket->receive(boost::asio::buffer(&msgSize, sizeof(msgSize)));
+	dest = new char[msgSize];
+	while (receivedSize < msgSize)
+	{
+		receivedSize += m_socket->receive(boost::asio::buffer(dest + receivedSize, (msgSize - receivedSize)));
+	}
+	//LOGI("Recv Binary with size %llu\n", receivedSize);
+	return receivedSize;
+}
+
 void TCPConnection::Terminate() noexcept
 {
 	try

@@ -212,7 +212,7 @@ bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, std::unique_p
 	return true;
 }
 
-AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, SendFunctionType sendFunc, std::unique_ptr<sgx_ias_report_t>& outIasReport)
+AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport)
 {
 	std::shared_ptr<RASPContext> spCTXPtr(FetchSpCtx(clientID));
 	if (!spCTXPtr || spCTXPtr->m_state != ClientRAState::ATTESTED)
@@ -227,7 +227,7 @@ AESGCMCommLayer* SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, S
 
 		outIasReport.swap(spCTX.m_iasReport);
 
-		res = new AESGCMCommLayer(*spCTX.m_sk, SerializeStruct(*spCTX.m_mySignPub), sendFunc);
+		res = new AESGCMCommLayer(*spCTX.m_sk);
 	}
 	SGXRAEnclave::DropClientRAState(clientID);
 	return res;

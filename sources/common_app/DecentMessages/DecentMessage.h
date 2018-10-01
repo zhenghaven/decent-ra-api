@@ -105,39 +105,3 @@ protected:
 
 private:
 };
-
-class DecentTrustedMessage : public DecentMessage
-{
-public:
-	static constexpr char const sk_LabelTrustedMsg[] = "Msg";
-	static constexpr char const sk_LabelAppAttach[] = "AppAttach";
-
-	static constexpr char const sk_ValueType[] = "TrustedMsg";
-
-	static std::string ParseTrustedMsg(const Json::Value& DecentRoot);
-	static std::string ParseAppAttach(const Json::Value& DecentRoot);
-
-public:
-	DecentTrustedMessage() = delete;
-	DecentTrustedMessage(const std::string& senderID, const std::string& trustedMsg, const std::string& appAttach) :
-		DecentMessage(senderID),
-		m_trustedMsg(trustedMsg),
-		m_appAttach(appAttach)
-	{}
-
-	explicit DecentTrustedMessage(const Json::Value& msg);
-	virtual ~DecentTrustedMessage() {}
-
-	virtual std::string GetMessageTypeStr() const override;
-
-	virtual const std::string& GetTrustedMsg() const { return m_trustedMsg; }
-	virtual const std::string& GetAppAttach() const { return m_appAttach; }
-
-protected:
-	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
-
-private:
-	const std::string m_trustedMsg;
-	const std::string m_appAttach;
-};
-
