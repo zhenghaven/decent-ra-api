@@ -5,7 +5,7 @@
 
 #include <Enclave_t.h>
 
-static constexpr size_t PRINT_BUFFER_SIZE = 10 * BUFSIZ;
+static constexpr size_t PRINT_BUFFER_SIZE = 20 * BUFSIZ;
 
 void ocall_printf(const char * fmt, ...)
 {

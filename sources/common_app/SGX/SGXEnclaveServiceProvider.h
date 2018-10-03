@@ -27,11 +27,6 @@ public:
 	virtual const std::string GetRAClientSignPubKey() const override; /*This is used to suppress the warnning*/
 	virtual ClientRASession* GetRAClientSession(Connection& connection) override; /*This is used to suppress the warnning*/
 
-	virtual bool SendLARequest(Connection& connection) override;
-	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection) override;
-	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection, const Json::Value& ackMsg) override;
-	virtual LocalAttestationSession* GetLAResponderSession(Connection& connection, const Json::Value& initMsg) override;
-
 	virtual void GetRASPSignPubKey(sgx_ec256_public_t& outKey) const override;
 	virtual const std::string GetRASPSignPubKey() const override;
 	virtual ServiceProviderRASession* GetRASPSession(Connection& connection) override;

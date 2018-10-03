@@ -72,26 +72,6 @@ ClientRASession* SGXEnclaveServiceProvider::GetRAClientSession(Connection& conne
 	return SGXEnclave::GetRAClientSession(connection);
 }
 
-bool SGXEnclaveServiceProvider::SendLARequest(Connection& connection)
-{
-	return SGXEnclave::SendLARequest(connection);
-}
-
-LocalAttestationSession* SGXEnclaveServiceProvider::GetLAInitiatorSession(Connection& connection)
-{
-	return SGXEnclave::GetLAInitiatorSession(connection);
-}
-
-LocalAttestationSession* SGXEnclaveServiceProvider::GetLAInitiatorSession(Connection& connection, const Json::Value & ackMsg)
-{
-	return SGXEnclave::GetLAInitiatorSession(connection, ackMsg);
-}
-
-LocalAttestationSession* SGXEnclaveServiceProvider::GetLAResponderSession(Connection& connection, const Json::Value & initMsg)
-{
-	return SGXEnclave::GetLAResponderSession(connection, initMsg);
-}
-
 void SGXEnclaveServiceProvider::GetRASPSignPubKey(sgx_ec256_public_t & outKey) const
 {
 	sgx_status_t retval = SGX_SUCCESS;

@@ -131,28 +131,6 @@ ClientRASession* SGXEnclave::GetRAClientSession(Connection& connection)
 	return new SGXClientRASession(connection, *this);
 }
 
-bool SGXEnclave::SendLARequest(Connection& connection)
-{
-	return SGXLASession::SendHandshakeMessage(connection, *this);
-}
-
-LocalAttestationSession* SGXEnclave::GetLAInitiatorSession(Connection& connection)
-{
-	return new SGXLASession(connection, *this);
-}
-
-LocalAttestationSession* SGXEnclave::GetLAInitiatorSession(Connection& connection, const Json::Value & ackMsg)
-{
-	SGXLAMessage1* msg1 = new SGXLAMessage1(ackMsg);
-	return new SGXLASession(connection, *this, msg1);
-}
-
-LocalAttestationSession* SGXEnclave::GetLAResponderSession(Connection& connection, const Json::Value & initMsg)
-{
-	SGXLARequest req(initMsg);
-	return new SGXLASession(connection, *this, req);
-}
-
 uint32_t SGXEnclave::GetExGroupID()
 {
 	uint32_t res = 0;
@@ -222,59 +200,11 @@ sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_i
 	return retval;
 }
 
-sgx_status_t SGXEnclave::ResponderGenerateLAMsg1(const std::string & peerID, sgx_dh_msg1_t & outMsg1)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_sgx_la_responder_gen_msg1(GetEnclaveId(), &retval, peerID.c_str(), &outMsg1);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_responder_gen_msg1);
-
-	return retval;
-}
-
-sgx_status_t SGXEnclave::InitiatorProcessLAMsg1(const std::string & peerID, const sgx_dh_msg1_t & inMsg1, sgx_dh_msg2_t & outMsg2)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_sgx_la_initiator_proc_msg1(GetEnclaveId(), &retval, peerID.c_str(), &inMsg1, &outMsg2);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
-
-	return retval;
-}
-
-sgx_status_t SGXEnclave::ResponderProcessLAMsg2(const std::string & peerID, const sgx_dh_msg2_t & inMsg2, sgx_dh_msg3_t & outMsg3)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_sgx_la_responder_proc_msg2(GetEnclaveId(), &retval, peerID.c_str(), &inMsg2, &outMsg3);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
-
-	return retval;
-}
-
-sgx_status_t SGXEnclave::InitiatorProcessLAMsg3(const std::string & peerID, const sgx_dh_msg3_t & inMsg3)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_sgx_la_initiator_proc_msg3(GetEnclaveId(), &retval, peerID.c_str(), &inMsg3);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_sgx_la_init);
-
-	return retval;
-}
-
 bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	if (category == SGXRAClientMessage::sk_ValueCat)
 	{
 		return SGXClientRASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
-	}
-	else if (category == SGXLAMessage::sk_ValueCat)
-	{
-		return SGXLASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
 	}
 	else
 	{

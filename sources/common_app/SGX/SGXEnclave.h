@@ -80,11 +80,6 @@ public:
 	virtual const std::string GetRAClientSignPubKey() const override;
 	virtual ClientRASession* GetRAClientSession(Connection& connection) override;
 
-	virtual bool SendLARequest(Connection& connection) override;
-	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection) override;
-	virtual LocalAttestationSession* GetLAInitiatorSession(Connection& connection, const Json::Value& ackMsg) override;
-	virtual LocalAttestationSession* GetLAResponderSession(Connection& connection, const Json::Value& initMsg) override;
-
 	virtual uint32_t GetExGroupID();
 
 	//***************************************
@@ -95,16 +90,6 @@ public:
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID);
 	virtual sgx_status_t ProcessRAMsg2(const std::string& ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t& inContextID, sgx_ecall_proc_msg2_trusted_t proc_msg2_func, sgx_ecall_get_msg3_trusted_t get_msg3_func);
 	virtual sgx_status_t ProcessRAMsg4(const std::string& ServerID, const sgx_ias_report_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign);
-
-
-	//***************************************
-	//  Local Attestation Methods
-	//***************************************
-
-	virtual sgx_status_t ResponderGenerateLAMsg1(const std::string& peerID, sgx_dh_msg1_t& outMsg1);
-	virtual sgx_status_t InitiatorProcessLAMsg1(const std::string& peerID, const sgx_dh_msg1_t& inMsg1, sgx_dh_msg2_t& outMsg2);
-	virtual sgx_status_t ResponderProcessLAMsg2(const std::string& peerID, const sgx_dh_msg2_t& inMsg2, sgx_dh_msg3_t& outMsg3);
-	virtual sgx_status_t InitiatorProcessLAMsg3(const std::string& peerID, const sgx_dh_msg3_t& inMsg3);
 
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
 
