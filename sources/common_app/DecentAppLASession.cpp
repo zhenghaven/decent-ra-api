@@ -5,7 +5,6 @@
 #include "EnclaveBase.h"
 #include "DecentEnclave.h"
 #include "DecentAppEnclave.h"
-#include "LocalAttestationSession.h"
 #include "DecentMessages/DecentAppMessage.h"
 #include "MessageException.h"
 #include "Networking/Connection.h"

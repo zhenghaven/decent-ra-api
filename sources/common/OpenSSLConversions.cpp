@@ -14,7 +14,7 @@
 #define C_TRUE 1
 #define C_FALSE 0
 
-#ifdef ENCLAVE_CODE
+#ifdef ENCLAVE_ENVIRONMENT
 
 namespace std
 {
@@ -31,7 +31,7 @@ namespace std
 	}
 }
 
-#endif // ENCLAVE_CODE
+#endif // ENCLAVE_ENVIRONMENT
 
 struct DecentEccContext
 {

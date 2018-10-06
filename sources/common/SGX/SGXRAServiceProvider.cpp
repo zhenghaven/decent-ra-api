@@ -29,7 +29,7 @@
 #include "../SGX/ias_report.h"
 #include "../SGX/IasReport.h"
 
-#ifdef ENCLAVE_CODE
+#ifdef ENCLAVE_ENVIRONMENT
 #include <rapidjson/document.h>
 #else
 #include <json/json.h>

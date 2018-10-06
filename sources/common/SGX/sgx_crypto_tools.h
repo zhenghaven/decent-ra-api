@@ -55,9 +55,9 @@ extern "C" {
 
 	sgx_status_t verify_cmac128(const sgx_ec_key_128bit_t* mac_key, const uint8_t* data_buf, uint32_t buf_size, const uint8_t* mac_buf);
 
-#if !defined(ENCLAVE_CODE)
+#if !defined(ENCLAVE_ENVIRONMENT)
 	int consttime_memequal(const void *b1, const void *b2, size_t len);
-#endif // ENCLAVE_CODE
+#endif // ENCLAVE_ENVIRONMENT
 
 
 #ifdef __cplusplus

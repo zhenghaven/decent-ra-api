@@ -12,9 +12,9 @@ const OpenSSLInitializer & OpenSSLInitializer::Initialize()
 
 OpenSSLInitializer::OpenSSLInitializer()
 {
-#ifndef ENCLAVE_CODE
+#ifndef ENCLAVE_ENVIRONMENT
 	SSL_library_init();
-#endif // !ENCLAVE_CODE
+#endif // !ENCLAVE_ENVIRONMENT
 }
 
 OpenSSLInitializer::~OpenSSLInitializer()

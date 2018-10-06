@@ -38,7 +38,7 @@ static_assert(offsetof(sgx_ec256_dh_shared_t, s) == offsetof(sgx_ec256_dh_shared
 static_assert(offsetof(sgx_ec256_signature_t, x) == offsetof(general_secp256r1_signature_t, x), SGX_GENERAL_KEY_TYPE_ERROR_MSG);
 static_assert(offsetof(sgx_ec256_signature_t, y) == offsetof(general_secp256r1_signature_t, y), SGX_GENERAL_KEY_TYPE_ERROR_MSG);
 
-#ifdef ENCLAVE_CODE
+#ifdef ENCLAVE_ENVIRONMENT
 
 namespace std
 {
@@ -55,7 +55,7 @@ namespace std
 	}
 }
 
-#endif // ENCLAVE_CODE
+#endif // ENCLAVE_ENVIRONMENT
 
 bool ECKeyCalcSharedKey(EVP_PKEY* inKey, EVP_PKEY* inPeerKey, sgx_ec256_dh_shared_t *outSharedkey)
 {

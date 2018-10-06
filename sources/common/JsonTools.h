@@ -2,7 +2,7 @@
 
 #include <string>
 
-#ifdef ENCLAVE_CODE
+#ifdef ENCLAVE_ENVIRONMENT
 #define JSON_EDITION rapidjson
 #define JSON_DOCUMENT_TYPE Document
 
@@ -26,7 +26,7 @@
 #define JSON_AS_INT32 asInt
 #endif
 
-#ifdef ENCLAVE_CODE
+#ifdef ENCLAVE_ENVIRONMENT
 namespace JSON_EDITION
 {
 	class CrtAllocator;
@@ -51,7 +51,7 @@ namespace JSON_EDITION
 {
 	class Value;
 }
-#endif // ENCLAVE_CODE
+#endif // ENCLAVE_ENVIRONMENT
 
 
 bool ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const std::string& inStr);

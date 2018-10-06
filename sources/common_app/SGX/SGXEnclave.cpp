@@ -22,8 +22,6 @@
 #include "SGXEnclaveRuntimeException.h"
 #include "SGXClientRASession.h"
 #include "SGXMessages/SGXRAMessage.h"
-#include "SGXLASession.h"
-#include "SGXMessages/SGXLAMessage.h"
 
 #include <Enclave_u.h>
 

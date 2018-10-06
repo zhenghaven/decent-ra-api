@@ -12,11 +12,11 @@
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-#ifdef ENCLAVE_CODE
+#ifdef ENCLAVE_ENVIRONMENT
 constexpr bool IS_IN_ENCLAVE_SIDE = true;
 #else
 constexpr bool IS_IN_ENCLAVE_SIDE = false;
-#endif // ENCLAVE_CODE
+#endif // ENCLAVE_ENVIRONMENT
 
 namespace
 {

@@ -6,11 +6,11 @@
 
 #include <cppcodec/hex_default_upper.hpp>
 
-#ifdef ENCLAVE_CODE
+#ifdef ENCLAVE_ENVIRONMENT
 #include <rapidjson/document.h>
 #else
 #include <json/json.h>
-#endif // ENCLAVE_CODE
+#endif // ENCLAVE_ENVIRONMENT
 
 #include "../JsonTools.h"
 #include "../DataCoding.h"
