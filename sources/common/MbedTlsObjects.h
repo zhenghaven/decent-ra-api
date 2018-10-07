@@ -9,89 +9,142 @@
 
 typedef struct mbedtls_pk_context mbedtls_pk_context;
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
+typedef struct mbedtls_x509_crt mbedtls_x509_crt;
+typedef struct mbedtls_x509_csr mbedtls_x509_csr;
 
-template<typename T>
-class MbedTlsObjBase
+namespace MbedTlsObj
 {
-public:
-	MbedTlsObjBase(T* ptr) :
-		m_ptr(ptr)
-	{}
-
-	MbedTlsObjBase(const MbedTlsObjBase& other) = delete;
-	MbedTlsObjBase(MbedTlsObjBase&& other)
+	template<typename T>
+	class ObjBase
 	{
-		this->m_ptr = other.m_ptr;
-		other.m_ptr = nullptr;
-	}
+	public:
+		ObjBase(T* ptr) :
+			m_ptr(ptr)
+		{}
 
-	virtual MbedTlsObjBase& operator=(const MbedTlsObjBase& other) = delete;
-	virtual MbedTlsObjBase& operator=(MbedTlsObjBase&& other)
-	{
-		if (this != &other)
+		ObjBase(const ObjBase& other) = delete;
+		ObjBase(ObjBase&& other)
 		{
 			this->m_ptr = other.m_ptr;
 			other.m_ptr = nullptr;
 		}
-		return *this;
-	}
 
-	virtual ~MbedTlsObjBase() {}
+		virtual ObjBase& operator=(const ObjBase& other) = delete;
+		virtual ObjBase& operator=(ObjBase&& other)
+		{
+			if (this != &other)
+			{
+				this->m_ptr = other.m_ptr;
+				other.m_ptr = nullptr;
+			}
+			return *this;
+		}
 
-	virtual operator bool() const
+		virtual ~ObjBase() {}
+
+		virtual operator bool() const
+		{
+			return m_ptr;
+		}
+
+		T* GetInternalPtr() const
+		{
+			return m_ptr;
+		}
+
+		T* Release()
+		{
+			T* tmp = m_ptr;
+			m_ptr = nullptr;
+			return tmp;
+		}
+
+	protected:
+		T * m_ptr;
+	};
+
+	class ECKeyPublic : public ObjBase<mbedtls_pk_context>
 	{
-		return m_ptr;
-	}
+	public:
+		ECKeyPublic() = delete;
+		ECKeyPublic(mbedtls_pk_context* ptr, bool isOwner);
+		ECKeyPublic(const general_secp256r1_public_t& pub);
+		ECKeyPublic(const std::string& pemStr);
+		ECKeyPublic(ECKeyPublic&& other);
+		virtual ~ECKeyPublic();
 
-	T* GetInternalPtr() const
+		virtual ECKeyPublic& operator=(ECKeyPublic&& other);
+
+		bool ToGeneralPublicKey(general_secp256r1_public_t& outKey) const;
+
+		std::string ToPubPemString() const;
+		bool ToPubDerArray(std::vector<uint8_t>& outArray) const;
+
+		mbedtls_ecp_keypair* GetInternalECKey() const;
+
+	private:
+		bool m_isOwner;
+
+	};
+
+	class ECKeyPair : public ECKeyPublic
 	{
-		return m_ptr;
-	}
+	public:
+		//Dummy struct to indicate the need for generating a new key pair.
+		struct GeneratePair
+		{
+			explicit GeneratePair() = default;
+		};
 
-	T* Release()
+		static constexpr GeneratePair generatePair{};
+
+	public:
+		ECKeyPair() = delete;
+		ECKeyPair(mbedtls_pk_context* ptr, bool isOwner);
+		ECKeyPair(GeneratePair);
+		ECKeyPair(const general_secp256r1_private_t& prv);
+		ECKeyPair(const general_secp256r1_private_t& prv, const general_secp256r1_public_t& pub);
+		ECKeyPair(const std::string& pemStr);
+		virtual ~ECKeyPair();
+
+		bool ToGeneralPrivateKey(general_secp256r1_private_t& outKey) const;
+
+		std::string ToPrvPemString() const;
+		bool ToPrvDerArray(std::vector<uint8_t>& outArray) const;
+
+	};
+
+	class X509Req : public ObjBase<mbedtls_x509_csr>
 	{
-		T* tmp = m_ptr;
-		m_ptr = nullptr;
-		return tmp;
-	}
+	public:
+		X509Req() = delete;
+		X509Req(const std::string& pemStr);
+		X509Req(mbedtls_x509_csr* ptr, const std::string& pemStr);
+		X509Req(const ECKeyPair& keyPair, const std::string& commonName);
+		~X509Req();
 
-protected:
-	T * m_ptr;
-};
+		bool VerifySignature() const;
+		const ECKeyPublic& GetPublicKey() const;
 
-class MbedECKeyPublic : public MbedTlsObjBase<mbedtls_pk_context>
-{
-public:
-	MbedECKeyPublic() = delete;
-	MbedECKeyPublic(mbedtls_pk_context* m_ptr, bool isOwner);
-	MbedECKeyPublic(const general_secp256r1_public_t& pub);
-	MbedECKeyPublic(const std::string& pemStr);
-	MbedECKeyPublic(MbedECKeyPublic&& other);
-	virtual ~MbedECKeyPublic();
+		std::string ToPemString() const;
+		//bool ToDerArray(std::vector<uint8_t>& outArray) const;
 
-	virtual MbedECKeyPublic& operator=(MbedECKeyPublic&& other);
+	private:
+		std::string m_pemStr;
+		ECKeyPublic m_pubKey;
+	};
 
-	std::string ToPubPemString() const;
-	bool ToPubDerArray(std::vector<uint8_t>& outArray) const;
+	class X509Cert : public ObjBase<mbedtls_x509_crt>
+	{
+	public:
+		X509Cert() = delete;
+		X509Cert(const std::string& pemStr);
+		X509Cert(mbedtls_x509_crt* ptr, const std::string& pemStr);
+		~X509Cert();
 
-	mbedtls_ecp_keypair* GetInternalECKey() const;
+	private:
+		std::string m_pemStr;
+		ECKeyPublic m_pubKey;
+	};
 
-private:
-	bool m_isOwner;
-
-};
-
-class MbedECKeyPair : public MbedECKeyPublic
-{
-public:
-	MbedECKeyPair() = delete;
-	MbedECKeyPair(mbedtls_pk_context* m_ptr, bool isOwner);
-	MbedECKeyPair(const general_secp256r1_private_t& prv);
-	MbedECKeyPair(const general_secp256r1_private_t& prv, const general_secp256r1_public_t& pub);
-	MbedECKeyPair(const std::string& pemStr);
-	virtual ~MbedECKeyPair();
-
-	std::string ToPrvPemString() const;
-	bool ToPrvDerArray(std::vector<uint8_t>& outArray) const;
-
-};
+}
