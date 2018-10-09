@@ -1,9 +1,17 @@
 #include "MbedTlsObjects.h"
 
+#include <ctime>
+#include <climits>
+
 #include <memory>
+#include <map>
+#include <string>
 
 #include <mbedtls/pk.h>
 #include <mbedtls/ecp.h>
+#include <mbedtls/pem.h>
+#include <mbedtls/asn1write.h>
+#include <mbedtls/oid.h>
 #include <mbedtls/x509.h>
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/x509_crt.h>
@@ -11,6 +19,7 @@
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include "../common/MbedTlsHelpers.h"
+#include "../common/CommonTool.h"
 
 using namespace MbedTlsObj;
 
@@ -49,16 +58,19 @@ namespace
 
 	static constexpr char const PEM_BEGIN_CSR[] = "-----BEGIN CERTIFICATE REQUEST-----\n";
 	static constexpr char const PEM_END_CSR[] = "-----END CERTIFICATE REQUEST-----\n";
+	static constexpr char const PEM_BEGIN_CRT[] = "-----BEGIN CERTIFICATE-----\n";
+	static constexpr char const PEM_END_CRT[] = "-----END CERTIFICATE-----\n";
 
 	static constexpr size_t ECP_PUB_DER_MAX_BYTES = (30 + 2 * MBEDTLS_ECP_MAX_BYTES);
 	static constexpr size_t ECP_PRV_DER_MAX_BYTES = (29 + 3 * MBEDTLS_ECP_MAX_BYTES);
 	static constexpr size_t X509_REQ_DER_MAX_BYTES = 4096; //From x509write_csr.c
+	static constexpr size_t X509_CRT_DER_MAX_BYTES = 4096; //From x509write_crt.c
 
 	static constexpr size_t CalcPemMaxBytes(size_t derMaxSize, size_t headerSize, size_t footerSize)
 	{
 		return headerSize + 
 			cppcodec::base64_rfc4648::encoded_size(derMaxSize) + 
-			(derMaxSize / 64) +  //'\n' for each line.
+			(cppcodec::base64_rfc4648::encoded_size(derMaxSize) / 64) +  //'\n' for each line.
 			footerSize + 
 			1;                   //null terminator
 	}
@@ -72,7 +84,51 @@ namespace
 	static constexpr size_t X509_REQ_PEM_MAX_BYTES =
 		CalcPemMaxBytes(X509_REQ_DER_MAX_BYTES, sizeof(PEM_BEGIN_CSR), sizeof(PEM_END_CSR));
 
+	static constexpr size_t X509_CRT_PEM_MAX_BYTES =
+		CalcPemMaxBytes(X509_CRT_DER_MAX_BYTES, sizeof(PEM_BEGIN_CRT), sizeof(PEM_END_CRT));
 
+
+}
+
+BigNumber MbedTlsObj::BigNumber::GenRandomNumber(size_t size)
+{
+	std::unique_ptr<mbedtls_mpi> serialNum(new mbedtls_mpi);
+	mbedtls_mpi_init(serialNum.get());
+
+	void* drbgCtx;
+	MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
+
+	int mbedRet = mbedtls_mpi_fill_random(serialNum.get(), size,
+		&MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx);
+
+	MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+
+	if (mbedRet != MBEDTLS_SUCCESS_RET)
+	{
+		mbedtls_mpi_free(serialNum.get());
+		return BigNumber(nullptr);
+	}
+
+	return BigNumber(serialNum.release());
+}
+
+MbedTlsObj::BigNumber::BigNumber(BigNumber && other) :
+	ObjBase(std::forward<ObjBase>(other))
+{
+}
+
+MbedTlsObj::BigNumber::BigNumber(mbedtls_mpi * ptr) :
+	ObjBase(ptr)
+{
+}
+
+MbedTlsObj::BigNumber::~BigNumber()
+{
+	if (!*this)
+	{
+		mbedtls_mpi_free(m_ptr);
+		delete m_ptr;
+	}
 }
 
 static mbedtls_pk_context* ConstructEcPubFromPemDer(const uint8_t* ptr, size_t size)
@@ -568,6 +624,228 @@ static mbedtls_x509_crt* ConstructX509CertFromPem(const std::string & pemStr)
 	return ConstructX509CertFromPemDer(reinterpret_cast<const uint8_t*>(pemStr.c_str()), pemStr.size() + 1);
 }
 
+static int x509_write_time(unsigned char **p, unsigned char *start,
+	const char *t, size_t size)
+{
+	int ret;
+	size_t len = 0;
+
+	/*
+	 * write MBEDTLS_ASN1_UTC_TIME if year < 2050 (2 bytes shorter)
+	 */
+	if (t[0] == '2' && t[1] == '0' && t[2] < '5')
+	{
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_raw_buffer(p, start,
+			(const unsigned char *)t + 2,
+			size - 2));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(p, start, len));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(p, start, MBEDTLS_ASN1_UTC_TIME));
+	}
+	else
+	{
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_raw_buffer(p, start,
+			(const unsigned char *)t,
+			size));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(p, start, len));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(p, start, MBEDTLS_ASN1_GENERALIZED_TIME));
+	}
+
+	return((int)len);
+}
+
+static int myX509WriteCrtDer(mbedtls_x509write_cert *ctx, std::vector<uint8_t>& buf,
+	int(*f_rng)(void *, unsigned char *, size_t), void *p_rng)
+{
+	int ret;
+	const char *sig_oid;
+	size_t sig_oid_len = 0;
+	unsigned char *c, *c2;
+	unsigned char hash[64];
+	unsigned char sig[MBEDTLS_MPI_MAX_SIZE];
+	size_t sub_len = 0, pub_len = 0, sig_and_oid_len = 0, sig_len;
+	size_t len = 0;
+	mbedtls_pk_type_t pk_alg;
+
+	c = buf.data() + buf.size();
+
+	if (mbedtls_pk_can_do(ctx->issuer_key, MBEDTLS_PK_RSA))
+		pk_alg = MBEDTLS_PK_RSA;
+	else if (mbedtls_pk_can_do(ctx->issuer_key, MBEDTLS_PK_ECDSA))
+		pk_alg = MBEDTLS_PK_ECDSA;
+	else
+		return(MBEDTLS_ERR_X509_INVALID_ALG);
+
+	if ((ret = mbedtls_oid_get_oid_by_sig_alg(pk_alg, ctx->md_alg,
+		&sig_oid, &sig_oid_len)) != 0)
+	{
+		return(ret);
+	}
+
+	if (ctx->version == MBEDTLS_X509_CRT_VERSION_3)
+	{
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_x509_write_extensions(&c, buf.data(), ctx->extensions));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf.data(), len));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf.data(), MBEDTLS_ASN1_CONSTRUCTED |
+			MBEDTLS_ASN1_SEQUENCE));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf.data(), len));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf.data(), MBEDTLS_ASN1_CONTEXT_SPECIFIC |
+			MBEDTLS_ASN1_CONSTRUCTED | 3));
+	}
+
+	MBEDTLS_ASN1_CHK_ADD(pub_len, mbedtls_pk_write_pubkey_der(ctx->subject_key, buf.data(), c - buf.data()));
+	c -= pub_len;
+	len += pub_len;
+
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_x509_write_names(&c, buf.data(), ctx->subject));
+
+	sub_len = 0;
+
+	MBEDTLS_ASN1_CHK_ADD(sub_len, x509_write_time(&c, buf.data(), ctx->not_after,
+		MBEDTLS_X509_RFC5280_UTC_TIME_LEN));
+
+	MBEDTLS_ASN1_CHK_ADD(sub_len, x509_write_time(&c, buf.data(), ctx->not_before,
+		MBEDTLS_X509_RFC5280_UTC_TIME_LEN));
+
+	len += sub_len;
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf.data(), sub_len));
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf.data(), MBEDTLS_ASN1_CONSTRUCTED |
+		MBEDTLS_ASN1_SEQUENCE));
+
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_x509_write_names(&c, buf.data(), ctx->issuer));
+
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_algorithm_identifier(&c, buf.data(),
+		sig_oid, strlen(sig_oid), 0));
+
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, buf.data(), &ctx->serial));
+
+	if (ctx->version != MBEDTLS_X509_CRT_VERSION_1)
+	{
+		sub_len = 0;
+		MBEDTLS_ASN1_CHK_ADD(sub_len, mbedtls_asn1_write_int(&c, buf.data(), ctx->version));
+		len += sub_len;
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf.data(), sub_len));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf.data(), MBEDTLS_ASN1_CONTEXT_SPECIFIC |
+			MBEDTLS_ASN1_CONSTRUCTED | 0));
+	}
+
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf.data(), len));
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf.data(), MBEDTLS_ASN1_CONSTRUCTED |
+		MBEDTLS_ASN1_SEQUENCE));
+
+	/*
+	 * Make signature
+	 */
+	if ((ret = mbedtls_md(mbedtls_md_info_from_type(ctx->md_alg), c, len, hash)) != 0 ||
+		(ret = mbedtls_pk_sign(ctx->issuer_key, ctx->md_alg, hash, 0, sig, &sig_len, f_rng, p_rng)) != 0)
+	{
+		return(ret);
+	}
+
+	/*
+	 * Write data to output buffer
+	 */
+	std::vector<uint8_t> sigAndOid(sig_oid_len + sig_len + 128);
+	c2 = sigAndOid.data() + sigAndOid.size();
+	MBEDTLS_ASN1_CHK_ADD(sig_and_oid_len, mbedtls_x509_write_sig(&c2, sigAndOid.data(),
+		sig_oid, sig_oid_len, sig, sig_len));
+
+	buf.insert(buf.end(), sigAndOid.end() - sig_and_oid_len, sigAndOid.end());
+
+	len += sig_and_oid_len;
+	c2 = buf.data() + buf.size() - len;
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c2, buf.data(), len));
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c2, buf.data(), MBEDTLS_ASN1_CONSTRUCTED |
+		MBEDTLS_ASN1_SEQUENCE));
+
+	return((int)len);
+}
+
+static std::string GetFormatedTime(const time_t& timer)
+{
+	std::tm timeRes;
+	Common::GetSystemUtcTime(timer, timeRes);
+
+	std::string res(sizeof("YYYYMMDDHHMMSS0"), '\0');
+
+	strftime(&res[0], res.size(), "%Y%m%d%H%M%S", &timeRes);
+
+	return res;
+}
+
+static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const MbedTlsObj::ECKeyPair& prvKey, const MbedTlsObj::ECKeyPublic& pubKey,
+	const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
+	const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap)
+{
+	//Check parameter.
+	if (!prvKey || !pubKey)
+	{
+		return std::string();
+	}
+
+	mbedtls_x509write_cert cert;
+	mbedtls_x509write_crt_init(&cert);
+
+	mbedtls_x509write_crt_set_version(&cert, MBEDTLS_X509_CRT_VERSION_3);
+	mbedtls_x509write_crt_set_md_alg(&cert, MBEDTLS_MD_SHA256);
+	mbedtls_x509write_crt_set_issuer_key(&cert, prvKey.GetInternalPtr());
+	mbedtls_x509write_crt_set_subject_key(&cert, pubKey.GetInternalPtr());
+
+	time_t timerBegin;
+	Common::GetSystemTime(timerBegin);
+	time_t timerEnd = timerBegin + validTime;
+
+	if (mbedtls_x509write_crt_set_validity(&cert, GetFormatedTime(timerBegin).c_str(), GetFormatedTime(timerEnd).c_str()) != MBEDTLS_SUCCESS_RET ||
+		mbedtls_x509write_crt_set_serial(&cert, serialNum.GetInternalPtr()) != MBEDTLS_SUCCESS_RET ||
+		mbedtls_x509write_crt_set_subject_name(&cert, x509NameList.c_str()) != MBEDTLS_SUCCESS_RET ||
+		mbedtls_x509write_crt_set_basic_constraints(&cert, isCa, maxChainDepth) != MBEDTLS_SUCCESS_RET ||
+		mbedtls_x509write_crt_set_key_usage(&cert, keyUsage) != MBEDTLS_SUCCESS_RET ||
+		mbedtls_x509write_crt_set_ns_cert_type(&cert, nsType) != MBEDTLS_SUCCESS_RET)
+	{
+		mbedtls_x509write_crt_free(&cert);
+		return std::string();
+	}
+
+	size_t extTotalSize = 0;
+
+	int mbedRet = caCert ? MbedTlsHelper::MbedTlsAsn1DeepCopy(cert.issuer, caCert->issuer) : 
+		mbedtls_x509write_crt_set_issuer_name(&cert, x509NameList.c_str());
+	for (auto it = extMap.begin(); it != extMap.end() && mbedRet == MBEDTLS_SUCCESS_RET; ++it)
+	{
+		mbedRet = mbedtls_x509write_crt_set_extension(&cert, it->first.c_str(), it->first.size(), it->second.first,
+			reinterpret_cast<const unsigned char*>(it->second.second.c_str()), it->second.second.size());
+		extTotalSize += it->second.second.size() + it->first.size();
+	}
+
+	if (mbedRet != MBEDTLS_SUCCESS_RET)
+	{
+		mbedtls_x509write_crt_free(&cert);
+		return std::string();
+	}
+
+	void* drbgCtx;
+	MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
+
+	std::vector<uint8_t> tmpDerBuf(X509_CRT_DER_MAX_BYTES + extTotalSize + 5);
+
+	mbedRet = myX509WriteCrtDer(&cert, tmpDerBuf,
+		&MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx);
+
+	MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+	if (mbedRet < 0)
+	{
+		mbedtls_x509write_crt_free(&cert);
+		return std::string();
+	}
+	std::vector<char> tmpRes(X509_CRT_PEM_MAX_BYTES + cppcodec::base64_rfc4648::encoded_size(extTotalSize) + (extTotalSize / 64));
+	mbedRet = mbedtls_pem_write_buffer(PEM_BEGIN_CRT, PEM_END_CRT, 
+		reinterpret_cast<const uint8_t*>(tmpDerBuf.data()) + tmpDerBuf.size() - mbedRet,
+		mbedRet, reinterpret_cast<uint8_t*>(tmpRes.data()), tmpRes.size(), &extTotalSize);
+
+
+	mbedtls_x509write_crt_free(&cert);
+	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) : std::string();
+}
+
 MbedTlsObj::X509Cert::X509Cert(const std::string & pemStr) :
 	X509Cert(ConstructX509CertFromPem(pemStr), pemStr)
 {
@@ -580,6 +858,24 @@ MbedTlsObj::X509Cert::X509Cert(mbedtls_x509_crt * ptr, const std::string & pemSt
 {
 }
 
+MbedTlsObj::X509Cert::X509Cert(const X509Cert & caCert, const MbedTlsObj::ECKeyPair & prvKey, const MbedTlsObj::ECKeyPublic & pubKey, 
+	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
+	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
+	X509Cert(ConstructNewX509Cert(caCert.GetInternalPtr(), prvKey, pubKey, 
+		serialNum, validTime, isCa, maxChainDepth, keyUsage, nsType,
+		x509NameList, extMap))
+{
+}
+
+MbedTlsObj::X509Cert::X509Cert(const MbedTlsObj::ECKeyPair & prvKey, 
+	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
+	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
+	X509Cert(ConstructNewX509Cert(nullptr, prvKey, prvKey, 
+		serialNum, validTime, isCa, maxChainDepth, keyUsage, nsType,
+		x509NameList, extMap))
+{
+}
+
 MbedTlsObj::X509Cert::~X509Cert()
 {
 	if (!*this)
@@ -587,4 +883,122 @@ MbedTlsObj::X509Cert::~X509Cert()
 		mbedtls_x509_crt_free(m_ptr);
 		delete m_ptr;
 	}
+}
+
+bool MbedTlsObj::X509Cert::GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const
+{
+	if (!*this)
+	{
+		return false;
+	}
+
+	if (extMap.size() == 0)
+	{
+		return true;
+	}
+
+	int mbedRet = 0;
+	int is_critical = 0;
+	size_t len = 0;
+
+	unsigned char *end_ext_data = nullptr;
+	unsigned char *end_ext_octet = nullptr;
+
+	unsigned char *begin = m_ptr->v3_ext.p;
+	const unsigned char *end = m_ptr->v3_ext.p + m_ptr->v3_ext.len;
+
+	unsigned char **p = &begin;
+
+	if (mbedtls_asn1_get_tag(p, end, &len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE) != MBEDTLS_SUCCESS_RET ||
+		(*p + len) != end)
+	{
+		return false;
+	}
+
+	while (*p < end)
+	{
+		is_critical = 0; /* DEFAULT FALSE */
+
+		if (mbedtls_asn1_get_tag(p, end, &len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE) != MBEDTLS_SUCCESS_RET)
+		{
+			return false;
+		}
+
+		end_ext_data = *p + len;
+
+		/* Get extension ID */
+		if (mbedtls_asn1_get_tag(p, end_ext_data, &len, MBEDTLS_ASN1_OID) != MBEDTLS_SUCCESS_RET)
+		{
+			return false;
+		}
+		std::string oid(reinterpret_cast<char*>(*p), len);
+
+		*p += len;
+
+		/* Get optional critical */
+		mbedRet = mbedtls_asn1_get_bool(p, end_ext_data, &is_critical);
+		if (mbedRet != MBEDTLS_SUCCESS_RET && mbedRet != MBEDTLS_ERR_ASN1_UNEXPECTED_TAG)
+		{
+			return false;
+		}
+
+		/* Data should be octet string type */
+		if (mbedtls_asn1_get_tag(p, end_ext_data, &len, MBEDTLS_ASN1_OCTET_STRING) != MBEDTLS_SUCCESS_RET)
+		{
+			return false;
+		}
+
+		std::string data(reinterpret_cast<char*>(*p), len);
+		end_ext_octet = *p + len;
+
+		if (end_ext_octet != end_ext_data)
+		{
+			return false;
+		}
+
+		if (extMap.find(oid) != extMap.end())
+		{
+			std::pair<bool, std::string>& destRef = extMap[oid];
+			destRef.first = is_critical;
+			destRef.second.swap(data);
+		}
+
+		*p = end_ext_octet;
+	}
+
+	return true;
+}
+
+bool MbedTlsObj::X509Cert::VerifySignature() const
+{
+	return *this && VerifySignature(ECKeyPublic(&m_ptr->pk, false));
+}
+
+bool MbedTlsObj::X509Cert::VerifySignature(const ECKeyPublic & pubKey) const
+{
+	if (!*this || !pubKey)
+	{
+		return false;
+	}
+
+	const mbedtls_md_info_t *mdInfo = mbedtls_md_info_from_type(m_ptr->sig_md);
+	unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+
+	bool verifyRes =
+		(mbedtls_md(mdInfo, m_ptr->tbs.p, m_ptr->tbs.len, hash) == MBEDTLS_SUCCESS_RET) &&
+		(mbedtls_pk_verify_ext(m_ptr->sig_pk, m_ptr->sig_opts, pubKey.GetInternalPtr(),
+			m_ptr->sig_md, hash, mbedtls_md_get_size(mdInfo),
+			m_ptr->sig.p, m_ptr->sig.len) == MBEDTLS_SUCCESS_RET);
+
+	return verifyRes;
+}
+
+const ECKeyPublic & MbedTlsObj::X509Cert::GetPublicKey() const
+{
+	return m_pubKey;
+}
+
+const std::string & MbedTlsObj::X509Cert::ToPemString() const
+{
+	return m_pemStr;
 }

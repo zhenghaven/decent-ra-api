@@ -1,6 +1,10 @@
 #include "Common.h"
+#include "../common/CommonTool.h"
 
 #include <vector>
+#include <ctime>
+
+#include <mbedtls/platform_util.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -87,3 +91,28 @@ void SetConsoleColor(ConsoleColors foreground, ConsoleColors background)
 }
 
 #endif // _WIN32
+
+void Common::GetSystemUtcTime(const time_t& timer, struct tm& outTime)
+{
+	mbedtls_platform_gmtime_r(&timer, &outTime);
+}
+
+void Common::GetSystemTime(time_t& timer)
+{
+	std::time(&timer);
+}
+
+extern "C" void ocall_get_system_time(time_t* timer)
+{
+	std::time(timer);
+}
+
+extern "C" void ocall_get_system_utc_time(const time_t* timer, tm* out_time)
+{
+	if (!timer || !out_time)
+	{
+		return;
+	}
+
+	Common::GetSystemUtcTime(*timer, *out_time);
+}

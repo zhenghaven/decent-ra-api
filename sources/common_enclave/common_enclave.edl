@@ -1,5 +1,7 @@
 enclave {
 	
+	include "time.h"
+	
 	untrusted {
 		void ocall_print_string([in, string] const char *str);
 
@@ -12,6 +14,10 @@ enclave {
 		size_t ocall_connection_receive([user_check] void* ptr, [out] char** msg);
 		
 		void ocall_connection_clean_recv_buffer([user_check] char* ptr);
+		
+		void ocall_get_system_time([out] time_t* timer);
+		
+		void ocall_get_system_utc_time([in] const time_t* timer, [out] struct tm* out_time);
 	};
 
 };

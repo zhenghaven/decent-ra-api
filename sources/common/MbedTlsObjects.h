@@ -4,9 +4,11 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "GeneralKeyTypes.h"
 
+typedef struct mbedtls_mpi mbedtls_mpi;
 typedef struct mbedtls_pk_context mbedtls_pk_context;
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
 typedef struct mbedtls_x509_crt mbedtls_x509_crt;
@@ -61,6 +63,20 @@ namespace MbedTlsObj
 
 	protected:
 		T * m_ptr;
+	};
+
+	class BigNumber : public ObjBase<mbedtls_mpi>
+	{
+	public:
+		static BigNumber GenRandomNumber(size_t size);
+
+	public:
+		BigNumber() = delete;
+		BigNumber(BigNumber&& other);
+		BigNumber(mbedtls_mpi* ptr);
+		~BigNumber();
+
+	private:
 	};
 
 	class ECKeyPublic : public ObjBase<mbedtls_pk_context>
@@ -140,7 +156,21 @@ namespace MbedTlsObj
 		X509Cert() = delete;
 		X509Cert(const std::string& pemStr);
 		X509Cert(mbedtls_x509_crt* ptr, const std::string& pemStr);
+		X509Cert(const X509Cert& caCert, const MbedTlsObj::ECKeyPair& prvKey, const MbedTlsObj::ECKeyPublic& pubKey,
+			const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
+			const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap);
+
+		X509Cert(const MbedTlsObj::ECKeyPair& prvKey, 
+			const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
+			const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap);
 		~X509Cert();
+
+		bool GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const;
+		bool VerifySignature() const;
+		bool VerifySignature(const ECKeyPublic& pubKey) const;
+
+		const ECKeyPublic& GetPublicKey() const;
+		const std::string& ToPemString() const;
 
 	private:
 		std::string m_pemStr;

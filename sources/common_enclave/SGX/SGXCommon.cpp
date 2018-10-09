@@ -1,9 +1,10 @@
-#include "Common.h"
+#include "../../common/CommonTool.h"
 
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
 
 #include <Enclave_t.h>
+#include "..\..\common\CommonTool.h"
 
 static constexpr size_t PRINT_BUFFER_SIZE = 20 * BUFSIZ;
 
@@ -47,4 +48,14 @@ void ocall_log_w(const char * file, int line, const char * fmt, ...)
 	vsnprintf(buf, PRINT_BUFFER_SIZE, buf, ap);
 	va_end(ap);
 	ocall_print_string_w(buf);
+}
+
+void Common::GetSystemTime(time_t & timer)
+{
+	ocall_get_system_time(&timer);
+}
+
+void Common::GetSystemUtcTime(const time_t& timer, struct tm& outTime)
+{
+	ocall_get_system_utc_time(&timer, &outTime);
 }
