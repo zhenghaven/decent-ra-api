@@ -11,8 +11,8 @@
 
 #include "../Common.h"
 
-#include "../../common/DecentOpenSSL.h"
 #include "../../common/DataCoding.h"
+#include "../../common/DecentCrypto.h"
 #include "../../common/DecentRAReport.h"
 
 #include "../../common/SGX/ias_report.h"
@@ -57,7 +57,7 @@ bool DecentEnclave::DecentReportDataVerifier(const std::string& pubSignKey, cons
 	return std::memcmp(tmpHash, inData.data(), sizeof(sgx_sha256_hash_t)) == 0;
 }
 
-bool DecentEnclave::ProcessIasRaReport(const DecentServerX509 & inX509, const std::string& inHashStr, sgx_ias_report_t& outIasReport)
+bool DecentEnclave::ProcessIasRaReport(const MbedTlsDecentServerX509 & inX509, const std::string& inHashStr, sgx_ias_report_t& outIasReport)
 {
 	if (!inX509 
 		|| inX509.GetPlatformType() != Decent::RAReport::sk_ValueReportType
@@ -82,7 +82,7 @@ bool DecentEnclave::ProcessIasRaReport(const DecentServerX509 & inX509, const st
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);
 
-	std::string pubKeyPem = inX509.GetPublicKey().ToPemString();
+	std::string pubKeyPem = inX509.GetPublicKey().ToPubPemString();
 	ReportDataVerifier reportDataVerifier = [pubKeyPem](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
 	{
 		return DecentReportDataVerifier(pubKeyPem, initData, inData);

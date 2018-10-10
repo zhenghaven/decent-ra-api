@@ -18,7 +18,7 @@
 #include "../../common/DataCoding.h"
 #include "../../common/GeneralKeyTypes.h"
 #include "../../common/AESGCMCommLayer.h"
-#include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/CryptoKeyContainer.h"
 #include "../../common/OpenSSLInitializer.h"
 #include "../../common/SGX/ias_report.h"
 #include "../../common/SGX/IasReport.h"
@@ -222,7 +222,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg4(const std::string & serverID, const sgx
 extern "C" sgx_status_t ecall_sgx_ra_client_init()
 {
 	sgx_status_t res = SGX_SUCCESS;
-	if (!EnclaveAsyKeyContainer::GetInstance()->IsValid())
+	if (!CryptoKeyContainer::GetInstance())
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
@@ -253,13 +253,13 @@ extern "C" sgx_status_t ecall_get_ra_client_pub_sig_key(sgx_ec256_public_t* out_
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer = EnclaveAsyKeyContainer::GetInstance();
-	if (!keyContainer->IsValid())
+	CryptoKeyContainer& keyContainer = CryptoKeyContainer::GetInstance();
+	if (!keyContainer)
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	std::shared_ptr<const sgx_ec256_public_t> signPub = keyContainer->GetSignPubKey();
+	std::shared_ptr<const general_secp256r1_public_t> signPub = keyContainer.GetSignPubKey();
 	std::memcpy(out_key, signPub.get(), sizeof(sgx_ec256_public_t));
 	return SGX_SUCCESS;
 }

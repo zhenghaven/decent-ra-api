@@ -24,7 +24,7 @@
 #include "../../common/DataCoding.h"
 #include "../../common/OpenSSLTools.h"
 #include "../../common/DecentRAReport.h"
-#include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/CryptoKeyContainer.h"
 
 #include "../../common/SGX/SGXOpenSSLConversions.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
@@ -46,7 +46,7 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509P
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	std::shared_ptr<DecentServerX509> inCert(new DecentServerX509(x509Pem));
+	std::shared_ptr<MbedTlsDecentServerX509> inCert(new MbedTlsDecentServerX509(x509Pem));
 	if (!inCert || !(*inCert))
 	{
 		return SGX_ERROR_UNEXPECTED;
@@ -92,10 +92,10 @@ extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* co
 	//}
 	//===============
 
-	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer = EnclaveAsyKeyContainer::GetInstance();
-	std::shared_ptr<const ECKeyPair> prvKeyOpenSSL = keyContainer->GetSignPrvKeyOpenSSL();
+	CryptoKeyContainer& keyContainer = CryptoKeyContainer::GetInstance();
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
 
-	X509ReqWrapper certReq(*prvKeyOpenSSL);
+	MbedTlsObj::X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 	if (!certReq)
 	{
 		return SGX_ERROR_UNEXPECTED;
@@ -110,7 +110,7 @@ extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* co
 
 	//Process X509 Message:
 
-	std::shared_ptr<DecentAppX509> cert(new DecentAppX509(plainMsg));
+	std::shared_ptr<MbedTlsDecentAppX509> cert(new MbedTlsDecentAppX509(plainMsg));
 	if (!cert || !*cert)
 	{
 		return SGX_ERROR_UNEXPECTED;

@@ -2,13 +2,11 @@
 
 #include <memory>
 
-#include "../common/DecentOpenSSL.h"
+#include "../common/DecentCrypto.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
-
-class X509Wrapper;
 
 class DecentCertContainer
 {
@@ -21,7 +19,7 @@ public:
 
 	~DecentCertContainer() {}
 
-	std::shared_ptr<const X509Wrapper> GetCert() const
+	std::shared_ptr<const MbedTlsObj::X509Cert> GetCert() const
 	{
 #ifdef DECENT_THREAD_SAFETY_HIGH
 		return std::atomic_load(&m_cert);
@@ -30,7 +28,7 @@ public:
 #endif // DECENT_THREAD_SAFETY_HIGH
 	}
 
-	std::shared_ptr<const DecentServerX509> GetServerCert() const
+	std::shared_ptr<const MbedTlsDecentServerX509> GetServerCert() const
 	{
 #ifdef DECENT_THREAD_SAFETY_HIGH
 		return std::atomic_load(&m_serverCert);
@@ -39,7 +37,7 @@ public:
 #endif // DECENT_THREAD_SAFETY_HIGH
 	}
 
-	void SetCert(std::shared_ptr<const X509Wrapper> cert)
+	void SetCert(std::shared_ptr<const MbedTlsObj::X509Cert> cert)
 	{
 #ifdef DECENT_THREAD_SAFETY_HIGH
 		std::atomic_store(&m_cert, cert);
@@ -48,7 +46,7 @@ public:
 #endif // DECENT_THREAD_SAFETY_HIGH
 	}
 
-	void SetServerCert(std::shared_ptr<const DecentServerX509> serverCert)
+	void SetServerCert(std::shared_ptr<const MbedTlsDecentServerX509> serverCert)
 	{
 #ifdef DECENT_THREAD_SAFETY_HIGH
 		std::atomic_store(&m_serverCert, serverCert);
@@ -60,6 +58,6 @@ public:
 private:
 	DecentCertContainer() {}
 
-	std::shared_ptr<const X509Wrapper> m_cert;
-	std::shared_ptr<const DecentServerX509> m_serverCert;
+	std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
+	std::shared_ptr<const MbedTlsDecentServerX509> m_serverCert;
 };

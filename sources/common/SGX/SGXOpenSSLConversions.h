@@ -99,6 +99,86 @@ __forceinline general_secp256r1_signature_t& SgxEc256Type2General(sgx_ec256_sign
 	return reinterpret_cast<general_secp256r1_signature_t&>(x);
 }
 
+__forceinline const sgx_ec256_public_t* GeneralEc256Type2Sgx(const general_secp256r1_public_t* x)
+{
+	return reinterpret_cast<const sgx_ec256_public_t*>(x);
+}
+
+__forceinline const sgx_ec256_private_t* GeneralEc256Type2Sgx(const general_secp256r1_private_t* x)
+{
+	return reinterpret_cast<const sgx_ec256_private_t*>(x);
+}
+
+__forceinline const sgx_ec256_dh_shared_t* GeneralEc256Type2Sgx(const general_secp256r1_shared_t* x)
+{
+	return reinterpret_cast<const sgx_ec256_dh_shared_t*>(x);
+}
+
+__forceinline const sgx_ec256_signature_t* GeneralEc256Type2Sgx(const general_secp256r1_signature_t* x)
+{
+	return reinterpret_cast<const sgx_ec256_signature_t*>(x);
+}
+
+__forceinline sgx_ec256_public_t* GeneralEc256Type2Sgx(general_secp256r1_public_t* x)
+{
+	return reinterpret_cast<sgx_ec256_public_t*>(x);
+}
+
+__forceinline sgx_ec256_private_t* GeneralEc256Type2Sgx(general_secp256r1_private_t* x)
+{
+	return reinterpret_cast<sgx_ec256_private_t*>(x);
+}
+
+__forceinline sgx_ec256_dh_shared_t* GeneralEc256Type2Sgx(general_secp256r1_shared_t* x)
+{
+	return reinterpret_cast<sgx_ec256_dh_shared_t*>(x);
+}
+
+__forceinline sgx_ec256_signature_t* GeneralEc256Type2Sgx(general_secp256r1_signature_t* x)
+{
+	return reinterpret_cast<sgx_ec256_signature_t*>(x);
+}
+
+__forceinline const sgx_ec256_public_t& GeneralEc256Type2Sgx(const general_secp256r1_public_t& x)
+{
+	return reinterpret_cast<const sgx_ec256_public_t&>(x);
+}
+
+__forceinline const sgx_ec256_private_t& GeneralEc256Type2Sgx(const general_secp256r1_private_t& x)
+{
+	return reinterpret_cast<const sgx_ec256_private_t&>(x);
+}
+
+__forceinline const sgx_ec256_dh_shared_t& GeneralEc256Type2Sgx(const general_secp256r1_shared_t& x)
+{
+	return reinterpret_cast<const sgx_ec256_dh_shared_t&>(x);
+}
+
+__forceinline const sgx_ec256_signature_t& GeneralEc256Type2Sgx(const general_secp256r1_signature_t& x)
+{
+	return reinterpret_cast<const sgx_ec256_signature_t&>(x);
+}
+
+__forceinline sgx_ec256_public_t& GeneralEc256Type2Sgx(general_secp256r1_public_t& x)
+{
+	return reinterpret_cast<sgx_ec256_public_t&>(x);
+}
+
+__forceinline sgx_ec256_private_t& GeneralEc256Type2Sgx(general_secp256r1_private_t& x)
+{
+	return reinterpret_cast<sgx_ec256_private_t&>(x);
+}
+
+__forceinline sgx_ec256_dh_shared_t& GeneralEc256Type2Sgx(general_secp256r1_shared_t& x)
+{
+	return reinterpret_cast<sgx_ec256_dh_shared_t&>(x);
+}
+
+__forceinline sgx_ec256_signature_t& GeneralEc256Type2Sgx(general_secp256r1_signature_t& x)
+{
+	return reinterpret_cast<sgx_ec256_signature_t&>(x);
+}
+
 bool ECKeyCalcSharedKey(EVP_PKEY* inKey, EVP_PKEY* inPeerKey, sgx_ec256_dh_shared_t *outSharedkey);
 
 bool ECKeySignOpenSSL2SGX(const ECDSA_SIG* inSign, sgx_ec256_signature_t* outSign);

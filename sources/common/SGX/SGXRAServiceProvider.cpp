@@ -14,6 +14,8 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
+#include "SGXOpenSSLConversions.h"
+
 #include "../JsonTools.h"
 #include "../CommonTool.h"
 #include "../DataCoding.h"
@@ -21,7 +23,7 @@
 #include "../NonceGenerator.h"
 #include "../AESGCMCommLayer.h"
 #include "../GeneralKeyTypes.h"
-#include "../EnclaveAsyKeyContainer.h"
+#include "../CryptoKeyContainer.h"
 
 #include "../SGX/ias_report_cert.h"
 #include "../SGX/sgx_crypto_tools.h"
@@ -44,7 +46,7 @@ enum class ClientRAState
 
 struct RASPContext
 {
-	std::shared_ptr<const sgx_ec256_public_t> m_mySignPub;
+	std::shared_ptr<const general_secp256r1_public_t> m_mySignPub;
 	std::shared_ptr<const PrivateKeyWrap> m_mySignPrv;
 	std::unique_ptr<sgx_ec256_public_t> m_peerSignKey;
 
@@ -67,7 +69,7 @@ struct RASPContext
 	std::mutex m_mutex;
 	std::unique_ptr<sgx_ias_report_t> m_iasReport;
 
-	RASPContext(const EnclaveAsyKeyContainer& keyContainer, const sgx_ec256_public_t& inSignPubKey) :
+	RASPContext(const CryptoKeyContainer& keyContainer, const sgx_ec256_public_t& inSignPubKey) :
 		m_mySignPub(keyContainer.GetSignPubKey()),
 		m_mySignPrv(keyContainer.GetSignPrvKey()),
 		m_peerSignKey(new sgx_ec256_public_t),
@@ -121,7 +123,7 @@ namespace
 
 static inline std::shared_ptr<RASPContext> ConstructSpCtx(const std::string& clientID, const sgx_ec256_public_t& inPubKey)
 {
-	std::shared_ptr<RASPContext> spCTX(new RASPContext(*EnclaveAsyKeyContainer::GetInstance(), inPubKey));
+	std::shared_ptr<RASPContext> spCTX(new RASPContext(CryptoKeyContainer::GetInstance(), inPubKey));
 	sgx_ecc_state_handle_t ecState;
 	sgx_status_t enclaveRet = sgx_ecc256_open_context(&ecState);
 	if (!spCTX || (enclaveRet != SGX_SUCCESS))
@@ -247,7 +249,7 @@ void SGXRAEnclave::SetSPID(const sgx_spid_t & spid)
 sgx_status_t SGXRAEnclave::ServiceProviderInit()
 {
 	sgx_status_t res = SGX_SUCCESS;
-	if (!EnclaveAsyKeyContainer::GetInstance()->IsValid())
+	if (!CryptoKeyContainer::GetInstance())
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
@@ -281,13 +283,13 @@ sgx_status_t SGXRAEnclave::GetIasNonce(const std::string& clientId, char* outStr
 
 sgx_status_t SGXRAEnclave::GetRASPSignPubKey(sgx_ec256_public_t& outKey)
 {
-	std::shared_ptr<EnclaveAsyKeyContainer> keyContainer(EnclaveAsyKeyContainer::GetInstance());
-	if (!keyContainer->IsValid())
+	CryptoKeyContainer& keyContainer = CryptoKeyContainer::GetInstance();
+	if (!keyContainer)
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
 
-	std::shared_ptr<const sgx_ec256_public_t> signPub(keyContainer->GetSignPubKey());
+	std::shared_ptr<const general_secp256r1_public_t> signPub(keyContainer.GetSignPubKey());
 	std::memcpy(&outKey, signPub.get(), sizeof(sgx_ec256_public_t));
 	return SGX_SUCCESS;
 }
@@ -330,7 +332,8 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 		{
 			return res; //Error return. (Error from SGX)
 		}
-		res = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&spCTX.m_pubKey), 2 * sizeof(sgx_ec256_public_t), const_cast<sgx_ec256_private_t*>(&(spCTX.m_mySignPrv->m_prvKey)), &(outMsg2.sign_gb_ga), eccState);
+		res = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&spCTX.m_pubKey), 2 * sizeof(sgx_ec256_public_t), 
+			const_cast<sgx_ec256_private_t*>(GeneralEc256Type2Sgx(&(spCTX.m_mySignPrv->m_prvKey))), &(outMsg2.sign_gb_ga), eccState);
 		if (res != SGX_SUCCESS)
 		{
 			return res; //Error return. (Error from SGX)
@@ -457,7 +460,8 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 		{
 			return res; //Error return. (Error from SGX)
 		}
-		res = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&outMsg4), sizeof(outMsg4), const_cast<sgx_ec256_private_t*>(&(spCTX.m_mySignPrv->m_prvKey)), &outMsg4Sign, eccState);
+		res = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&outMsg4), sizeof(outMsg4), 
+			const_cast<sgx_ec256_private_t*>(GeneralEc256Type2Sgx(&(spCTX.m_mySignPrv->m_prvKey))), &outMsg4Sign, eccState);
 		if (res != SGX_SUCCESS)
 		{
 			return res; //Error return. (Error from SGX)

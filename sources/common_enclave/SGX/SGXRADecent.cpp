@@ -17,11 +17,10 @@
 
 #include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
-#include "../../common/DecentOpenSSL.h"
+#include "../../common/DecentCrypto.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/AESGCMCommLayer.h"
-#include "../../common/OpenSSLInitializer.h"
-#include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/CryptoKeyContainer.h"
 
 #include "../../common/SGX/sgx_constants.h"
 #include "../../common/SGX/sgx_crypto_tools.h"
@@ -87,7 +86,6 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	ocall_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
 	SetSelfEnclaveHash(SerializeStruct(enclaveHash));
 
-	DecentOpenSSLInitializer::Initialize();
 	return SGX_SUCCESS;
 }
 
@@ -98,8 +96,8 @@ extern "C" void ecall_decent_terminate()
 
 extern "C" sgx_status_t ecall_decent_server_generate_x509(const char* selfReport)
 {
-	std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
-	std::shared_ptr<const ECKeyPair> signPubOpenSSL = EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKeyOpenSSL();
+	std::shared_ptr<const general_secp256r1_public_t> signPub = CryptoKeyContainer::GetInstance().GetSignPubKey();
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = CryptoKeyContainer::GetInstance().GetSignKeyPair();
 
 	std::string selfId(SerializeStruct(*signPub));
 	bool isClientAttested = SGXRAEnclave::IsClientAttested(selfId);
@@ -108,7 +106,7 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const char* selfReport
 	if (isClientAttested && isServerAttested)
 	{
 		//g_decentProtoPubKey = selfId;
-		std::shared_ptr<const DecentServerX509> serverCert(new DecentServerX509(*signPubOpenSSL, *g_selfHash, Decent::RAReport::sk_ValueReportType, selfReport));
+		std::shared_ptr<const MbedTlsDecentServerX509> serverCert(new MbedTlsDecentServerX509(*signkeyPair, *g_selfHash, Decent::RAReport::sk_ValueReportType, selfReport));
 		if (!serverCert)
 		{
 			return SGX_ERROR_UNEXPECTED;
@@ -147,7 +145,7 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
 		return 0;
 	}
 
-	std::shared_ptr<DecentServerX509> inCert(new DecentServerX509(x509Pem));
+	std::shared_ptr<MbedTlsDecentServerX509> inCert(new MbedTlsDecentServerX509(x509Pem));
 	if (!inCert || !(*inCert))
 	{
 		return 0;
@@ -181,8 +179,8 @@ extern "C" sgx_status_t ecall_process_ra_msg1_decent(const char* client_id, cons
 	sgx_ec256_public_t clientSignkey(*in_key);
 	ReportDataVerifier reportDataVerifier = [clientSignkey](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
 	{
-		ECKeyPublic pubKey(SgxEc256Type2General(clientSignkey));
-		std::string pubKeyPem = pubKey.ToPemString();
+		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(clientSignkey));
+		std::string pubKeyPem = pubKey.ToPubPemString();
 		if (pubKeyPem.size() == 0)
 		{
 			return false;
@@ -204,10 +202,9 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* serverID, 
 
 	ReportDataGenerator rdGenerator = [](const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen) -> bool
 	{
-		std::shared_ptr<const sgx_ec256_public_t> signPub = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
+		std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = CryptoKeyContainer::GetInstance().GetSignKeyPair();
 
-		ECKeyPublic pubKey(SgxEc256Type2General(*signPub));
-		std::string pubKeyPem = pubKey.ToPemString();
+		std::string pubKeyPem = signPub->ToPubPemString();
 		if (pubKeyPem.size() == 0)
 		{
 			return false;
@@ -291,7 +288,9 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 	}
 
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
-	if (!ParseStr2Json(jsonRoot, plainMsg) || !jsonRoot.HasMember(gsk_LabelFunc) || !jsonRoot[gsk_LabelFunc].IsString())
+	if (!ParseStr2Json(jsonRoot, plainMsg) || 
+		!jsonRoot.HasMember(gsk_LabelFunc) || 
+		!jsonRoot[gsk_LabelFunc].IsString())
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -301,13 +300,16 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 	if (funcType == gsk_ValueFuncSetProtoKey && 
 		jsonRoot.HasMember(gsk_LabelPrvKey) && jsonRoot[gsk_LabelPrvKey].IsString()) //Set Protocol Key Function:
 	{
-		sgx_ec256_public_t pubKey;
+		general_secp256r1_public_t pubKey;
 		DeserializeStruct(pubKey, nodeID);
 		PrivateKeyWrap prvKey;
 		DeserializeStruct(prvKey.m_prvKey, jsonRoot[gsk_LabelPrvKey].GetString());
-		std::shared_ptr<const sgx_ec256_public_t> pubKeyPtr = std::shared_ptr<const sgx_ec256_public_t>(new const sgx_ec256_public_t(pubKey));
-		std::shared_ptr<const PrivateKeyWrap> prvKeyPtr = std::shared_ptr<const PrivateKeyWrap>(new const PrivateKeyWrap(prvKey));
-		EnclaveAsyKeyContainer::GetInstance()->UpdateSignKeyPair(prvKeyPtr, pubKeyPtr);
+		std::shared_ptr<const general_secp256r1_public_t> pubKeyPtr(new const general_secp256r1_public_t(pubKey));
+		std::shared_ptr<const PrivateKeyWrap> prvKeyPtr(new const PrivateKeyWrap(prvKey));
+		if (!CryptoKeyContainer::GetInstance().UpdateSignKeyPair(prvKeyPtr, pubKeyPtr))
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
 		DecentCertContainer::Get().SetCert(serverCert);
 
 		COMMON_PRINTF("Joined Decent network.\n");
@@ -357,7 +359,7 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 	JSON_EDITION::JSON_DOCUMENT_TYPE doc;
 	rapidjson::Value jsonRoot;
 
-	std::string prvKeyB64 = SerializeStruct(EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKey()->m_prvKey);
+	std::string prvKeyB64 = SerializeStruct(CryptoKeyContainer::GetInstance().GetSignPrvKey()->m_prvKey);
 
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelFunc, gsk_ValueFuncSetProtoKey);
 	JsonCommonSetString(doc, jsonRoot, gsk_LabelPrvKey, prvKeyB64);

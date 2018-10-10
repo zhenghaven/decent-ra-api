@@ -92,6 +92,7 @@ namespace MbedTlsObj
 		virtual ECKeyPublic& operator=(ECKeyPublic&& other);
 
 		bool ToGeneralPublicKey(general_secp256r1_public_t& outKey) const;
+		general_secp256r1_public_t* ToGeneralPublicKey() const;
 
 		std::string ToPubPemString() const;
 		bool ToPubDerArray(std::vector<uint8_t>& outArray) const;
@@ -123,11 +124,15 @@ namespace MbedTlsObj
 		ECKeyPair(const std::string& pemStr);
 		virtual ~ECKeyPair();
 
-		bool ToGeneralPrivateKey(general_secp256r1_private_t& outKey) const;
+		bool ToGeneralPrivateKey(PrivateKeyWrap& outKey) const;
+		PrivateKeyWrap* ToGeneralPrivateKeyWrap() const;
 
 		std::string ToPrvPemString() const;
 		bool ToPrvDerArray(std::vector<uint8_t>& outArray) const;
 
+	private:
+		bool ToGeneralPrivateKey(general_secp256r1_private_t& outKey) const;
+		general_secp256r1_private_t* ToGeneralPrivateKey() const;
 	};
 
 	class X509Req : public ObjBase<mbedtls_x509_csr>

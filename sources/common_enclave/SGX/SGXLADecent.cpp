@@ -22,21 +22,21 @@
 #include "../DecentCertContainer.h"
 
 #include "../../common/DataCoding.h"
-#include "../../common/DecentOpenSSL.h"
+#include "../../common/MbedTlsObjects.h"
 #include "../../common/AESGCMCommLayer.h"
-#include "../../common/EnclaveAsyKeyContainer.h"
+#include "../../common/CryptoKeyContainer.h"
 
-static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity_t& identity, const X509ReqWrapper& x509Req, SecureCommLayer& commLayer, void* const connectionPtr)
+static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity_t& identity, const MbedTlsObj::X509Req& x509Req, SecureCommLayer& commLayer, void* const connectionPtr)
 {
-	std::shared_ptr<const ECKeyPair> signKey = EnclaveAsyKeyContainer::GetInstance()->GetSignPrvKeyOpenSSL();
-	std::shared_ptr<const DecentServerX509> serverCert = DecentCertContainer::Get().GetServerCert();
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
+	std::shared_ptr<const MbedTlsDecentServerX509> serverCert = DecentCertContainer::Get().GetServerCert();
 
 	if (!x509Req.VerifySignature())
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	DecentAppX509 appX509(x509Req.GetPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), SGXLADecent::gsk_ValuePlatformType, SerializeStruct(identity));
+	MbedTlsDecentAppX509 appX509(x509Req.GetPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), SGXLADecent::gsk_ValuePlatformType, SerializeStruct(identity));
 
 	if (!appX509)
 	{
@@ -68,7 +68,7 @@ extern "C" sgx_status_t ecall_decent_proc_app_x509_req(const char* peerId, void*
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	std::shared_ptr<const sgx_ec256_public_t> pubKey = EnclaveAsyKeyContainer::GetInstance()->GetSignPubKey();
+	std::shared_ptr<const general_secp256r1_public_t> pubKey = CryptoKeyContainer::GetInstance().GetSignPubKey();
 
 	std::string plainMsg;
 	if (!commLayer.ReceiveMsg(connectionPtr, plainMsg))
@@ -76,7 +76,7 @@ extern "C" sgx_status_t ecall_decent_proc_app_x509_req(const char* peerId, void*
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	X509ReqWrapper appX509Req(plainMsg);
+	MbedTlsObj::X509Req appX509Req(plainMsg);
 	if (!appX509Req)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;

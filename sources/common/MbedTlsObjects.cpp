@@ -251,6 +251,18 @@ bool ECKeyPublic::ToGeneralPublicKey(general_secp256r1_public_t & outKey) const
 	return true;
 }
 
+general_secp256r1_public_t * MbedTlsObj::ECKeyPublic::ToGeneralPublicKey() const
+{
+	general_secp256r1_public_t* res = new general_secp256r1_public_t;
+	if (res && ToGeneralPublicKey(*res))
+	{
+		return res;
+	}
+
+	delete res;
+	return nullptr;
+}
+
 std::string ECKeyPublic::ToPubPemString() const
 {
 	if (!*this)
@@ -461,6 +473,35 @@ bool ECKeyPair::ToGeneralPrivateKey(general_secp256r1_private_t & outKey) const
 	std::reverse(std::begin(outKey.r), std::end(outKey.r));
 
 	return true;
+}
+
+bool ECKeyPair::ToGeneralPrivateKey(PrivateKeyWrap & outKey) const
+{
+	return ToGeneralPrivateKey(outKey.m_prvKey);
+}
+
+PrivateKeyWrap * ECKeyPair::ToGeneralPrivateKeyWrap() const
+{
+	PrivateKeyWrap* res = new PrivateKeyWrap;
+	if (res && ToGeneralPrivateKey(*res))
+	{
+		return res;
+	}
+
+	delete res;
+	return nullptr;
+}
+
+general_secp256r1_private_t * ECKeyPair::ToGeneralPrivateKey() const
+{
+	general_secp256r1_private_t* res = new general_secp256r1_private_t;
+	if (res && ToGeneralPrivateKey(*res))
+	{
+		return res;
+	}
+
+	delete res;
+	return nullptr;
 }
 
 std::string ECKeyPair::ToPrvPemString() const
@@ -808,15 +849,14 @@ static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const Mb
 	size_t extTotalSize = 0;
 
 	int mbedRet = caCert ? MbedTlsHelper::MbedTlsAsn1DeepCopy(cert.issuer, caCert->issuer) : 
-		mbedtls_x509write_crt_set_issuer_name(&cert, x509NameList.c_str());
-	for (auto it = extMap.begin(); it != extMap.end() && mbedRet == MBEDTLS_SUCCESS_RET; ++it)
+		(mbedtls_x509write_crt_set_issuer_name(&cert, x509NameList.c_str()) == MBEDTLS_SUCCESS_RET);
+	for (auto it = extMap.begin(); it != extMap.end() && mbedRet; ++it)
 	{
 		mbedRet = mbedtls_x509write_crt_set_extension(&cert, it->first.c_str(), it->first.size(), it->second.first,
-			reinterpret_cast<const unsigned char*>(it->second.second.c_str()), it->second.second.size());
+			reinterpret_cast<const unsigned char*>(it->second.second.c_str()), it->second.second.size()) == MBEDTLS_SUCCESS_RET;
 		extTotalSize += it->second.second.size() + it->first.size();
 	}
-
-	if (mbedRet != MBEDTLS_SUCCESS_RET)
+	if (!mbedRet)
 	{
 		mbedtls_x509write_crt_free(&cert);
 		return std::string();
@@ -840,7 +880,6 @@ static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const Mb
 	mbedRet = mbedtls_pem_write_buffer(PEM_BEGIN_CRT, PEM_END_CRT, 
 		reinterpret_cast<const uint8_t*>(tmpDerBuf.data()) + tmpDerBuf.size() - mbedRet,
 		mbedRet, reinterpret_cast<uint8_t*>(tmpRes.data()), tmpRes.size(), &extTotalSize);
-
 
 	mbedtls_x509write_crt_free(&cert);
 	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) : std::string();

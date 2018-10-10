@@ -17,7 +17,28 @@ public:
 	MbedTlsDecentServerX509(const MbedTlsObj::ECKeyPair& prvKey, const std::string& enclaveHash, const std::string& platformType, const std::string& selfRaReport);
 	~MbedTlsDecentServerX509() {}
 
+	const std::string& GetPlatformType() const;
+	const std::string& GetSelfRaReport() const;
+
 private:
 	std::string m_platformType;
 	std::string m_selfRaReport;
+};
+
+class MbedTlsDecentAppX509 : public MbedTlsObj::X509Cert
+{
+public:
+	MbedTlsDecentAppX509() = delete;
+	MbedTlsDecentAppX509(const std::string & pemStr);
+	MbedTlsDecentAppX509(const MbedTlsObj::ECKeyPublic& pubKey, 
+		const MbedTlsDecentServerX509& caCert, const MbedTlsObj::ECKeyPair& serverPrvKey, 
+		const std::string& enclaveHash, const std::string& platformType, const std::string& appId);
+	~MbedTlsDecentAppX509() {}
+
+	const std::string& GetPlatformType() const;
+	const std::string& GetAppId() const;
+
+private:
+	std::string m_platformType;
+	std::string m_appId;
 };
