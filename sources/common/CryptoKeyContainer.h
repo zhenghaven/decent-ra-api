@@ -30,6 +30,8 @@ public:
 
 	virtual bool UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap> prv, std::shared_ptr<const general_secp256r1_public_t> pub);
 
+	virtual bool UpdateSignKeyPair(std::shared_ptr<const MbedTlsObj::ECKeyPair> keyPair);
+
 private:
 	CryptoKeyContainer(const std::pair<general_secp256r1_public_t*, PrivateKeyWrap*>& keyPair);
 	CryptoKeyContainer(MbedTlsObj::ECKeyPair* keyPair);

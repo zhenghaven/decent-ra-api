@@ -4,6 +4,12 @@
 #include <cstdlib>
 
 #include <mbedtls/asn1.h>
+#include <mbedtls/md.h>
+
+namespace
+{
+	static constexpr int MBEDTLS_SUCCESS_RET = 0;
+}
 
 bool MbedTlsHelper::MbedTlsAsn1DeepCopy(mbedtls_asn1_buf& dest, const mbedtls_asn1_buf& src)
 {
@@ -55,4 +61,10 @@ bool MbedTlsHelper::MbedTlsAsn1DeepCopy(mbedtls_asn1_named_data *& dest, const m
 	dest = reinterpret_cast<struct mbedtls_asn1_named_data *>(calloc(1, sizeof(struct mbedtls_asn1_named_data)));
 
 	return MbedTlsAsn1DeepCopy(*dest, src);
+}
+
+bool MbedTlsHelper::CalcHashSha256(const std::string & data, General256Hash& hash)
+{
+	return mbedtls_md(mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256),
+		reinterpret_cast<const uint8_t*>(data.data()), data.size(), hash.data()) == MBEDTLS_SUCCESS_RET;
 }

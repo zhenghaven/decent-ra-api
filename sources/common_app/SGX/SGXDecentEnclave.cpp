@@ -15,7 +15,6 @@
 #include <Enclave_u.h>
 
 #include "../common/DataCoding.h"
-#include "../common/OpenSSLTools.h"
 #include "../common/SGX/SGXOpenSSLConversions.h"
 #include "../common/SGX/ias_report.h"
 #include "../common/DecentRAReport.h"

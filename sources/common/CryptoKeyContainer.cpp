@@ -109,3 +109,30 @@ bool CryptoKeyContainer::UpdateSignKeyPair(std::shared_ptr<const PrivateKeyWrap>
 
 	return true;
 }
+
+bool CryptoKeyContainer::UpdateSignKeyPair(std::shared_ptr<const MbedTlsObj::ECKeyPair> keyPair)
+{
+	if (!keyPair || !*keyPair)
+	{
+		return false;
+	}
+	
+	std::shared_ptr<const PrivateKeyWrap> prv(keyPair->ToGeneralPrivateKeyWrap());
+	std::shared_ptr<const general_secp256r1_public_t> pub(keyPair->ToGeneralPublicKey());
+	if (!prv || !pub)
+	{
+		return false;
+	}
+
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&m_signPrvKey, prv);
+	std::atomic_store(&m_signPubKey, pub);
+	std::atomic_store(&m_signPrvKeyObj, tmpPrvObj);
+#else
+	m_signPrvKey = prv;
+	m_signPubKey = pub;
+	m_signPrvKeyObj = keyPair;
+#endif // DECENT_THREAD_SAFETY_HIGH
+
+	return true;
+}

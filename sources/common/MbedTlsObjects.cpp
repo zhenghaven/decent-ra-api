@@ -15,6 +15,7 @@
 #include <mbedtls/x509.h>
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/x509_crt.h>
+#include <mbedtls/x509_crl.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
 
@@ -124,11 +125,66 @@ MbedTlsObj::BigNumber::BigNumber(mbedtls_mpi * ptr) :
 
 MbedTlsObj::BigNumber::~BigNumber()
 {
+	Destory();
+}
+
+void MbedTlsObj::BigNumber::Destory()
+{
 	if (!*this)
 	{
 		mbedtls_mpi_free(m_ptr);
 		delete m_ptr;
 	}
+	m_ptr = nullptr;
+}
+
+MbedTlsObj::PKey::PKey(mbedtls_pk_context * ptr, bool isOwner) :
+	ObjBase(ptr),
+	m_isOwner(isOwner)
+{
+}
+
+MbedTlsObj::PKey::PKey(PKey && other) :
+	ObjBase(std::forward<ObjBase>(other)),
+	m_isOwner(other.m_isOwner)
+{
+	other.m_isOwner = false;
+}
+
+MbedTlsObj::PKey::~PKey()
+{
+	Destory();
+}
+
+void MbedTlsObj::PKey::Destory()
+{
+	if (m_ptr && m_isOwner)
+	{
+		mbedtls_pk_free(m_ptr);
+		delete m_ptr;
+	}
+	m_isOwner = false;
+	m_ptr = nullptr;
+}
+
+PKey & MbedTlsObj::PKey::operator=(PKey && other)
+{
+	if (this != &other)
+	{
+		ObjBase::operator=(std::forward<ObjBase>(other));
+		this->m_isOwner = other.m_isOwner;
+		other.m_isOwner = false;
+	}
+	return *this;
+}
+
+bool MbedTlsObj::PKey::VerifySignatureSha256(const General256Hash& hash, const std::vector<uint8_t>& signature) const
+{
+	if (!m_ptr)
+	{
+		return false;
+	}
+	return mbedtls_pk_verify(m_ptr, mbedtls_md_type_t::MBEDTLS_MD_SHA256, hash.data(), hash.size(), signature.data(), signature.size()) == MBEDTLS_SUCCESS_RET;
 }
 
 static mbedtls_pk_context* ConstructEcPubFromPemDer(const uint8_t* ptr, size_t size)
@@ -188,8 +244,7 @@ static mbedtls_pk_context* ConstructEcPubFromGeneral(const general_secp256r1_pub
 }
 
 ECKeyPublic::ECKeyPublic(mbedtls_pk_context * ptr, bool isOwner) :
-	ObjBase(ptr),
-	m_isOwner(isOwner)
+	PKey(ptr, isOwner)
 {
 }
 
@@ -204,28 +259,15 @@ ECKeyPublic::ECKeyPublic(const std::string & pemStr) :
 }
 
 ECKeyPublic::ECKeyPublic(ECKeyPublic && other) :
-	ObjBase(std::forward<ObjBase>(other)),
-	m_isOwner(other.m_isOwner)
+	PKey(std::forward<PKey>(other))
 {
-	other.m_isOwner = false;
-}
-
-ECKeyPublic::~ECKeyPublic()
-{
-	if (*this && m_isOwner)
-	{
-		mbedtls_pk_free(m_ptr);
-		delete m_ptr;
-	}
 }
 
 ECKeyPublic & ECKeyPublic::operator=(ECKeyPublic && other)
 {
 	if (this != &other)
 	{
-		ObjBase::operator=(std::forward<ObjBase>(other));
-		this->m_isOwner = other.m_isOwner;
-		other.m_isOwner = false;
+		PKey::operator=(std::forward<PKey>(other));
 	}
 	return *this;
 }
@@ -447,15 +489,6 @@ ECKeyPair::ECKeyPair(const std::string & pemStr) :
 {
 }
 
-ECKeyPair::~ECKeyPair()
-{
-	//if (*this && m_isOwner)
-	//{
-	//	mbedtls_pk_free(m_ptr);
-	//	delete m_ptr;
-	//}
-}
-
 bool ECKeyPair::ToGeneralPrivateKey(general_secp256r1_private_t & outKey) const
 {
 	if (!*this)
@@ -559,7 +592,7 @@ static mbedtls_x509_csr* ConstructX509ReqFromPem(const std::string & pemStr)
 	return ConstructX509ReqFromPemDer(reinterpret_cast<const uint8_t*>(pemStr.c_str()), pemStr.size() + 1);
 }
 
-static const std::string CreateX509Pem(const ECKeyPair & keyPair, const std::string& commonName)
+static const std::string CreateX509Pem(const PKey & keyPair, const std::string& commonName)
 {
 	if (!keyPair)
 	{
@@ -603,18 +636,30 @@ MbedTlsObj::X509Req::X509Req(mbedtls_x509_csr * ptr, const std::string& pemStr) 
 {
 }
 
-MbedTlsObj::X509Req::X509Req(const ECKeyPair & keyPair, const std::string& commonName) :
+MbedTlsObj::X509Req::X509Req(const PKey & keyPair, const std::string& commonName) :
 	X509Req(CreateX509Pem(keyPair, commonName))
 {
 }
 
 MbedTlsObj::X509Req::~X509Req()
 {
-	if (!*this)
+	Destory();
+}
+
+void MbedTlsObj::X509Req::Destory()
+{
+	m_pubKey.Destory();
+	if (m_ptr)
 	{
 		mbedtls_x509_csr_free(m_ptr);
 		delete m_ptr;
 	}
+	m_ptr = nullptr;
+}
+
+MbedTlsObj::X509Req::operator bool() const
+{
+	return ObjBase::operator bool() && m_pubKey;
 }
 
 bool MbedTlsObj::X509Req::VerifySignature() const
@@ -636,7 +681,7 @@ bool MbedTlsObj::X509Req::VerifySignature() const
 	return verifyRes;
 }
 
-const ECKeyPublic & MbedTlsObj::X509Req::GetPublicKey() const
+const PKey & MbedTlsObj::X509Req::GetPublicKey() const
 {
 	return m_pubKey;
 }
@@ -813,7 +858,7 @@ static std::string GetFormatedTime(const time_t& timer)
 	return res;
 }
 
-static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const MbedTlsObj::ECKeyPair& prvKey, const MbedTlsObj::ECKeyPublic& pubKey,
+static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const PKey& prvKey, const PKey& pubKey,
 	const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap)
 {
@@ -897,7 +942,7 @@ MbedTlsObj::X509Cert::X509Cert(mbedtls_x509_crt * ptr, const std::string & pemSt
 {
 }
 
-MbedTlsObj::X509Cert::X509Cert(const X509Cert & caCert, const MbedTlsObj::ECKeyPair & prvKey, const MbedTlsObj::ECKeyPublic & pubKey, 
+MbedTlsObj::X509Cert::X509Cert(const X509Cert & caCert, const PKey & prvKey, const PKey & pubKey,
 	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
 	X509Cert(ConstructNewX509Cert(caCert.GetInternalPtr(), prvKey, pubKey, 
@@ -906,7 +951,7 @@ MbedTlsObj::X509Cert::X509Cert(const X509Cert & caCert, const MbedTlsObj::ECKeyP
 {
 }
 
-MbedTlsObj::X509Cert::X509Cert(const MbedTlsObj::ECKeyPair & prvKey, 
+MbedTlsObj::X509Cert::X509Cert(const PKey & prvKey,
 	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
 	X509Cert(ConstructNewX509Cert(nullptr, prvKey, prvKey, 
@@ -917,11 +962,25 @@ MbedTlsObj::X509Cert::X509Cert(const MbedTlsObj::ECKeyPair & prvKey,
 
 MbedTlsObj::X509Cert::~X509Cert()
 {
-	if (!*this)
+	Destory();
+}
+
+void MbedTlsObj::X509Cert::Destory()
+{
+	SwitchToFirstCert();
+
+	m_pubKey.Destory();
+	if (m_ptr)
 	{
 		mbedtls_x509_crt_free(m_ptr);
 		delete m_ptr;
 	}
+	m_ptr = nullptr;
+}
+
+MbedTlsObj::X509Cert::operator bool() const
+{
+	return ObjBase::operator bool() && m_pubKey;
 }
 
 bool MbedTlsObj::X509Cert::GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const
@@ -1013,7 +1072,7 @@ bool MbedTlsObj::X509Cert::VerifySignature() const
 	return *this && VerifySignature(ECKeyPublic(&m_ptr->pk, false));
 }
 
-bool MbedTlsObj::X509Cert::VerifySignature(const ECKeyPublic & pubKey) const
+bool MbedTlsObj::X509Cert::VerifySignature(const PKey & pubKey) const
 {
 	if (!*this || !pubKey)
 	{
@@ -1032,12 +1091,118 @@ bool MbedTlsObj::X509Cert::VerifySignature(const ECKeyPublic & pubKey) const
 	return verifyRes;
 }
 
-const ECKeyPublic & MbedTlsObj::X509Cert::GetPublicKey() const
+bool MbedTlsObj::X509Cert::Verify(const X509Cert & trustedCa, mbedtls_x509_crl* caCrl, const char* commonName, int(*vrfyFunc)(void *, mbedtls_x509_crt *, int, uint32_t *), void * vrfyParam) const
+{
+	if (!*this)
+	{
+		return false;
+	}
+	uint32_t flag = 0;
+	return mbedtls_x509_crt_verify(m_ptr, trustedCa.GetInternalPtr(), caCrl,
+		commonName, &flag, vrfyFunc, vrfyParam) == MBEDTLS_SUCCESS_RET && flag == 0;
+}
+
+bool MbedTlsObj::X509Cert::Verify(const X509Cert & trustedCa, mbedtls_x509_crl* caCrl, const char* commonName, const mbedtls_x509_crt_profile & profile, int(*vrfyFunc)(void *, mbedtls_x509_crt *, int, uint32_t *), void * vrfyParam) const
+{
+	if (!*this)
+	{
+		return false;
+	}
+	uint32_t flag = 0;
+	return mbedtls_x509_crt_verify_with_profile(m_ptr, trustedCa.GetInternalPtr(), caCrl, 
+		&profile, commonName, &flag, vrfyFunc, vrfyParam) == MBEDTLS_SUCCESS_RET && flag == 0;
+}
+
+const PKey & MbedTlsObj::X509Cert::GetPublicKey() const
 {
 	return m_pubKey;
 }
 
 const std::string & MbedTlsObj::X509Cert::ToPemString() const
+{
+	return m_pemStr;
+}
+
+bool MbedTlsObj::X509Cert::NextCert()
+{
+	if (m_ptr && m_ptr->next)
+	{
+		m_certStack.push_back(m_ptr);
+		m_ptr = m_ptr->next;
+		m_pubKey = PKey(&m_ptr->pk, false);
+		return true;
+	}
+	return false;
+}
+
+bool MbedTlsObj::X509Cert::PreviousCert()
+{
+	if (m_certStack.size() > 0)
+	{
+		m_ptr = m_certStack.back();
+		m_pubKey = PKey(&m_ptr->pk, false);
+		m_certStack.pop_back();
+		return true;
+	}
+	return false;
+}
+
+void MbedTlsObj::X509Cert::SwitchToFirstCert()
+{
+	if (m_certStack.size() > 0)
+	{
+		m_ptr = m_certStack[0];
+		m_pubKey = PKey(&m_ptr->pk, false);
+		m_certStack.clear();
+	}
+}
+
+static mbedtls_x509_crl* ConstructX509CrlFromPemDer(const uint8_t* ptr, size_t size)
+{
+	std::unique_ptr<mbedtls_x509_crl> res(new mbedtls_x509_crl);
+	mbedtls_x509_crl_init(res.get());
+
+	if (mbedtls_x509_crl_parse(res.get(), ptr, size) != MBEDTLS_SUCCESS_RET)
+	{
+		mbedtls_x509_crl_free(res.get());
+		return nullptr;
+	}
+
+	return res.release();
+}
+
+static mbedtls_x509_crl* ConstructX509CrlFromPem(const std::string & pemStr)
+{
+	return ConstructX509CrlFromPemDer(reinterpret_cast<const uint8_t*>(pemStr.c_str()), pemStr.size() + 1);
+}
+
+MbedTlsObj::X509Crl::X509Crl(const std::string & pemStr) :
+	X509Crl(ConstructX509CrlFromPem(pemStr), pemStr)
+{
+}
+
+MbedTlsObj::X509Crl::X509Crl(mbedtls_x509_crl * ptr, const std::string & pemStr) :
+	ObjBase(ptr),
+	m_pemStr(pemStr)
+{
+}
+
+MbedTlsObj::X509Crl::~X509Crl()
+{
+	Destory();
+}
+
+void MbedTlsObj::X509Crl::Destory()
+{
+	if (m_ptr)
+	{
+		mbedtls_x509_crl_free(m_ptr);
+		delete m_ptr;
+	}
+	m_ptr = nullptr;
+}
+
+std::string MbedTlsObj::X509Crl::ToPemString() const
 {
 	return m_pemStr;
 }

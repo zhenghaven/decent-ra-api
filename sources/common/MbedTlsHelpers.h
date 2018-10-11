@@ -1,5 +1,12 @@
 #pragma once
 
+#include <cstdint>
+
+#include <string>
+#include <vector>
+
+#include "GeneralKeyTypes.h"
+
 typedef struct mbedtls_asn1_named_data mbedtls_asn1_named_data;
 typedef struct mbedtls_asn1_buf mbedtls_asn1_buf;
 
@@ -19,4 +26,6 @@ namespace MbedTlsHelper
 
 	//Dest can be null. If it's not null, it will be freed before copy.
 	bool MbedTlsAsn1DeepCopy(mbedtls_asn1_named_data*& dest, const mbedtls_asn1_named_data& src);
+
+	bool CalcHashSha256(const std::string& data, General256Hash& hash);
 }

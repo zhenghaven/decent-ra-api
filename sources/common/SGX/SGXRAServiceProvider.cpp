@@ -7,8 +7,6 @@
 #include <atomic>
 #include <mutex>
 
-#include <openssl/x509.h>
-
 #include <sgx_quote.h>
 #include <sgx_key_exchange.h>
 
@@ -19,7 +17,8 @@
 #include "../JsonTools.h"
 #include "../CommonTool.h"
 #include "../DataCoding.h"
-#include "../OpenSSLTools.h"
+#include "../MbedTlsObjects.h"
+#include "../MbedTlsHelpers.h"
 #include "../NonceGenerator.h"
 #include "../AESGCMCommLayer.h"
 #include "../GeneralKeyTypes.h"
@@ -483,23 +482,28 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 	return SGX_SUCCESS;
 }
 
-bool SGXRAEnclave::VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce)
+bool SGXRAEnclave::VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCertStr, const std::string& reportSign, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce)
 {
 #ifndef SIMULATING_ENCLAVE
-	std::vector<X509*> certs;
-	LoadX509CertsFromStr(certs, IAS_REPORT_CERT);
-	X509* iasCert = certs[0];
-
-	LoadX509CertsFromStr(certs, reportCert);
-
-	bool certVerRes = VerifyIasReportCert(iasCert, certs);
+	MbedTlsObj::X509Cert trustedIasCert(IAS_REPORT_CERT);
+	MbedTlsObj::X509Cert reportCertChain(reportCertStr);
+	
+	bool certVerRes = trustedIasCert && reportCertChain &&
+		reportCertChain.Verify(trustedIasCert, nullptr, nullptr, nullptr, nullptr);
 
 	std::vector<uint8_t> buffer1 = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
 
-	bool signVerRes = VerifyIasReportSignature(iasReportStr, buffer1, certs[0]);
+	General256Hash hash;
+	if (!MbedTlsHelper::CalcHashSha256(iasReportStr, hash))
+	{
+		return false;
+	}
 
-	FreeX509Cert(&iasCert);
-	FreeX509Cert(certs);
+	bool signVerRes = false;
+	do
+	{
+		signVerRes = reportCertChain.GetPublicKey().VerifySignatureSha256(hash, buffer1);
+	} while (!signVerRes && reportCertChain.NextCert());
 
 	//COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
 	//COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");

@@ -82,7 +82,7 @@ bool DecentEnclave::ProcessIasRaReport(const MbedTlsDecentServerX509 & inX509, c
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);
 
-	std::string pubKeyPem = inX509.GetPublicKey().ToPubPemString();
+	std::string pubKeyPem = inX509.GetEcPublicKey().ToPubPemString();
 	ReportDataVerifier reportDataVerifier = [pubKeyPem](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
 	{
 		return DecentReportDataVerifier(pubKeyPem, initData, inData);

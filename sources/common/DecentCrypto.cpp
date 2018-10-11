@@ -1,9 +1,63 @@
 #include "DecentCrypto.h"
 
+#include <climits>
+
+#include <mbedtls/x509_csr.h>
 #include <mbedtls/x509_crt.h>
 
+const mbedtls_x509_crt_profile & DecentCrypto::GetX509Profile()
+{
+	static const mbedtls_x509_crt_profile inst = {
+		mbedtls_md_type_t::MBEDTLS_MD_SHA256,
+		mbedtls_pk_type_t::MBEDTLS_PK_ECKEY,
+		mbedtls_ecp_group_id::MBEDTLS_ECP_DP_SECP256R1,
+		UINT32_MAX
+	};
+	
+	return inst;
+}
+
+MbedTlsDecentX509Req::MbedTlsDecentX509Req(const std::string & pemStr) :
+	X509Req(pemStr),
+	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? &m_ptr->pk : nullptr, false)
+{
+}
+
+MbedTlsDecentX509Req::MbedTlsDecentX509Req(mbedtls_x509_csr * ptr, const std::string & pemStr) :
+	X509Req(ptr, pemStr),
+	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? &m_ptr->pk : nullptr, false)
+{
+}
+
+MbedTlsDecentX509Req::MbedTlsDecentX509Req(const MbedTlsObj::ECKeyPublic & keyPair, const std::string & commonName) :
+	X509Req(keyPair, commonName),
+	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? &m_ptr->pk : nullptr, false)
+{
+}
+
+void MbedTlsDecentX509Req::Destory()
+{
+	X509Req::Destory();
+	m_ecPubKey.Destory();
+}
+
+MbedTlsDecentX509Req::operator bool() const
+{
+	return X509Req::operator bool() && m_ecPubKey;
+}
+
+const MbedTlsObj::ECKeyPublic & MbedTlsDecentX509Req::GetEcPublicKey() const
+{
+	return m_ecPubKey;
+}
+
 MbedTlsDecentServerX509::MbedTlsDecentServerX509(const std::string & pemStr) :
-	X509Cert(pemStr)
+	X509Cert(pemStr),
+	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? &m_ptr->pk : nullptr, false)
 {
 	std::map<std::string, std::pair<bool, std::string> > extMap = 
 	{
@@ -29,8 +83,23 @@ MbedTlsDecentServerX509::MbedTlsDecentServerX509(const MbedTlsObj::ECKeyPair & p
 		}
 	),
 	m_platformType(platformType),
-	m_selfRaReport(selfRaReport)
+	m_selfRaReport(selfRaReport),
+	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? &m_ptr->pk : nullptr, false)
 {
+}
+
+void MbedTlsDecentServerX509::Destory()
+{
+	X509Cert::Destory();
+	m_ecPubKey.Destory();
+	m_platformType.clear();
+	m_selfRaReport.clear();
+}
+
+MbedTlsDecentServerX509::operator bool() const
+{
+	return X509Cert::operator bool() && m_ecPubKey;
 }
 
 const std::string & MbedTlsDecentServerX509::GetPlatformType() const
@@ -44,8 +113,15 @@ const std::string & MbedTlsDecentServerX509::GetSelfRaReport() const
 	return m_selfRaReport;
 }
 
+const MbedTlsObj::ECKeyPublic & MbedTlsDecentServerX509::GetEcPublicKey() const
+{
+	return m_ecPubKey;
+}
+
 MbedTlsDecentAppX509::MbedTlsDecentAppX509(const std::string & pemStr) :
-	X509Cert(pemStr)
+	X509Cert(pemStr),
+	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? &m_ptr->pk : nullptr, false)
 {
 	std::map<std::string, std::pair<bool, std::string> > extMap =
 	{
@@ -73,8 +149,23 @@ MbedTlsDecentAppX509::MbedTlsDecentAppX509(const MbedTlsObj::ECKeyPublic & pubKe
 	}
 	),
 	m_platformType(platformType),
-	m_appId(appId)
+	m_appId(appId),
+	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? &m_ptr->pk : nullptr, false)
 {
+}
+
+void MbedTlsDecentAppX509::Destory()
+{
+	X509Cert::Destory();
+	m_ecPubKey.Destory();
+	m_platformType.clear();
+	m_appId.clear();
+}
+
+MbedTlsDecentAppX509::operator bool() const
+{
+	return X509Cert::operator bool() && m_ecPubKey;
 }
 
 const std::string & MbedTlsDecentAppX509::GetPlatformType() const
@@ -85,4 +176,9 @@ const std::string & MbedTlsDecentAppX509::GetPlatformType() const
 const std::string & MbedTlsDecentAppX509::GetAppId() const
 {
 	return m_appId;
+}
+
+const MbedTlsObj::ECKeyPublic & MbedTlsDecentAppX509::GetEcPublicKey() const
+{
+	return m_ecPubKey;
 }

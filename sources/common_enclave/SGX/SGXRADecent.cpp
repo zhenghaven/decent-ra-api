@@ -287,37 +287,18 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	JSON_EDITION::JSON_DOCUMENT_TYPE jsonRoot;
-	if (!ParseStr2Json(jsonRoot, plainMsg) || 
-		!jsonRoot.HasMember(gsk_LabelFunc) || 
-		!jsonRoot[gsk_LabelFunc].IsString())
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> protoKeyPair(new MbedTlsObj::ECKeyPair(plainMsg));
+	if (!protoKeyPair || !*protoKeyPair ||
+		!CryptoKeyContainer::GetInstance().UpdateSignKeyPair(protoKeyPair))
 	{
-		return SGX_ERROR_INVALID_PARAMETER;
+		return SGX_ERROR_UNEXPECTED;
 	}
 
-	std::string funcType(jsonRoot[gsk_LabelFunc].GetString());
+	DecentCertContainer::Get().SetCert(serverCert);
 
-	if (funcType == gsk_ValueFuncSetProtoKey && 
-		jsonRoot.HasMember(gsk_LabelPrvKey) && jsonRoot[gsk_LabelPrvKey].IsString()) //Set Protocol Key Function:
-	{
-		general_secp256r1_public_t pubKey;
-		DeserializeStruct(pubKey, nodeID);
-		PrivateKeyWrap prvKey;
-		DeserializeStruct(prvKey.m_prvKey, jsonRoot[gsk_LabelPrvKey].GetString());
-		std::shared_ptr<const general_secp256r1_public_t> pubKeyPtr(new const general_secp256r1_public_t(pubKey));
-		std::shared_ptr<const PrivateKeyWrap> prvKeyPtr(new const PrivateKeyWrap(prvKey));
-		if (!CryptoKeyContainer::GetInstance().UpdateSignKeyPair(prvKeyPtr, pubKeyPtr))
-		{
-			return SGX_ERROR_UNEXPECTED;
-		}
-		DecentCertContainer::Get().SetCert(serverCert);
+	COMMON_PRINTF("Joined Decent network.\n");
 
-		COMMON_PRINTF("Joined Decent network.\n");
-
-		return SGX_SUCCESS;
-	}
-
-	return SGX_ERROR_INVALID_PARAMETER;
+	return SGX_SUCCESS;
 }
 
 //This function will be call at existing node side.
@@ -356,15 +337,8 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 
 	COMMON_PRINTF("Accepted New Decent Node: %s\n", nodeID);
 
-	JSON_EDITION::JSON_DOCUMENT_TYPE doc;
-	rapidjson::Value jsonRoot;
-
-	std::string prvKeyB64 = SerializeStruct(CryptoKeyContainer::GetInstance().GetSignPrvKey()->m_prvKey);
-
-	JsonCommonSetString(doc, jsonRoot, gsk_LabelFunc, gsk_ValueFuncSetProtoKey);
-	JsonCommonSetString(doc, jsonRoot, gsk_LabelPrvKey, prvKeyB64);
-
-	return commLayer->SendMsg(connectionPtr, Json2StyleString(jsonRoot)) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
+	return commLayer->SendMsg(connectionPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair()->ToPrvPemString()) ?
+		SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

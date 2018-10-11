@@ -22,7 +22,6 @@
 #include "../Common.h"
 #include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
-#include "../../common/OpenSSLTools.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/CryptoKeyContainer.h"
 
@@ -95,7 +94,7 @@ extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* co
 	CryptoKeyContainer& keyContainer = CryptoKeyContainer::GetInstance();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
 
-	MbedTlsObj::X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
+	MbedTlsDecentX509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 	if (!certReq)
 	{
 		return SGX_ERROR_UNEXPECTED;

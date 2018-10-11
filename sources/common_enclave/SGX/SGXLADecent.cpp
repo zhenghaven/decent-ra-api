@@ -26,7 +26,7 @@
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/CryptoKeyContainer.h"
 
-static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity_t& identity, const MbedTlsObj::X509Req& x509Req, SecureCommLayer& commLayer, void* const connectionPtr)
+static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity_t& identity, const MbedTlsDecentX509Req& x509Req, SecureCommLayer& commLayer, void* const connectionPtr)
 {
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
 	std::shared_ptr<const MbedTlsDecentServerX509> serverCert = DecentCertContainer::Get().GetServerCert();
@@ -36,7 +36,7 @@ static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	MbedTlsDecentAppX509 appX509(x509Req.GetPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), SGXLADecent::gsk_ValuePlatformType, SerializeStruct(identity));
+	MbedTlsDecentAppX509 appX509(x509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), SGXLADecent::gsk_ValuePlatformType, SerializeStruct(identity));
 
 	if (!appX509)
 	{
@@ -76,7 +76,7 @@ extern "C" sgx_status_t ecall_decent_proc_app_x509_req(const char* peerId, void*
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	MbedTlsObj::X509Req appX509Req(plainMsg);
+	MbedTlsDecentX509Req appX509Req(plainMsg);
 	if (!appX509Req)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;

@@ -16,7 +16,6 @@
 
 #include <sgx_tcrypto.h>
 
-#include "../OpenSSLTools.h"
 #include "../OpenSSLConversions.h"
 
 #define SGX_GENERAL_KEY_TYPE_ERROR_MSG "The key type of SGX is incompatible with the general key type!"
