@@ -103,7 +103,7 @@ if(MSVC)
 	set(ENCLAVE_OPTIONS "/NODEFAULTLIB /NOENTRY")
 	
 	set(COMMON_APP_DEFINES WIN32_LEAN_AND_MEAN CURL_STATICLIB)
-	set(COMMON_ENCLAVE_DEFINES ENCLAVE_CODE)
+	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
 #elseif(APPLE)
 #	set(COMMON_OPTIONS )
 #	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
@@ -115,7 +115,7 @@ else()
 	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
 	
 	set(COMMON_APP_DEFINES CURL_STATICLIB)
-	set(COMMON_ENCLAVE_DEFINES ENCLAVE_CODE)
+	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
 endif()
 
 set(DEBUG_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
@@ -203,21 +203,29 @@ set(CMAKE_USE_OPENSSL ON CACHE BOOL "Set to ON to build libcurl with OpenSSL." F
 option(HTTP_ONLY ON)
 option(ENABLE_MANUAL OFF)
 
+set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
+set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbed TLS programs." FORCE)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/curl)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls)
 
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/enclaveRapidJson/include)
 set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 set(CURL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/curl/include)
+set(MBEDTLS_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/mbedtls/include)
+
+set(MBEDTLS_LIB mbedtls)
+set(MBEDTLS_ENCLAVE_LIB mbedtls_enclave)
 
 set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS} 
 							 ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							 ${TCLAP_INCLUDE_DIR} 
 							 ${CURL_INCLUDE_DIR} 
 							 ${CPPCODEC_INCLUDE_DIR} 
+							 ${MBEDTLS_INCLUDE_DIR} 
 #							 ${Boost_INCLUDE_DIRS} 
 							 )
 
@@ -227,6 +235,7 @@ set(COMMON_ENCLAVE_INCLUDE_DIRS ${INTEL_SGX_SDK_INCLUDE_PATH}
 							 ${INTEL_SGX_SSL_INCLUDE_PATH}
 							 ${CPPCODEC_INCLUDE_DIR}
 							 ${RAPIDJSON_INCLUDE_DIR}
+							 ${MBEDTLS_INCLUDE_DIR}
 							 )
 
 #==========================================================
@@ -309,6 +318,7 @@ target_link_libraries(LibTest_App
 					libcurl
 					OpenSSL::SSL 
 					OpenSSL::Crypto 
+					${MBEDTLS_LIB} 
 					Boost::filesystem
 					Boost::date_time
 					Boost::system
@@ -385,6 +395,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_GROUP_DEBUG}>" 
 						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM}>" 
 						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_GROUP_RELEASE}>" 
+						${MBEDTLS_ENCLAVE_LIB} 
 						${GROUP_FLAG_END}
 						)
 
@@ -416,10 +427,11 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
 						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
 						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>"
-						${COMMON_STANDARD_LIBRARIES}
-						jsoncpp_lib_static
-						libcurl
+						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
+						${COMMON_STANDARD_LIBRARIES} 
+						jsoncpp_lib_static 
+						libcurl 
+						${MBEDTLS_LIB} 
 						OpenSSL::SSL 
 						OpenSSL::Crypto 
 						Boost::filesystem
