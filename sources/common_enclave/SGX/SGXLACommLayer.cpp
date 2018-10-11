@@ -26,22 +26,22 @@ const sgx_dh_session_enclave_identity_t* SGXLACommLayer::GetIdentity() const
 	return m_identity.get();
 }
 
-SGXLACommLayer::SGXLACommLayer(std::pair<std::unique_ptr<GeneralAES128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t>> keyAndId) :
+SGXLACommLayer::SGXLACommLayer(std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t>> keyAndId) :
 	SGXLACommLayer(keyAndId.first, keyAndId.second, keyAndId.first && keyAndId.second)
 {
 }
 
-SGXLACommLayer::SGXLACommLayer(std::unique_ptr<GeneralAES128BitKey>& key, std::unique_ptr<sgx_dh_session_enclave_identity_t>& id, bool isValid) :
-	AESGCMCommLayer(isValid ? std::move(*key) : GeneralAES128BitKey()),
+SGXLACommLayer::SGXLACommLayer(std::unique_ptr<General128BitKey>& key, std::unique_ptr<sgx_dh_session_enclave_identity_t>& id, bool isValid) :
+	AESGCMCommLayer(isValid ? std::move(*key) : General128BitKey()),
 	m_isHandShaked(isValid),
 	m_identity(std::move(id))
 {
 }
 
-std::pair<std::unique_ptr<GeneralAES128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > SGXLACommLayer::DoHandShake(void * const connectionPtr, bool isInitiator)
+std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > SGXLACommLayer::DoHandShake(void * const connectionPtr, bool isInitiator)
 {
-	std::pair<std::unique_ptr<GeneralAES128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > retValue;
-	std::unique_ptr<GeneralAES128BitKey> keyPtr(new GeneralAES128BitKey);
+	std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > retValue;
+	std::unique_ptr<General128BitKey> keyPtr(new General128BitKey);
 	std::unique_ptr<sgx_dh_session_enclave_identity_t> idPtr(new sgx_dh_session_enclave_identity_t);
 
 	sgx_dh_session_t session;

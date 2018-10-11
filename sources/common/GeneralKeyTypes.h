@@ -7,8 +7,11 @@
 
 #include "general_key_types.h"
 
-typedef std::array<uint8_t, GENERAL_128BIT_16BYTE_SIZE> GeneralAES128BitKey;
-typedef std::array<uint8_t, GENERAL_256BIT_32BYTE_SIZE> General256Hash;
+typedef std::array<uint8_t, GENERAL_128BIT_16BYTE_SIZE> General128BitKey;
+typedef std::array<uint8_t, GENERAL_256BIT_32BYTE_SIZE> General256BitKey;
+
+typedef General128BitKey General128Tag;
+typedef General256BitKey General256Hash;
 
 struct PrivateKeyWrap
 {

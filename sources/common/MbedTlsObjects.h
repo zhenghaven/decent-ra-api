@@ -73,9 +73,17 @@ namespace MbedTlsObj
 	{
 	public:
 		static BigNumber GenRandomNumber(size_t size);
+		//Dummy struct to indicate the need for generating a new big number.
+		struct Generate
+		{
+			explicit Generate() = default;
+		};
+
+		static constexpr Generate generate{};
 
 	public:
 		BigNumber() = delete;
+		BigNumber(const Generate&);
 		BigNumber(BigNumber&& other);
 		BigNumber(mbedtls_mpi* ptr);
 		virtual ~BigNumber();
@@ -143,6 +151,8 @@ namespace MbedTlsObj
 
 		bool ToGeneralPrivateKey(PrivateKeyWrap& outKey) const;
 		PrivateKeyWrap* ToGeneralPrivateKeyWrap() const;
+
+		bool GenerateSharedKey(General256BitKey& outKey, const ECKeyPublic& peerPubKey);
 
 		std::string ToPrvPemString() const;
 		bool ToPrvDerArray(std::vector<uint8_t>& outArray) const;

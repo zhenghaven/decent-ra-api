@@ -2,11 +2,11 @@
 
 #include <sgx_trts.h>
 
-void MbedTlsHelper::MbedTlsHelperDrbgInit(void *& ctx)
+void MbedTlsHelper::DrbgInit(void *& ctx)
 {
 }
 
-int MbedTlsHelper::MbedTlsHelperDrbgRandom(void * ctx, unsigned char * output, size_t output_len)
+int MbedTlsHelper::DrbgRandom(void * ctx, unsigned char * output, size_t output_len)
 {
 	if (!output ||
 		sgx_read_rand(output, output_len) != SGX_SUCCESS)
@@ -17,6 +17,6 @@ int MbedTlsHelper::MbedTlsHelperDrbgRandom(void * ctx, unsigned char * output, s
 	return 0;
 }
 
-void MbedTlsHelper::MbedTlsHelperDrbgFree(void *& ctx)
+void MbedTlsHelper::DrbgFree(void *& ctx)
 {
 }

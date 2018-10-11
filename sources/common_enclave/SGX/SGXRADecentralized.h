@@ -19,7 +19,6 @@ namespace std
 	template <class _Tp, size_t _Size>
 	struct array;
 }
-typedef std::array<uint8_t, 16> GeneralAES128BitKey;
 
 typedef struct _ias_report_t sgx_ias_report_t;
 
@@ -27,7 +26,7 @@ namespace SGXRADecentralized
 {
 	void DropNode(const std::string& nodeID);
 	bool IsNodeAttested(const std::string& nodeID);
-	bool ReleaseNodeKeys(const std::string& nodeID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK);
+	bool ReleaseNodeKeys(const std::string& nodeID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<General128BitKey>& outSK, std::unique_ptr<General128BitKey>& outMK);
 	AESGCMCommLayer* ReleaseNodeKeys(const std::string& nodeID, SendFunctionType sendFunc, std::unique_ptr<sgx_ias_report_t>& outIasReport);
 }
 

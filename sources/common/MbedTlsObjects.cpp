@@ -9,6 +9,7 @@
 
 #include <mbedtls/pk.h>
 #include <mbedtls/ecp.h>
+#include <mbedtls/ecdh.h>
 #include <mbedtls/pem.h>
 #include <mbedtls/asn1write.h>
 #include <mbedtls/oid.h>
@@ -97,12 +98,12 @@ BigNumber MbedTlsObj::BigNumber::GenRandomNumber(size_t size)
 	mbedtls_mpi_init(serialNum.get());
 
 	void* drbgCtx;
-	MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
+	MbedTlsHelper::DrbgInit(drbgCtx);
 
 	int mbedRet = mbedtls_mpi_fill_random(serialNum.get(), size,
-		&MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx);
+		&MbedTlsHelper::DrbgRandom, drbgCtx);
 
-	MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+	MbedTlsHelper::DrbgFree(drbgCtx);
 
 	if (mbedRet != MBEDTLS_SUCCESS_RET)
 	{
@@ -111,6 +112,12 @@ BigNumber MbedTlsObj::BigNumber::GenRandomNumber(size_t size)
 	}
 
 	return BigNumber(serialNum.release());
+}
+
+MbedTlsObj::BigNumber::BigNumber(const Generate &) :
+	ObjBase(new mbedtls_mpi)
+{
+	mbedtls_mpi_init(m_ptr);
 }
 
 MbedTlsObj::BigNumber::BigNumber(BigNumber && other) :
@@ -382,9 +389,9 @@ static bool CheckPublicAndPrivatePair(const mbedtls_ecp_keypair* pair)
 	mbedtls_ecp_group_copy(&grp, &pair->grp);
 
 	void* drbgCtx;
-	MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
-	int mbedRet = mbedtls_ecp_mul(&grp, &Q, &pair->d, &grp.G, &MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx);
-	MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+	MbedTlsHelper::DrbgInit(drbgCtx);
+	int mbedRet = mbedtls_ecp_mul(&grp, &Q, &pair->d, &grp.G, &MbedTlsHelper::DrbgRandom, drbgCtx);
+	MbedTlsHelper::DrbgFree(drbgCtx);
 
 	bool negRes = (mbedRet != MBEDTLS_SUCCESS_RET) ||
 		mbedtls_mpi_cmp_mpi(&Q.X, &pair->Q.X) ||
@@ -428,9 +435,9 @@ static mbedtls_pk_context* ConstructEcPrvFromGeneral(const general_secp256r1_pri
 	else
 	{
 		void* drbgCtx;
-		MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
-		int mbedRet = mbedtls_ecp_mul(&ecPtr->grp, &ecPtr->Q, &ecPtr->d, &ecPtr->grp.G, &MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx);
-		MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+		MbedTlsHelper::DrbgInit(drbgCtx);
+		int mbedRet = mbedtls_ecp_mul(&ecPtr->grp, &ecPtr->Q, &ecPtr->d, &ecPtr->grp.G, &MbedTlsHelper::DrbgRandom, drbgCtx);
+		MbedTlsHelper::DrbgFree(drbgCtx);
 		if (mbedRet != MBEDTLS_SUCCESS_RET)
 		{
 			mbedtls_pk_free(res.get());
@@ -447,20 +454,20 @@ static mbedtls_pk_context* GenerateEcKeyPair()
 	mbedtls_pk_init(res.get());
 	mbedtls_ecp_keypair* ecPtr = nullptr;
 	void* drbgCtx;
-	MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
+	MbedTlsHelper::DrbgInit(drbgCtx);
 
 	if (mbedtls_pk_setup(res.get(), mbedtls_pk_info_from_type(mbedtls_pk_type_t::MBEDTLS_PK_ECKEY))
 		!= MBEDTLS_SUCCESS_RET ||
 		!(ecPtr = mbedtls_pk_ec(*res)) ||
-		mbedtls_ecp_gen_key(SECP256R1_CURVE_ID, ecPtr, &MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx)
+		mbedtls_ecp_gen_key(SECP256R1_CURVE_ID, ecPtr, &MbedTlsHelper::DrbgRandom, drbgCtx)
 		!= MBEDTLS_SUCCESS_RET)
 	{
-		MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+		MbedTlsHelper::DrbgFree(drbgCtx);
 		mbedtls_pk_free(res.get());
 		return nullptr;
 	}
 	
-	MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+	MbedTlsHelper::DrbgFree(drbgCtx);
 	return res.release();
 }
 
@@ -523,6 +530,40 @@ PrivateKeyWrap * ECKeyPair::ToGeneralPrivateKeyWrap() const
 
 	delete res;
 	return nullptr;
+}
+
+bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic & peerPubKey)
+{
+	if (!*this || !peerPubKey)
+	{
+		return false;
+	}
+
+	BigNumber sharedKey(BigNumber::generate);
+	if (!sharedKey)
+	{
+		return false;
+	}
+
+	void* drbgCtx;
+	MbedTlsHelper::DrbgInit(drbgCtx);
+
+	int mbedRet = mbedtls_ecdh_compute_shared(&GetInternalECKey()->grp, sharedKey.GetInternalPtr(),
+		&peerPubKey.GetInternalECKey()->Q, &GetInternalECKey()->d,
+		&MbedTlsHelper::DrbgRandom, drbgCtx);
+
+	MbedTlsHelper::DrbgFree(drbgCtx);
+
+	if (mbedRet != MBEDTLS_SUCCESS_RET ||
+		mbedtls_mpi_size(sharedKey.GetInternalPtr()) != outKey.size() ||
+		mbedtls_mpi_write_binary(sharedKey.GetInternalPtr(), outKey.data(), outKey.size()) != MBEDTLS_SUCCESS_RET)
+	{
+		return false;
+	}
+
+	std::reverse(outKey.begin(), outKey.end());
+
+	return true;
 }
 
 general_secp256r1_private_t * ECKeyPair::ToGeneralPrivateKey() const
@@ -611,14 +652,14 @@ static const std::string CreateX509Pem(const PKey & keyPair, const std::string& 
 	}
 
 	void* drbgCtx;
-	MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
+	MbedTlsHelper::DrbgInit(drbgCtx);
 
 	std::vector<char> tmpRes(X509_REQ_PEM_MAX_BYTES);
 	int mbedRet = mbedtls_x509write_csr_pem(&csr, 
 		reinterpret_cast<unsigned char*>(tmpRes.data()), tmpRes.size(), 
-		&MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx);
+		&MbedTlsHelper::DrbgRandom, drbgCtx);
 
-	MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+	MbedTlsHelper::DrbgFree(drbgCtx);
 
 	mbedtls_x509write_csr_free(&csr);
 	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) : std::string();
@@ -908,14 +949,14 @@ static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const PK
 	}
 
 	void* drbgCtx;
-	MbedTlsHelper::MbedTlsHelperDrbgInit(drbgCtx);
+	MbedTlsHelper::DrbgInit(drbgCtx);
 
 	std::vector<uint8_t> tmpDerBuf(X509_CRT_DER_MAX_BYTES + extTotalSize + 5);
 
 	mbedRet = myX509WriteCrtDer(&cert, tmpDerBuf,
-		&MbedTlsHelper::MbedTlsHelperDrbgRandom, drbgCtx);
+		&MbedTlsHelper::DrbgRandom, drbgCtx);
 
-	MbedTlsHelper::MbedTlsHelperDrbgFree(drbgCtx);
+	MbedTlsHelper::DrbgFree(drbgCtx);
 	if (mbedRet < 0)
 	{
 		mbedtls_x509write_crt_free(&cert);

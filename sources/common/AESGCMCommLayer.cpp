@@ -4,9 +4,9 @@
 #include <iterator>
 
 #include <sgx_tcrypto.h>
-#include <sgx_trts.h>
 
 #include "GeneralKeyTypes.h"
+#include "MbedTlsHelpers.h"
 #include "DataCoding.h"
 #include "JsonTools.h"
 #include "CommonTool.h"
@@ -104,13 +104,16 @@ bool AESGCMCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg
 
 	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(outMsg[0]);
 
-	sgx_status_t enclaveRet = sgx_read_rand(encryptedStruct.m_iv, SUGGESTED_AESGCM_IV_SIZE);
-	if (enclaveRet != SGX_SUCCESS)
+	void* drbgCtx;
+	MbedTlsHelper::DrbgInit(drbgCtx);
+	int mbedRet = MbedTlsHelper::DrbgRandom(drbgCtx, encryptedStruct.m_iv, SUGGESTED_AESGCM_IV_SIZE);
+	MbedTlsHelper::DrbgFree(drbgCtx);
+	if (mbedRet != 0)
 	{
 		return false;
 	}
 
-	enclaveRet = sgx_rijndael128GCM_encrypt(
+	sgx_status_t enclaveRet = sgx_rijndael128GCM_encrypt(
 		reinterpret_cast<const sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
 		reinterpret_cast<const uint8_t*>(inMsg.data()),
 		static_cast<uint32_t>(inMsg.size()),

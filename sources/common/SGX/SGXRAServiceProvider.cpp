@@ -14,12 +14,10 @@
 
 #include "SGXOpenSSLConversions.h"
 
-#include "../JsonTools.h"
 #include "../CommonTool.h"
 #include "../DataCoding.h"
 #include "../MbedTlsObjects.h"
 #include "../MbedTlsHelpers.h"
-#include "../NonceGenerator.h"
 #include "../AESGCMCommLayer.h"
 #include "../GeneralKeyTypes.h"
 #include "../CryptoKeyContainer.h"
@@ -30,12 +28,6 @@
 #include "../SGX/ias_report.h"
 #include "../SGX/IasReport.h"
 
-#ifdef ENCLAVE_ENVIRONMENT
-#include <rapidjson/document.h>
-#else
-#include <json/json.h>
-#endif
-
 enum class ClientRAState
 {
 	MSG0_DONE,
@@ -43,42 +35,60 @@ enum class ClientRAState
 	ATTESTED, //MSG3_DONE,
 };
 
+static std::string ConstructNonce(size_t size)
+{
+	size_t dataSize = (size / 4) * 3;
+	std::vector<uint8_t> randData(dataSize);
+
+	void* drbgCtx;
+	MbedTlsHelper::DrbgInit(drbgCtx);
+	int mbedRet = MbedTlsHelper::DrbgRandom(drbgCtx, randData.data(), randData.size());
+	MbedTlsHelper::DrbgFree(drbgCtx);
+	if (mbedRet != 0)
+	{
+		return std::string();
+	}
+
+	return cppcodec::base64_rfc4648::encode(randData);
+}
+
 struct RASPContext
 {
 	std::shared_ptr<const general_secp256r1_public_t> m_mySignPub;
 	std::shared_ptr<const PrivateKeyWrap> m_mySignPrv;
-	std::unique_ptr<sgx_ec256_public_t> m_peerSignKey;
 
-	sgx_ec256_private_t m_prvKey;
+	MbedTlsObj::ECKeyPair m_encrKeyPair;
 
 	//Do not move the following members:
-	sgx_ec256_public_t m_pubKey;
-	sgx_ec256_public_t m_peerEncrKey;
+	general_secp256r1_public_t m_pubKey;
+	general_secp256r1_public_t m_peerEncrKey;
 	//End Do Not Move.
 
 	std::string m_nonce;
 	ReportDataVerifier m_reportDataVerifier;
-	sgx_ec256_dh_shared_t m_sharedKey;
-	sgx_ec_key_128bit_t m_smk = { 0 };
-	std::unique_ptr<GeneralAES128BitKey> m_mk;
-	std::unique_ptr<GeneralAES128BitKey> m_sk;
-	sgx_ec_key_128bit_t m_vk = { 0 };
+	//sgx_ec256_dh_shared_t m_sharedKey;
+	General128BitKey m_smk;
+	std::unique_ptr<General128BitKey> m_mk;
+	std::unique_ptr<General128BitKey> m_sk;
+	General128BitKey m_vk = { 0 };
 	//sgx_ps_sec_prop_desc_t m_secProp;
 	ClientRAState m_state;
 	std::mutex m_mutex;
 	std::unique_ptr<sgx_ias_report_t> m_iasReport;
+	bool m_isValid;
 
-	RASPContext(const CryptoKeyContainer& keyContainer, const sgx_ec256_public_t& inSignPubKey) :
+	RASPContext(const CryptoKeyContainer& keyContainer) :
 		m_mySignPub(keyContainer.GetSignPubKey()),
 		m_mySignPrv(keyContainer.GetSignPrvKey()),
-		m_peerSignKey(new sgx_ec256_public_t),
-		m_nonce(GenNonceForIASJson(IAS_REQUEST_NONCE_SIZE)),
-		m_sharedKey({ {0} }),
-		m_mk(new GeneralAES128BitKey),
-		m_sk(new GeneralAES128BitKey),
+		m_encrKeyPair(MbedTlsObj::ECKeyPair::generatePair),
+		m_nonce(ConstructNonce(IAS_REQUEST_NONCE_SIZE)),
+		//m_sharedKey({ {0} }),
+		m_mk(new General128BitKey),
+		m_sk(new General128BitKey),
 		//m_secProp({ {0} }),
 		m_state(ClientRAState::MSG0_DONE),
-		m_iasReport(new sgx_ias_report_t)
+		m_iasReport(new sgx_ias_report_t),
+		m_isValid(m_encrKeyPair && m_encrKeyPair.ToGeneralPublicKey(m_pubKey) && m_nonce.size() == IAS_REQUEST_NONCE_SIZE)
 	{
 		m_reportDataVerifier = [](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
 		{
@@ -86,25 +96,34 @@ struct RASPContext
 		};
 	}
 
-	sgx_status_t SetEncrPubKey(const sgx_ec256_public_t& inEncrPubKey)
+	operator bool() const
 	{
-		std::memcpy(&m_peerEncrKey, &inEncrPubKey, sizeof(sgx_ec256_public_t));
+		return m_isValid;
+	}
 
-		sgx_ecc_state_handle_t ecState;
-		sgx_status_t enclaveRet = sgx_ecc256_open_context(&ecState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return enclaveRet;
-		}
-		enclaveRet = sgx_ecc256_compute_shared_dhkey(&m_prvKey, &m_peerEncrKey, &m_sharedKey, ecState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return enclaveRet;
-		}
-		sgx_ecc256_close_context(ecState);
+	bool SetEncrPubKey(const general_secp256r1_public_t& inEncrPubKey)
+	{
+		std::memcpy(&m_peerEncrKey, &inEncrPubKey, sizeof(general_secp256r1_public_t));
 
-		enclaveRet = derive_key_set(&m_sharedKey, &m_smk, reinterpret_cast<sgx_ec_key_128bit_t*>(m_mk->data()), reinterpret_cast<sgx_ec_key_128bit_t*>(m_sk->data()), &m_vk);
-		return enclaveRet;
+		MbedTlsObj::ECKeyPublic peerEncrKey(inEncrPubKey);
+		if (!peerEncrKey)
+		{
+			return false;
+		}
+		General256BitKey sharedKey;
+		if (!m_encrKeyPair.GenerateSharedKey(sharedKey, peerEncrKey))
+		{
+			return false;
+		}
+
+		if (!MbedTlsHelper::CkdfAes128(sharedKey, "SMK", m_smk) ||
+			!MbedTlsHelper::CkdfAes128(sharedKey, "MK", *m_mk) ||
+			!MbedTlsHelper::CkdfAes128(sharedKey, "SK", *m_sk) ||
+			!MbedTlsHelper::CkdfAes128(sharedKey, "VK", m_vk))
+		{
+			return false;
+		}
+		return true;
 	}
 };
 
@@ -118,25 +137,6 @@ namespace
 	std::mutex g_clientsMapMutex;
 	static ClientsMapType g_clientsMap;
 	static const ClientsMapType& k_clientsMap = g_clientsMap;
-}
-
-static inline std::shared_ptr<RASPContext> ConstructSpCtx(const std::string& clientID, const sgx_ec256_public_t& inPubKey)
-{
-	std::shared_ptr<RASPContext> spCTX(new RASPContext(CryptoKeyContainer::GetInstance(), inPubKey));
-	sgx_ecc_state_handle_t ecState;
-	sgx_status_t enclaveRet = sgx_ecc256_open_context(&ecState);
-	if (!spCTX || (enclaveRet != SGX_SUCCESS))
-	{
-		sgx_ecc256_close_context(ecState);
-		return nullptr;
-	}
-	enclaveRet = sgx_ecc256_create_key_pair(&spCTX->m_prvKey, &spCTX->m_pubKey, ecState);
-	sgx_ecc256_close_context(ecState);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return nullptr;
-	}
-	return std::move(spCTX);
 }
 
 static inline bool AddNewClientRAState(const std::string& clientID, std::shared_ptr<RASPContext> spCTX)
@@ -190,7 +190,7 @@ bool SGXRAEnclave::IsClientAttested(const std::string & clientID)
 	return it == k_clientsMap.cend() ? false : (it->second->m_state == ClientRAState::ATTESTED);
 }
 
-bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK)
+bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<General128BitKey>& outSK, std::unique_ptr<General128BitKey>& outMK)
 {
 	std::shared_ptr<RASPContext> spCTXPtr(FetchSpCtx(clientID));
 	if (!spCTXPtr || spCTXPtr->m_state != ClientRAState::ATTESTED)
@@ -203,7 +203,6 @@ bool SGXRAEnclave::ReleaseClientKeys(const std::string & clientID, std::unique_p
 		std::lock_guard<std::mutex> ctxLock(spCTX.m_mutex);
 
 		outIasReport.swap(spCTX.m_iasReport);
-		outSignPubKey.swap(spCTX.m_peerSignKey);
 		outSK.swap(spCTX.m_sk);
 		outMK.swap(spCTX.m_mk);
 	}
@@ -295,8 +294,8 @@ sgx_status_t SGXRAEnclave::GetRASPSignPubKey(sgx_ec256_public_t& outKey)
 
 sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_ec256_public_t& inKey, const sgx_ra_msg1_t& inMsg1, sgx_ra_msg2_t& outMsg2)
 {
-	std::shared_ptr<RASPContext> spCTXPtr(std::move(ConstructSpCtx(clientId, inKey)));
-	if (!spCTXPtr)
+	std::shared_ptr<RASPContext> spCTXPtr(new RASPContext(CryptoKeyContainer::GetInstance()));
+	if (!spCTXPtr || !*spCTXPtr)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -304,10 +303,9 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 
 	sgx_status_t res = SGX_SUCCESS;
 
-	res = spCTX.SetEncrPubKey(inMsg1.g_a);
-	if (res != SGX_SUCCESS)
+	if (!spCTX.SetEncrPubKey(SgxEc256Type2General(inMsg1.g_a)))
 	{
-		return res; //Error return. (Error from SGX)
+		return SGX_ERROR_UNEXPECTED;
 	}
 
 	memcpy(&(outMsg2.g_b), &(spCTX.m_pubKey), sizeof(sgx_ec256_public_t));
@@ -340,11 +338,15 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 		sgx_ecc256_close_context(eccState);
 	}
 
-	uint8_t mac[SGX_CMAC_MAC_SIZE] = { 0 };
-	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
-	res = sgx_rijndael128_cmac_msg(reinterpret_cast<sgx_cmac_128bit_key_t*>(&(spCTX.m_smk)), reinterpret_cast<uint8_t*>(&(outMsg2.g_b)), cmac_size, &outMsg2.mac);
-
 	outMsg2.sig_rl_size = 0;
+
+	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
+	General128Tag cmac;
+	if (!MbedTlsHelper::CalcCmacAes128(spCTX.m_smk, reinterpret_cast<uint8_t*>(&(outMsg2.g_b)), cmac_size, cmac))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	std::copy(cmac.begin(), cmac.end(), std::begin(outMsg2.mac));
 
 	spCTX.m_state = ClientRAState::MSG1_DONE;
 
@@ -353,7 +355,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	return res; //Error return. (Error from SGX)
+	return SGX_SUCCESS; //Error return. (Error from SGX)
 }
 
 sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint8_t* inMsg3, uint32_t msg3Len, const std::string& iasReport, const std::string& reportSign, const std::string& reportCert, sgx_ias_report_t& outMsg4, sgx_ec256_signature_t& outMsg4Sign, sgx_report_data_t* outOriRD)
@@ -387,10 +389,11 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 	const uint8_t *p_msg3_cmaced = inMsg3;
 	p_msg3_cmaced += sizeof(sgx_mac_t);
 
-	res = verify_cmac128(&(spCTX.m_smk), p_msg3_cmaced, mac_size, (msg3.mac));
-	if (res != SGX_SUCCESS)
+	General128Tag msg3Mac;
+	std::copy(std::begin(msg3.mac), std::end(msg3.mac), msg3Mac.begin());
+	if (!MbedTlsHelper::VerifyCmacAes128(spCTX.m_smk, p_msg3_cmaced, mac_size, msg3Mac))
 	{
-		return res; //Error return. (Error from SGX)
+		return SGX_ERROR_UNEXPECTED;
 	}
 
 	//std::memcpy(&spCTX.m_secProp, &msg3.ps_sec_prop, sizeof(sgx_ps_sec_prop_desc_t));

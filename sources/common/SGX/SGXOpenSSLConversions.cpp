@@ -56,56 +56,6 @@ namespace std
 
 #endif // ENCLAVE_ENVIRONMENT
 
-bool ECKeyCalcSharedKey(EVP_PKEY* inKey, EVP_PKEY* inPeerKey, sgx_ec256_dh_shared_t *outSharedkey)
-{
-	if (!inKey || !inPeerKey)
-	{
-		return false;
-	}
-
-	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(inKey, nullptr);
-	if (!ctx)
-	{
-		return false;
-	}
-
-	if (EVP_PKEY_derive_init(ctx) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	if (EVP_PKEY_derive_set_peer(ctx, inPeerKey) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	size_t keySize = 0;
-	if (EVP_PKEY_derive(ctx, NULL, &keySize) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	if (keySize != SGX_ECP256_KEY_SIZE)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	if (EVP_PKEY_derive(ctx, outSharedkey->s, &keySize) <= 0)
-	{
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
-
-	std::reverse(std::begin(outSharedkey->s), std::end(outSharedkey->s));
-
-	EVP_PKEY_CTX_free(ctx);
-	return true;
-}
-
 bool ECKeySignOpenSSL2SGX(const ECDSA_SIG * inSign, sgx_ec256_signature_t * outSign)
 {
 	if (!inSign || !outSign)

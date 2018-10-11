@@ -24,8 +24,8 @@
 struct DecentrNodeContext
 {
 	std::unique_ptr<sgx_ec256_public_t> m_pubKey;
-	std::unique_ptr<GeneralAES128BitKey> m_sk;
-	std::unique_ptr<GeneralAES128BitKey> m_mk;
+	std::unique_ptr<General128BitKey> m_sk;
+	std::unique_ptr<General128BitKey> m_mk;
 	std::unique_ptr<sgx_ias_report_t> m_iasReport;
 };
 
@@ -164,7 +164,7 @@ static inline std::unique_ptr<DecentrNodeContext> FetchNodeCtx(const std::string
 	}
 	return std::move(nodeCtx);
 }
-bool SGXRADecentralized::ReleaseNodeKeys(const std::string & nodeID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK)
+bool SGXRADecentralized::ReleaseNodeKeys(const std::string & nodeID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<General128BitKey>& outSK, std::unique_ptr<General128BitKey>& outMK)
 {
 	std::unique_ptr<DecentrNodeContext> nodeCtx(std::move(FetchNodeCtx(nodeID)));
 	if (!nodeCtx)

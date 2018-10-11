@@ -287,31 +287,6 @@ sgx_status_t sgx_rijndael128GCM_decrypt(const sgx_aes_gcm_128bit_key_t *p_key,
 	}
 }
 
-sgx_status_t sgx_rijndael128_cmac_msg(const sgx_cmac_128bit_key_t *p_key, const uint8_t *p_src, uint32_t src_len, sgx_cmac_128bit_tag_t *p_mac)
-{
-	if (!p_key || !p_src || !src_len || !p_mac)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-
-	size_t outCmacLen = 0;
-	CMAC_CTX *ctx = CMAC_CTX_new();
-	CMAC_Init(ctx, p_key, SGX_CMAC_KEY_SIZE, EVP_aes_128_cbc(), NULL);
-
-	CMAC_Update(ctx, p_src, src_len);
-	CMAC_Final(ctx, *p_mac, &outCmacLen);
-
-	CMAC_CTX_free(ctx);
-
-	if (outCmacLen != SGX_CMAC_MAC_SIZE)
-	{
-		LOGW("CMAC Tag size doesn't match! It should be %d, but the actual size is %llu.", SGX_CMAC_MAC_SIZE, static_cast<unsigned long long>(outCmacLen));
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	return SGX_SUCCESS;
-}
-
 //sgx_status_t sgx_cmac128_init(const sgx_cmac_128bit_key_t *p_key, sgx_cmac_state_handle_t* p_cmac_handle);
 //sgx_status_t sgx_cmac128_update(const uint8_t *p_src, uint32_t src_len, sgx_cmac_state_handle_t cmac_handle);
 //sgx_status_t sgx_cmac128_final(sgx_cmac_state_handle_t cmac_handle, sgx_cmac_128bit_tag_t *p_hash);
@@ -345,82 +320,6 @@ sgx_status_t sgx_ecc256_open_context(sgx_ecc_state_handle_t* p_ecc_handle)
 sgx_status_t sgx_ecc256_close_context(sgx_ecc_state_handle_t ecc_handle)
 {
 	ECKeyCloseContext(ecc_handle);
-	return SGX_SUCCESS;
-}
-
-//sgx_status_t sgx_ecc256_check_point(const sgx_ec256_public_t *p_point, const sgx_ecc_state_handle_t ecc_handle, int *p_valid)
-//{
-//#pragma message("!!!!!!!!!TODO: Complete this function later.!!!!!!!!!!!")
-//	
-//	return SGX_SUCCESS;
-//}
-
-sgx_status_t sgx_ecc256_create_key_pair(sgx_ec256_private_t *p_private, sgx_ec256_public_t *p_public, sgx_ecc_state_handle_t ecc_handle)
-{
-	if (!p_private || !p_public || !ecc_handle)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-
-	EC_KEY *key = nullptr;
-	int opensslRes = 0;
-	
-	key = EC_KEY_new_by_curve_name(SGX_ECC256_CURVE_NAME);
-	if (key == nullptr)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-	opensslRes = EC_KEY_generate_key(key);
-	if (opensslRes != 1)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-	if (!ECKeyPairOpenSSL2General(key, SgxEc256Type2General(p_private), SgxEc256Type2General(p_public), ecc_handle))
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	return SGX_SUCCESS;
-}
-
-sgx_status_t sgx_ecc256_compute_shared_dhkey(sgx_ec256_private_t *p_private_b, sgx_ec256_public_t *p_public_ga, sgx_ec256_dh_shared_t *p_shared_key, sgx_ecc_state_handle_t ecc_handle)
-{
-	if (!p_private_b || !p_public_ga || !p_shared_key || !ecc_handle)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-
-	EVP_PKEY* myKey = EVP_PKEY_new();
-	EVP_PKEY* peerKey = EVP_PKEY_new();
-	EC_KEY* myECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(p_private_b), nullptr, ecc_handle);
-	EC_KEY* peerECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(p_public_ga), ecc_handle);
-	if (!myKey || !peerKey || !myECKey || !peerECKey ||
-		!EVP_PKEY_assign_EC_KEY(myKey, myECKey))
-	{
-		EVP_PKEY_free(myKey);
-		EVP_PKEY_free(peerKey);
-		EC_KEY_free(myECKey);
-		EC_KEY_free(peerECKey);
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	if (!EVP_PKEY_assign_EC_KEY(peerKey, peerECKey))
-	{
-		EVP_PKEY_free(myKey);
-		EVP_PKEY_free(peerKey);
-		EC_KEY_free(peerECKey);
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	if (!ECKeyCalcSharedKey(myKey, peerKey, p_shared_key))
-	{
-		EVP_PKEY_free(myKey);
-		EVP_PKEY_free(peerKey);
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	EVP_PKEY_free(myKey);
-	EVP_PKEY_free(peerKey);
 	return SGX_SUCCESS;
 }
 
@@ -512,41 +411,4 @@ sgx_status_t sgx_ecdsa_verify(const uint8_t *p_data, uint32_t data_size, const s
 	ECDSA_SIG_free(sign);
 	
 	return ret;
-}
-
-//Copied from SDK code.
-int consttime_memequal(const void *b1, const void *b2, size_t len)
-{
-	const unsigned char *c1 = reinterpret_cast<const unsigned char *>(b1), *c2 = reinterpret_cast<const unsigned char *>(b2);
-	unsigned int res = 0;
-
-	while (len--)
-		res |= *c1++ ^ *c2++;
-
-	/*
-	* Map 0 to 1 and [1, 256) to 0 using only constant-time
-	* arithmetic.
-	*
-	* This is not simply `!res' because although many CPUs support
-	* branchless conditional moves and many compilers will take
-	* advantage of them, certain compilers generate branches on
-	* certain CPUs for `!res'.
-	*/
-	return (1 & ((res - 1) >> 8));
-}
-
-sgx_status_t sgx_read_rand(unsigned char *rand, size_t length_in_bytes)
-{
-	std::random_device rd;
-	//unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-	//std::mt19937 gen(seed);
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(0, UCHAR_MAX);
-
-	for (size_t i = 0; i < length_in_bytes; ++i)
-	{
-		rand[i] = dis(gen);
-	}
-
-	return SGX_SUCCESS;
 }

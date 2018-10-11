@@ -23,7 +23,7 @@ private:
 	bool m_isHandShaked;
 	std::unique_ptr<sgx_dh_session_enclave_identity_t> m_identity;
 
-	SGXLACommLayer(std::pair<std::unique_ptr<GeneralAES128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > keyAndId);
-	SGXLACommLayer(std::unique_ptr<GeneralAES128BitKey>& key, std::unique_ptr<sgx_dh_session_enclave_identity_t>& id, bool isValid);
-	static std::pair<std::unique_ptr<GeneralAES128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > DoHandShake(void* const connectionPtr, bool isInitiator);
+	SGXLACommLayer(std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > keyAndId);
+	SGXLACommLayer(std::unique_ptr<General128BitKey>& key, std::unique_ptr<sgx_dh_session_enclave_identity_t>& id, bool isValid);
+	static std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > DoHandShake(void* const connectionPtr, bool isInitiator);
 };

@@ -51,7 +51,7 @@ namespace SGXRAEnclave
 	bool AddNewServerRAState(const std::string& ServerID, const sgx_ec256_public_t& inPubKey, std::unique_ptr<CtxIdWrapper>& sgxCtxId);
 	void DropRAStateToServer(const std::string& serverID);
 	bool IsAttestedToServer(const std::string& serverID);
-	bool ReleaseServerKeys(const std::string& serverID, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK);
+	bool ReleaseServerKeys(const std::string& serverID, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<General128BitKey>& outSK, std::unique_ptr<General128BitKey>& outMK);
 	AESGCMCommLayer* ReleaseServerKeys(const std::string& serverID);
 
 	sgx_status_t ProcessRaMsg4(const std::string& serverID, const sgx_ias_report_t& inMsg4, const sgx_ec256_signature_t& inMsg4Sign, RaGetKeyFuncType raGetKeyFuncType);

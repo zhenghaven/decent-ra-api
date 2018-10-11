@@ -27,7 +27,7 @@ namespace
 	static EntropyInstance gs_entropy;
 }
 
-void MbedTlsHelper::MbedTlsHelperDrbgInit(void *& ctx)
+void MbedTlsHelper::DrbgInit(void *& ctx)
 {
 	mbedtls_ctr_drbg_context* ctxPtr = new mbedtls_ctr_drbg_context;
 
@@ -37,7 +37,7 @@ void MbedTlsHelper::MbedTlsHelperDrbgInit(void *& ctx)
 	ctx = ctxPtr;
 }
 
-int MbedTlsHelper::MbedTlsHelperDrbgRandom(void * ctx, unsigned char * output, size_t output_len)
+int MbedTlsHelper::DrbgRandom(void * ctx, unsigned char * output, size_t output_len)
 {
 	if (!ctx)
 	{
@@ -47,7 +47,7 @@ int MbedTlsHelper::MbedTlsHelperDrbgRandom(void * ctx, unsigned char * output, s
 	return mbedtls_ctr_drbg_random(ctx, output, output_len);
 }
 
-void MbedTlsHelper::MbedTlsHelperDrbgFree(void *& ctx)
+void MbedTlsHelper::DrbgFree(void *& ctx)
 {
 	if (!ctx)
 	{

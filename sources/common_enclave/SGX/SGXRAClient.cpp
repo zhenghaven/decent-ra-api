@@ -26,16 +26,16 @@
 struct RAClientContext
 {
 	std::unique_ptr<sgx_ec256_public_t> m_peerSignKey;
-	std::unique_ptr<GeneralAES128BitKey> m_mk;
-	std::unique_ptr<GeneralAES128BitKey> m_sk;
+	std::unique_ptr<General128BitKey> m_mk;
+	std::unique_ptr<General128BitKey> m_sk;
 	std::unique_ptr<const CtxIdWrapper> m_sgxCtxId;
 	bool m_isAttested;
 	std::mutex m_mutex;
 
 	RAClientContext(const sgx_ec256_public_t& signPub, std::unique_ptr<CtxIdWrapper>& sgxCtxId) noexcept :
 		m_peerSignKey(new sgx_ec256_public_t(signPub)),
-		m_mk(new GeneralAES128BitKey),
-		m_sk(new GeneralAES128BitKey),
+		m_mk(new General128BitKey),
+		m_sk(new General128BitKey),
 		m_isAttested(false),
 		m_sgxCtxId(std::move(sgxCtxId))
 	{
@@ -103,7 +103,7 @@ static inline std::shared_ptr<RAClientContext> FetchAndDropServerCtx(const std::
 	return std::move(clientCTXPtr);
 }
 
-bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK)
+bool SGXRAEnclave::ReleaseServerKeys(const std::string & serverID, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<General128BitKey>& outSK, std::unique_ptr<General128BitKey>& outMK)
 {
 	std::shared_ptr<RAClientContext> clientCTXPtr(std::move(FetchAndDropServerCtx(serverID)));
 	if (!clientCTXPtr)

@@ -31,7 +31,7 @@ namespace SGXRAEnclave
 	bool SetReportDataVerifier(const std::string& clientID, ReportDataVerifier func);
 	void DropClientRAState(const std::string& clientID);
 	bool IsClientAttested(const std::string& clientID);
-	bool ReleaseClientKeys(const std::string& clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<sgx_ec256_public_t>& outSignPubKey, std::unique_ptr<GeneralAES128BitKey>& outSK, std::unique_ptr<GeneralAES128BitKey>& outMK);
+	bool ReleaseClientKeys(const std::string& clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<General128BitKey>& outSK, std::unique_ptr<General128BitKey>& outMK);
 	AESGCMCommLayer* ReleaseClientKeys(const std::string& clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport);
 	void SetSPID(const sgx_spid_t& spid);
 	bool VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce);

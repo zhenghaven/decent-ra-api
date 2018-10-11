@@ -10,7 +10,7 @@
 class AESGCMCommLayer : virtual public SecureCommLayer
 {
 public:
-	typedef GeneralAES128BitKey AesGcm128bKeyType;
+	typedef General128BitKey AesGcm128bKeyType;
 
 public:
 	AESGCMCommLayer() = delete;
