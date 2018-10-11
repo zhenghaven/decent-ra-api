@@ -16,9 +16,6 @@
 [submodule "libs/cppcodec"]
 	path = libs/cppcodec
 	url = https://github.com/tplgy/cppcodec.git
-[submodule "libs/enclaveRapidJson"]
-	path = libs/enclaveRapidJson
-	url = https://github.com/zhenghaven/enclaveRapidJson.git
 [submodule "libs/tclap"]
 	path = libs/tclap
 	url = https://git.code.sf.net/p/tclap/code
@@ -28,4 +25,8 @@
 [submodule "libs/mbedtls"]
 	path = libs/mbedtls
 	url = https://github.com/zhenghaven/mbedtls.git
+	branch = master
+[submodule "libs/rapidjson"]
+	path = libs/rapidjson
+	url = https://github.com/zhenghaven/rapidjson.git
 	branch = master

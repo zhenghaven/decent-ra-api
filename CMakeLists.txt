@@ -212,7 +212,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/curl)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls)
 
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
-set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/enclaveRapidJson/include)
+set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/rapidjson/include)
 set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 set(CURL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/curl/include)
 set(MBEDTLS_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/mbedtls/include)
