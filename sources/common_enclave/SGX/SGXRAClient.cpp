@@ -19,7 +19,6 @@
 #include "../../common/GeneralKeyTypes.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/CryptoKeyContainer.h"
-#include "../../common/OpenSSLInitializer.h"
 #include "../../common/SGX/ias_report.h"
 #include "../../common/SGX/IasReport.h"
 
@@ -226,8 +225,6 @@ extern "C" sgx_status_t ecall_sgx_ra_client_init()
 	{
 		return SGX_ERROR_UNEXPECTED; //Error return. (Error from SGX)
 	}
-
-	OpenSSLInitializer::Initialize();
 	return SGX_SUCCESS;
 }
 

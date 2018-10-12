@@ -1,17 +1,6 @@
 #pragma once
 
-#include <string>
-
-//#include <openssl/obj_mac.h>
-#include "../OpenSSLConversions.h"
-
-#define SGX_ECC256_CURVE_NAME NID_X9_62_prime256v1
-
-//typedef struct bignum_st BIGNUM;
-//typedef struct ec_point_st EC_POINT;
-//typedef struct ec_key_st EC_KEY;
-//typedef struct evp_pkey_st EVP_PKEY;
-//typedef struct ECDSA_SIG_st ECDSA_SIG;
+#include "../GeneralKeyTypes.h"
 
 typedef struct _sgx_ec256_private_t sgx_ec256_private_t;
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
@@ -178,7 +167,3 @@ __forceinline sgx_ec256_signature_t& GeneralEc256Type2Sgx(general_secp256r1_sign
 {
 	return reinterpret_cast<sgx_ec256_signature_t&>(x);
 }
-
-bool ECKeySignOpenSSL2SGX(const ECDSA_SIG* inSign, sgx_ec256_signature_t* outSign);
-
-bool ECKeySignSGX2OpenSSL(const sgx_ec256_signature_t* inSign, ECDSA_SIG* outSign);

@@ -10,6 +10,8 @@
 #include <sgx_quote.h>
 #include <sgx_key_exchange.h>
 
+#include <mbedtls/md.h>
+
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include "SGXOpenSSLConversions.h"
@@ -23,7 +25,6 @@
 #include "../CryptoKeyContainer.h"
 
 #include "../SGX/ias_report_cert.h"
-#include "../SGX/sgx_crypto_tools.h"
 #include "../SGX/sgx_constants.h"
 #include "../SGX/ias_report.h"
 #include "../SGX/IasReport.h"
@@ -55,7 +56,7 @@ static std::string ConstructNonce(size_t size)
 struct RASPContext
 {
 	std::shared_ptr<const general_secp256r1_public_t> m_mySignPub;
-	std::shared_ptr<const PrivateKeyWrap> m_mySignPrv;
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> m_mySignPrv;
 
 	MbedTlsObj::ECKeyPair m_encrKeyPair;
 
@@ -79,7 +80,7 @@ struct RASPContext
 
 	RASPContext(const CryptoKeyContainer& keyContainer) :
 		m_mySignPub(keyContainer.GetSignPubKey()),
-		m_mySignPrv(keyContainer.GetSignPrvKey()),
+		m_mySignPrv(keyContainer.GetSignKeyPair()),
 		m_encrKeyPair(MbedTlsObj::ECKeyPair::generatePair),
 		m_nonce(ConstructNonce(IAS_REQUEST_NONCE_SIZE)),
 		//m_sharedKey({ {0} }),
@@ -322,20 +323,13 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 	
 	outMsg2.kdf_id = SAMPLE_AES_CMAC_KDF_ID;
 
+	General256Hash hashToBeSigned;
+	MbedTlsHelper::CalcHashSha256(&spCTX.m_pubKey, 2 * sizeof(sgx_ec256_public_t), hashToBeSigned);
+
+	if(!spCTX.m_mySignPrv->EcdsaSign(SgxEc256Type2General(outMsg2.sign_gb_ga), hashToBeSigned, 
+		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
 	{
-		sgx_ecc_state_handle_t eccState;
-		res = sgx_ecc256_open_context(&eccState);
-		if (res != SGX_SUCCESS)
-		{
-			return res; //Error return. (Error from SGX)
-		}
-		res = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&spCTX.m_pubKey), 2 * sizeof(sgx_ec256_public_t), 
-			const_cast<sgx_ec256_private_t*>(GeneralEc256Type2Sgx(&(spCTX.m_mySignPrv->m_prvKey))), &(outMsg2.sign_gb_ga), eccState);
-		if (res != SGX_SUCCESS)
-		{
-			return res; //Error return. (Error from SGX)
-		}
-		sgx_ecc256_close_context(eccState);
+		return SGX_ERROR_UNEXPECTED;
 	}
 
 	outMsg2.sig_rl_size = 0;
@@ -407,39 +401,15 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 		// Verify the report_data in the Quote matches the expected value.
 		// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
 		// The second 32 bytes of report_data are set to zero.
-		res = sgx_sha256_init(&sha_handle);
-		if (res != SGX_SUCCESS)
-		{
-			return res; //Error return. (Error from SGX)
-		}
-
-		res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&(spCTX.m_peerEncrKey)), sizeof(sgx_ec256_public_t), sha_handle);
-		if (res != SGX_SUCCESS)
-		{
-			sgx_sha256_close(sha_handle);
-			return res;
-		}
-
-		res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&spCTX.m_pubKey), sizeof(sgx_ec256_public_t), sha_handle);
-		if (res != SGX_SUCCESS)
-		{
-			sgx_sha256_close(sha_handle);
-			return res; //Error return. (Error from SGX)
-		}
-
-		res = sgx_sha256_update(reinterpret_cast<const uint8_t*>(&(spCTX.m_vk)), sizeof(sgx_ec_key_128bit_t), sha_handle);
-		if (res != SGX_SUCCESS)
-		{
-			sgx_sha256_close(sha_handle);
-			return res; //Error return. (Error from SGX)
-		}
-
-		res = sgx_sha256_get_hash(sha_handle, (sgx_sha256_hash_t *)&report_data);
-		sgx_sha256_close(sha_handle);
-		if (res != SGX_SUCCESS)
-		{
-			return res; //Error return. (Error from SGX)
-		}
+		General256Hash reportDataHash;
+		MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, {
+			{&(spCTX.m_peerEncrKey), sizeof(sgx_ec256_public_t)},
+			{&(spCTX.m_pubKey), sizeof(sgx_ec256_public_t)},
+			{&(spCTX.m_vk), sizeof(sgx_ec_key_128bit_t)},
+			},
+			reportDataHash);
+		
+		std::copy(reportDataHash.begin(), reportDataHash.end(), report_data.d);
 	}
 	
 	if (outOriRD)
@@ -455,20 +425,13 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 
 	std::memcpy(&outMsg4, spCTX.m_iasReport.get(), sizeof(*spCTX.m_iasReport));
 
+	General256Hash hashToBeSigned;
+	MbedTlsHelper::CalcHashSha256(&outMsg4, sizeof(outMsg4), hashToBeSigned);
+
+	if(!spCTX.m_mySignPrv->EcdsaSign(SgxEc256Type2General(outMsg4Sign), hashToBeSigned, 
+		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
 	{
-		sgx_ecc_state_handle_t eccState;
-		res = sgx_ecc256_open_context(&eccState);
-		if (res != SGX_SUCCESS)
-		{
-			return res; //Error return. (Error from SGX)
-		}
-		res = sgx_ecdsa_sign(reinterpret_cast<const uint8_t*>(&outMsg4), sizeof(outMsg4), 
-			const_cast<sgx_ec256_private_t*>(GeneralEc256Type2Sgx(&(spCTX.m_mySignPrv->m_prvKey))), &outMsg4Sign, eccState);
-		if (res != SGX_SUCCESS)
-		{
-			return res; //Error return. (Error from SGX)
-		}
-		sgx_ecc256_close_context(eccState);
+		return SGX_ERROR_UNEXPECTED;
 	}
 
 	if ((outMsg4.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK) || outMsg4.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_GROUP_OUT_OF_DATE)) &&

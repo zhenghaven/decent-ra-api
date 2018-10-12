@@ -232,11 +232,6 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	enclaveRet = ProcessRAMsg4(senderID, msg4, msg4Sign);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg4);
 
-	//ToDecentralizedNode(senderID, true);
-
-	/*TODO: Safety check here: */
-	EC_KEY* pubECKey = ECKeyGeneral2OpenSSL(SgxEc256Type2General(&pubKey), nullptr);
-
 	Json::Value root;
 	Json::Value& decentReportBody = root[Decent::RAReport::sk_LabelRoot];
 	decentReportBody[Decent::RAReport::sk_LabelIasReport] = iasReport;

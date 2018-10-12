@@ -15,6 +15,7 @@ typedef struct mbedtls_x509_crt mbedtls_x509_crt;
 typedef struct mbedtls_x509_csr mbedtls_x509_csr;
 typedef struct mbedtls_x509_crl mbedtls_x509_crl;
 typedef struct mbedtls_x509_crt_profile mbedtls_x509_crt_profile;
+typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 
 namespace MbedTlsObj
 {
@@ -73,6 +74,12 @@ namespace MbedTlsObj
 	{
 	public:
 		static BigNumber GenRandomNumber(size_t size);
+		static BigNumber FromLittleEndianBin(const uint8_t* in, const size_t size);
+		template<typename T>
+		static BigNumber FromLittleEndianBin(const T& in)
+		{
+			return FromLittleEndianBin(reinterpret_cast<const uint8_t*>(&in), sizeof(T));
+		}
 		//Dummy struct to indicate the need for generating a new big number.
 		struct Generate
 		{
@@ -89,6 +96,15 @@ namespace MbedTlsObj
 		virtual ~BigNumber();
 
 		virtual void Destory() override;
+
+		bool ToLittleEndianBinary(uint8_t* out, const size_t size);
+
+		template<typename T>
+		bool ToLittleEndianBinary(T& out)
+		{
+			return ToLittleEndianBinary(reinterpret_cast<uint8_t*>(&out), sizeof(T));
+		}
+
 	private:
 	};
 
@@ -123,6 +139,14 @@ namespace MbedTlsObj
 		bool ToGeneralPublicKey(general_secp256r1_public_t& outKey) const;
 		general_secp256r1_public_t* ToGeneralPublicKey() const;
 
+		bool VerifySign(const general_secp256r1_signature_t& inSign, const uint8_t* hash, const size_t hashLen) const;
+
+		template<size_t hashSize>
+		bool VerifySign(const general_secp256r1_signature_t& inSign, const std::array<uint8_t, hashSize>& hash, const size_t hashLen) const
+		{
+			return VerifySign(inSign, hash.data(), hash.size());
+		}
+
 		std::string ToPubPemString() const;
 		bool ToPubDerArray(std::vector<uint8_t>& outArray) const;
 
@@ -153,6 +177,13 @@ namespace MbedTlsObj
 		PrivateKeyWrap* ToGeneralPrivateKeyWrap() const;
 
 		bool GenerateSharedKey(General256BitKey& outKey, const ECKeyPublic& peerPubKey);
+		bool EcdsaSign(general_secp256r1_signature_t& outSign, const uint8_t* hash, const size_t hashLen, const mbedtls_md_info_t* mdInfo) const;
+
+		template<size_t hashSize>
+		bool EcdsaSign(general_secp256r1_signature_t& outSign, const std::array<uint8_t, hashSize>& hash, const mbedtls_md_info_t* mdInfo) const
+		{
+			return EcdsaSign(outSign, hash.data(), hash.size(), mdInfo);
+		}
 
 		std::string ToPrvPemString() const;
 		bool ToPrvDerArray(std::vector<uint8_t>& outArray) const;

@@ -2,25 +2,9 @@
 
 #include <cstddef>
 
-//#include <xutility>
-#include <vector>
-#include <cstdint>
-#include <iterator>
-#include <algorithm>
-
-#include <openssl/cmac.h>
-#include <openssl/sha.h>
-#include <openssl/ec.h>
-#include <openssl/bn.h>
-#include <openssl/evp.h>
-
 #include <sgx_tcrypto.h>
 
-#include "../OpenSSLConversions.h"
-
 #define SGX_GENERAL_KEY_TYPE_ERROR_MSG "The key type of SGX is incompatible with the general key type!"
-
-static_assert(SGX_ECC256_CURVE_NAME == ECC256_CURVE_NAME, SGX_GENERAL_KEY_TYPE_ERROR_MSG);
 
 static_assert(sizeof(sgx_ec256_private_t) == sizeof(general_secp256r1_private_t), SGX_GENERAL_KEY_TYPE_ERROR_MSG);
 static_assert(sizeof(sgx_ec256_public_t) == sizeof(general_secp256r1_public_t), SGX_GENERAL_KEY_TYPE_ERROR_MSG);
@@ -36,93 +20,3 @@ static_assert(offsetof(sgx_ec256_dh_shared_t, s) == offsetof(sgx_ec256_dh_shared
 
 static_assert(offsetof(sgx_ec256_signature_t, x) == offsetof(general_secp256r1_signature_t, x), SGX_GENERAL_KEY_TYPE_ERROR_MSG);
 static_assert(offsetof(sgx_ec256_signature_t, y) == offsetof(general_secp256r1_signature_t, y), SGX_GENERAL_KEY_TYPE_ERROR_MSG);
-
-#ifdef ENCLAVE_ENVIRONMENT
-
-namespace std
-{
-	template<class T, size_t Size>
-	inline reverse_iterator<T *> rbegin(T(&_Array)[Size])
-	{	// get beginning of reversed array
-		return (reverse_iterator<T *>(_Array + Size));
-	}
-
-	template<class T, size_t Size>
-	inline reverse_iterator<T *> rend(T(&_Array)[Size])
-	{	// get end of reversed array
-		return (reverse_iterator<T *>(_Array));
-	}
-}
-
-#endif // ENCLAVE_ENVIRONMENT
-
-bool ECKeySignOpenSSL2SGX(const ECDSA_SIG * inSign, sgx_ec256_signature_t * outSign)
-{
-	if (!inSign || !outSign)
-	{
-		return false;
-	}
-
-	const BIGNUM* r = nullptr;
-	const BIGNUM* s = nullptr;
-	ECDSA_SIG_get0(inSign, &r, &s);
-
-	if (BN_num_bytes(r) != SGX_ECP256_KEY_SIZE ||
-		BN_num_bytes(s) != SGX_ECP256_KEY_SIZE)
-	{
-		return false;
-	}
-
-	uint8_t* signX = reinterpret_cast<uint8_t*>(outSign->x);
-	uint8_t* signY = reinterpret_cast<uint8_t*>(outSign->y);
-	BN_bn2bin(r, signX);
-	BN_bn2bin(s, signY);
-	std::reverse(&signX[0], &signX[SGX_ECP256_KEY_SIZE]);
-	std::reverse(&signY[0], &signY[SGX_ECP256_KEY_SIZE]);
-
-	return true;
-}
-
-bool ECKeySignSGX2OpenSSL(const sgx_ec256_signature_t * inSign, ECDSA_SIG * outSign)
-{
-	if (!inSign || !outSign)
-	{
-		return false;
-	}
-
-	BIGNUM* r = BN_new();
-	BIGNUM* s = BN_new();
-	if (!r || !s)
-	{
-		BN_free(r);
-		BN_free(s);
-		return false;
-	}
-
-	std::vector<uint8_t> buffer(std::rbegin(inSign->x), std::rend(inSign->x));
-
-	BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), r);
-
-	buffer.assign(std::rbegin(inSign->y), std::rend(inSign->y));
-	BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), s);
-
-	if (BN_num_bytes(r) != SGX_ECP256_KEY_SIZE ||
-		BN_num_bytes(s) != SGX_ECP256_KEY_SIZE)
-	{
-		BN_free(r);
-		BN_free(s);
-		return false;
-	}
-
-	int opensslRes = 0;
-
-	opensslRes = ECDSA_SIG_set0(outSign, r, s); //The ownership of r and s is changed here!
-	if (opensslRes != 1)
-	{
-		BN_free(r);
-		BN_free(s);
-		return false;
-	}
-
-	return true;
-}

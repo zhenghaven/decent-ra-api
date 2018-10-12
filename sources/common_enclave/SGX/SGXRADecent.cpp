@@ -23,7 +23,6 @@
 #include "../../common/CryptoKeyContainer.h"
 
 #include "../../common/SGX/sgx_constants.h"
-#include "../../common/SGX/sgx_crypto_tools.h"
 #include "../../common/SGX/ias_report.h"
 #include "../../common/SGX/IasReport.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"

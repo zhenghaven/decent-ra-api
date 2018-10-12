@@ -12,6 +12,21 @@ namespace
 	static constexpr int MBEDTLS_SUCCESS_RET = 0;
 }
 
+struct mdCtxWarp
+{
+	mbedtls_md_context_t m_ctx;
+
+	mdCtxWarp()
+	{
+		mbedtls_md_init(&m_ctx);
+	}
+
+	~mdCtxWarp()
+	{
+		mbedtls_md_init(&m_ctx);
+	}
+};
+
 bool MbedTlsHelper::MbedTlsAsn1DeepCopy(mbedtls_asn1_buf& dest, const mbedtls_asn1_buf& src)
 {
 	if (src.p == nullptr ||
@@ -64,10 +79,28 @@ bool MbedTlsHelper::MbedTlsAsn1DeepCopy(mbedtls_asn1_named_data *& dest, const m
 	return MbedTlsAsn1DeepCopy(*dest, src);
 }
 
-bool MbedTlsHelper::CalcHashSha256(const std::string & data, General256Hash& hash)
+bool MbedTlsHelper::CalcHashSha256(const HashListMode, const HashDataList & dataList, General256Hash & hash)
+{
+	mdCtxWarp mdCtx;
+	if (mbedtls_md_setup(&mdCtx.m_ctx, mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256), false) != MBEDTLS_SUCCESS_RET ||
+		mbedtls_md_starts(&mdCtx.m_ctx))
+	{
+		return false;
+	}
+
+	int mbedRet = MBEDTLS_SUCCESS_RET;
+	for (auto it = dataList.begin(); it != dataList.end() && mbedRet == MBEDTLS_SUCCESS_RET; ++it)
+	{
+		mbedRet = mbedtls_md_update(&mdCtx.m_ctx, reinterpret_cast<const uint8_t*>(it->m_ptr), it->size);
+	}
+
+	return mbedRet == MBEDTLS_SUCCESS_RET && mbedtls_md_finish(&mdCtx.m_ctx, hash.data()) == MBEDTLS_SUCCESS_RET;
+}
+
+bool MbedTlsHelper::CalcHashSha256(const void * dataPtr, const size_t size, General256Hash & hash)
 {
 	return mbedtls_md(mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256),
-		reinterpret_cast<const uint8_t*>(data.data()), data.size(), hash.data()) == MBEDTLS_SUCCESS_RET;
+		reinterpret_cast<const uint8_t*>(dataPtr), size, hash.data()) == MBEDTLS_SUCCESS_RET;
 }
 
 bool MbedTlsHelper::CalcCmacAes128(const General128BitKey & key, const uint8_t * data, size_t dataSize, General128Tag & outTag)

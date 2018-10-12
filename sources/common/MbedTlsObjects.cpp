@@ -8,6 +8,8 @@
 #include <string>
 
 #include <mbedtls/pk.h>
+#include <mbedtls/md.h>
+#include <mbedtls/md_internal.h>
 #include <mbedtls/ecp.h>
 #include <mbedtls/ecdh.h>
 #include <mbedtls/pem.h>
@@ -92,6 +94,26 @@ namespace
 
 }
 
+struct EcGroupWarp
+{
+	mbedtls_ecp_group m_grp;
+
+	EcGroupWarp()
+	{
+		mbedtls_ecp_group_init(&m_grp);
+	}
+
+	~EcGroupWarp()
+	{
+		mbedtls_ecp_group_free(&m_grp);
+	}
+
+	bool Copy(const mbedtls_ecp_group& grp)
+	{
+		return mbedtls_ecp_group_copy(&m_grp, &grp) == MBEDTLS_SUCCESS_RET;
+	}
+};
+
 BigNumber MbedTlsObj::BigNumber::GenRandomNumber(size_t size)
 {
 	std::unique_ptr<mbedtls_mpi> serialNum(new mbedtls_mpi);
@@ -112,6 +134,19 @@ BigNumber MbedTlsObj::BigNumber::GenRandomNumber(size_t size)
 	}
 
 	return BigNumber(serialNum.release());
+}
+
+BigNumber MbedTlsObj::BigNumber::FromLittleEndianBin(const uint8_t * in, const size_t size)
+{
+	std::vector<uint8_t> tmpBuf(std::reverse_iterator<const uint8_t*>(in + size), std::reverse_iterator<const uint8_t*>(in));
+
+	BigNumber res(BigNumber::generate);
+	if (!res ||
+		mbedtls_mpi_read_binary(res.GetInternalPtr(), tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
+	{
+		res.Destory();
+	}
+	return res;
 }
 
 MbedTlsObj::BigNumber::BigNumber(const Generate &) :
@@ -143,6 +178,19 @@ void MbedTlsObj::BigNumber::Destory()
 		delete m_ptr;
 	}
 	m_ptr = nullptr;
+}
+
+bool MbedTlsObj::BigNumber::ToLittleEndianBinary(uint8_t * out, const size_t size)
+{
+	if (!*this || 
+		mbedtls_mpi_size(m_ptr) != size ||
+		mbedtls_mpi_write_binary(m_ptr, out, size) != MBEDTLS_SUCCESS_RET)
+	{
+		return false;
+	}
+
+	std::reverse(out, out + size);
+	return true;
 }
 
 MbedTlsObj::PKey::PKey(mbedtls_pk_context * ptr, bool isOwner) :
@@ -310,6 +358,25 @@ general_secp256r1_public_t * MbedTlsObj::ECKeyPublic::ToGeneralPublicKey() const
 
 	delete res;
 	return nullptr;
+}
+
+bool MbedTlsObj::ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const uint8_t * hash, const size_t hashLen) const
+{
+	if (!*this || !hash || hashLen <= 0)
+	{
+		return false;
+	}
+	BigNumber r(BigNumber::FromLittleEndianBin(inSign.x));
+	BigNumber s(BigNumber::FromLittleEndianBin(inSign.y));
+	EcGroupWarp grp;
+
+	if (!r || !s || !grp.Copy(GetInternalECKey()->grp))
+	{
+		return false;
+	}
+
+	return mbedtls_ecdsa_verify(&grp.m_grp, hash, hashLen, &GetInternalECKey()->Q,
+		r.GetInternalPtr(), s.GetInternalPtr()) == MBEDTLS_SUCCESS_RET;
 }
 
 std::string ECKeyPublic::ToPubPemString() const
@@ -540,7 +607,8 @@ bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const E
 	}
 
 	BigNumber sharedKey(BigNumber::generate);
-	if (!sharedKey)
+	EcGroupWarp grp;
+	if (!sharedKey || !grp.Copy(GetInternalECKey()->grp))
 	{
 		return false;
 	}
@@ -548,7 +616,7 @@ bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const E
 	void* drbgCtx;
 	MbedTlsHelper::DrbgInit(drbgCtx);
 
-	int mbedRet = mbedtls_ecdh_compute_shared(&GetInternalECKey()->grp, sharedKey.GetInternalPtr(),
+	int mbedRet = mbedtls_ecdh_compute_shared(&grp.m_grp, sharedKey.GetInternalPtr(),
 		&peerPubKey.GetInternalECKey()->Q, &GetInternalECKey()->d,
 		&MbedTlsHelper::DrbgRandom, drbgCtx);
 
@@ -564,6 +632,37 @@ bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const E
 	std::reverse(outKey.begin(), outKey.end());
 
 	return true;
+}
+
+bool MbedTlsObj::ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t * hash, const size_t hashLen, const mbedtls_md_info_t* mdInfo) const
+{
+	if (!*this || !hash || !mdInfo || hashLen != mdInfo->size)
+	{
+		return false;
+	}
+
+	int mbedRet = 0;
+	BigNumber r(BigNumber::generate);
+	BigNumber s(BigNumber::generate);
+	EcGroupWarp grp;
+
+	if (!r ||!s || !grp.Copy(GetInternalECKey()->grp))
+	{
+		return false;
+	}
+
+#ifdef MBEDTLS_ECDSA_DETERMINISTIC
+	mbedRet = mbedtls_ecdsa_sign_det(&grp.m_grp, r.GetInternalPtr(), s.GetInternalPtr(), 
+		&GetInternalECKey()->d, hash, hashLen, mdInfo->type);
+#else
+	void* drbgCtx;
+	MbedTlsHelper::DrbgInit(drbgCtx);
+	mbedRet = mbedtls_ecdsa_sign(&grp.m_grp, r.GetInternalPtr(), s.GetInternalPtr(),
+		&GetInternalECKey()->d, hash, hashLen, &MbedTlsHelper::DrbgRandom, drbgCtx);
+	MbedTlsHelper::DrbgFree(drbgCtx);
+#endif 
+
+	return mbedRet == MBEDTLS_SUCCESS_RET && r.ToLittleEndianBinary(outSign.x) && s.ToLittleEndianBinary(outSign.y);
 }
 
 general_secp256r1_private_t * ECKeyPair::ToGeneralPrivateKey() const
