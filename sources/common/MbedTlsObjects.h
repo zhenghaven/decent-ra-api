@@ -11,6 +11,7 @@
 typedef struct mbedtls_mpi mbedtls_mpi;
 typedef struct mbedtls_pk_context mbedtls_pk_context;
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
+typedef struct mbedtls_gcm_context mbedtls_gcm_context;
 typedef struct mbedtls_x509_crt mbedtls_x509_crt;
 typedef struct mbedtls_x509_csr mbedtls_x509_csr;
 typedef struct mbedtls_x509_crl mbedtls_x509_crl;
@@ -122,6 +123,51 @@ namespace MbedTlsObj
 
 	private:
 		bool m_isOwner;
+	};
+
+	class Gcm : public ObjBase<mbedtls_gcm_context>
+	{
+	public:
+		Gcm(mbedtls_gcm_context* ptr);
+		Gcm(Gcm&& other);
+		virtual ~Gcm();
+
+		virtual void Destory() override;
+		virtual Gcm& operator=(Gcm&& other);
+
+		virtual bool Encrypt(const uint8_t* inData, uint8_t* outData, const size_t dataLen, 
+			const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen, 
+			uint8_t* tag, const size_t tagLen);
+
+		virtual bool Decrypt(const uint8_t* inData, uint8_t* outData, const size_t dataLen,
+			const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen,
+			const uint8_t* tag, const size_t tagLen);
+
+		//Not very useful now.
+		//template<typename Container>
+		//bool Encrypt(const Container& inData, uint8_t* outData, const size_t outLen,
+		//	const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen, General128Tag& outTag)
+		//{
+		//	return inData.size() > 0 && (inData.size() * sizeof(inData[0])) == outLen &&
+		//		Encrypt(reinterpret_cast<const uint8_t*>(inData.data()), outData, outLen, iv, ivLen, add, addLen, outTag);
+		//}
+		//template<typename Container>
+		//bool Encrypt(const uint8_t* inData, Container& outData, const size_t inLen,
+		//	const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen, General128Tag& outTag)
+		//{
+		//	return outData.size() > 0 && (outData.size() * sizeof(outData[0])) == inLen &&
+		//		Encrypt(inData, reinterpret_cast<const uint8_t*>(&outData[0]), inLen, iv, ivLen, add, addLen, outTag);
+		//}
+		//template<typename inDataContainer, typename outDataContainer>
+		//bool Encrypt(const inDataContainer& inData, outDataContainer& outData,
+		//	const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen, General128Tag& outTag)
+		//{
+		//	const size_t inLen = 0;
+		//	return inData.size() > 0 && outData.size() > 0 && 
+		//		(inLen = inData.size() * sizeof(inData[0])) == (outData.size() * sizeof(outData[0])) &&
+		//		Encrypt(reinterpret_cast<const uint8_t*>(inData.data()), 
+		//			reinterpret_cast<const uint8_t*>(&outData[0]), inLen, iv, ivLen, add, addLen, outTag);
+		//}
 	};
 
 	class ECKeyPublic : public PKey
@@ -271,6 +317,19 @@ namespace MbedTlsObj
 		std::string m_pemStr;
 		PKey m_pubKey;
 		std::vector<mbedtls_x509_crt*> m_certStack;
+	};
+
+	class Aes128Gcm : public Gcm
+	{
+	public:
+		Aes128Gcm() = delete;
+		Aes128Gcm(const General128BitKey& key);
+		Aes128Gcm(const uint8_t (&key)[GENERAL_128BIT_16BYTE_SIZE]);
+		Aes128Gcm(Aes128Gcm&& other);
+		virtual ~Aes128Gcm() {}
+
+		virtual Aes128Gcm& operator=(Aes128Gcm&& other);
+
 	};
 
 }

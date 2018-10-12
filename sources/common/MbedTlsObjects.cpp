@@ -10,6 +10,7 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/md.h>
 #include <mbedtls/md_internal.h>
+#include <mbedtls/gcm.h>
 #include <mbedtls/ecp.h>
 #include <mbedtls/ecdh.h>
 #include <mbedtls/pem.h>
@@ -235,11 +236,69 @@ PKey & MbedTlsObj::PKey::operator=(PKey && other)
 
 bool MbedTlsObj::PKey::VerifySignatureSha256(const General256Hash& hash, const std::vector<uint8_t>& signature) const
 {
-	if (!m_ptr)
+	if (!*this)
 	{
 		return false;
 	}
 	return mbedtls_pk_verify(m_ptr, mbedtls_md_type_t::MBEDTLS_MD_SHA256, hash.data(), hash.size(), signature.data(), signature.size()) == MBEDTLS_SUCCESS_RET;
+}
+
+MbedTlsObj::Gcm::Gcm(mbedtls_gcm_context * ptr) :
+	ObjBase(ptr)
+{
+}
+
+MbedTlsObj::Gcm::Gcm(Gcm && other) :
+	ObjBase(std::forward<ObjBase>(other))
+{
+}
+
+MbedTlsObj::Gcm::~Gcm()
+{
+	Destory();
+}
+
+void MbedTlsObj::Gcm::Destory()
+{
+	if (m_ptr)
+	{
+		mbedtls_gcm_free(m_ptr);
+		delete m_ptr;
+	}
+	m_ptr = nullptr;
+}
+
+Gcm & MbedTlsObj::Gcm::operator=(Gcm && other)
+{
+	if (this != &other)
+	{
+		ObjBase::operator=(std::forward<ObjBase>(other));
+	}
+	return *this;
+}
+
+bool MbedTlsObj::Gcm::Encrypt(const uint8_t * inData, uint8_t * outData, const size_t dataLen, 
+	const uint8_t* iv, const size_t ivLen, const uint8_t * add, const size_t addLen,
+	uint8_t* tag, const size_t tagLen)
+{
+	if (!*this)
+	{
+		return false;
+	}
+	return mbedtls_gcm_crypt_and_tag(m_ptr, MBEDTLS_GCM_ENCRYPT, dataLen, 
+		iv, ivLen, add, addLen, inData, outData, tagLen, tag) == MBEDTLS_SUCCESS_RET;
+}
+
+bool MbedTlsObj::Gcm::Decrypt(const uint8_t * inData, uint8_t * outData, const size_t dataLen, 
+	const uint8_t * iv, const size_t ivLen, const uint8_t * add, const size_t addLen,
+	const uint8_t* tag, const size_t tagLen)
+{
+	if (!*this)
+	{
+		return false;
+	}
+	return mbedtls_gcm_auth_decrypt(m_ptr, dataLen,
+		iv, ivLen, add, addLen, tag, tagLen, inData, outData) == MBEDTLS_SUCCESS_RET;
 }
 
 static mbedtls_pk_context* ConstructEcPubFromPemDer(const uint8_t* ptr, size_t size)
@@ -1345,4 +1404,42 @@ void MbedTlsObj::X509Crl::Destory()
 std::string MbedTlsObj::X509Crl::ToPemString() const
 {
 	return m_pemStr;
+}
+
+static mbedtls_gcm_context* ConstructGcmCtx(const uint8_t* key, const size_t size, mbedtls_cipher_id_t type)
+{
+	std::unique_ptr<mbedtls_gcm_context> res(new mbedtls_gcm_context);
+	mbedtls_gcm_init(res.get());
+
+	if (mbedtls_gcm_setkey(res.get(), type, key, static_cast<unsigned int>(size * GENERAL_BITS_PER_BYTE)) != MBEDTLS_SUCCESS_RET)
+	{
+		mbedtls_gcm_free(res.get());
+		return nullptr;
+	}
+
+	return res.release();
+}
+
+MbedTlsObj::Aes128Gcm::Aes128Gcm(const General128BitKey & key) :
+	Gcm(ConstructGcmCtx(key.data(), key.size(), mbedtls_cipher_id_t::MBEDTLS_CIPHER_ID_AES))
+{
+}
+
+MbedTlsObj::Aes128Gcm::Aes128Gcm(const uint8_t(&key)[GENERAL_128BIT_16BYTE_SIZE]) :
+	Gcm(ConstructGcmCtx(key, GENERAL_128BIT_16BYTE_SIZE, mbedtls_cipher_id_t::MBEDTLS_CIPHER_ID_AES))
+{
+}
+
+MbedTlsObj::Aes128Gcm::Aes128Gcm(Aes128Gcm && other) :
+	Gcm(std::forward<Gcm>(other))
+{
+}
+
+Aes128Gcm & MbedTlsObj::Aes128Gcm::operator=(Aes128Gcm && other)
+{
+	if (this != &other)
+	{
+		Gcm::operator=(std::forward<Gcm>(other));
+	}
+	return *this;
 }

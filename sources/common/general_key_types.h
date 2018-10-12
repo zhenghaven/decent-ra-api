@@ -42,9 +42,11 @@ extern "C" {
 		uint8_t y[GENERAL_256BIT_32BYTE_SIZE];
 	} general_secp256r1_signature_t;
 
-	typedef uint8_t general_aes_128bit_key[GENERAL_128BIT_16BYTE_SIZE];
+	typedef uint8_t general_128bit_key[GENERAL_128BIT_16BYTE_SIZE];
 
 	typedef uint8_t suggested_aesgcm_iv[SUGGESTED_AESGCM_IV_SIZE];
+
+	typedef general_128bit_key general_128bit_tag;
 
 #pragma pack(pop)
 

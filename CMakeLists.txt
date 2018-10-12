@@ -232,7 +232,6 @@ set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS}
 set(COMMON_ENCLAVE_INCLUDE_DIRS ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							 ${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc 
 							 ${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME} 
-							 ${INTEL_SGX_SSL_INCLUDE_PATH}
 							 ${CPPCODEC_INCLUDE_DIR}
 							 ${RAPIDJSON_INCLUDE_DIR}
 							 ${MBEDTLS_INCLUDE_DIR}
@@ -316,8 +315,6 @@ target_link_libraries(LibTest_App
 					#${Boost_LIBRARIES}
 					jsoncpp_lib_static
 					libcurl
-					OpenSSL::SSL 
-					OpenSSL::Crypto 
 					${MBEDTLS_LIB} 
 					Boost::filesystem
 					Boost::date_time
@@ -366,7 +363,6 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
 		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
 		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-		--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
 		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_Enclave}"
 	)
 
@@ -384,17 +380,11 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}>" 
 						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM}>" 
 						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}>" 
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_WHOLE_ARC_RELEASE}>" 
 						${WHOLE_ARCHIVE_FLAG_END}
 						${GROUP_FLAG_BEGIN}
 						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
 						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
 						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_GROUP_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_GROUP_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_GROUP_RELEASE}>" 
 						${MBEDTLS_ENCLAVE_LIB} 
 						${GROUP_FLAG_END}
 						)
@@ -417,7 +407,6 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
 		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
 		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-		--search-path "${INTEL_SGX_SSL_INCLUDE_PATH}"
 		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_App}"
 	)
 
@@ -425,15 +414,10 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
 						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
 						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SSL_LIB_UNTRUSTED_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SSL_LIB_UNTRUSTED_RELEASE}>" 
 						${COMMON_STANDARD_LIBRARIES} 
 						jsoncpp_lib_static 
 						libcurl 
 						${MBEDTLS_LIB} 
-						OpenSSL::SSL 
-						OpenSSL::Crypto 
 						Boost::filesystem
 						Boost::date_time
 						Boost::system

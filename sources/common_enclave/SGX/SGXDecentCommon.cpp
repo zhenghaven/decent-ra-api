@@ -7,8 +7,6 @@
 
 #include <sgx_tcrypto.h>
 
-#include <openssl/ec.h>
-
 #include "../Common.h"
 
 #include "../../common/DataCoding.h"

@@ -1,10 +1,5 @@
 #include "AESGCMCommLayer.h"
 
-#include <algorithm>
-#include <iterator>
-
-#include <sgx_tcrypto.h>
-
 #include "GeneralKeyTypes.h"
 #include "MbedTlsHelpers.h"
 #include "DataCoding.h"
@@ -14,7 +9,7 @@
 
 struct EncryptedStruct
 {
-	general_aes_128bit_key m_mac;
+	general_128bit_tag m_mac;
 	suggested_aesgcm_iv m_iv;
 
 #ifdef _MSC_VER
@@ -32,48 +27,40 @@ struct EncryptedStruct
 #endif
 };
 
-AESGCMCommLayer::AESGCMCommLayer(const uint8_t sKey[GENERAL_128BIT_16BYTE_SIZE])
-{
-	std::copy(sKey, sKey + GENERAL_128BIT_16BYTE_SIZE, m_sk.begin());
-}
-
-AESGCMCommLayer::AESGCMCommLayer(const AesGcm128bKeyType & sKey)
-{
-	std::copy(sKey.begin(), sKey.end(), m_sk.begin());
-}
-
-AESGCMCommLayer::AESGCMCommLayer(AesGcm128bKeyType & sKey) :
-	AESGCMCommLayer(std::move(sKey))
+AESGCMCommLayer::AESGCMCommLayer(const uint8_t (&sKey)[GENERAL_128BIT_16BYTE_SIZE]) :
+	m_gcm(sKey)
 {
 }
 
-AESGCMCommLayer::AESGCMCommLayer(AesGcm128bKeyType && sKey) :
-	m_sk(sKey)
+AESGCMCommLayer::AESGCMCommLayer(const AesGcm128bKeyType & sKey) :
+	m_gcm(sKey)
 {
 }
 
-//AESGCMCommLayer::AESGCMCommLayer(const AESGCMCommLayer & other) :
-//	m_senderID(other.m_senderID),
-//	m_sendFunc(other.m_sendFunc)
-//{
-//	std::copy(other.m_sk.begin(), other.m_sk.end(), m_sk.begin());
-//}
-
-AESGCMCommLayer::AESGCMCommLayer(AESGCMCommLayer && other)
+AESGCMCommLayer::AESGCMCommLayer(AESGCMCommLayer && other) :
+	m_gcm(std::move(other.m_gcm))
 {
-	m_sk.swap(other.m_sk);
 }
 
 AESGCMCommLayer::~AESGCMCommLayer()
 {
 }
 
-bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg) const
+AESGCMCommLayer & AESGCMCommLayer::operator=(AESGCMCommLayer && other)
+{
+	if (this != &other)
+	{
+		m_gcm = std::forward<MbedTlsObj::Aes128Gcm>(other.m_gcm);
+	}
+	return *this;
+}
+
+bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
 {
 	return AESGCMCommLayer::DecryptMsg(outMsg, std::string(inMsg));
 }
 
-bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg) const
+bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg)
 {
 	if (inMsg.size() <= sizeof(EncryptedStruct))
 	{
@@ -84,21 +71,21 @@ bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg
 	size_t messageSize = inMsg.size() - sizeof(EncryptedStruct);
 	outMsg.resize(messageSize);
 
-	sgx_status_t enclaveRet = sgx_rijndael128GCM_decrypt(
-		reinterpret_cast<const sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
+	bool res = m_gcm.Decrypt(
 		reinterpret_cast<const uint8_t*>(&encryptedStruct.m_msg),
-		static_cast<uint32_t>(messageSize),
 		reinterpret_cast<uint8_t*>(&outMsg[0]),
+		messageSize,
 		encryptedStruct.m_iv,
-		static_cast<uint32_t>(SUGGESTED_AESGCM_IV_SIZE),
+		SUGGESTED_AESGCM_IV_SIZE,
 		nullptr,
-		static_cast<uint32_t>(0),
-		&encryptedStruct.m_mac);
+		0,
+		encryptedStruct.m_mac,
+		sizeof(encryptedStruct.m_mac));
 
-	return (enclaveRet == SGX_SUCCESS);
+	return res;
 }
 
-bool AESGCMCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg) const
+bool AESGCMCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg)
 {
 	outMsg.resize(inMsg.size() + sizeof(EncryptedStruct));
 
@@ -113,22 +100,21 @@ bool AESGCMCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg
 		return false;
 	}
 
-	sgx_status_t enclaveRet = sgx_rijndael128GCM_encrypt(
-		reinterpret_cast<const sgx_aes_gcm_128bit_key_t*>(m_sk.data()),
+	bool res = m_gcm.Encrypt(
 		reinterpret_cast<const uint8_t*>(inMsg.data()),
-		static_cast<uint32_t>(inMsg.size()),
 		reinterpret_cast<uint8_t*>(&encryptedStruct.m_msg),
+		inMsg.size(),
 		encryptedStruct.m_iv,
-		static_cast<uint32_t>(SUGGESTED_AESGCM_IV_SIZE),
+		SUGGESTED_AESGCM_IV_SIZE,
 		nullptr,
-		static_cast<uint32_t>(0),
-		&encryptedStruct.m_mac
-	);
+		0,
+		encryptedStruct.m_mac,
+		sizeof(encryptedStruct.m_mac));
 
-	return (enclaveRet == SGX_SUCCESS);
+	return res;
 }
 
-bool AESGCMCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg) const
+bool AESGCMCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
 {
 	std::string encrypted;
 	if (!StaticConnection::Receive(connectionPtr, encrypted))
@@ -138,7 +124,7 @@ bool AESGCMCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMs
 	return DecryptMsg(outMsg, encrypted);
 }
 
-bool AESGCMCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg) const
+bool AESGCMCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg)
 {
 	std::string encrypted;
 	if (!EncryptMsg(encrypted, inMsg))
