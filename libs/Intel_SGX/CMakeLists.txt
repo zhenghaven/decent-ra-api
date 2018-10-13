@@ -62,52 +62,63 @@ get_filename_component(INTEL_SGX_SIGNER_PATH ${INTEL_SGX_SIGNER_PATH} ABSOLUTE)
 # SGX Lib Path
 ############################
 if(WIN32)
-		file(GLOB INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_trts.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_GROUP_RELEASE 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tservice.lib 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tstdc.lib 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tcxx.lib 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tkey_exchange.lib 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tcrypto.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_uae_service.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_ukey_exchange.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_urts.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_trts.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_GROUP_DEBUG 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tservice.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tstdc.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcxx.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tkey_exchange.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcrypto.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_uae_service.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_ukey_exchange.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_urts.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_trts_sim.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tservice_sim.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tstdc.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcxx.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tkey_exchange.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcrypto.lib)
-		
-		file(GLOB INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM 
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_uae_service_sim.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_ukey_exchange.lib
-					${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_urts_sim.lib)
-		
-		set(INTEL_SGX_CXXLIB_NAME libc++)
+	file(GLOB INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_trts.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_GROUP_RELEASE 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tservice.lib 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tstdc.lib 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tcxx.lib 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tkey_exchange.lib 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tcrypto.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_uae_service.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_ukey_exchange.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_urts.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_trts.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_GROUP_DEBUG 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tservice.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tstdc.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcxx.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tkey_exchange.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcrypto.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_uae_service.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_ukey_exchange.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_urts.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_trts_sim.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tservice_sim.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tstdc.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcxx.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tkey_exchange.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcrypto.lib)
+	
+	file(GLOB INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM 
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_uae_service_sim.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_ukey_exchange.lib
+				${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_urts_sim.lib)
+	
+	set(INTEL_SGX_CXXLIB_NAME libc++)
+	
+	#C Flags:
+	set(INTEL_SGX_SDK_C_FLAGS )
+	#CXX Flags:
+	set(INTEL_SGX_SDK_CXX_FLAGS )
+	
+	#Linker Flags (Trusted):
+	set(INTEL_SGX_SDK_LINKER_FLAGS_T )
+	
+	#Linker Flags (Untrusted):
+	set(INTEL_SGX_SDK_LINKER_FLAGS_U )
 elseif(UNIX)
 	
 	#set(INTEL_SGX_SDK_LIB_PATH "${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}")
@@ -153,23 +164,14 @@ elseif(UNIX)
 	#CXX Flags:
 	set(INTEL_SGX_SDK_CXX_FLAGS -nostdinc++ -std=c++11)
 	
-	#Linker Flags (Trusted, Hardware Mode):
-	set(INTEL_SGX_SDK_LINKER_FLAGS_T_HW "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
+	#Linker Flags (Trusted):
+	set(INTEL_SGX_SDK_LINKER_FLAGS_T "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic \
 	-Wl,--defsym,__ImageBase=0")
 	
-	#Linker Flags (Trusted, Simulation Mode):
-	set(INTEL_SGX_SDK_LINKER_FLAGS_T_SIM "-Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
-	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
-	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic \
-	-Wl,--defsym,__ImageBase=0")
-	
-	#Linker Flags (Untrusted, Hardware Mode):
-	set(INTEL_SGX_SDK_LINKER_FLAGS_U_HW "-lpthread")
-	
-	#Linker Flags (Untrusted, Simulation Mode):
-	set(INTEL_SGX_SDK_LINKER_FLAGS_U_SIM "-lpthread")
+	#Linker Flags (Untrusted):
+	set(INTEL_SGX_SDK_LINKER_FLAGS_U "-lpthread")
 	
 	set(INTEL_SGX_CXXLIB_NAME libcxx)
 	
@@ -195,10 +197,8 @@ endif()
 
 # ${INTEL_SGX_SDK_C_FLAGS}
 # ${INTEL_SGX_SDK_CXX_FLAGS}
-# ${INTEL_SGX_SDK_LINKER_FLAGS_T_HW}
-# ${INTEL_SGX_SDK_LINKER_FLAGS_T_SIM}
-# ${INTEL_SGX_SDK_LINKER_FLAGS_U_HW}
-# ${INTEL_SGX_SDK_LINKER_FLAGS_U_SIM}
+# ${INTEL_SGX_SDK_LINKER_FLAGS_T}
+# ${INTEL_SGX_SDK_LINKER_FLAGS_U}
 
 # ${INTEL_SGX_EDGER_PATH}
 # ${INTEL_SGX_SIGNER_PATH}
@@ -221,10 +221,8 @@ set(INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE ${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE} P
 
 set(INTEL_SGX_SDK_C_FLAGS ${INTEL_SGX_SDK_C_FLAGS} PARENT_SCOPE)
 set(INTEL_SGX_SDK_CXX_FLAGS ${INTEL_SGX_SDK_CXX_FLAGS} PARENT_SCOPE)
-set(INTEL_SGX_SDK_LINKER_FLAGS_T_HW ${INTEL_SGX_SDK_LINKER_FLAGS_T_HW} PARENT_SCOPE)
-set(INTEL_SGX_SDK_LINKER_FLAGS_T_SIM ${INTEL_SGX_SDK_LINKER_FLAGS_T_SIM} PARENT_SCOPE)
-set(INTEL_SGX_SDK_LINKER_FLAGS_U_HW ${INTEL_SGX_SDK_LINKER_FLAGS_U_HW} PARENT_SCOPE)
-set(INTEL_SGX_SDK_LINKER_FLAGS_U_SIM ${INTEL_SGX_SDK_LINKER_FLAGS_U_SIM} PARENT_SCOPE)
+set(INTEL_SGX_SDK_LINKER_FLAGS_T ${INTEL_SGX_SDK_LINKER_FLAGS_T} PARENT_SCOPE)
+set(INTEL_SGX_SDK_LINKER_FLAGS_U ${INTEL_SGX_SDK_LINKER_FLAGS_U} PARENT_SCOPE)
 
 set(INTEL_SGX_EDGER_PATH ${INTEL_SGX_EDGER_PATH} PARENT_SCOPE)
 set(INTEL_SGX_SIGNER_PATH ${INTEL_SGX_SIGNER_PATH} PARENT_SCOPE)
