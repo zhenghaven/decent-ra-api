@@ -54,8 +54,8 @@ message(STATUS "")
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 
-hunter_add_package(ZLIB)
-find_package(ZLIB REQUIRED)
+#hunter_add_package(ZLIB)
+#find_package(ZLIB REQUIRED)
 
 #==========================================================
 #   Setup options
@@ -64,8 +64,6 @@ find_package(ZLIB REQUIRED)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_STATIC_LIBS "Build static libraries" ON)
 option(USE_MSVC_RUNTIME_LIBRARY_DLL OFF)
-option(JSONCPP_WITH_TESTS OFF)
-option(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
 
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 
@@ -196,29 +194,43 @@ message(STATUS "")
 #   Add submodules
 #==========================================================
 
+##MbedTLS
+set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
+set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbed TLS programs." FORCE)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls)
+set(MBEDTLS_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/mbedtls/include)
+set(MBEDTLS_INCLUDE_DIRS ${MBEDTLS_INCLUDE_DIR})
+set(MBEDCRYPTO_LIBRARY mbedcrypto)
+set(MBEDX509_LIBRARY mbedx509)
+set(MBEDTLS_LIBRARY mbedtls)
+set(MBEDTLS_ENCLAVE_LIBRARY mbedtls_enclave)
+
+
+##libcurl
 set(BUILD_CURL_EXE OFF CACHE BOOL "Set to ON to build CURL executable." FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "Set to ON to build libcurl test libraries." FORCE)
 set(CURL_STATICLIB ON CACHE BOOL "Set to ON to build libcurl with static linking." FORCE)
+set(CURL_ZLIB OFF CACHE BOOL "Set to ON to enable building curl with zlib support." FORCE)
 set(CMAKE_USE_OPENSSL ON CACHE BOOL "Set to ON to build libcurl with OpenSSL." FORCE)
+set(CMAKE_USE_MBEDTLS OFF CACHE BOOL "Set to ON to build libcurl with MbedTLS." FORCE)
 option(HTTP_ONLY ON)
 option(ENABLE_MANUAL OFF)
-
-set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
-set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbed TLS programs." FORCE)
-
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/curl)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls)
+set(CURL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/curl/include)
 
+##JsonCPP
+set(JSONCPP_WITH_TESTS OFF CACHE BOOL "Set to ON to build JsonCpp with tests." FORCE)
+set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF CACHE BOOL "Set to ON to build JsonCpp with unit tests." FORCE)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
+
+##Intel SGX SDK
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
+
+##Header only libraries
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/rapidjson/include)
 set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
-set(CURL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/curl/include)
-set(MBEDTLS_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/mbedtls/include)
 
-set(MBEDTLS_LIB mbedtls)
-set(MBEDTLS_ENCLAVE_LIB mbedtls_enclave)
 
 set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS} 
 							 ${INTEL_SGX_SDK_INCLUDE_PATH} 
@@ -315,7 +327,7 @@ target_link_libraries(LibTest_App
 					#${Boost_LIBRARIES}
 					jsoncpp_lib_static
 					libcurl
-					${MBEDTLS_LIB} 
+					${MBEDTLS_LIBRARY} 
 					Boost::filesystem
 					Boost::date_time
 					Boost::system
@@ -385,7 +397,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
 						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
 						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
-						${MBEDTLS_ENCLAVE_LIB} 
+						${MBEDTLS_ENCLAVE_LIBRARY} 
 						${GROUP_FLAG_END}
 						)
 
@@ -417,7 +429,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						${COMMON_STANDARD_LIBRARIES} 
 						jsoncpp_lib_static 
 						libcurl 
-						${MBEDTLS_LIB} 
+						${MBEDTLS_LIBRARY} 
 						Boost::filesystem
 						Boost::date_time
 						Boost::system
