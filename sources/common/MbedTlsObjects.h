@@ -52,7 +52,7 @@ namespace MbedTlsObj
 
 		virtual operator bool() const
 		{
-			return m_ptr;
+			return m_ptr != nullptr;
 		}
 
 		T* GetInternalPtr() const

@@ -1256,7 +1256,7 @@ bool MbedTlsObj::X509Cert::GetExtensions(std::map<std::string, std::pair<bool, s
 		if (extMap.find(oid) != extMap.end())
 		{
 			std::pair<bool, std::string>& destRef = extMap[oid];
-			destRef.first = is_critical;
+			destRef.first = is_critical != 0;
 			destRef.second.swap(data);
 		}
 
