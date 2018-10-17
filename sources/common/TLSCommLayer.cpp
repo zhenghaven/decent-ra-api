@@ -33,17 +33,45 @@ namespace
 
 		return StaticConnection::ReceiveRaw(ctx, buf, len);
 	}
+
+	static bool MbedTlsSslWriteWrap(mbedtls_ssl_context *ssl, const void* const buf, const size_t len)
+	{
+		size_t sentSize = 0;
+		int res = 0;
+		while (sentSize < len)
+		{
+			res = mbedtls_ssl_write(ssl, reinterpret_cast<const uint8_t*>(buf), len - sentSize);
+			if (res < 0)
+			{
+				return false;
+			}
+			sentSize += res;
+		}
+		return true;
+	}
+
+	static bool MbedTlsSslReadWrap(mbedtls_ssl_context *ssl, void* const buf, const size_t len)
+	{
+		size_t recvSize = 0;
+		int res = 0;
+		while (recvSize < len)
+		{
+			res = mbedtls_ssl_read(ssl, reinterpret_cast<uint8_t*>(buf), len - recvSize);
+			if (res < 0)
+			{
+				return false;
+			}
+			recvSize += res;
+		}
+		return true;
+	}
 }
 
 static mbedtls_ssl_context* ConstructTlsConnection(void * const connectionPtr, bool reqPeerCert,
-	const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig,
-	const std::shared_ptr<const MbedTlsObj::X509Cert>& caCert,
-	const std::shared_ptr<const MbedTlsObj::PKey>& selfPrvKey,
-	const std::shared_ptr<const MbedTlsObj::X509Cert>& selfCert)
+	const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig)
 {
 	if (!connectionPtr ||
-		!tlsConfig || !caCert || !selfPrvKey || !selfCert ||
-		!*tlsConfig || !*caCert || !*selfPrvKey || !*selfCert)
+		!tlsConfig || !*tlsConfig)
 	{
 		return nullptr;
 	}
@@ -69,19 +97,11 @@ static mbedtls_ssl_context* ConstructTlsConnection(void * const connectionPtr, b
 	return tlsCtx.release();
 }
 
-TLSCommLayer::TLSCommLayer(void * const connectionPtr, 
-	const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig,
-	const std::shared_ptr<const MbedTlsObj::X509Cert>& caCert,
-	const std::shared_ptr<const MbedTlsObj::PKey>& selfPrvKey,
-	const std::shared_ptr<const MbedTlsObj::X509Cert>& selfCert,
-	bool reqPeerCert
+TLSCommLayer::TLSCommLayer(void * const connectionPtr, const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig, bool reqPeerCert
 	) :
 	m_sslCtx(ConstructTlsConnection(connectionPtr, reqPeerCert,
-		tlsConfig, caCert, selfPrvKey, selfCert)),
+		tlsConfig)),
 	m_tlsConfig(tlsConfig),
-	m_caCert(caCert),
-	m_selfPrvKey(selfPrvKey),
-	m_selfCert(selfCert),
 	m_hasHandshaked(m_sslCtx != nullptr)
 {
 }
@@ -89,8 +109,6 @@ TLSCommLayer::TLSCommLayer(void * const connectionPtr,
 TLSCommLayer::TLSCommLayer(TLSCommLayer && other) :
 	m_sslCtx(other.m_sslCtx),
 	m_tlsConfig(std::move(other.m_tlsConfig)),
-	m_selfPrvKey(std::move(other.m_selfPrvKey)),
-	m_selfCert(std::move(other.m_selfCert)),
 	m_hasHandshaked(other.m_hasHandshaked)
 {
 	other.m_sslCtx = nullptr;
@@ -119,8 +137,6 @@ TLSCommLayer & TLSCommLayer::operator=(TLSCommLayer && other)
 	{
 		m_sslCtx = other.m_sslCtx;
 		m_tlsConfig = std::move(other.m_tlsConfig);
-		m_selfPrvKey = std::move(other.m_selfPrvKey);
-		m_selfCert = std::move(other.m_selfCert);
 		m_hasHandshaked = other.m_hasHandshaked;
 
 		other.m_sslCtx = nullptr;
@@ -131,8 +147,7 @@ TLSCommLayer & TLSCommLayer::operator=(TLSCommLayer && other)
 
 TLSCommLayer::operator bool() const
 {
-	return m_sslCtx != nullptr && m_tlsConfig && *m_tlsConfig && m_selfPrvKey && *m_selfPrvKey &&
-		m_selfCert && *m_selfCert && m_hasHandshaked;
+	return m_sslCtx != nullptr && m_tlsConfig && *m_tlsConfig && m_hasHandshaked;
 }
 
 bool TLSCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
@@ -141,10 +156,13 @@ bool TLSCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
 	{
 		return false;
 	}
-
-	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
-	
-	return mbedtls_ssl_read(m_sslCtx, reinterpret_cast<uint8_t*>(&outMsg[0]), outMsg.size()) > 0;
+	uint64_t msgSize = 0;
+	if (!MbedTlsSslReadWrap(m_sslCtx, &msgSize, sizeof(uint64_t)))
+	{
+		return false;
+	}
+	outMsg.resize(msgSize);
+	return MbedTlsSslReadWrap(m_sslCtx, &outMsg[0], outMsg.size());
 }
 
 bool TLSCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg)
@@ -156,12 +174,6 @@ bool TLSCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg
 
 	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 
-	/*TODO: fixed partial write. */
-	return mbedtls_ssl_write(m_sslCtx, reinterpret_cast<const uint8_t*>(inMsg.data()), inMsg.size()) > 0;
+	uint64_t msgSize = static_cast<uint64_t>(inMsg.size());
+	return MbedTlsSslWriteWrap(m_sslCtx, &msgSize, sizeof(uint64_t)) && MbedTlsSslWriteWrap(m_sslCtx, inMsg.data(), inMsg.size());
 }
-
-//TLSCommLayer::TLSCommLayer() :
-//	m_sslCtx(new mbedtls_ssl_context)
-//{
-//	mbedtls_ssl_init(m_sslCtx);
-//}

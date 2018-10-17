@@ -239,9 +239,9 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 
 		AppX509 appCert(cert);
 
-		*flag = appCert && 
-			m_appCertVerifier(appCert.GetEcPublicKey(), appCert.GetPlatformType(), appCert.GetAppId()) ? 0 :
-			MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+		*flag |= ((appCert && 
+			m_appCertVerifier(appCert.GetEcPublicKey(), appCert.GetPlatformType(), appCert.GetAppId())) ? 0 :
+			MBEDTLS_X509_BADCERT_NOT_TRUSTED);
 
 		return 0;
 	}
@@ -260,9 +260,9 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 		}
 
 		ServerX509 serverCert(cert);
-		*flag = serverCert &&
-			m_decentCertVerifier(serverCert.GetEcPublicKey(), serverCert.GetPlatformType(), serverCert.GetSelfRaReport()) ? 0 :
-			MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+		*flag |= ((serverCert &&
+			m_decentCertVerifier(serverCert.GetEcPublicKey(), serverCert.GetPlatformType(), serverCert.GetSelfRaReport())) ? 0 :
+			MBEDTLS_X509_BADCERT_NOT_TRUSTED);
 		
 		return 0;
 	}
@@ -276,8 +276,8 @@ TlsConfig::TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier,
 	const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
 	const std::shared_ptr<const AppX509>& selfCert, bool isServer) :
 	Decent::TlsConfig(appIdVerifier,
-		[this](const MbedTlsObj::ECKeyPublic& pubKey, const std::string& platformType, const std::string& selfRaReport) -> bool {
-			std::shared_ptr<const ServerX509>& decentCert = this->m_decentCert;
+		[](const MbedTlsObj::ECKeyPublic& pubKey, const std::string& platformType, const std::string& selfRaReport) -> bool {
+			std::shared_ptr<const ServerX509> decentCert = DecentCertContainer::Get().GetServerCert();
 			if (!decentCert || !*decentCert)
 			{
 				return false;
@@ -346,9 +346,9 @@ TlsConfig & TlsConfig::operator=(TlsConfig && other)
 
 void TlsConfig::Destroy()
 {
-	//m_prvKey.reset();
-	//m_appCert.reset();
-	//m_decentCert.reset();
+	m_prvKey.reset();
+	m_appCert.reset();
+	m_decentCert.reset();
 	if (m_rng)
 	{
 		MbedTlsHelper::DrbgFree(m_rng);

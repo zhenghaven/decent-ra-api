@@ -14,6 +14,7 @@
 
 #include "../DecentError.h"
 #include "../Common.h"
+#include "../DecentCrypto.h"
 
 #include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
@@ -35,38 +36,6 @@
 #include "decent_tkey_exchange.h"
 #include "SGXRAClient.h"
 
-
-namespace
-{
-	static constexpr char gsk_LabelFunc[] = "Func";
-	static constexpr char gsk_LabelPrvKey[] = "PrvKey";
-
-	static constexpr char gsk_ValueFuncSetProtoKey[] = "SetProtoKey";
-
-	//Assume this is set correctly during init and no change afterwards.
-	static std::shared_ptr<const std::string> g_selfHash = std::make_shared<const std::string>("");
-
-	//std::string g_decentProtoPubKey;
-}
-
-static inline void SetSelfEnclaveHash(const std::string & hashBase64)
-{
-#ifdef DECENT_THREAD_SAFETY_HIGH
-	std::atomic_store(&g_targetHash, std::make_shared<const std::string>(hashBase64));
-#else
-	g_selfHash = std::make_shared<const std::string>(hashBase64);
-#endif // DECENT_THREAD_SAFETY_HIGH
-}
-
-static inline const std::string GetSelfEnclaveHash()
-{
-#ifdef DECENT_THREAD_SAFETY_HIGH
-	return *std::atomic_load(&g_targetHash);
-#else
-	return *g_selfHash;
-#endif // DECENT_THREAD_SAFETY_HIGH
-}
-
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 {
 	if (!inSpid)
@@ -75,16 +44,9 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	}
 	SGXRAEnclave::SetSPID(*inSpid);
 
-	sgx_report_t selfReport;
-	sgx_status_t res = sgx_create_report(nullptr, nullptr, &selfReport);
-	if (res != SGX_SUCCESS)
-	{
-		return res; //Error return. (Error from SGX)
-	}
+	std::string selfHash = Decent::Crypto::GetProgSelfHashBase64();
 
-	sgx_measurement_t& enclaveHash = selfReport.body.mr_enclave;
-	ocall_printf("Enclave Program Hash: %s\n", SerializeStruct(enclaveHash).c_str());
-	SetSelfEnclaveHash(SerializeStruct(enclaveHash));
+	ocall_printf("Enclave Program Hash: %s\n", selfHash.c_str());
 
 	return SGX_SUCCESS;
 }
@@ -106,7 +68,8 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const char* selfReport
 	if (isClientAttested && isServerAttested)
 	{
 		//g_decentProtoPubKey = selfId;
-		std::shared_ptr<const Decent::ServerX509> serverCert(new Decent::ServerX509(*signkeyPair, *g_selfHash, Decent::RAReport::sk_ValueReportTypeSgx, selfReport));
+		std::shared_ptr<const Decent::ServerX509> serverCert(new Decent::ServerX509(*signkeyPair, 
+			Decent::Crypto::GetProgSelfHashBase64(), Decent::RAReport::sk_ValueReportTypeSgx, selfReport));
 		if (!serverCert)
 		{
 			return SGX_ERROR_UNEXPECTED;
@@ -154,7 +117,7 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
 	sgx_ias_report_t iasReport;
 
 	if (!Decent::RAReport::ProcessSelfRaReport(inCert->GetPlatformType(), inCert->GetEcPublicKey().ToPubPemString(),
-		inCert->GetSelfRaReport(), GetSelfEnclaveHash(), iasReport))
+		inCert->GetSelfRaReport(), Decent::Crypto::GetProgSelfHashBase64(), iasReport))
 	{
 		return 0;
 	}
@@ -329,9 +292,10 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	sgx_measurement_t targetHash;
-	DeserializeStruct(targetHash, GetSelfEnclaveHash());
-	if (!consttime_memequal(&iasReport->m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t)))
+
+	const General256Hash& targetHash = Decent::Crypto::GetGetProgSelfHash256();
+	
+	if (!consttime_memequal(iasReport->m_quote.report_body.mr_enclave.m, targetHash.data(), sizeof(sgx_measurement_t)))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}

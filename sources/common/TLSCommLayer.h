@@ -17,12 +17,7 @@ class TLSCommLayer : public SecureCommLayer
 {
 public:
 	TLSCommLayer() = delete;
-	TLSCommLayer(void* const connectionPtr, 
-		const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig,
-		const std::shared_ptr<const MbedTlsObj::X509Cert>& caCert,
-		const std::shared_ptr<const MbedTlsObj::PKey>& selfPrvKey,
-		const std::shared_ptr<const MbedTlsObj::X509Cert>& selfCert,
-		bool reqPeerCert);
+	TLSCommLayer(void* const connectionPtr, const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig, bool reqPeerCert);
 
 	TLSCommLayer(const TLSCommLayer& other) = delete;
 	TLSCommLayer(TLSCommLayer&& other);
@@ -42,8 +37,5 @@ public:
 private:
 	mbedtls_ssl_context* m_sslCtx;
 	std::shared_ptr<const MbedTlsObj::TlsConfig> m_tlsConfig;
-	std::shared_ptr<const MbedTlsObj::X509Cert> m_caCert;
-	std::shared_ptr<const MbedTlsObj::PKey> m_selfPrvKey;
-	std::shared_ptr<const MbedTlsObj::X509Cert> m_selfCert;
 	bool m_hasHandshaked;
 };

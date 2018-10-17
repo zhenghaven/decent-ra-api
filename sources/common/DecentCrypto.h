@@ -92,14 +92,14 @@ namespace Decent
 	class TlsConfig : public MbedTlsObj::TlsConfig
 	{
 	public:
-		TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier,
-			const std::shared_ptr<const ServerX509>& caCert,
-			const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
-			const std::shared_ptr<const AppX509>& selfCert, bool isServer);
+		TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, const std::shared_ptr<const ServerX509>& caCert,
+			const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey, const std::shared_ptr<const AppX509>& selfCert, 
+			bool isServer);
+
 		TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, Decent::Crypto::ServerRaReportVerfier serverReportVerifier,
-			const std::shared_ptr<const ServerX509>& caCert,
-			const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
+			const std::shared_ptr<const ServerX509>& caCert, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
 			const std::shared_ptr<const AppX509>& selfCert, bool isServer);
+
 		TlsConfig(TlsConfig&& other);
 		virtual ~TlsConfig() {}
 
@@ -108,9 +108,7 @@ namespace Decent
 		virtual void Destroy() override;
 
 	private:
-		static TlsConfig ConstructTlsConfig(
-			const std::shared_ptr<const ServerX509>& caCert,
-			const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
+		static TlsConfig ConstructTlsConfig(const std::shared_ptr<const ServerX509>& caCert, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
 			const std::shared_ptr<const AppX509>& selfCert, bool isServer);
 		static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
 		int CertVerifyCallBack(mbedtls_x509_crt* cert, int depth, uint32_t* flag);
