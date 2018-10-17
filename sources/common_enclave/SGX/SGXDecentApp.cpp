@@ -15,10 +15,10 @@
 
 #include <Enclave_t.h>
 
-#include "SGXLADecent.h"
 #include "SGXLACommLayer.h"
 
 #include "../Common.h"
+#include "../DecentCrypto.h"
 #include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
 #include "../../common/DecentCrypto.h"
@@ -28,7 +28,6 @@
 
 #include "../../common/SGX/SGXCryptoConversions.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
-
 
 namespace
 {
@@ -60,6 +59,17 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509P
 	//	return SGX_ERROR_INVALID_PARAMETER;
 	//}
 
+	//=============== Not used now 
+	//sgx_measurement_t targetHash;
+	//DeserializeStruct(targetHash, gk_decentHash);
+	//const sgx_measurement_t& testHash = identity->mr_enclave;
+
+	//if (!consttime_memequal(&targetHash, &testHash, sizeof(sgx_measurement_t)))
+	//{
+	//	return SGX_ERROR_INVALID_PARAMETER;
+	//}
+	//===============
+
 	DecentCertContainer::Get().SetServerCert(inCert);
 	//COMMON_PRINTF("Accepted Decent Server.\n%s\n", DecentCertContainer::Get().GetServerCert()->ToPemString().c_str());
 
@@ -80,17 +90,6 @@ extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* co
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-
-	//=============== Not used now 
-	//sgx_measurement_t targetHash;
-	//DeserializeStruct(targetHash, gk_decentHash);
-	//const sgx_measurement_t& testHash = identity->mr_enclave;
-
-	//if (!consttime_memequal(&targetHash, &testHash, sizeof(sgx_measurement_t)))
-	//{
-	//	return SGX_ERROR_INVALID_PARAMETER;
-	//}
-	//===============
 
 	CryptoKeyContainer& keyContainer = CryptoKeyContainer::GetInstance();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
@@ -117,6 +116,11 @@ extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* co
 	}
 
 	DecentCertContainer::Get().SetCert(cert);
+
+	Decent::Crypto::RefreshDecentAppAppClientSideConfig();
+	Decent::Crypto::RefreshDecentAppAppServerSideConfig();
+	Decent::Crypto::RefreshDecentAppClientServerSideConfig();
+
 	COMMON_PRINTF("Received X509 from Decent Server. \n%s\n", DecentCertContainer::Get().GetCert()->ToPemString().c_str());
 
 	return SGX_SUCCESS;

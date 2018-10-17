@@ -5,8 +5,12 @@
 #include <atomic>
 
 #include <sgx_utils.h>
+#include <sgx_dh.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
+
+#include "../../common/DataCoding.h"
+#include "../../common/DecentRAReport.h"
 
 using namespace Decent;
 
@@ -37,7 +41,28 @@ namespace
 		return res;
 	}
 
-	//static std::shared_ptr<const TlsConfig> gsk_decentAppAppServerSideConfig;
+	static const Crypto::AppIdVerfier peerAppVerifier = [](const MbedTlsObj::ECKeyPublic& pubKey, const std::string& platformType, const std::string& appId) -> bool
+	{
+		if (platformType != Decent::RAReport::sk_ValueReportTypeSgx)
+		{
+			return false;
+		}
+
+		sgx_dh_session_enclave_identity_t identity;
+		DeserializeStruct(identity, appId);
+
+		return consttime_memequal(identity.mr_enclave.m, Crypto::GetGetProgSelfHash256().data(), Crypto::GetGetProgSelfHash256().size()) == 1;
+	};
+
+
+	static const Crypto::AppIdVerfier emptyAppVerifier = [](const MbedTlsObj::ECKeyPublic& pubKey, const std::string& platformType, const std::string& appId) -> bool
+	{
+		return true;
+	};
+
+	static std::shared_ptr<const TlsConfig> gsk_decentAppAppServerSideConfig;
+	static std::shared_ptr<const TlsConfig> gsk_decentAppAppClientSideConfig;
+	static std::shared_ptr<const TlsConfig> gsk_decentAppClientServerSideConfig;
 }
 
 const General256Hash& Crypto::GetGetProgSelfHash256()
@@ -47,13 +72,41 @@ const General256Hash& Crypto::GetGetProgSelfHash256()
 	return hash;
 }
 
-//std::shared_ptr<const TlsConfig> Decent::Crypto::GetDecentAppAppServerSideConfig()
-//{
-//	return std::shared_ptr<const TlsConfig>();
-//}
-
 const std::string& Crypto::GetProgSelfHashBase64()
 {
 	static const std::string hashBase64(cppcodec::base64_rfc4648::encode(Crypto::GetGetProgSelfHash256()));
 	return hashBase64;
+}
+
+std::shared_ptr<const TlsConfig> Decent::Crypto::GetDecentAppAppServerSideConfig()
+{
+	return std::atomic_load(&gsk_decentAppAppServerSideConfig);
+}
+
+std::shared_ptr<const TlsConfig> Decent::Crypto::GetDecentAppAppClientSideConfig()
+{
+	return std::atomic_load(&gsk_decentAppAppClientSideConfig);
+}
+
+std::shared_ptr<const TlsConfig> Decent::Crypto::GetDecentAppClientServerSideConfig()
+{
+	return std::atomic_load(&gsk_decentAppClientServerSideConfig);
+}
+
+void Decent::Crypto::RefreshDecentAppAppServerSideConfig()
+{
+	std::shared_ptr<const TlsConfig> config(new TlsConfig(peerAppVerifier, true));
+	std::atomic_store(&gsk_decentAppAppServerSideConfig, config);
+}
+
+void Decent::Crypto::RefreshDecentAppAppClientSideConfig()
+{
+	std::shared_ptr<const TlsConfig> config(new TlsConfig(peerAppVerifier, false));
+	std::atomic_store(&gsk_decentAppAppClientSideConfig, config);
+}
+
+void Decent::Crypto::RefreshDecentAppClientServerSideConfig()
+{
+	std::shared_ptr<const TlsConfig> config(new TlsConfig(emptyAppVerifier, true));
+	std::atomic_store(&gsk_decentAppClientServerSideConfig, config);
 }

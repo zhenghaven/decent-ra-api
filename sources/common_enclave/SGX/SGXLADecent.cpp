@@ -1,21 +1,11 @@
 #include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
 
-#include "SGXLADecent.h"
-
-#define STRUCT_ASSERT_ERROR_MSG "Check sgx_report_body_t and sgx_dh_session_enclave_identity_t has different struct"
-
 #include <string>
 #include <memory>
 #include <cstring>
 
-#include <sgx_report.h>
-#include <sgx_error.h>
-#include <sgx_ecp_types.h>
 #include <sgx_dh.h>
-#include <sgx_tcrypto.h>
-
-#include <Enclave_t.h>
 
 #include "SGXLACommLayer.h"
 
@@ -23,8 +13,8 @@
 
 #include "../../common/DataCoding.h"
 #include "../../common/DecentCrypto.h"
+#include "../../common/DecentRAReport.h"
 #include "../../common/MbedTlsObjects.h"
-#include "../../common/AESGCMCommLayer.h"
 #include "../../common/CryptoKeyContainer.h"
 
 static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity_t& identity, const Decent::X509Req& x509Req, SecureCommLayer& commLayer, void* const connectionPtr)
@@ -37,7 +27,7 @@ static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	Decent::AppX509 appX509(x509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), SGXLADecent::gsk_ValuePlatformType, SerializeStruct(identity));
+	Decent::AppX509 appX509(x509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), Decent::RAReport::sk_ValueReportTypeSgx, SerializeStruct(identity));
 
 	if (!appX509)
 	{

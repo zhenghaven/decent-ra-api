@@ -4,6 +4,7 @@
 
 #include <mbedtls/ssl.h>
 
+#include "CommonTool.h"
 #include "Connection.h"
 #include "MbedTlsObjects.h"
 
@@ -88,7 +89,8 @@ static mbedtls_ssl_context* ConstructTlsConnection(void * const connectionPtr, b
 	mbedtls_ssl_set_hs_authmode(tlsCtx.get(), reqPeerCert ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_NONE);
 	//mbedtls_ssl_get_verify_result
 
-	if (mbedtls_ssl_handshake(tlsCtx.get()) != MBEDTLS_SUCCESS_RET)
+	int ret = 0;
+	if ((ret = mbedtls_ssl_handshake(tlsCtx.get())) != MBEDTLS_SUCCESS_RET)
 	{
 		mbedtls_ssl_free(tlsCtx.get());
 		return nullptr;

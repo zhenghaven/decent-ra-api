@@ -6,6 +6,7 @@
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/ssl.h>
 
+#include "CommonTool.h"
 #include "MbedTlsHelpers.h"
 #include "CryptoKeyContainer.h"
 #include "DecentCertContainer.h"
@@ -271,10 +272,7 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 	}
 }
 
-TlsConfig::TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier,
-	const std::shared_ptr<const ServerX509>& caCert,
-	const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
-	const std::shared_ptr<const AppX509>& selfCert, bool isServer) :
+TlsConfig::TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, bool isServer) :
 	Decent::TlsConfig(appIdVerifier,
 		[](const MbedTlsObj::ECKeyPublic& pubKey, const std::string& platformType, const std::string& selfRaReport) -> bool {
 			std::shared_ptr<const ServerX509> decentCert = DecentCertContainer::Get().GetServerCert();
@@ -291,16 +289,13 @@ TlsConfig::TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier,
 			//For now, this situation probably won't happen.
 			return false;
 		}, 
-		caCert, selfPrvKey, selfCert,
 		isServer)
 {
 }
 
 TlsConfig::TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, Decent::Crypto::ServerRaReportVerfier serverReportVerifier,
-	const std::shared_ptr<const ServerX509>& caCert,
-	const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
-	const std::shared_ptr<const AppX509>& selfCert, bool isServer) :
-	Decent::TlsConfig(ConstructTlsConfig(caCert, selfPrvKey, selfCert, isServer))
+	bool isServer) :
+	Decent::TlsConfig(ConstructTlsConfig(isServer))
 {
 	m_decentCertVerifier.swap(serverReportVerifier);
 	m_appCertVerifier.swap(appIdVerifier);
@@ -356,31 +351,26 @@ void TlsConfig::Destroy()
 	m_rng = nullptr;
 }
 
-Decent::TlsConfig TlsConfig::ConstructTlsConfig(
-	const std::shared_ptr<const ServerX509>& caCert,
-	const std::shared_ptr<const MbedTlsObj::ECKeyPair>& selfPrvKey,
-	const std::shared_ptr<const AppX509>& selfCert, bool isServer)
+Decent::TlsConfig TlsConfig::ConstructTlsConfig(bool isServer)
 {
 	Decent::TlsConfig config(new mbedtls_ssl_config);
 	mbedtls_ssl_config_init(config.GetInternalPtr());
 
-	config.m_decentCert = caCert;
-	config.m_prvKey = selfPrvKey;
-	config.m_appCert = selfCert;
+	config.m_decentCert = DecentCertContainer::Get().GetServerCert();
+	config.m_prvKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
+	config.m_appCert = DecentCertContainer::Get().GetCert();
 
-	if (!config.m_prvKey || !*config.m_prvKey ||
-		!config.m_appCert || !*config.m_appCert ||
-		!config.m_decentCert || !*config.m_decentCert)
+	if (!config.m_decentCert || !*config.m_decentCert ||
+		mbedtls_ssl_config_defaults(config.GetInternalPtr(), isServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT, 
+		MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_SUITEB) != 0)
 	{
 		config.Destroy();
 		return config;
 	}
 
-	
-	if (mbedtls_ssl_config_defaults(config.GetInternalPtr(), isServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT, 
-		MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_SUITEB) != 0 ||
-		mbedtls_ssl_conf_own_cert(config.GetInternalPtr(), config.m_appCert->GetInternalPtr(), 
-			config.m_prvKey->GetInternalPtr()) != 0)
+	if (config.m_prvKey && *config.m_prvKey && config.m_appCert && *config.m_appCert && 
+		mbedtls_ssl_conf_own_cert(config.GetInternalPtr(), config.m_appCert->GetInternalPtr(),
+		config.m_prvKey->GetInternalPtr()) != 0)
 	{
 		config.Destroy();
 		return config;

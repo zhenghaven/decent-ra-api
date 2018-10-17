@@ -4,37 +4,27 @@
 #include <string>
 #include <map>
 #include <memory>
-#include <mutex>
 
-#include <sgx_utils.h>
-
-#include <rapidjson/document.h>
-
-#include <Enclave_t.h>
-
-#include "../DecentError.h"
 #include "../Common.h"
 #include "../DecentCrypto.h"
 
-#include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
 #include "../../common/DecentCrypto.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/CryptoKeyContainer.h"
+#include "../../common/DecentCertContainer.h"
 
 #include "../../common/SGX/sgx_constants.h"
-#include "../../common/SGX/ias_report.h"
 #include "../../common/SGX/IasReport.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
 
-#include "../../common/DecentCertContainer.h"
-#include "../../common/DecentRAReport.h"
-
 #include "decent_ra_tools.h"
 #include "decent_tkey_exchange.h"
 #include "SGXRAClient.h"
+
+#include "../../common/TLSCommLayer.h"
 
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 {
@@ -74,8 +64,15 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const char* selfReport
 		{
 			return SGX_ERROR_UNEXPECTED;
 		}
-		//DecentCertContainer::Get().SetCert(serverCert);
 		DecentCertContainer::Get().SetServerCert(serverCert);
+
+		std::shared_ptr<const Decent::AppX509> dummyAppCert(new Decent::AppX509(*signkeyPair, *serverCert, *signkeyPair,
+			Decent::Crypto::GetProgSelfHashBase64(), Decent::RAReport::sk_ValueReportTypeSgx, ""));
+		DecentCertContainer::Get().SetCert(dummyAppCert);
+
+		Decent::Crypto::RefreshDecentAppAppClientSideConfig();
+		Decent::Crypto::RefreshDecentAppAppServerSideConfig();
+		Decent::Crypto::RefreshDecentAppClientServerSideConfig();
 
 		SGXRAEnclave::DropClientRAState(selfId);
 		SGXRAEnclave::DropRAStateToServer(selfId);
@@ -258,7 +255,18 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	//DecentCertContainer::Get().SetCert(serverCert);
+	std::shared_ptr<const Decent::AppX509> dummyAppCert(new Decent::AppX509(*protoKeyPair, *serverCert, *protoKeyPair,
+		Decent::Crypto::GetProgSelfHashBase64(), Decent::RAReport::sk_ValueReportTypeSgx, ""));
+	DecentCertContainer::Get().SetCert(dummyAppCert);
+
+	Decent::Crypto::RefreshDecentAppAppClientSideConfig();
+	Decent::Crypto::RefreshDecentAppAppServerSideConfig();
+	Decent::Crypto::RefreshDecentAppClientServerSideConfig();
+
+	//std::string testMsg;
+	//TLSCommLayer testTls(connectionPtr, Decent::Crypto::GetDecentAppAppClientSideConfig(), true);
+	//testTls.ReceiveMsg(connectionPtr, testMsg);
+	//COMMON_PRINTF("TLS Test Msg: %s.\n", testMsg.c_str());
 
 	COMMON_PRINTF("Joined Decent network.\n");
 
@@ -302,7 +310,14 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void*
 
 	COMMON_PRINTF("Accepted New Decent Node: %s\n", nodeID);
 
-	return commLayer->SendMsg(connectionPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair()->ToPrvPemString()) ?
+	bool res = commLayer->SendMsg(connectionPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair()->ToPrvPemString());
+
+	//std::string testMsg = "Enclave Test Message.";
+	//TLSCommLayer testTls(connectionPtr, Decent::Crypto::GetDecentAppAppServerSideConfig(), true);
+	//testTls.SendMsg(connectionPtr, testMsg);
+	//COMMON_PRINTF("TLS Test Msg: %s.\n", testMsg.c_str());
+
+	return res ?
 		SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
