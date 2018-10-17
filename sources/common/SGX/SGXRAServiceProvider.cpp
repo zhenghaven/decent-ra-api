@@ -14,7 +14,7 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
-#include "SGXOpenSSLConversions.h"
+#include "SGXCryptoConversions.h"
 
 #include "../CommonTool.h"
 #include "../DataCoding.h"

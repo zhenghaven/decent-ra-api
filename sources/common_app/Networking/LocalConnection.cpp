@@ -81,6 +81,11 @@ LocalConnection & LocalConnection::operator=(LocalConnection && other)
 	return *this;
 }
 
+size_t LocalConnection::SendRaw(const void * const dataPtr, const size_t size)
+{
+	return 0;
+}
+
 size_t LocalConnection::Send(const Messages & msg)
 {
 	return Send(msg.ToJsonString());
@@ -134,6 +139,11 @@ size_t LocalConnection::Send(const void * const dataPtr, const size_t size)
 	}
 
 	return sentSize;
+}
+
+size_t LocalConnection::ReceiveRaw(void * const bufPtr, const size_t size)
+{
+	return 0;
 }
 
 size_t LocalConnection::Receive(std::string & msg)

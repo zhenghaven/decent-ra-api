@@ -26,14 +26,15 @@
 #include "../../common/SGX/ias_report.h"
 #include "../../common/SGX/IasReport.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
-#include "../../common/SGX/SGXOpenSSLConversions.h"
+#include "../../common/SGX/SGXCryptoConversions.h"
 
-#include "../../common_enclave/DecentCertContainer.h"
+#include "../../common/DecentCertContainer.h"
+#include "../../common/DecentRAReport.h"
 
 #include "decent_ra_tools.h"
 #include "decent_tkey_exchange.h"
 #include "SGXRAClient.h"
-#include "SGXDecentCommon.h"
+
 
 namespace
 {
@@ -105,12 +106,12 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const char* selfReport
 	if (isClientAttested && isServerAttested)
 	{
 		//g_decentProtoPubKey = selfId;
-		std::shared_ptr<const MbedTlsDecentServerX509> serverCert(new MbedTlsDecentServerX509(*signkeyPair, *g_selfHash, Decent::RAReport::sk_ValueReportType, selfReport));
+		std::shared_ptr<const Decent::ServerX509> serverCert(new Decent::ServerX509(*signkeyPair, *g_selfHash, Decent::RAReport::sk_ValueReportTypeSgx, selfReport));
 		if (!serverCert)
 		{
 			return SGX_ERROR_UNEXPECTED;
 		}
-		DecentCertContainer::Get().SetCert(serverCert);
+		//DecentCertContainer::Get().SetCert(serverCert);
 		DecentCertContainer::Get().SetServerCert(serverCert);
 
 		SGXRAEnclave::DropClientRAState(selfId);
@@ -144,7 +145,7 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
 		return 0;
 	}
 
-	std::shared_ptr<MbedTlsDecentServerX509> inCert(new MbedTlsDecentServerX509(x509Pem));
+	std::shared_ptr<Decent::ServerX509> inCert(new Decent::ServerX509(x509Pem));
 	if (!inCert || !(*inCert))
 	{
 		return 0;
@@ -152,7 +153,8 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
 
 	sgx_ias_report_t iasReport;
 
-	if (!DecentEnclave::ProcessIasRaReport(*inCert, GetSelfEnclaveHash(), iasReport))
+	if (!Decent::RAReport::ProcessSelfRaReport(inCert->GetPlatformType(), inCert->GetEcPublicKey().ToPubPemString(),
+		inCert->GetSelfRaReport(), GetSelfEnclaveHash(), iasReport))
 	{
 		return 0;
 	}
@@ -184,7 +186,7 @@ extern "C" sgx_status_t ecall_process_ra_msg1_decent(const char* client_id, cons
 		{
 			return false;
 		}
-		return DecentEnclave::DecentReportDataVerifier(pubKeyPem, initData, inData);
+		return Decent::RAReport::DecentReportDataVerifier(pubKeyPem, initData, inData);
 	};
 
 	SGXRAEnclave::SetReportDataVerifier(client_id, reportDataVerifier); //Imposible to return false on this call.
@@ -293,7 +295,7 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	DecentCertContainer::Get().SetCert(serverCert);
+	//DecentCertContainer::Get().SetCert(serverCert);
 
 	COMMON_PRINTF("Joined Decent network.\n");
 

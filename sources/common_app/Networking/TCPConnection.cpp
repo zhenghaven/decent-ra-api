@@ -31,6 +31,12 @@ TCPConnection::~TCPConnection()
 	Terminate();
 }
 
+size_t TCPConnection::SendRaw(const void * const dataPtr, const size_t size)
+{
+	size_t res = m_socket->send(boost::asio::buffer(dataPtr, size));
+	return res;
+}
+
 size_t TCPConnection::Send(const Messages & msg)
 {
 	return Send(msg.ToJsonString());
@@ -65,6 +71,11 @@ size_t TCPConnection::Send(const void * const dataPtr, const size_t size)
 
 	size_t res = m_socket->send(msgBuf);
 	return res > sizeof(msgSize) ? res - sizeof(msgSize) : 0;
+}
+
+size_t TCPConnection::ReceiveRaw(void * const bufPtr, const size_t size)
+{
+	return m_socket->receive(boost::asio::buffer(bufPtr, size));
 }
 
 size_t TCPConnection::Receive(std::string & msg)

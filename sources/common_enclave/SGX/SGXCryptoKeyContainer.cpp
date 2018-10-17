@@ -4,7 +4,7 @@
 
 #include <sgx_tcrypto.h>
 
-#include "../../common/SGX/SGXOpenSSLConversions.h"
+#include "../../common/SGX/SGXCryptoConversions.h"
 
 static std::pair<general_secp256r1_public_t*, PrivateKeyWrap*> ConstructKeyPair()
 {

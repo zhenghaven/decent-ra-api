@@ -55,10 +55,10 @@ AESGCMCommLayer & AESGCMCommLayer::operator=(AESGCMCommLayer && other)
 	return *this;
 }
 
-bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
-{
-	return AESGCMCommLayer::DecryptMsg(outMsg, std::string(inMsg));
-}
+//bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
+//{
+//	return AESGCMCommLayer::DecryptMsg(outMsg, std::string(inMsg));
+//}
 
 bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg)
 {

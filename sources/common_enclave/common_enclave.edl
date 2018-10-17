@@ -13,6 +13,10 @@ enclave {
 		
 		size_t ocall_connection_receive([user_check] void* ptr, [out] char** msg);
 		
+		size_t ocall_connection_send_raw([user_check] void* ptr, [in, size = size] const char* msg, size_t size);
+		
+		size_t ocall_connection_receive_raw([user_check] void* ptr, [out, size = buf_size] char* buf, size_t buf_size);
+		
 		void ocall_connection_clean_recv_buffer([user_check] char* ptr);
 		
 		void ocall_get_system_time([out] time_t* timer);

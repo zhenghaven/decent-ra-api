@@ -20,6 +20,7 @@
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/x509_crl.h>
+#include <mbedtls/ssl.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
 
@@ -145,7 +146,7 @@ BigNumber MbedTlsObj::BigNumber::FromLittleEndianBin(const uint8_t * in, const s
 	if (!res ||
 		mbedtls_mpi_read_binary(res.GetInternalPtr(), tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
 	{
-		res.Destory();
+		res.Destroy();
 	}
 	return res;
 }
@@ -168,12 +169,12 @@ MbedTlsObj::BigNumber::BigNumber(mbedtls_mpi * ptr) :
 
 MbedTlsObj::BigNumber::~BigNumber()
 {
-	Destory();
+	Destroy();
 }
 
-void MbedTlsObj::BigNumber::Destory()
+void MbedTlsObj::BigNumber::Destroy()
 {
-	if (!*this)
+	if (m_ptr)
 	{
 		mbedtls_mpi_free(m_ptr);
 		delete m_ptr;
@@ -209,10 +210,10 @@ MbedTlsObj::PKey::PKey(PKey && other) :
 
 MbedTlsObj::PKey::~PKey()
 {
-	Destory();
+	Destroy();
 }
 
-void MbedTlsObj::PKey::Destory()
+void MbedTlsObj::PKey::Destroy()
 {
 	if (m_ptr && m_isOwner)
 	{
@@ -255,10 +256,10 @@ MbedTlsObj::Gcm::Gcm(Gcm && other) :
 
 MbedTlsObj::Gcm::~Gcm()
 {
-	Destory();
+	Destroy();
 }
 
-void MbedTlsObj::Gcm::Destory()
+void MbedTlsObj::Gcm::Destroy()
 {
 	if (m_ptr)
 	{
@@ -842,12 +843,12 @@ MbedTlsObj::X509Req::X509Req(const PKey & keyPair, const std::string& commonName
 
 MbedTlsObj::X509Req::~X509Req()
 {
-	Destory();
+	Destroy();
 }
 
-void MbedTlsObj::X509Req::Destory()
+void MbedTlsObj::X509Req::Destroy()
 {
-	m_pubKey.Destory();
+	m_pubKey.Destroy();
 	if (m_ptr)
 	{
 		mbedtls_x509_csr_free(m_ptr);
@@ -1136,7 +1137,16 @@ MbedTlsObj::X509Cert::X509Cert(const std::string & pemStr) :
 
 MbedTlsObj::X509Cert::X509Cert(mbedtls_x509_crt * ptr, const std::string & pemStr) :
 	ObjBase(ptr),
+	m_isOwner(true),
 	m_pemStr(pemStr),
+	m_pubKey(ptr ? &ptr->pk : nullptr, false)
+{
+}
+
+MbedTlsObj::X509Cert::X509Cert(mbedtls_x509_crt * ptr) :
+	ObjBase(ptr),
+	m_isOwner(false),
+	m_pemStr(),
 	m_pubKey(ptr ? &ptr->pk : nullptr, false)
 {
 }
@@ -1161,15 +1171,15 @@ MbedTlsObj::X509Cert::X509Cert(const PKey & prvKey,
 
 MbedTlsObj::X509Cert::~X509Cert()
 {
-	Destory();
+	Destroy();
 }
 
-void MbedTlsObj::X509Cert::Destory()
+void MbedTlsObj::X509Cert::Destroy()
 {
-	SwitchToFirstCert();
+	m_pubKey.Destroy();
 
-	m_pubKey.Destory();
-	if (m_ptr)
+	SwitchToFirstCert();
+	if (m_isOwner && m_ptr)
 	{
 		mbedtls_x509_crt_free(m_ptr);
 		delete m_ptr;
@@ -1388,10 +1398,10 @@ MbedTlsObj::X509Crl::X509Crl(mbedtls_x509_crl * ptr, const std::string & pemStr)
 
 MbedTlsObj::X509Crl::~X509Crl()
 {
-	Destory();
+	Destroy();
 }
 
-void MbedTlsObj::X509Crl::Destory()
+void MbedTlsObj::X509Crl::Destroy()
 {
 	if (m_ptr)
 	{
@@ -1440,6 +1450,40 @@ Aes128Gcm & MbedTlsObj::Aes128Gcm::operator=(Aes128Gcm && other)
 	if (this != &other)
 	{
 		Gcm::operator=(std::forward<Gcm>(other));
+	}
+	return *this;
+}
+
+TlsConfig::TlsConfig(mbedtls_ssl_config * ptr) :
+	ObjBase(ptr)
+{
+}
+
+MbedTlsObj::TlsConfig::TlsConfig(TlsConfig && other) :
+	ObjBase(std::forward<ObjBase>(other))
+{
+}
+
+MbedTlsObj::TlsConfig::~TlsConfig()
+{
+	Destroy();
+}
+
+void MbedTlsObj::TlsConfig::Destroy()
+{
+	if (m_ptr)
+	{
+		mbedtls_ssl_config_free(m_ptr);
+		delete m_ptr;
+	}
+	m_ptr = nullptr;
+}
+
+TlsConfig & MbedTlsObj::TlsConfig::operator=(TlsConfig && other)
+{
+	if (this != &other)
+	{
+		ObjBase::operator=(std::forward<ObjBase>(other));
 	}
 	return *this;
 }

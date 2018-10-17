@@ -1,4 +1,4 @@
-#include "SGXOpenSSLConversions.h"
+#include "SGXCryptoConversions.h"
 
 #include <cstddef>
 

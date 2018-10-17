@@ -1,37 +1,49 @@
-//#pragma once
-//
-//#include "SecureCommLayer.h"
-//
-//typedef struct ssl_st SSL;
-//typedef struct bio_st BIO;
-//
-//class TLSCommLayer : public SecureCommLayer
-//{
-//public:
-//	TLSCommLayer() = delete;
-//	TLSCommLayer(SSL* ssl, bool isServer);
-//	TLSCommLayer(const TLSCommLayer& other) = delete;
-//	TLSCommLayer(TLSCommLayer&& other);
-//
-//	virtual ~TLSCommLayer();
-//
-//	TLSCommLayer& operator=(const TLSCommLayer& other) = delete;
-//	TLSCommLayer& operator=(TLSCommLayer&& other);
-//
-//	operator bool() const;
-//
-//	virtual bool DecryptMsg(std::string& outMsg, const char* inMsg) const override;
-//	virtual bool DecryptMsg(std::string& outMsg, const std::string& inMsg) const override;
-//
-//	virtual bool EncryptMsg(std::string& outMsg, const std::string& inMsg) const override;
-//	virtual bool SendMsg(void* const connectionPtr, const std::string& msg, const char* appAttach) const override;
-//
-//private:
-//	SSL * m_ssl;
-//	BIO* m_inBuf;
-//	BIO* m_outBuf;
-//	bool m_isServer;
-//	bool m_hasHandshaked;
-//
-//	void Clean();
-//};
+#pragma once
+
+#include "SecureCommLayer.h"
+
+#include <memory>
+
+typedef struct mbedtls_ssl_context mbedtls_ssl_context;
+
+namespace MbedTlsObj
+{
+	class TlsConfig;
+	class PKey;
+	class X509Cert;
+}
+
+class TLSCommLayer : public SecureCommLayer
+{
+public:
+	TLSCommLayer() = delete;
+	TLSCommLayer(void* const connectionPtr, 
+		const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig,
+		const std::shared_ptr<const MbedTlsObj::X509Cert>& caCert,
+		const std::shared_ptr<const MbedTlsObj::PKey>& selfPrvKey,
+		const std::shared_ptr<const MbedTlsObj::X509Cert>& selfCert,
+		bool reqPeerCert);
+
+	TLSCommLayer(const TLSCommLayer& other) = delete;
+	TLSCommLayer(TLSCommLayer&& other);
+
+	virtual ~TLSCommLayer();
+
+	void Destory();
+
+	TLSCommLayer& operator=(const TLSCommLayer& other) = delete;
+	TLSCommLayer& operator=(TLSCommLayer&& other);
+
+	operator bool() const;
+
+	virtual bool ReceiveMsg(void* const connectionPtr, std::string& outMsg) override;
+	virtual bool SendMsg(void* const connectionPtr, const std::string& inMsg) override;
+
+private:
+	mbedtls_ssl_context* m_sslCtx;
+	std::shared_ptr<const MbedTlsObj::TlsConfig> m_tlsConfig;
+	std::shared_ptr<const MbedTlsObj::X509Cert> m_caCert;
+	std::shared_ptr<const MbedTlsObj::PKey> m_selfPrvKey;
+	std::shared_ptr<const MbedTlsObj::X509Cert> m_selfCert;
+	bool m_hasHandshaked;
+};

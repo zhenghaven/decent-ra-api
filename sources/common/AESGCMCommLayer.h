@@ -27,10 +27,9 @@ public:
 	AESGCMCommLayer& operator=(const AESGCMCommLayer& other) = delete;
 	AESGCMCommLayer& operator=(AESGCMCommLayer&& other);
 
-	virtual bool DecryptMsg(std::string& outMsg, const char* inMsg) override;
-	virtual bool DecryptMsg(std::string& outMsg, const std::string& inMsg) override;
+	virtual bool DecryptMsg(std::string& outMsg, const std::string& inMsg);// override;
 
-	virtual bool EncryptMsg(std::string& outMsg, const std::string& inMsg) override;
+	virtual bool EncryptMsg(std::string& outMsg, const std::string& inMsg);// override;
 
 	virtual bool ReceiveMsg(void* const connectionPtr, std::string& outMsg) override;
 	virtual bool SendMsg(void* const connectionPtr, const std::string& inMsg) override;

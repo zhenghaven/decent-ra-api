@@ -16,6 +16,7 @@ typedef struct mbedtls_x509_crt mbedtls_x509_crt;
 typedef struct mbedtls_x509_csr mbedtls_x509_csr;
 typedef struct mbedtls_x509_crl mbedtls_x509_crl;
 typedef struct mbedtls_x509_crt_profile mbedtls_x509_crt_profile;
+typedef struct mbedtls_ssl_config mbedtls_ssl_config;
 typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 
 namespace MbedTlsObj
@@ -24,14 +25,16 @@ namespace MbedTlsObj
 	class ObjBase
 	{
 	public:
+		ObjBase() = delete;
+
 		ObjBase(T* ptr) :
 			m_ptr(ptr)
 		{}
 
 		ObjBase(const ObjBase& other) = delete;
-		ObjBase(ObjBase&& other)
+		ObjBase(ObjBase&& other) :
+			m_ptr(other.m_ptr)
 		{
-			this->m_ptr = other.m_ptr;
 			other.m_ptr = nullptr;
 		}
 
@@ -48,7 +51,7 @@ namespace MbedTlsObj
 
 		virtual ~ObjBase() {}
 
-		virtual void Destory() = 0;
+		virtual void Destroy() = 0;
 
 		virtual operator bool() const
 		{
@@ -96,7 +99,7 @@ namespace MbedTlsObj
 		BigNumber(mbedtls_mpi* ptr);
 		virtual ~BigNumber();
 
-		virtual void Destory() override;
+		virtual void Destroy() override;
 
 		bool ToLittleEndianBinary(uint8_t* out, const size_t size);
 
@@ -116,7 +119,7 @@ namespace MbedTlsObj
 		PKey(PKey&& other);
 		virtual ~PKey();
 
-		virtual void Destory() override;
+		virtual void Destroy() override;
 		virtual PKey& operator=(PKey&& other);
 
 		virtual bool VerifySignatureSha256(const General256Hash& hash, const std::vector<uint8_t>& signature) const;
@@ -132,7 +135,7 @@ namespace MbedTlsObj
 		Gcm(Gcm&& other);
 		virtual ~Gcm();
 
-		virtual void Destory() override;
+		virtual void Destroy() override;
 		virtual Gcm& operator=(Gcm&& other);
 
 		virtual bool Encrypt(const uint8_t* inData, uint8_t* outData, const size_t dataLen, 
@@ -248,7 +251,7 @@ namespace MbedTlsObj
 		X509Req(const PKey& keyPair, const std::string& commonName);
 		virtual ~X509Req();
 
-		virtual void Destory() override;
+		virtual void Destroy() override;
 		virtual operator bool() const override;
 
 		bool VerifySignature() const;
@@ -270,7 +273,7 @@ namespace MbedTlsObj
 		X509Crl(mbedtls_x509_crl* ptr, const std::string& pemStr);
 		virtual ~X509Crl();
 
-		virtual void Destory() override;
+		virtual void Destroy() override;
 
 		std::string ToPemString() const;
 		//bool ToDerArray(std::vector<uint8_t>& outArray) const;
@@ -285,6 +288,7 @@ namespace MbedTlsObj
 		X509Cert() = delete;
 		X509Cert(const std::string& pemStr);
 		X509Cert(mbedtls_x509_crt* ptr, const std::string& pemStr);
+		X509Cert(mbedtls_x509_crt* ptr);
 		X509Cert(const X509Cert& caCert, const PKey& prvKey, const PKey& pubKey,
 			const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 			const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap);
@@ -294,7 +298,7 @@ namespace MbedTlsObj
 			const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap);
 		virtual ~X509Cert();
 
-		virtual void Destory() override;
+		virtual void Destroy() override;
 		virtual operator bool() const override;
 
 		bool GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const;
@@ -314,6 +318,7 @@ namespace MbedTlsObj
 		void SwitchToFirstCert();
 
 	private:
+		bool m_isOwner;
 		std::string m_pemStr;
 		PKey m_pubKey;
 		std::vector<mbedtls_x509_crt*> m_certStack;
@@ -330,6 +335,17 @@ namespace MbedTlsObj
 
 		virtual Aes128Gcm& operator=(Aes128Gcm&& other);
 
+	};
+
+	class TlsConfig : public ObjBase<mbedtls_ssl_config>
+	{
+	public:
+		TlsConfig(mbedtls_ssl_config* ptr);
+		TlsConfig(TlsConfig&& other);
+		virtual ~TlsConfig();
+
+		virtual void Destroy() override;
+		virtual TlsConfig& operator=(TlsConfig&& other);
 	};
 
 }
