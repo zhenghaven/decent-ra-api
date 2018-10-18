@@ -139,10 +139,8 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		std::unique_ptr<SGXRAMessage1> msg1(ParseMessageExpected<SGXRAMessage1>(msgBuffer));
 
 		std::string sigRlStr;
-		int32_t respCode = 0;
 
-		respCode = m_ias.GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr);
-		if (respCode != 200)
+		if (!m_ias.GetRevocationList(msg1->GetMsg1Data().gid, sigRlStr))
 		{
 			m_connection.SendPack(SGXRAClientErrMsg(k_senderId, "Failed to get Revocation List from IAS!"));
 			return false;
@@ -186,8 +184,7 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 		std::string iasReportSign;
 		std::string iasCert;
 
-		respCode = m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert);
-		if (respCode != 200)
+		if (!m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert))
 		{
 			SGXRAClientErrMsg errMsg(k_senderId, "Failed to get report from IAS!");
 			m_connection.SendPack(errMsg.ToJsonString());

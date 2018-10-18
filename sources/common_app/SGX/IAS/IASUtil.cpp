@@ -24,10 +24,7 @@ namespace
 	typedef std::function<size_t(char*, size_t, size_t, void*)> cUrlContentCallBackFunc;
 	typedef std::function<size_t(char*, size_t, size_t, void*)> cUrlHeaderCallBackFunc;
 
-	typedef size_t(*cUrlContentCallBack)(char*, size_t, size_t, void*);
-	typedef size_t(*cUrlHeaderCallBack)(char*, size_t, size_t, void*);
-
-	cUrlContentCallBack g_contentCallbackStatic = [](char *ptr, size_t size, size_t nmemb, void *userdata) -> size_t
+	static size_t ContentCallbackStatic(char *ptr, size_t size, size_t nmemb, void *userdata)
 	{
 		cUrlContentCallBackFunc* callbackFunc = static_cast<cUrlContentCallBackFunc*>(userdata);
 		if (!callbackFunc)
@@ -35,9 +32,9 @@ namespace
 			return 0;
 		}
 		return (*callbackFunc)(ptr, size, nmemb, nullptr);
-	};
+	}
 
-	cUrlHeaderCallBack g_headerCallbackStatic = [](char *ptr, size_t size, size_t nitems, void *userdata) -> size_t
+	static size_t HeaderCallbackStatic(char *ptr, size_t size, size_t nitems, void *userdata)
 	{
 		cUrlHeaderCallBackFunc* callbackFunc = static_cast<cUrlHeaderCallBackFunc*>(userdata);
 		if (!callbackFunc)
@@ -45,50 +42,48 @@ namespace
 			return 0;
 		}
 		return (*callbackFunc)(ptr, size, nitems, nullptr);
-	};
-}
+	}
 
-// trim from start (in place)
-static inline std::string& ltrim(std::string &s)
-{
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char ch) 
+	// trim from start (in place)
+	static std::string& ltrim(std::string &s)
 	{
-		return !std::isspace(ch);
-	}));
+		s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char ch) 
+		{
+			return !std::isspace(ch);
+		}));
 
-	return s;
-}
+		return s;
+	}
 
-// trim from end (in place)
-static inline std::string& rtrim(std::string &s)
-{
-	s.erase(std::find_if(s.rbegin(), s.rend(), [](char ch)
+	// trim from end (in place)
+	static std::string& rtrim(std::string &s)
 	{
-		return !std::isspace(ch);
-	}).base(), s.end());
+		s.erase(std::find_if(s.rbegin(), s.rend(), [](char ch)
+		{
+			return !std::isspace(ch);
+		}).base(), s.end());
 
-	return s;
+		return s;
+	}
+
+	static std::string& ParseHeaderLine(std::string& s)
+	{
+		s = s.substr(s.find_first_of(':') + 1);
+		rtrim(ltrim(s));
+		return s;
+	}
+
+	static std::string GetGIDBigEndianStr(const sgx_epid_group_id_t& gid)
+	{
+		const uint8_t(&gidRef)[4] = gid;
+		std::vector<uint8_t> gidcpy(std::rbegin(gidRef), std::rend(gidRef));
+
+		return cppcodec::hex_lower::encode(gidcpy);
+	}
 }
 
-static inline std::string& ParseHeaderLine(std::string& s)
+bool IASUtil::GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList, const std::string& certPath, const std::string& keyPath)
 {
-	s = s.substr(s.find_first_of(':') + 1);
-	rtrim(ltrim(s));
-	return s;
-}
-
-static std::string GetGIDBigEndianStr(const sgx_epid_group_id_t& gid)
-{
-	const uint8_t(&gidRef)[4] = gid;
-	std::vector<uint8_t> gidcpy(std::rbegin(gidRef), std::rend(gidRef));
-
-	return cppcodec::hex_lower::encode(gidcpy);
-}
-
-int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList, const std::string& certPath, const std::string& keyPath)
-{
-	int16_t respCode = -1;
-
 	const std::string iasURL = GetIasUrlHost() + GetIasUrlSigRlPath() + GetGIDBigEndianStr(gid);
 
 	outRevcList = "";
@@ -113,50 +108,43 @@ int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t& gid, std::string &
 	};
 
 	CURL *hnd = curl_easy_init();
+	curl_slist *headers = curl_slist_append(nullptr, "Cache-Control: no-cache");
+	long response_code = 0;
 
-	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "GET");
-	curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str());
-	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
-	curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str());
-	curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
-	curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str());
-	curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM");
-	curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, g_headerCallbackStatic);
-	curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback);
-	curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, g_contentCallbackStatic);
-	curl_easy_setopt(hnd, CURLOPT_WRITEDATA, &contentCallback);
-
-	struct curl_slist *headers = NULL;
-	headers = curl_slist_append(headers, "Cache-Control: no-cache");
-	curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers);
-
-	CURLcode ret = curl_easy_perform(hnd);
-	
-	if (ret == CURLE_OK) {
-		long response_code;
-		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code);
-		respCode = static_cast<int16_t>(response_code);
+	if (hnd == nullptr ||
+		headers == nullptr ||
+		curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "GET") != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM") != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM") != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, &HeaderCallbackStatic) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, &ContentCallbackStatic) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_WRITEDATA, &contentCallback) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers) != CURLE_OK ||
+		curl_easy_perform(hnd) != CURLE_OK ||
+		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code) != CURLE_OK)
+	{
+		curl_slist_free_all(headers);
+		curl_easy_cleanup(hnd);
+		return false;
 	}
 
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(hnd);
-#else
-	respCode = 200;
-#endif // !SIMULATING_ENCLAVE
 
-	return respCode;
+	return response_code == 200;
+#else
+	return true;
+#endif // !SIMULATING_ENCLAVE
 }
 
-//int16_t IASUtil::GetRevocationList(const sgx_epid_group_id_t & gid, std::string & outRevcList)
-//{
-//	return GetRevocationList(gid, outRevcList, GetDefaultCertPath(), GetDefaultKeyPath());
-//}
-
-int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert, const std::string & certPath, const std::string & keyPath)
+bool IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert, const std::string & certPath, const std::string & keyPath)
 {
-	int16_t respCode = -1;
-
 	const std::string iasURL = GetIasUrlHost() + GetIasUrlReportPath();
 
 	outReport = "";
@@ -189,41 +177,46 @@ int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & o
 	};
 
 	CURL *hnd = curl_easy_init();
+	curl_slist *headers = curl_slist_append(nullptr, "Cache-Control: no-cache");
+	long response_code = 0;
 
-	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST");
-	curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str());
-	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
-	curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str());
-	curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
-	curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str());
-	curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM");
-	curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, g_headerCallbackStatic);
-	curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback);
-	curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, g_contentCallbackStatic);
-	curl_easy_setopt(hnd, CURLOPT_WRITEDATA, &contentCallback);
-	curl_easy_setopt(hnd, CURLOPT_POSTFIELDS, jsonReqBody.c_str());
-
-	struct curl_slist *headers = NULL;
-	headers = curl_slist_append(headers, "Cache-Control: no-cache");
-	headers = curl_slist_append(headers, "Content-Type: application/json");
-	curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers);
-
-	CURLcode ret = curl_easy_perform(hnd);
-
-	if (ret == CURLE_OK) {
-		long response_code;
-		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code);
-		respCode = static_cast<int16_t>(response_code);
-		
+	if (hnd == nullptr ||
+		headers == nullptr ||
+		(headers = curl_slist_append(headers, "Content-Type: application/json")) == nullptr ||
+		curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST") != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM") != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM") != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, &HeaderCallbackStatic) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, &ContentCallbackStatic) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_WRITEDATA, &contentCallback) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_POSTFIELDS, jsonReqBody.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers) != CURLE_OK ||
+		curl_easy_perform(hnd) != CURLE_OK ||
+		curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code) != CURLE_OK)
+	{
+		curl_slist_free_all(headers);
+		curl_easy_cleanup(hnd);
+		return false;
+	}
+	
+	{
 		int outLen = 0;
 		char* outStr = curl_easy_unescape(hnd, outCert.c_str(), static_cast<int>(outCert.length()), &outLen);
 		outCert = std::string(outStr, outLen);
-		delete outStr;
+		std::free(outStr);
 	}
 
 	curl_slist_free_all(headers);
 	curl_easy_cleanup(hnd);
+
+	return response_code == 200;
+
 #else
 	Json::Value jsonRoot;
 	Json::CharReaderBuilder rbuilder;
@@ -247,16 +240,9 @@ int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & o
 
 	outReport = reportJson.toStyledString();
 
-	respCode = 200;
+	return true;
 #endif // !SIMULATING_ENCLAVE
-
-	return respCode;
 }
-
-//int16_t IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & outReport, std::string & outSign, std::string & outCert)
-//{
-//	return GetQuoteReport(jsonReqBody, outReport, outSign, outCert, GetDefaultCertPath(), GetDefaultKeyPath());
-//}
 
 std::string IASUtil::GetDefaultIasDirPath()
 {

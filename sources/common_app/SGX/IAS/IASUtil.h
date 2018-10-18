@@ -6,13 +6,9 @@
 
 namespace IASUtil
 {
-	int16_t GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList, const std::string& certPath, const std::string& keyPath);
+	bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string & outRevcList, const std::string& certPath, const std::string& keyPath);
 
-	//int16_t GetRevocationList(const sgx_epid_group_id_t& gid, std::string& outRevcList);
-
-	int16_t GetQuoteReport(const std::string& jsonReqBody, std::string& outReport, std::string& outSign, std::string& outCert, const std::string& certPath, const std::string& keyPath);
-
-	//int16_t GetQuoteReport(const std::string& jsonReqBody, std::string& outReport, std::string& outSign, std::string& outCert);
+	bool GetQuoteReport(const std::string& jsonReqBody, std::string& outReport, std::string& outSign, std::string& outCert, const std::string& certPath, const std::string& keyPath);
 
 	inline std::string GetIasUrlHost()
 	{

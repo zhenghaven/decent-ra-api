@@ -202,8 +202,11 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	enclaveRet = ProcessRAMsg0Resp(senderID, pubKey, false, raCtx, msg1);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg0Resp);
 
-	/*TODO: Safety check here: */
-	int16_t webRet = m_ias->GetRevocationList(msg1.gid, sigRL);
+	bool webRet = m_ias->GetRevocationList(msg1.gid, sigRL);
+	if (!webRet)
+	{
+		throw SGXEnclaveRuntimeException(SGX_ERROR_UNEXPECTED, "ias->GetRevocationList");
+	}
 	std::vector<uint8_t> sigRLData;
 	DeserializeStruct(sigRLData, sigRL);
 	msg2.resize(sizeof(sgx_ra_msg2_t) + sigRLData.size());
@@ -222,10 +225,14 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 
 	sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<sgx_ra_msg3_t*>(msg3.data());
 	Json::Value iasReqRoot;
-	iasReqRoot["isvEnclaveQuote"] = static_cast<std::string>(SerializeStruct(msg3Ref.quote, msg3.size() - sizeof(sgx_ra_msg3_t)));
+	iasReqRoot["isvEnclaveQuote"] = SerializeStruct(msg3Ref.quote, msg3.size() - sizeof(sgx_ra_msg3_t));
 	iasReqRoot["nonce"] = iasNonce;
-	/*TODO: Safety check here: */
+
 	webRet = m_ias->GetQuoteReport(iasReqRoot.toStyledString(), iasReport, reportSign, reportCertChain);
+	if (!webRet)
+	{
+		throw SGXEnclaveRuntimeException(SGX_ERROR_UNEXPECTED, "ias->GetQuoteReport");
+	}
 
 	enclaveRet = ProcessRAMsg3(senderID, msg3, iasReport, reportSign, reportCertChain, msg4, msg4Sign, &oriReportData);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::ProcessRAMsg3);
