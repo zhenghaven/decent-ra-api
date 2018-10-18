@@ -17,8 +17,9 @@ class SharedObject;
 
 class LocalAcceptor;
 struct LocalSessionStruct;
+struct LocalMessageQueue;
 
-class LocalConnection : virtual public Connection
+class LocalConnection : public Connection
 {
 public:
 	static Connection* Connect(const std::string& serverName);
@@ -34,17 +35,8 @@ public:
 	LocalConnection& operator=(LocalConnection&& other);
 
 	virtual size_t SendRaw(const void* const dataPtr, const size_t size) override;
-	virtual size_t Send(const Messages& msg) override;
-	virtual size_t Send(const std::string& msg) override;
-	virtual size_t Send(const Json::Value& msg) override;
-	virtual size_t Send(const std::vector<uint8_t>& msg) override;
-	virtual size_t Send(const void* const dataPtr, const size_t size) override;
 
 	virtual size_t ReceiveRaw(void* const bufPtr, const size_t size) override;
-	virtual size_t Receive(std::string& msg) override;
-	virtual size_t Receive(Json::Value& msg) override;
-	virtual size_t Receive(std::vector<uint8_t>& msg) override;
-	virtual size_t Receive(char*& dest) override;
 
 	virtual bool IsTerminate() const noexcept;
 
@@ -52,9 +44,13 @@ public:
 
 private:
 	LocalConnection(const std::string& sessionId);
-	LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs) noexcept;
+	LocalConnection(const std::pair<
+		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
+		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> >& sharedObjs) noexcept;
 
 private:
-	std::shared_ptr<SharedObject<LocalSessionStruct> > m_inSharedObj;
-	std::shared_ptr<SharedObject<LocalSessionStruct> > m_outSharedObj;
+	std::unique_ptr<SharedObject<LocalSessionStruct> > m_inSharedObj;
+	std::unique_ptr<SharedObject<LocalSessionStruct> > m_outSharedObj;
+	std::unique_ptr<LocalMessageQueue> m_inMsgQ;
+	std::unique_ptr<LocalMessageQueue> m_outMsgQ;
 };

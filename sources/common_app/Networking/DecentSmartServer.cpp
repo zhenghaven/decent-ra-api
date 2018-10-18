@@ -160,7 +160,7 @@ void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, s
 			Json::Value jsonRoot;
 			try
 			{
-				connectionPtr->Receive(jsonRoot);
+				connectionPtr->ReceivePack(jsonRoot);
 				isEnded = !(handler->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connectionPtr));
 			}
 			catch (const std::exception&)

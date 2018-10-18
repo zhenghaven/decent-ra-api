@@ -8,74 +8,74 @@
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <boost/interprocess/ipc/message_queue.hpp>
 
 #include "../Common.h"
 
 template<typename T>
 class SharedObject
 {
-public:
-	SharedObject(const std::string& objName, const bool isCreate) :
-		m_isOwner(isCreate)
+private:
+	static boost::interprocess::shared_memory_object ConstructObj(const std::string& objName, const bool isCreate)
 	{
 		if (isCreate)
 		{
 			shared_memory_object::remove(objName.c_str());
-			m_sharedObj = new boost::interprocess::shared_memory_object(create_only, objName.c_str(), read_write);
-			m_sharedObj->truncate(sizeof(T));
+			boost::interprocess::shared_memory_object retObj(create_only, objName.c_str(), read_write);
+			retObj.truncate(sizeof(T));
 			LOGI("Created shared object, %s.\n", objName.c_str());
+			return std::move(retObj);
 		}
 		else
 		{
-			m_sharedObj = new boost::interprocess::shared_memory_object(open_only, objName.c_str(), read_write);
+			boost::interprocess::shared_memory_object retObj(open_only, objName.c_str(), read_write);
+			return std::move(retObj);
 		}
+	}
 
-		m_mapReg = new mapped_region(*m_sharedObj, read_write);
+	static boost::interprocess::mapped_region ContructMap(const boost::interprocess::shared_memory_object& sharedObj)
+	{
+		return boost::interprocess::mapped_region(sharedObj, read_write);
+	}
 
-		if (isCreate)
-		{
-			m_objPtr = new (m_mapReg->get_address()) T;
-		}
-		else
-		{
-			m_objPtr = static_cast<T*>(m_mapReg->get_address());
-		}
+public:
+	SharedObject(const std::string& objName, const bool isCreate) :
+		m_sharedObj(ConstructObj(objName, isCreate)),
+		m_mapReg(ContructMap(m_sharedObj)),
+		m_objPtr(isCreate ? (new (m_mapReg.get_address()) T) : static_cast<T*>(m_mapReg.get_address())),
+		m_isOwner(isCreate)
+	{
 	}
 
 	SharedObject(const SharedObject& other) = delete;
-	SharedObject(SharedObject&& other) = delete;
-	//SharedObject(SharedObject&& other) noexcept :
-	//	m_sharedObj(other.m_sharedObj),
-	//	m_mapReg(other.m_mapReg),
-	//	m_objPtr(other.m_objPtr),
-	//	m_isOwner(other.m_isOwner)
-	//{
-	//	other.m_sharedObj = nullptr;
-	//	other.m_mapReg = nullptr;
-	//	other.m_objPtr = nullptr;
-	//	other.m_isOwner = false;
-	//}
-
-	T& GetObject()
+	SharedObject(SharedObject&& other) :
+		m_sharedObj(std::move(other.m_sharedObj)),
+		m_mapReg(std::move(other.m_mapReg)),
+		m_objPtr(other.m_objPtr),
+		m_isOwner(other.m_isOwner)
 	{
-		return *m_objPtr;
+		other.m_objPtr = nullptr;
+		other.m_isOwner = false;
 	}
 
-	const T& GetObject() const
-	{
-		return *m_objPtr;
-	}
+	T& GetObject() { return *m_objPtr; }
+
+	const T& GetObject() const { return *m_objPtr; }
 
 	~SharedObject()
 	{
 		std::string objName;
 		if (m_isOwner)
 		{
-			objName = m_sharedObj->get_name();
+			objName = m_sharedObj.get_name();
 		}
 		
-		delete m_sharedObj;
-		delete m_mapReg;
+		{
+			boost::interprocess::shared_memory_object tmpObj;
+			boost::interprocess::mapped_region tmpMap;
+			tmpObj.swap(m_sharedObj);
+			tmpMap.swap(m_mapReg);
+		}
 
 		if (m_isOwner)
 		{
@@ -84,14 +84,9 @@ public:
 		}
 	}
 
-	//bool IsValid() const
-	//{
-	//	return m_objPtr && m_mapReg;
-	//}
-
 private:
-	boost::interprocess::shared_memory_object* m_sharedObj;
-	boost::interprocess::mapped_region* m_mapReg;
+	boost::interprocess::shared_memory_object m_sharedObj;
+	boost::interprocess::mapped_region m_mapReg;
 	T* m_objPtr;
 	bool m_isOwner;
 };
@@ -99,11 +94,10 @@ private:
 struct LocalConnectStruct
 {
 private:
-	//std::atomic<uint8_t> m_isClosed;
 	volatile uint8_t m_isClosed;
 
 public:
-	enum { UUID_STR_LEN = (16 * 2) + 1 };
+	static constexpr size_t UUID_STR_LEN = (16 * 2) + 1;
 
 
 	boost::interprocess::interprocess_mutex m_connectLock;
@@ -113,58 +107,102 @@ public:
 	boost::interprocess::interprocess_condition m_idReadySignal;
 
 	char m_msg[UUID_STR_LEN];
+	volatile uint8_t m_isMsgReady;
 
 	LocalConnectStruct() noexcept :
 		m_isClosed(false),
-		m_msg{ 0 }
+		m_msg{ 0 },
+		m_isMsgReady(false)
 	{}
 
-	void SetClose() volatile noexcept
-	{
-		m_isClosed = 1;
-	}
+	void SetClose() volatile noexcept { m_isClosed = 1; }
 
-	bool IsClosed() const volatile noexcept
-	{
-		return m_isClosed;
-	}
+	bool IsClosed() const volatile noexcept { return m_isClosed; }
 };
 
 struct LocalSessionStruct
 {
 private:
-	//std::atomic<uint8_t> m_isClosed;
 	volatile uint8_t m_isClosed;
 
 public:
-	enum { MSG_SIZE = 65536 };
+	static constexpr size_t MSG_SIZE = 5;
+	static constexpr char const NAME_S2C_POSTFIX[] = "S2C_S";
+	static constexpr char const NAME_C2S_POSTFIX[] = "C2S_S";
 
 	boost::interprocess::interprocess_mutex m_msgLock;
-	boost::interprocess::interprocess_condition m_emptySignal;
 	boost::interprocess::interprocess_condition m_readySignal;
 
 	volatile uint8_t m_isMsgReady;
-	volatile uint64_t m_totalSize;
-	volatile uint32_t m_sentSize;
-	uint8_t m_msg[MSG_SIZE];
 
 	LocalSessionStruct() noexcept:
 		m_isClosed(false),
-		m_isMsgReady(false),
-		m_totalSize(0),
-		m_sentSize(0),
-		m_msg{ 0 }
+		m_isMsgReady(false)
 	{
-		static_assert(sizeof(m_sentSize) < MSG_SIZE, "The MSG_SIZE must not exceed the size of m_sentSize!");
 	}
 
-	void SetClose() volatile noexcept
+	void SetClose() volatile noexcept { m_isClosed = 1; }
+
+	bool IsClosed() const volatile noexcept { return m_isClosed; }
+};
+
+struct LocalMessageQueue
+{
+private:
+	static boost::interprocess::message_queue* ConstructQueue(const std::string& name, const bool isOwner)
 	{
-		m_isClosed = 1;
+		if (isOwner)
+		{
+			boost::interprocess::message_queue::remove(name.c_str());
+			LOGI("Created msg queue, %s.\n", name.c_str());
+			return new boost::interprocess::message_queue(boost::interprocess::create_only, name.c_str(),
+				MSG_SIZE, sizeof(uint8_t));
+		}
+		else
+		{
+			return new boost::interprocess::message_queue(boost::interprocess::open_only, name.c_str());
+		}
 	}
 
-	bool IsClosed() const volatile noexcept
+	boost::interprocess::message_queue* m_msgQ;
+	bool m_isOwner;
+	std::string m_name;
+
+public:
+	static constexpr unsigned int DEFAULT_PRIORITY = 0;
+	static constexpr size_t CHUNK_SIZE = sizeof(uint8_t);
+	static constexpr size_t MSG_SIZE = LocalSessionStruct::MSG_SIZE;
+	static constexpr char const NAME_S2C_POSTFIX[] = "S2C_M";
+	static constexpr char const NAME_C2S_POSTFIX[] = "C2S_M";
+
+	LocalMessageQueue(const std::string& name, const bool isOwner) :
+		m_msgQ(ConstructQueue(name, isOwner)),
+		m_isOwner(isOwner),
+		m_name(name)
 	{
-		return m_isClosed;
 	}
+
+	LocalMessageQueue(const LocalMessageQueue& other) = delete;
+	LocalMessageQueue(LocalMessageQueue&& other) :
+		m_msgQ(other.m_msgQ),
+		m_isOwner(other.m_isOwner),
+		m_name(std::move(other.m_name))
+	{
+		other.m_msgQ = nullptr;
+		m_isOwner = false;
+	}
+
+	~LocalMessageQueue()
+	{
+		delete m_msgQ;
+
+		if (m_isOwner)
+		{
+			bool isClosed = boost::interprocess::message_queue::remove(m_name.c_str());
+			LOGI("Attempted to close msg queue, %s - %s!\n", m_name.c_str(), isClosed ? "Successful!" : "Failed!");
+		}
+	}
+
+	boost::interprocess::message_queue& GetQ() { return *m_msgQ; }
+	const boost::interprocess::message_queue& GetQ() const { return *m_msgQ; }
 };

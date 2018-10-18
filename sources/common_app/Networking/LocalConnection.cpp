@@ -25,27 +25,47 @@ using namespace boost::interprocess;
 								   throw ConnectionClosedException();\
 								   }
 
+
+template<typename PrForWait, typename PrForThrow>
+static void TimedWait(interprocess_condition& cond, scoped_lock<interprocess_mutex>& lock, PrForWait prWait, PrForThrow prThrow)
+{
+	boost::posix_time::ptime timeout;
+	do
+	{
+		timeout = microsec_clock::universal_time() + boost::posix_time::milliseconds(2000);
+	} while (!cond.timed_wait(lock, timeout, prWait));
+	
+	CONNECTION_CLOSED_CHECK(prThrow());
+}
+
 Connection* LocalConnection::Connect(const std::string & serverName)
 {
-	std::shared_ptr<SharedObject<LocalConnectStruct> > sharedAcc(std::make_shared<SharedObject<LocalConnectStruct> >(serverName, false));
+	std::unique_ptr<SharedObject<LocalConnectStruct> > sharedAcc(new SharedObject<LocalConnectStruct>(serverName, false));
 
-	scoped_lock<interprocess_mutex> connectlock(sharedAcc->GetObject().m_connectLock);
-	scoped_lock<interprocess_mutex> writelock(sharedAcc->GetObject().m_writeLock);
+	LocalConnectStruct& objRef = sharedAcc->GetObject();
 
-	sharedAcc->GetObject().m_connectSignal.notify_one();
+	scoped_lock<interprocess_mutex> connectlock(objRef.m_connectLock);
+	scoped_lock<interprocess_mutex> writelock(objRef.m_writeLock);
 
-	CONNECTION_CLOSED_CHECK(sharedAcc->GetObject().IsClosed());
-	sharedAcc->GetObject().m_idReadySignal.wait(writelock);
-	CONNECTION_CLOSED_CHECK(sharedAcc->GetObject().IsClosed());
+	objRef.m_connectSignal.notify_one();
+
+	TimedWait(objRef.m_idReadySignal, writelock, [&objRef]() -> bool {
+		return objRef.IsClosed() || objRef.m_isMsgReady;
+	}, [&objRef]() -> bool {
+		return objRef.IsClosed();
+	});
 
 	std::string sessionId(sharedAcc->GetObject().m_msg);
+	objRef.m_isMsgReady = false;
 
 	return new LocalConnection(sessionId);
 }
 
 LocalConnection::LocalConnection(const std::string & sessionId) :
-	m_inSharedObj(std::make_shared<SharedObject<LocalSessionStruct> >((sessionId + "S2C"), false)),
-	m_outSharedObj(std::make_shared<SharedObject<LocalSessionStruct> >((sessionId + "C2S"), false))
+	m_inSharedObj(new SharedObject<LocalSessionStruct>((sessionId + LocalSessionStruct::NAME_S2C_POSTFIX), false)),
+	m_outSharedObj(new SharedObject<LocalSessionStruct>((sessionId + LocalSessionStruct::NAME_C2S_POSTFIX), false)),
+	m_inMsgQ(new LocalMessageQueue(sessionId + LocalMessageQueue::NAME_S2C_POSTFIX, false)),
+	m_outMsgQ(new LocalMessageQueue(sessionId + LocalMessageQueue::NAME_C2S_POSTFIX, false))
 {
 }
 
@@ -54,15 +74,21 @@ LocalConnection::LocalConnection(LocalAcceptor & acceptor) :
 {
 }
 
-LocalConnection::LocalConnection(const std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > >& sharedObjs) noexcept :
-	m_inSharedObj(std::move(sharedObjs.first)),
-	m_outSharedObj(std::move(sharedObjs.second))
+LocalConnection::LocalConnection(const std::pair<
+	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
+	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> >& sharedObjs) noexcept :
+	m_inSharedObj(sharedObjs.first.first),
+	m_outSharedObj(sharedObjs.second.first),
+	m_inMsgQ(sharedObjs.first.second),
+	m_outMsgQ(sharedObjs.second.second)
 {
 }
 
 LocalConnection::LocalConnection(LocalConnection && other) noexcept:
 	m_inSharedObj(std::move(other.m_inSharedObj)),
-	m_outSharedObj(std::move(other.m_outSharedObj))
+	m_outSharedObj(std::move(other.m_outSharedObj)),
+	m_inMsgQ(std::move(other.m_inMsgQ)),
+	m_outMsgQ(std::move(other.m_outMsgQ))
 {
 }
 
@@ -83,224 +109,70 @@ LocalConnection & LocalConnection::operator=(LocalConnection && other)
 
 size_t LocalConnection::SendRaw(const void * const dataPtr, const size_t size)
 {
-	return 0;
-}
+	LocalSessionStruct& dataRef = m_outSharedObj->GetObject();
+	size_t totalSentSize = 0;
 
-size_t LocalConnection::Send(const Messages & msg)
-{
-	return Send(msg.ToJsonString());
-}
-
-size_t LocalConnection::Send(const std::string & msg)
-{
-	size_t sentSize = Send(msg.data(), msg.size());
-	//LOGI("Sent Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(sentSize), msg.c_str());
-	return sentSize;
-}
-
-size_t LocalConnection::Send(const Json::Value & msg)
-{
-	return Send(msg.toStyledString());
-}
-
-size_t LocalConnection::Send(const std::vector<uint8_t>& msg)
-{
-	size_t sentSize = Send(msg.data(), msg.size());
-	//LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(sentSize));
-	return sentSize;
-}
-
-size_t LocalConnection::Send(const void * const dataPtr, const size_t size)
-{
-	uint64_t sentSize = 0;
-	const uint8_t* const bytePtr = static_cast<const uint8_t*>(dataPtr);
-
-	std::shared_ptr<SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj);
-	LocalSessionStruct& m_dataRef = outSharedObj->GetObject();
-
-	while (sentSize < size)
 	{
-		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
-		if (m_dataRef.m_isMsgReady)
+		scoped_lock<interprocess_mutex> writelock(dataRef.m_msgLock);
+		CONNECTION_CLOSED_CHECK(dataRef.IsClosed());
+
+		//size_t sizeToSent = LocalMessageQueue::MSG_SIZE - m_outMsgQ->GetQ().get_num_msg();
+		//sizeToSent = size < sizeToSent ? size : sizeToSent;
+
+		bool sentRes = true;
+
+		while (totalSentSize < size && sentRes)
 		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
-			m_dataRef.m_emptySignal.wait(writelock);
+			sentRes = m_outMsgQ->GetQ().try_send(reinterpret_cast<const uint8_t*>(dataPtr) + totalSentSize,
+				LocalMessageQueue::CHUNK_SIZE, LocalMessageQueue::DEFAULT_PRIORITY);
+
+			totalSentSize += LocalMessageQueue::CHUNK_SIZE;
 		}
-		CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
+		totalSentSize -= sentRes ? 0 : LocalMessageQueue::CHUNK_SIZE;
 
-		m_dataRef.m_totalSize = static_cast<uint64_t>(size) - sentSize;
-		m_dataRef.m_sentSize = m_dataRef.m_totalSize < LocalSessionStruct::MSG_SIZE ? static_cast<uint32_t>(m_dataRef.m_totalSize) : LocalSessionStruct::MSG_SIZE;
-
-		std::memcpy(m_dataRef.m_msg, bytePtr + sentSize, m_dataRef.m_sentSize);
-		sentSize += m_dataRef.m_sentSize;
-		m_dataRef.m_isMsgReady = true;
-
-		m_dataRef.m_readySignal.notify_one();
+		dataRef.m_isMsgReady = true;
 	}
 
-	return sentSize;
+	dataRef.m_readySignal.notify_one();
+	return totalSentSize;
 }
 
 size_t LocalConnection::ReceiveRaw(void * const bufPtr, const size_t size)
 {
-	return 0;
-}
+	LocalSessionStruct& dataRef = m_inSharedObj->GetObject();
 
-size_t LocalConnection::Receive(std::string & msg)
-{
-	uint64_t recvSize = 0;
-	uint64_t totalSize = 0;
-
-	std::shared_ptr<SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
-	LocalSessionStruct& m_dataRef = inSharedObj->GetObject();
-
+	scoped_lock<interprocess_mutex> writelock(dataRef.m_msgLock); 
+	if (!dataRef.m_isMsgReady)
 	{
-		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
-		if (!m_dataRef.m_isMsgReady)
-		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
-			m_dataRef.m_readySignal.wait(writelock);
-		}
-		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
-		totalSize = m_dataRef.m_totalSize;
-		msg.resize(totalSize);
-
-		std::memcpy(&msg[recvSize], m_dataRef.m_msg, m_dataRef.m_sentSize);
-		recvSize += m_dataRef.m_sentSize;
-		m_dataRef.m_isMsgReady = false;
-
-		m_dataRef.m_emptySignal.notify_one();
+		TimedWait(dataRef.m_readySignal, writelock, [&dataRef]() -> bool {
+			return dataRef.IsClosed() || dataRef.m_isMsgReady;
+		}, [&dataRef]() -> bool {
+			return dataRef.IsClosed();
+		});
 	}
 
-	while (recvSize < totalSize)
+	unsigned int priority = 0;
+	size_t recvSize = 0;
+	size_t totalRecvSize = 0;
+	bool recvRes = true;
+
+	while (totalRecvSize < size && recvRes)
 	{
-		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
-		if (!m_dataRef.m_isMsgReady)
-		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
-			m_dataRef.m_readySignal.wait(writelock);
-		}
-		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
+		recvRes = m_inMsgQ->GetQ().try_receive(reinterpret_cast<uint8_t*>(bufPtr) + totalRecvSize, LocalMessageQueue::CHUNK_SIZE,
+			recvSize, priority);
 
-		std::memcpy(&msg[recvSize], m_dataRef.m_msg, m_dataRef.m_sentSize);
-		recvSize += m_dataRef.m_sentSize;
-		m_dataRef.m_isMsgReady = false;
-
-		m_dataRef.m_emptySignal.notify_one();
+		totalRecvSize += recvSize;
 	}
+	totalRecvSize -= recvRes ? 0 : recvSize;
 
-	//LOGI("Recv Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(recvSize), msg.c_str());
-	return recvSize;
-}
+	dataRef.m_isMsgReady = false;
 
-size_t LocalConnection::Receive(Json::Value & msg)
-{
-	std::string buffer;
-	size_t res = Receive(buffer);
-	bool isValid = ParseStr2Json(msg, buffer);
-	return isValid ? res : 0;
-}
-
-size_t LocalConnection::Receive(std::vector<uint8_t>& msg)
-{
-	uint64_t recvSize = 0;
-	uint64_t totalSize = 0;
-
-	std::shared_ptr<SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
-	LocalSessionStruct& m_dataRef = inSharedObj->GetObject();
-
-	{
-		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
-		if (!m_dataRef.m_isMsgReady)
-		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
-			m_dataRef.m_readySignal.wait(writelock);
-		}
-		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
-		totalSize = m_dataRef.m_totalSize;
-		msg.resize(totalSize);
-
-		std::memcpy(&msg[recvSize], m_dataRef.m_msg, m_dataRef.m_sentSize);
-		recvSize += m_dataRef.m_sentSize;
-		m_dataRef.m_isMsgReady = false;
-
-		m_dataRef.m_emptySignal.notify_one();
-	}
-
-	while (recvSize < totalSize)
-	{
-		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
-		if (!m_dataRef.m_isMsgReady)
-		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
-			m_dataRef.m_readySignal.wait(writelock);
-		}
-		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
-
-		std::memcpy(&msg[recvSize], m_dataRef.m_msg, m_dataRef.m_sentSize);
-		recvSize += m_dataRef.m_sentSize;
-		m_dataRef.m_isMsgReady = false;
-
-		m_dataRef.m_emptySignal.notify_one();
-	}
-
-	//LOGI("Recv Binary with size %llu\n", recvSize);
-	return recvSize;
-}
-
-size_t LocalConnection::Receive(char *& dest)
-{
-	uint64_t recvSize = 0;
-	uint64_t totalSize = 0;
-
-	std::shared_ptr<SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
-	LocalSessionStruct& m_dataRef = inSharedObj->GetObject();
-
-	{
-		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
-		if (!m_dataRef.m_isMsgReady)
-		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
-			m_dataRef.m_readySignal.wait(writelock);
-		}
-		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
-		totalSize = m_dataRef.m_totalSize;
-		dest = new char[totalSize];
-
-		std::memcpy(dest + recvSize, m_dataRef.m_msg, m_dataRef.m_sentSize);
-		recvSize += m_dataRef.m_sentSize;
-		m_dataRef.m_isMsgReady = false;
-
-		m_dataRef.m_emptySignal.notify_one();
-	}
-
-	while (recvSize < totalSize)
-	{
-		scoped_lock<interprocess_mutex> writelock(m_dataRef.m_msgLock);
-		if (!m_dataRef.m_isMsgReady)
-		{
-			CONNECTION_CLOSED_CHECK(m_dataRef.IsClosed());
-			m_dataRef.m_readySignal.wait(writelock);
-		}
-		CONNECTION_CLOSED_CHECK(!m_dataRef.m_isMsgReady);
-
-		std::memcpy(dest + recvSize, m_dataRef.m_msg, m_dataRef.m_sentSize);
-		recvSize += m_dataRef.m_sentSize;
-		m_dataRef.m_isMsgReady = false;
-
-		m_dataRef.m_emptySignal.notify_one();
-	}
-
-	//LOGI("Recv Binary with size %llu\n", recvSize);
-	return recvSize;
+	return totalRecvSize;
 }
 
 bool LocalConnection::IsTerminate() const noexcept
 {
-	std::shared_ptr<const SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj); //noexcept based on cppreference.
-	std::shared_ptr<const SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj); //noexcept
-	
-	return (!inSharedObj || inSharedObj->GetObject().IsClosed()) && (!outSharedObj || inSharedObj->GetObject().IsClosed()); //noexcept
+	return (!m_inSharedObj || m_inSharedObj->GetObject().IsClosed()) && (!m_outSharedObj || m_outSharedObj->GetObject().IsClosed()); //noexcept
 }
 
 void LocalConnection::Terminate() noexcept
@@ -310,20 +182,15 @@ void LocalConnection::Terminate() noexcept
 		return;
 	}
 
-	std::shared_ptr<SharedObject<LocalSessionStruct> > inSharedObj = std::atomic_load(&m_inSharedObj);
-	std::shared_ptr<SharedObject<LocalSessionStruct> > outSharedObj = std::atomic_load(&m_outSharedObj);
-
-	if (inSharedObj)
+	if (m_inSharedObj)
 	{
-		inSharedObj->GetObject().SetClose();
-		inSharedObj->GetObject().m_emptySignal.notify_all();
-		inSharedObj->GetObject().m_readySignal.notify_all();
+		m_inSharedObj->GetObject().SetClose();
+		m_inSharedObj->GetObject().m_readySignal.notify_all();
 	}
 
-	if (outSharedObj)
+	if (m_outSharedObj)
 	{
-		outSharedObj->GetObject().SetClose();
-		outSharedObj->GetObject().m_emptySignal.notify_all();
-		outSharedObj->GetObject().m_readySignal.notify_all();
+		m_outSharedObj->GetObject().SetClose();
+		m_outSharedObj->GetObject().m_readySignal.notify_all();
 	}
 }

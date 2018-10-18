@@ -83,28 +83,45 @@ void LocalAcceptor::Terminate() noexcept
 	}
 }
 
-std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >, std::shared_ptr<SharedObject<LocalSessionStruct> > > LocalAcceptor::Accept()
+std::pair<
+	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
+	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> > LocalAcceptor::Accept()
 {
+	std::pair<
+		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
+		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> > emptyRet(std::make_pair(nullptr, nullptr), std::make_pair(nullptr, nullptr));
 	if (m_isTerminated)
 	{
-		return std::make_pair(nullptr, nullptr);
+		return emptyRet;
 	}
 
 	std::shared_ptr<SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
 
-	scoped_lock<interprocess_mutex> lock(obj->GetObject().m_writeLock);
+	std::unique_ptr<SharedObject<LocalSessionStruct> > sharedObj_s2c;
+	std::unique_ptr<SharedObject<LocalSessionStruct> > sharedObj_c2s;
+	std::unique_ptr<LocalMessageQueue> msgQ_s2c;
+	std::unique_ptr<LocalMessageQueue> msgQ_c2s;
 
-	obj->GetObject().m_connectSignal.wait(lock);
+	{
+		scoped_lock<interprocess_mutex> lock(obj->GetObject().m_writeLock);
+		obj->GetObject().m_connectSignal.wait(lock);
 
-	std::string uuid = GenerateSessionId();
+		std::string uuid = GenerateSessionId();
 
-	std::shared_ptr<SharedObject<LocalSessionStruct> > sharedObj_s2c(std::make_shared<SharedObject<LocalSessionStruct> >((uuid + "S2C"), true));
-	std::shared_ptr<SharedObject<LocalSessionStruct> > sharedObj_c2s(std::make_shared<SharedObject<LocalSessionStruct> >((uuid + "C2S"), true));
+		sharedObj_s2c.reset(new SharedObject<LocalSessionStruct>((uuid + LocalSessionStruct::NAME_S2C_POSTFIX), true));
+		sharedObj_c2s.reset(new SharedObject<LocalSessionStruct>((uuid + LocalSessionStruct::NAME_C2S_POSTFIX), true));
+		msgQ_s2c.reset(new LocalMessageQueue((uuid + LocalMessageQueue::NAME_S2C_POSTFIX), true));
+		msgQ_c2s.reset(new LocalMessageQueue((uuid + LocalMessageQueue::NAME_C2S_POSTFIX), true));
 
-	std::memcpy(obj->GetObject().m_msg, uuid.c_str(), sizeof(obj->GetObject().m_msg));
+		std::memcpy(obj->GetObject().m_msg, uuid.c_str(), sizeof(obj->GetObject().m_msg));
+		obj->GetObject().m_isMsgReady = true;
+	}
+
 	obj->GetObject().m_idReadySignal.notify_one();
 
-	return std::make_pair(sharedObj_c2s, sharedObj_s2c);
+	return std::make_pair(
+		std::make_pair(sharedObj_c2s.release(), msgQ_c2s.release()),
+		std::make_pair(sharedObj_s2c.release(), msgQ_s2c.release()));
 }
 
 LocalServer::LocalServer(const std::string & serverName) :

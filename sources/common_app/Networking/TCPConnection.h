@@ -7,19 +7,25 @@
 #include <memory>
 #include <cstdint>
 
-#include <boost/asio/ip/tcp.hpp>
+//#include <boost/asio/ip/tcp.hpp>
 
-namespace boost {
-	namespace asio {
+namespace boost 
+{
+	namespace asio 
+	{
 		class io_context;
 		typedef io_context io_service;
 		template <typename Protocol> class basic_socket_acceptor;
-		//namespace ip {
-		//	class tcp;
-		//	typedef basic_socket_acceptor<tcp> acceptor;
-		//}
+		template <typename Protocol> class basic_stream_socket;
+		namespace ip 
+		{
+			class tcp;
+			//typedef basic_socket_acceptor<tcp> acceptor;
+			//typedef basic_stream_socket<tcp> socket;
+		} // namespace ip
 	} // namespace asio
 } // namespace boost
+
 
 namespace Json
 {
@@ -28,26 +34,20 @@ namespace Json
 
 class Messages;
 
-class TCPConnection : virtual public Connection
+class TCPConnection : public Connection
 {
 public:
+	typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp> TcpSocketType;
+	typedef boost::asio::basic_socket_acceptor<boost::asio::ip::tcp> TcpAcceptorType;
+	
 	TCPConnection() = delete;
-	TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor& acceptor);
+	TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, TcpAcceptorType& acceptor);
 	TCPConnection(uint32_t ipAddr, uint16_t portNum);
 	virtual ~TCPConnection() noexcept;
 
 	virtual size_t SendRaw(const void* const dataPtr, const size_t size) override;
-	virtual size_t Send(const Messages& msg) override;
-	virtual size_t Send(const std::string& msg) override;
-	virtual size_t Send(const Json::Value& msg) override;
-	virtual size_t Send(const std::vector<uint8_t>& msg) override;
-	virtual size_t Send(const void* const dataPtr, const size_t size) override;
 
 	virtual size_t ReceiveRaw(void* const bufPtr, const size_t size) override;
-	virtual size_t Receive(std::string& msg) override;
-	virtual size_t Receive(Json::Value& msg) override;
-	virtual size_t Receive(std::vector<uint8_t>& msg) override;
-	virtual size_t Receive(char*& dest) override;
 
 	virtual void Terminate() noexcept override;
 
@@ -59,5 +59,5 @@ public:
 
 private:
 	std::shared_ptr<boost::asio::io_service> m_ioService;
-	std::unique_ptr<boost::asio::ip::tcp::socket> m_socket;
+	std::unique_ptr<TcpSocketType> m_socket;
 };

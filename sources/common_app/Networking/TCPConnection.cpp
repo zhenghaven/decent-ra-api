@@ -5,15 +5,9 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_service.hpp>
 
-#include <json/json.h>
-
-//#include "../Common.h"
-#include "../Messages.h"
-#include "../../common/JsonTools.h"
-
 using namespace boost::asio;
 
-TCPConnection::TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, boost::asio::ip::tcp::acceptor & acceptor) :
+TCPConnection::TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, TcpAcceptorType & acceptor) :
 	m_ioService(ioService),
 	m_socket(std::make_unique<ip::tcp::socket>(acceptor.accept()))
 {
@@ -37,95 +31,9 @@ size_t TCPConnection::SendRaw(const void * const dataPtr, const size_t size)
 	return res;
 }
 
-size_t TCPConnection::Send(const Messages & msg)
-{
-	return Send(msg.ToJsonString());
-}
-
-size_t TCPConnection::Send(const std::string & msg)
-{
-	size_t sentSize = Send(msg.data(), msg.size());
-	//LOGI("Sent Msg (len=%llu): \n%s\n", static_cast<unsigned long long>(sentSize), msg.c_str());
-	return sentSize;
-}
-
-size_t TCPConnection::Send(const Json::Value & msg)
-{
-	return Send(msg.toStyledString());
-}
-
-size_t TCPConnection::Send(const std::vector<uint8_t>& msg)
-{
-	size_t sentSize = Send(msg.data(), msg.size());
-	//LOGI("Sent Binary with size %llu\n", static_cast<unsigned long long>(sentSize));
-	return sentSize;
-}
-
-size_t TCPConnection::Send(const void * const dataPtr, const size_t size)
-{
-	uint64_t msgSize = static_cast<unsigned long long>(size);
-	std::array<boost::asio::const_buffer, 2> msgBuf = {
-		boost::asio::buffer(&msgSize, sizeof(msgSize)),
-		boost::asio::buffer(dataPtr, size)
-	};
-
-	size_t res = m_socket->send(msgBuf);
-	return res > sizeof(msgSize) ? res - sizeof(msgSize) : 0;
-}
-
 size_t TCPConnection::ReceiveRaw(void * const bufPtr, const size_t size)
 {
 	return m_socket->receive(boost::asio::buffer(bufPtr, size));
-}
-
-size_t TCPConnection::Receive(std::string & msg)
-{
-	uint64_t msgSize = 0;
-	uint64_t receivedSize = 0;
-	m_socket->receive(boost::asio::buffer(&msgSize, sizeof(msgSize)));
-	msg.resize(msgSize);
-	while (receivedSize < msgSize)
-	{
-		receivedSize += m_socket->receive(boost::asio::buffer(&msg[receivedSize], (msgSize - receivedSize)));
-	}
-	//LOGI("Recv Msg (len=%llu): \n%s\n", receivedSize, msg.c_str());
-	return receivedSize;
-}
-
-size_t TCPConnection::Receive(Json::Value & msg)
-{
-	std::string buffer;
-	size_t res = Receive(buffer);
-	bool isValid = ParseStr2Json(msg, buffer);
-	return isValid ? res : 0;
-}
-
-size_t TCPConnection::Receive(std::vector<uint8_t>& msg)
-{
-	uint64_t msgSize = 0;
-	uint64_t receivedSize = 0;
-	m_socket->receive(boost::asio::buffer(&msgSize, sizeof(msgSize)));
-	msg.resize(msgSize);
-	while (receivedSize < msgSize)
-	{
-		receivedSize += m_socket->receive(boost::asio::buffer(&msg[receivedSize], (msgSize - receivedSize)));
-	}
-	//LOGI("Recv Binary with size %llu\n", receivedSize);
-	return receivedSize;
-}
-
-size_t TCPConnection::Receive(char *& dest)
-{
-	uint64_t msgSize = 0;
-	uint64_t receivedSize = 0;
-	m_socket->receive(boost::asio::buffer(&msgSize, sizeof(msgSize)));
-	dest = new char[msgSize];
-	while (receivedSize < msgSize)
-	{
-		receivedSize += m_socket->receive(boost::asio::buffer(dest + receivedSize, (msgSize - receivedSize)));
-	}
-	//LOGI("Recv Binary with size %llu\n", receivedSize);
-	return receivedSize;
 }
 
 void TCPConnection::Terminate() noexcept

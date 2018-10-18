@@ -57,7 +57,7 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 			return std::move(retValue);
 		}
 
-		if (!StaticConnection::Receive(connectionPtr, inMsgBuf) ||
+		if (!StaticConnection::ReceivePack(connectionPtr, inMsgBuf) ||
 			inMsgBuf.size() != sizeof(sgx_dh_msg1_t))
 		{
 			return std::move(retValue);
@@ -73,8 +73,8 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 			}
 		}
 
-		if (!StaticConnection::Send(connectionPtr, outMsgBuf) ||
-			!StaticConnection::Receive(connectionPtr, inMsgBuf) ||
+		if (!StaticConnection::SendPack(connectionPtr, outMsgBuf) ||
+			!StaticConnection::ReceivePack(connectionPtr, inMsgBuf) ||
 			inMsgBuf.size() != sizeof(sgx_dh_msg3_t))
 		{
 			return std::move(retValue);
@@ -106,8 +106,8 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 			}
 		}
 
-		if (!StaticConnection::Send(connectionPtr, outMsgBuf) ||
-			!StaticConnection::Receive(connectionPtr, inMsgBuf) ||
+		if (!StaticConnection::SendPack(connectionPtr, outMsgBuf) ||
+			!StaticConnection::ReceivePack(connectionPtr, inMsgBuf) ||
 			inMsgBuf.size() != sizeof(sgx_dh_msg2_t))
 		{
 			return std::move(retValue);
@@ -122,7 +122,7 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 				return std::move(retValue);
 			}
 		}
-		if (!StaticConnection::Send(connectionPtr, outMsgBuf))
+		if (!StaticConnection::SendPack(connectionPtr, outMsgBuf))
 		{
 			return std::move(retValue);
 		}

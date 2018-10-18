@@ -117,7 +117,7 @@ bool AESGCMCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg
 bool AESGCMCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
 {
 	std::string encrypted;
-	if (!StaticConnection::Receive(connectionPtr, encrypted))
+	if (!StaticConnection::ReceivePack(connectionPtr, encrypted))
 	{
 		return false;
 	}
@@ -131,6 +131,6 @@ bool AESGCMCommLayer::SendMsg(void * const connectionPtr, const std::string & in
 	{
 		return false;
 	}
-	return StaticConnection::Send(connectionPtr, encrypted);
+	return StaticConnection::SendPack(connectionPtr, encrypted);
 }
 

@@ -64,7 +64,7 @@ static const Json::Value SendAndReceiveHandshakeMsg(Connection& connection, SGXE
 	SGXClientRASession::SendHandshakeMessage(connection, enclave);
 
 	std::string msgBuffer;
-	connection.Receive(msgBuffer);
+	connection.ReceivePack(msgBuffer);
 
 	Json::Value jsonRoot;
 	if (!ParseStr2Json(jsonRoot, msgBuffer))
@@ -81,8 +81,7 @@ void SGXClientRASession::SendHandshakeMessage(Connection& connection, SGXEnclave
 	enclave.GetRAClientSignPubKey(signPubKey);
 	std::string senderID = SerializeStruct(signPubKey);
 
-	SGXRAMessage0Send msg0s(senderID, enclave.GetExGroupID());
-	connection.Send(msg0s.ToJsonString());
+	connection.SendPack(SGXRAMessage0Send(senderID, enclave.GetExGroupID()));
 }
 
 bool SGXClientRASession::SmartMsgEntryPoint(Connection& connection, SGXEnclave & enclave, const Json::Value & msg)
@@ -130,28 +129,24 @@ bool SGXClientRASession::ProcessClientSideRA()
 		enclaveRes = m_hwEnclave.ProcessRAMsg0Resp(k_remoteSideId, k_remoteSideSignKey, false, raContextID, msg1Data);
 		if (enclaveRes != SGX_SUCCESS)
 		{
-			m_connection.Send(enclaveErrMsg);
+			m_connection.SendPack(enclaveErrMsg);
 			return false;
 		}
 
-		SGXRAMessage1 msg1(k_senderId, msg1Data);
-
-		m_connection.Send(msg1.ToJsonString());
-		m_connection.Receive(msgBuffer);
+		m_connection.SendPack(SGXRAMessage1(k_senderId, msg1Data));
+		m_connection.ReceivePack(msgBuffer);
 		std::unique_ptr<SGXRAMessage2> msg2(ParseMessageExpected<SGXRAMessage2>(msgBuffer));
 
 		std::vector<uint8_t> msg3Data;
 		enclaveRes = m_hwEnclave.ProcessRAMsg2(msg2->GetSenderID(), msg2->GetMsg2Data(), msg3Data, raContextID);
 		if (enclaveRes != SGX_SUCCESS)
 		{
-			m_connection.Send(enclaveErrMsg);
+			m_connection.SendPack(enclaveErrMsg);
 			return false;
 		}
 
-		SGXRAMessage3 msg3(k_senderId, msg3Data);
-
-		m_connection.Send(msg3.ToJsonString());
-		m_connection.Receive(msgBuffer);
+		m_connection.SendPack(SGXRAMessage3(k_senderId, msg3Data));
+		m_connection.ReceivePack(msgBuffer);
 		std::unique_ptr<SGXRAMessage4> msg4(ParseMessageExpected<SGXRAMessage4>(msgBuffer));
 
 		enclaveRes = m_hwEnclave.ProcessRAMsg4(msg4->GetSenderID(), msg4->GetMsg4Data(), msg4->GetMsg4Signature());
@@ -165,7 +160,7 @@ bool SGXClientRASession::ProcessClientSideRA()
 	catch (const MessageParseException&)
 	{
 		SGXRAClientErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection.Send(errMsg);
+		m_connection.SendPack(errMsg);
 		return false;
 	}
 }

@@ -29,8 +29,7 @@ static inline std::string ConstructSenderID(EnclaveServiceProviderBase & enclave
 
 void DecentRASession::SendHandshakeMessage(Connection& connection, EnclaveServiceProviderBase & enclave)
 {
-	DecentRAHandshake hs(ConstructSenderID(enclave));
-	connection.Send(hs.ToJsonString());
+	connection.SendPack(DecentRAHandshake(ConstructSenderID(enclave)));
 }
 
 bool DecentRASession::SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
@@ -62,7 +61,7 @@ static const DecentRAHandshakeAck SendAndReceiveHandshakeAck(Connection& connect
 	DecentRASession::SendHandshakeMessage(connection, enclave);
 
 	Json::Value jsonMsg;
-	connection.Receive(jsonMsg);
+	connection.ReceivePack(jsonMsg);
 	
 	return DecentRAHandshakeAck(jsonMsg);
 }
@@ -80,9 +79,7 @@ DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderB
 	m_decentEnclave(enclave),
 	k_isServerSide(true)
 {
-	DecentRAHandshakeAck hsAck(k_senderId, enclave.GetDecentSelfRAReport());
-	connection.Send(hsAck.ToJsonString());
-
+	connection.SendPack(DecentRAHandshakeAck(k_senderId, enclave.GetDecentSelfRAReport()));
 }
 
 DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const DecentRAHandshakeAck & ackMsg) :
@@ -120,8 +117,7 @@ bool DecentRASession::ProcessClientSideRA(DecentLogger* logger)
 		return false;
 	}
 
-	DecentProtocolKeyReq keyReq(k_senderId);
-	m_connection.Send(keyReq.ToJsonString());
+	m_connection.SendPack(DecentProtocolKeyReq(k_senderId));
 
 	res = m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection);
 
@@ -145,7 +141,7 @@ bool DecentRASession::ProcessServerSideRA(DecentLogger* logger)
 	}
 
 	Json::Value keyReqJson;
-	m_connection.Receive(keyReqJson);
+	m_connection.ReceivePack(keyReqJson);
 	DecentProtocolKeyReq keyReq(keyReqJson);
 
 	res = m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);

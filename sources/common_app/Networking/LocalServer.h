@@ -19,6 +19,7 @@ class SharedObject;
 
 struct LocalConnectStruct;
 struct LocalSessionStruct;
+struct LocalMessageQueue;
 
 class LocalAcceptor
 {
@@ -34,8 +35,9 @@ public:
 
 	bool IsTerminate() const noexcept;
 
-	std::pair<std::shared_ptr<SharedObject<LocalSessionStruct> >,
-		std::shared_ptr<SharedObject<LocalSessionStruct> > > Accept();
+	std::pair<
+		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
+		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> > Accept();
 
 	void Terminate() noexcept;
 

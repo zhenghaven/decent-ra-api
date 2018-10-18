@@ -54,8 +54,7 @@ DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase
 	k_remoteSideId(hsMsh.GetSenderID()),
 	m_decentEnclave(enclave)
 {
-	DecentAppHandshakeAck hsAck(k_senderId, enclave.GetDecentSelfRAReport());
-	connection.Send(hsAck);
+	connection.SendPack(DecentAppHandshakeAck(k_senderId, enclave.GetDecentSelfRAReport()));
 }
 
 bool DecentServerLASession::PerformDecentServerSideLA(DecentLogger* logger)
@@ -70,8 +69,7 @@ bool DecentServerLASession::PerformDecentServerSideLA(DecentLogger* logger)
 
 void DecentAppLASession::SendHandshakeMessage(Connection& connection, EnclaveBase & hwEnclave)
 {
-	DecentAppHandshake hsMsg(hwEnclave.GetRAClientSignPubKey());
-	connection.Send(hsMsg);
+	connection.SendPack(DecentAppHandshake(hwEnclave.GetRAClientSignPubKey()));
 }
 
 bool DecentAppLASession::SmartMsgEntryPoint(Connection& connection, EnclaveBase & hwEnclave, DecentAppEnclave & enclave, const Json::Value & jsonMsg)

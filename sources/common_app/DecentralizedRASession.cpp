@@ -51,7 +51,7 @@ static T* ParseMessageExpected(const std::string& jsonStr)
 void DecentralizedRASession::SendHandshakeMessage(Connection& connection, EnclaveServiceProviderBase & enclave)
 {
 	DecentralizedRAHandshake msg0s(enclave.GetRAClientSignPubKey());
-	connection.Send(msg0s.ToJsonString());
+	connection.SendPack(msg0s);
 }
 
 bool DecentralizedRASession::SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentralizedEnclave & enclave, const Json::Value & jsonMsg)
@@ -79,7 +79,7 @@ static const DecentralizedRAHandshakeAck SendAndReceiveHandshakeAck(Connection& 
 	DecentralizedRASession::SendHandshakeMessage(connection, enclave);
 
 	Json::Value jsonMsg;
-	connection.Receive(jsonMsg);
+	connection.ReceivePack(jsonMsg);
 
 	return DecentralizedRAHandshakeAck(jsonMsg);
 }
@@ -97,7 +97,7 @@ DecentralizedRASession::DecentralizedRASession(Connection& connection, EnclaveSe
 	m_decentralizedEnc(enclave),
 	k_isServerSide(true)
 {
-	connection.Send(DecentralizedRAHandshakeAck(k_senderId));
+	connection.SendPack(DecentralizedRAHandshakeAck(k_senderId));
 
 }
 
@@ -152,7 +152,7 @@ bool DecentralizedRASession::ProcessClientSideRA()
 	catch (const MessageParseException&)
 	{
 		DecentralizedErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection.Send(errMsg);
+		m_connection.SendPack(errMsg);
 		return false;
 	}
 }
@@ -194,14 +194,14 @@ bool DecentralizedRASession::ProcessServerSideRA()
 	catch (const MessageParseException&)
 	{
 		DecentralizedErrMsg errMsg(k_senderId, "Received unexpected message! Make sure you are following the protocol.");
-		m_connection.Send(errMsg);
+		m_connection.SendPack(errMsg);
 		return false;
 	}
 }
 
 bool DecentralizedRASession::SendReverseRARequest(const std::string & senderID)
 {
-	m_connection.Send(DecentralizedReverseReq(senderID));
+	m_connection.SendPack(DecentralizedReverseReq(senderID));
 
 	return true;
 }
@@ -209,7 +209,7 @@ bool DecentralizedRASession::SendReverseRARequest(const std::string & senderID)
 bool DecentralizedRASession::RecvReverseRARequest()
 {
 	std::string msgBuffer;
-	m_connection.Receive(msgBuffer);
+	m_connection.ReceivePack(msgBuffer);
 
 	delete ParseMessageExpected<DecentralizedReverseReq>(msgBuffer);
 
