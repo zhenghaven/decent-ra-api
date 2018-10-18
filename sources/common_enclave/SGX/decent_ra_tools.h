@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include <sgx_error.h>
-#include "decent_tkey_exchange.h"
+#include "DecentReplace/decent_tkey_exchange.h"
 
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 typedef uint32_t sgx_ra_context_t;

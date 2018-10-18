@@ -21,7 +21,7 @@
 #include "../../common/SGX/SGXCryptoConversions.h"
 
 #include "decent_ra_tools.h"
-#include "decent_tkey_exchange.h"
+#include "DecentReplace/decent_tkey_exchange.h"
 #include "SGXRAClient.h"
 
 #include "../../common/TLSCommLayer.h"

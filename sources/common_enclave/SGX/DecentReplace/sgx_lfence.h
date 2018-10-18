@@ -29,47 +29,33 @@
  *
  */
 
-#include "../../common/ModuleConfigInternal.h"
+#include "../../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
 
-#ifndef _SIMPLE_VECOTR_H
-#define _SIMPLE_VECOTR_H
+#ifndef _SGX_LFENCE_H_
+#define _SGX_LFENCE_H_
 
-#include <stdint.h>
+#ifdef __GNUC__
+#define sgx_lfence  __builtin_ia32_lfence
+#else
+#define sgx_lfence  _mm_lfence
+#endif // __GNUC__
 
-#ifdef  __cplusplus
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct _simple_vector
-{
-    uint32_t size;
-    uint32_t capacity;
-    void** data;
-}simple_vector;
+#ifdef __GNUC__
+extern void __builtin_ia32_lfence(void);
+#else
+extern void _mm_lfence(void);
+#endif // __GNUC__
 
-//call vector_init first or set all field to 0 to use a simple_vector
-void vector_init(simple_vector* vector);
-
-//get number of elements in simple_vector
-uint32_t vector_size(const simple_vector* vector);
-
-//insert an element to the end of simple_vector, the element can only be pointer
-errno_t vector_push_back(simple_vector* vector, const void* data);
-
-//get an element
-errno_t vector_get(const simple_vector* v, uint32_t index, void** data);
-
-//set an element content
-errno_t vector_set(simple_vector* v, uint32_t index, const void* data);
-
-//free the simple_vector allocated memory
-void vector_free(simple_vector* vector);
-
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* !_SGX_LFENCE_H_ */
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

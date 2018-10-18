@@ -29,33 +29,29 @@
  *
  */
 
-#include "../../common/ModuleConfigInternal.h"
+
+#include "../../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
 
-#ifndef _SGX_LFENCE_H_
-#define _SGX_LFENCE_H_
+#ifndef _ECP_INTERFACE_H
+#define _ECP_INTERFACE_H
 
-#ifdef __GNUC__
-#define sgx_lfence  __builtin_ia32_lfence
-#else
-#define sgx_lfence  _mm_lfence
-#endif // __GNUC__
+#include "sgx_ecp_types.h"
+#include "sgx_tcrypto.h"
 
+////Key Derivation Function ID : 0x0001  AES-CMAC Entropy Extraction and Key Expansion
+//const uint16_t AES_CMAC_KDF_ID = 0x0001;
 
-#ifdef __cplusplus
-extern "C" {
+sgx_status_t derive_key(
+    const sgx_ec256_dh_shared_t* shared_key,
+    const char* label,
+    uint32_t label_length,
+    sgx_ec_key_128bit_t* derived_key);
+
+//#ifndef INTERNAL_SGX_ERROR_CODE_CONVERTOR
+//#define INTERNAL_SGX_ERROR_CODE_CONVERTOR(x) if(x != SGX_ERROR_OUT_OF_MEMORY){x = SGX_ERROR_UNEXPECTED;}
+//#endif
+
 #endif
-
-#ifdef __GNUC__
-extern void __builtin_ia32_lfence(void);
-#else
-extern void _mm_lfence(void);
-#endif // __GNUC__
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* !_SGX_LFENCE_H_ */
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

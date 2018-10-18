@@ -31,7 +31,7 @@
 
 #pragma once
 
-#include "../../common/ModuleConfigInternal.h"
+#include "../../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
 
 #ifndef _DECENT_TKEY_EXCHANGE_H_

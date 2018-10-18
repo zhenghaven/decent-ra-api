@@ -29,7 +29,7 @@
  *
  */
 
-#include "../../common/ModuleConfigInternal.h"
+#include "../../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
 
 #include "decent_tkey_exchange.h"

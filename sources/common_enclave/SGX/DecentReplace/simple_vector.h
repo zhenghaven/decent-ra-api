@@ -29,28 +29,46 @@
  *
  */
 
-
-#include "../../common/ModuleConfigInternal.h"
+#include "../../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_INTERNAL
 
-#ifndef _ECP_INTERFACE_H
-#define _ECP_INTERFACE_H
+#ifndef _SIMPLE_VECOTR_H
+#define _SIMPLE_VECOTR_H
 
-#include "sgx_ecp_types.h"
-#include "sgx_tcrypto.h"
+#include <stdint.h>
 
-////Key Derivation Function ID : 0x0001  AES-CMAC Entropy Extraction and Key Expansion
-//const uint16_t AES_CMAC_KDF_ID = 0x0001;
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
-sgx_status_t derive_key(
-    const sgx_ec256_dh_shared_t* shared_key,
-    const char* label,
-    uint32_t label_length,
-    sgx_ec_key_128bit_t* derived_key);
+typedef struct _simple_vector
+{
+    uint32_t size;
+    uint32_t capacity;
+    void** data;
+}simple_vector;
 
-//#ifndef INTERNAL_SGX_ERROR_CODE_CONVERTOR
-//#define INTERNAL_SGX_ERROR_CODE_CONVERTOR(x) if(x != SGX_ERROR_OUT_OF_MEMORY){x = SGX_ERROR_UNEXPECTED;}
-//#endif
+//call vector_init first or set all field to 0 to use a simple_vector
+void vector_init(simple_vector* vector);
+
+//get number of elements in simple_vector
+uint32_t vector_size(const simple_vector* vector);
+
+//insert an element to the end of simple_vector, the element can only be pointer
+errno_t vector_push_back(simple_vector* vector, const void* data);
+
+//get an element
+errno_t vector_get(const simple_vector* v, uint32_t index, void** data);
+
+//set an element content
+errno_t vector_set(simple_vector* v, uint32_t index, const void* data);
+
+//free the simple_vector allocated memory
+void vector_free(simple_vector* vector);
+
+#ifdef  __cplusplus
+}
+#endif
 
 #endif
 
