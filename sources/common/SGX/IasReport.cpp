@@ -1,10 +1,10 @@
 #include "IasReport.h"
-#include "ias_report.h"
 
 #include <map>
 #include <string>
 
 #include <cppcodec/hex_default_upper.hpp>
+#include <cppcodec/base64_rfc4648.hpp>
 
 #ifdef ENCLAVE_ENVIRONMENT
 #include <rapidjson/document.h>
@@ -14,6 +14,10 @@
 
 #include "../JsonTools.h"
 #include "../DataCoding.h"
+#include "../MbedTlsObjects.h"
+#include "../MbedTlsHelpers.h"
+#include "IasReportCert.h"
+#include "sgx_structs.h"
 
 namespace
 {
@@ -37,17 +41,6 @@ namespace
 		std::pair<std::string, ias_pse_status_t>("REVOKED", ias_pse_status_t::IAS_PSE_REVOKED),
 		std::pair<std::string, ias_pse_status_t>("RL_VERSION_MISMATCH", ias_pse_status_t::IAS_PSE_RL_VERSION_MISMATCH),
 	};
-}
-
-sgx_status_t parse_ias_report(sgx_ias_report_t * out_report, const char * in_str)
-{
-	if (!out_report || !in_str)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-	std::string nonce;
-	std::string id;
-	return ParseIasReport(*out_report, id, nonce, in_str);
 }
 
 static inline ias_quote_status_t ParseIASQuoteStatus(const std::string& statusStr)
@@ -87,31 +80,31 @@ static inline ias_revoc_reason_t parse_revoc_reason(const int in_num)
 	}
 }
 
-sgx_status_t ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
+bool ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
 {
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
 	if (!ParseStr2Json(jsonDoc, inStr))
 	{
-		return SGX_ERROR_INVALID_PARAMETER;
+		return false;
 	}
 
 	//ID:
 	if (!jsonDoc.JSON_HAS_MEMBER("id") || !jsonDoc["id"].JSON_IS_STRING())
 	{
-		return SGX_ERROR_INVALID_PARAMETER;
+		return false;
 	}
 	outId = jsonDoc["id"].JSON_AS_STRING();
 
 	//Timestamp:
 	if (!jsonDoc.JSON_HAS_MEMBER("timestamp") || !jsonDoc["timestamp"].JSON_IS_STRING())
 	{
-		return SGX_ERROR_INVALID_PARAMETER;
+		return false;
 	}
 	
 	//Status:
 	if (!jsonDoc.JSON_HAS_MEMBER("isvEnclaveQuoteStatus") || !jsonDoc["isvEnclaveQuoteStatus"].JSON_IS_STRING())
 	{
-		return SGX_ERROR_INVALID_PARAMETER;
+		return false;
 	}
 	outReport.m_status = static_cast<uint8_t>(ParseIASQuoteStatus(jsonDoc["isvEnclaveQuoteStatus"].JSON_AS_STRING()));
 
@@ -125,7 +118,7 @@ sgx_status_t ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, st
 	outReport.m_pse_status = ias_pse_status_t::IAS_PSE_NA;
 	if (jsonDoc.JSON_HAS_MEMBER("pseManifestStatus") && jsonDoc["pseManifestStatus"].JSON_IS_STRING())
 	{
-		outReport.m_revoc_reason = static_cast<uint8_t>(ParseIASQuotePSEStatus(jsonDoc["pseManifestStatus"].JSON_AS_STRING()));
+		outReport.m_pse_status = static_cast<uint8_t>(ParseIASQuotePSEStatus(jsonDoc["pseManifestStatus"].JSON_AS_STRING()));
 	}
 
 	//PSE Hash:
@@ -158,9 +151,79 @@ sgx_status_t ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, st
 	//Quote Body:
 	if (!jsonDoc.JSON_HAS_MEMBER("isvEnclaveQuoteBody") || !jsonDoc["isvEnclaveQuoteBody"].JSON_IS_STRING())
 	{
-		return SGX_ERROR_INVALID_PARAMETER;
+		return false;
 	}
 	DeserializeStruct(outReport.m_quote, jsonDoc["isvEnclaveQuoteBody"].JSON_AS_STRING());
 
-	return sgx_status_t();
+	return true;
+}
+
+bool ParseAndVerifyIasReport(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
+{
+#ifndef SIMULATING_ENCLAVE
+	MbedTlsObj::X509Cert trustedIasCert(IAS_REPORT_CERT);
+	MbedTlsObj::X509Cert reportCertChain(reportCert);
+
+	bool certVerRes = trustedIasCert && reportCertChain &&
+		reportCertChain.Verify(trustedIasCert, nullptr, nullptr, nullptr, nullptr);
+
+	std::vector<uint8_t> signBinBuf = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
+
+	General256Hash hash;
+	if (!MbedTlsHelper::CalcHashSha256(iasReportStr, hash))
+	{
+		return false;
+	}
+
+	bool signVerRes = false;
+	do
+	{
+		signVerRes = reportCertChain.GetPublicKey().VerifySignatureSha256(hash, signBinBuf);
+	} while (!signVerRes && reportCertChain.NextCert());
+
+	//COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
+	//COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
+
+	if (!certVerRes || !signVerRes)
+	{
+		return false;
+	}
+#else
+	//COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", "Simulated!");
+	//COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", "Simulated!");
+#endif // !SIMULATING_ENCLAVE
+
+	std::string idStr;
+	std::string nonceInReport;
+	if (!ParseIasReport(outIasReport, idStr, nonceInReport, iasReportStr))
+	{
+		return false;
+	}
+
+	bool isQuoteStatusValid = (outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK) || outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_GROUP_OUT_OF_DATE));
+	bool isPseStatusValid = (outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_NA) || outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_OK) || outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_OUT_OF_DATE));
+	//COMMON_PRINTF("IAS Report Is Quote Status Valid:   %s \n", isQuoteStatusValid ? "Yes!" : "No!");
+	//COMMON_PRINTF("IAS Report Is PSE Status Valid:     %s \n", isQuoteStatusValid ? "Yes!" : "No!");
+	if (!isQuoteStatusValid || !isPseStatusValid)
+	{
+		return false;
+	}
+
+	bool isNonceMatch = true;
+	if (nonce)
+	{
+		isNonceMatch = (std::strlen(nonce) == nonceInReport.size());
+		isNonceMatch = isNonceMatch && consttime_memequal(nonceInReport.c_str(), nonce, nonceInReport.size());
+		//COMMON_PRINTF("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
+		if (!isNonceMatch)
+		{
+			return false;
+		}
+	}
+
+#ifndef SIMULATING_ENCLAVE
+	return certVerRes && signVerRes && isNonceMatch;
+#else
+	return isNonceMatch && isReportDataMatch;
+#endif // !SIMULATING_ENCLAVE
 }

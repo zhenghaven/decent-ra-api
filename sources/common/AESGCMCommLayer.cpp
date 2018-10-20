@@ -55,6 +55,11 @@ AESGCMCommLayer & AESGCMCommLayer::operator=(AESGCMCommLayer && other)
 	return *this;
 }
 
+AESGCMCommLayer::operator bool() const
+{
+	return m_gcm;
+}
+
 //bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
 //{
 //	return AESGCMCommLayer::DecryptMsg(outMsg, std::string(inMsg));

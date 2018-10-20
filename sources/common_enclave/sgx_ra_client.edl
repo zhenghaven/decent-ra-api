@@ -1,9 +1,19 @@
 enclave {
 	
-	include "../common/SGX/ias_report.h"
+	include "../common/SGX/sgx_structs.h"
 	
 	from "sgx_tkey_exchange.edl" import *;
 	
+	untrusted 
+	{
+		int ocall_sgx_ra_send_msg0s([user_check] void* connection_ptr);
+
+		int ocall_sgx_ra_get_msg1(uint64_t enclave_id, uint32_t ra_ctx, [out] sgx_ra_msg1_t* msg1);
+
+		size_t ocall_sgx_ra_proc_msg2(uint64_t enclave_id, uint32_t ra_ctx, [in, size=msg2_size] const sgx_ra_msg2_t* msg2, size_t msg2_size, 
+		[out] uint8_t** out_msg3);
+	};
+
 	trusted 
 	{
 	

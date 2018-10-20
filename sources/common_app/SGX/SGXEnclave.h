@@ -34,7 +34,7 @@ typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
 typedef struct _ra_msg3_t sgx_ra_msg3_t;
 
-typedef struct _ias_report_t sgx_ias_report_t;
+typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 typedef struct _sgx_dh_msg1_t sgx_dh_msg1_t;
 typedef struct _sgx_dh_msg2_t sgx_dh_msg2_t;

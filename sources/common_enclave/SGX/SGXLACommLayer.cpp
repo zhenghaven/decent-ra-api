@@ -21,6 +21,11 @@ SGXLACommLayer::~SGXLACommLayer()
 {
 }
 
+SGXLACommLayer::operator bool() const
+{
+	return AESGCMCommLayer::operator bool() && m_isHandShaked;
+}
+
 const sgx_dh_session_enclave_identity_t* SGXLACommLayer::GetIdentity() const
 {
 	return m_identity.get();

@@ -12,7 +12,7 @@ typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
 typedef struct _ra_msg3_t sgx_ra_msg3_t;
 
-typedef struct _ias_report_t sgx_ias_report_t;
+typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
 typedef struct _sgx_report_data_t sgx_report_data_t;

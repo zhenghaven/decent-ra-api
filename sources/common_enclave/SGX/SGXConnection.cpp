@@ -39,7 +39,7 @@ bool StaticConnection::ReceivePack(void* const connection, std::string& outMsg)
 	outMsg.resize(size);
 	std::memcpy(&outMsg[0], msgPtr, size);
 
-	ocall_connection_clean_recv_buffer(msgPtr);
+	ocall_common_del_buf_char(msgPtr);
 
 	return true;
 }
@@ -50,4 +50,24 @@ int StaticConnection::ReceiveRaw(void * const connection, void * const buf, cons
 	sgx_status_t enclaveRet = ocall_connection_receive_raw(&recvSize, connection, reinterpret_cast<char*>(buf), bufLen);
 
 	return enclaveRet == SGX_SUCCESS ? static_cast<int>(recvSize) : -1;
+}
+
+bool StaticConnection::SendAndReceivePack(void* const connection, const void* const inData, const size_t inDataLen, std::string& outMsg)
+{
+	size_t size = 0;
+	char* msgPtr = nullptr;
+	int retVal = 0;
+
+	sgx_status_t enclaveRet = ocall_connection_send_and_recv_pack(&retVal, connection, reinterpret_cast<const char*>(inData), inDataLen, &msgPtr, &size);
+	if (enclaveRet != SGX_SUCCESS || !retVal)
+	{
+		return false;
+	}
+
+	outMsg.resize(size);
+	std::memcpy(&outMsg[0], msgPtr, size);
+
+	ocall_common_del_buf_char(msgPtr);
+
+	return true;
 }

@@ -17,7 +17,7 @@ class AESGCMCommLayer;
 typedef struct _sgx_ec256_public_t sgx_ec256_public_t;
 typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
 
-typedef struct _ias_report_t sgx_ias_report_t;
+typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 typedef uint32_t sgx_ra_context_t;
 

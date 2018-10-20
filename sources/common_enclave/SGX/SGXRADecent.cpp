@@ -15,8 +15,8 @@
 #include "../../common/CryptoKeyContainer.h"
 #include "../../common/DecentCertContainer.h"
 
-#include "../../common/SGX/sgx_constants.h"
 #include "../../common/SGX/IasReport.h"
+#include "../../common/SGX/sgx_structs.h"
 #include "../../common/SGX/SGXRAServiceProvider.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
 

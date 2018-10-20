@@ -623,6 +623,11 @@ ECKeyPair::ECKeyPair(const std::string & pemStr) :
 {
 }
 
+MbedTlsObj::ECKeyPair::ECKeyPair(ECKeyPair && other) :
+	ECKeyPublic(std::forward<ECKeyPublic>(other))
+{
+}
+
 bool ECKeyPair::ToGeneralPrivateKey(general_secp256r1_private_t & outKey) const
 {
 	if (!*this)

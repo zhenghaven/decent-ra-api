@@ -10,7 +10,6 @@
 
 #include "../../common/DataCoding.h"
 #include "../../common/JsonTools.h"
-#include "../../common/SGX/ias_report.h"
 
 #include "../Common.h"
 
@@ -177,14 +176,11 @@ bool SGXServiceProviderRASession::ProcessServerSideRA()
 			return false;
 		}
 
-		Json::Value iasReqRoot;
-		iasReqRoot["isvEnclaveQuote"] = msg3->GetQuoteBase64();
-		iasReqRoot["nonce"] = iasNonce;
 		std::string iasReport;
 		std::string iasReportSign;
 		std::string iasCert;
 
-		if (!m_ias.GetQuoteReport(iasReqRoot.toStyledString(), iasReport, iasReportSign, iasCert))
+		if (!m_ias.GetQuoteReport(msg3->GetMsg3(), msg3->GetMsg3DataSize(), iasNonce, false, iasReport, iasReportSign, iasCert))
 		{
 			SGXRAClientErrMsg errMsg(k_senderId, "Failed to get report from IAS!");
 			m_connection.SendPack(errMsg.ToJsonString());

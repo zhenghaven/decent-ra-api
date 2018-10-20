@@ -10,6 +10,7 @@
 #include "MbedTlsHelpers.h"
 
 #include "SGX/IasReport.h"
+#include "SGX/sgx_structs.h"
 #include "SGX/SGXRAServiceProvider.h"
 #include "SGX/SGXCryptoConversions.h"
 

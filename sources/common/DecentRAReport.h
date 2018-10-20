@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-typedef struct _ias_report_t sgx_ias_report_t;
+typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 namespace Decent
 {

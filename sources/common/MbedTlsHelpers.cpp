@@ -79,7 +79,7 @@ bool MbedTlsHelper::MbedTlsAsn1DeepCopy(mbedtls_asn1_named_data *& dest, const m
 	return MbedTlsAsn1DeepCopy(*dest, src);
 }
 
-bool MbedTlsHelper::CalcHashSha256(const HashListMode, const HashDataList & dataList, General256Hash & hash)
+static bool CalcHashSha256ListInternal(const MbedTlsHelper::HashDataList & dataList, uint8_t* hash)
 {
 	mdCtxWarp mdCtx;
 	if (mbedtls_md_setup(&mdCtx.m_ctx, mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256), false) != MBEDTLS_SUCCESS_RET ||
@@ -94,16 +94,37 @@ bool MbedTlsHelper::CalcHashSha256(const HashListMode, const HashDataList & data
 		mbedRet = mbedtls_md_update(&mdCtx.m_ctx, reinterpret_cast<const uint8_t*>(it->m_ptr), it->size);
 	}
 
-	return mbedRet == MBEDTLS_SUCCESS_RET && mbedtls_md_finish(&mdCtx.m_ctx, hash.data()) == MBEDTLS_SUCCESS_RET;
+	return mbedRet == MBEDTLS_SUCCESS_RET && mbedtls_md_finish(&mdCtx.m_ctx, hash) == MBEDTLS_SUCCESS_RET;
 }
+
+bool MbedTlsHelper::CalcHashSha256(const HashListMode&, const HashDataList & dataList, General256Hash & hash)
+{
+	return CalcHashSha256ListInternal(dataList, hash.data());
+}
+
+bool MbedTlsHelper::CalcHashSha256(const HashListMode&, const HashDataList & dataList, uint8_t(&hash)[GENERAL_256BIT_32BYTE_SIZE])
+{
+	return CalcHashSha256ListInternal(dataList, hash);
+}
+
+static bool CalcHashSha256Internal(const void * dataPtr, const size_t size, uint8_t* hash)
+{
+	return mbedtls_md(mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256),
+		reinterpret_cast<const uint8_t*>(dataPtr), size, hash) == MBEDTLS_SUCCESS_RET;
+}
+
 
 bool MbedTlsHelper::CalcHashSha256(const void * dataPtr, const size_t size, General256Hash & hash)
 {
-	return mbedtls_md(mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256),
-		reinterpret_cast<const uint8_t*>(dataPtr), size, hash.data()) == MBEDTLS_SUCCESS_RET;
+	return CalcHashSha256Internal(dataPtr, size, hash.data());
 }
 
-bool MbedTlsHelper::CalcCmacAes128(const General128BitKey & key, const uint8_t * data, size_t dataSize, General128Tag & outTag)
+bool MbedTlsHelper::CalcHashSha256(const void * dataPtr, const size_t size, uint8_t(&hash)[GENERAL_256BIT_32BYTE_SIZE])
+{
+	return CalcHashSha256Internal(dataPtr, size, hash);
+}
+
+static bool CalcCmacAes128Internal(const General128BitKey & key, const uint8_t * data, size_t dataSize, uint8_t* outTag)
 {
 	if (!data || dataSize <= 0)
 	{
@@ -113,22 +134,42 @@ bool MbedTlsHelper::CalcCmacAes128(const General128BitKey & key, const uint8_t *
 	return mbedtls_cipher_cmac(mbedtls_cipher_info_from_type(mbedtls_cipher_type_t::MBEDTLS_CIPHER_AES_128_ECB),
 		key.data(), key.size() * GENERAL_BITS_PER_BYTE,
 		data, dataSize,
-		outTag.data()) == MBEDTLS_SUCCESS_RET;
+		outTag) == MBEDTLS_SUCCESS_RET;
 }
 
-bool MbedTlsHelper::VerifyCmacAes128(const General128BitKey & key, const uint8_t * data, size_t dataSize, const General128Tag & inTag)
+bool MbedTlsHelper::CalcCmacAes128(const General128BitKey & key, const uint8_t * data, size_t dataSize, General128Tag & outTag)
+{
+	return CalcCmacAes128Internal(key, data, dataSize, outTag.data());
+}
+
+bool MbedTlsHelper::CalcCmacAes128(const General128BitKey & key, const uint8_t * data, size_t dataSize, uint8_t(&outTag)[GENERAL_128BIT_16BYTE_SIZE])
+{
+	return CalcCmacAes128Internal(key, data, dataSize, outTag);
+}
+
+static bool VerifyCmacAes128Internal(const General128BitKey & key, const uint8_t * data, size_t dataSize, const uint8_t* inTag)
 {
 	if (!data || dataSize <= 0)
 	{
 		return false;
 	}
 	General128Tag tag;
-	if (!CalcCmacAes128(key, data, dataSize, tag) ||
-		!consttime_memequal(tag.data(), inTag.data(), tag.size()))
+	if (!MbedTlsHelper::CalcCmacAes128(key, data, dataSize, tag) ||
+		!consttime_memequal(tag.data(), inTag, tag.size()))
 	{
 		return false;
 	}
 	return true;
+}
+
+bool MbedTlsHelper::VerifyCmacAes128(const General128BitKey & key, const uint8_t * data, size_t dataSize, const General128Tag & inTag)
+{
+	return VerifyCmacAes128Internal(key, data, dataSize, inTag.data());
+}
+
+bool MbedTlsHelper::VerifyCmacAes128(const General128BitKey & key, const uint8_t * data, size_t dataSize, const uint8_t(&inTag)[GENERAL_128BIT_16BYTE_SIZE])
+{
+	return VerifyCmacAes128Internal(key, data, dataSize, inTag);
 }
 
 #define EC_DERIVATION_BUFFER_SIZE(label_length) ((label_length) +4)

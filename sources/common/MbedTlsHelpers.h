@@ -37,9 +37,11 @@ namespace MbedTlsHelper
 	struct HashListMode	{HashListMode() = default;};
 	const HashListMode hashListMode;
 
-	bool CalcHashSha256(const HashListMode, const HashDataList& dataList, General256Hash& hash);
+	bool CalcHashSha256(const HashListMode&, const HashDataList& dataList, General256Hash& hash);
+	bool CalcHashSha256(const HashListMode&, const HashDataList& dataList, uint8_t(&hash)[GENERAL_256BIT_32BYTE_SIZE]);
 
 	bool CalcHashSha256(const void* dataPtr, const size_t size, General256Hash& hash);
+	bool CalcHashSha256(const void* dataPtr, const size_t size, uint8_t(&hash)[GENERAL_256BIT_32BYTE_SIZE]);
 
 	template<typename Container>
 	bool CalcHashSha256(const Container& data, General256Hash& hash)
@@ -48,8 +50,10 @@ namespace MbedTlsHelper
 	}
 
 	bool CalcCmacAes128(const General128BitKey& key, const uint8_t* data, size_t dataSize, General128Tag& outTag);
+	bool CalcCmacAes128(const General128BitKey& key, const uint8_t* data, size_t dataSize, uint8_t (&outTag)[GENERAL_128BIT_16BYTE_SIZE]);
 
 	bool VerifyCmacAes128(const General128BitKey& key, const uint8_t* data, size_t dataSize, const General128Tag& inTag);
+	bool VerifyCmacAes128(const General128BitKey& key, const uint8_t* data, size_t dataSize, const uint8_t(&inTag)[GENERAL_128BIT_16BYTE_SIZE]);
 
 	bool CkdfAes128(const uint8_t* key, size_t keySize, const char* label, size_t labelLen, General128BitKey& outKey);
 

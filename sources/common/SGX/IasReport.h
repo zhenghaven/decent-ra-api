@@ -1,11 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <sgx_error.h>
 
 #include <string>
 
-#include "ias_report.h"
+typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 enum class ias_quote_status_t : uint8_t {
 	IAS_QUOTE_OK                          = 0,
@@ -41,4 +40,8 @@ enum ias_pse_status_t : uint8_t{
 	IAS_PSE_RL_VERSION_MISMATCH      = 6,
 };
 	
-sgx_status_t ParseIasReport(sgx_ias_report_t& outReport, std::string& outId, std::string& outNonce, const std::string& inStr);
+bool ParseIasReport(sgx_ias_report_t& outReport, std::string& outId, std::string& outNonce, const std::string& inStr);
+
+bool ParseAndVerifyIasReport(sgx_ias_report_t& outIasReport,
+	const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
+	const char* nonce);

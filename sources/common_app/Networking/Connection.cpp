@@ -45,6 +45,13 @@ int StaticConnection::ReceiveRaw(void * const connection, void * const buf, cons
 	return static_cast<int>(reinterpret_cast<Connection*>(connection)->ReceiveRaw(buf, bufLen));
 }
 
+bool StaticConnection::SendAndReceivePack(void * const connection, const void * const inData, const size_t inDataLen, std::string & outMsg)
+{
+	reinterpret_cast<Connection*>(connection)->SendPack(inData, inDataLen);
+	reinterpret_cast<Connection*>(connection)->ReceivePack(outMsg);
+	return true;
+}
+
 extern "C" int ocall_connection_send_pack(void* const ptr, const char* msg, size_t size)
 {
 	if (!ptr || !msg)
@@ -80,9 +87,23 @@ extern "C" size_t ocall_connection_receive_pack(void* const ptr, char** msg)
 	}
 }
 
-extern "C" void ocall_connection_clean_recv_buffer(char* ptr)
+extern "C" int ocall_connection_send_and_recv_pack(void* const ptr, const char* in_msg, size_t in_size, char** out_msg, size_t* out_size)
 {
-	delete[] ptr;
+	if (!ptr || !in_msg || !out_msg || !out_size)
+	{
+		return false;
+	}
+
+	try
+	{
+		reinterpret_cast<Connection*>(ptr)->SendPack(in_msg, in_size);
+		*out_size = reinterpret_cast<Connection*>(ptr)->ReceivePack(*out_msg);
+		return true;
+	}
+	catch (const std::exception&)
+	{
+		return false;
+	}
 }
 
 extern "C" size_t ocall_connection_send_raw(void* const ptr, const char* msg, size_t size)

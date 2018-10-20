@@ -4,6 +4,7 @@
 #include "SGXEnclave.h"
 
 #include <algorithm>
+#include <thread>
 
 #include <sgx_urts.h>
 #include <sgx_eid.h>
@@ -18,6 +19,8 @@
 #include "../SGX/SGXEnclaveUtil.h"
 
 #include "../../common/DataCoding.h"
+#include "../../common/Connection.h"
+#include "../../common/SGX/sgx_structs.h"
 
 #include "SGXEnclaveRuntimeException.h"
 #include "SGXClientRASession.h"
@@ -239,6 +242,72 @@ bool SGXEnclave::UpdateToken(const fs::path& tokenPath, const std::vector<uint8_
 	}
 	bool writeRes = tokenFile.WriteBlock(inToken);
 	return writeRes;
+}
+
+extern "C" int ocall_sgx_ra_get_msg1(const uint64_t enclave_id, const uint32_t ra_ctx, sgx_ra_msg1_t* msg1)
+{
+	if (!msg1)
+	{
+		return false;
+	}
+	
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	std::thread tmpThread([&enclaveRet, enclave_id, ra_ctx, msg1]() {
+		enclaveRet = sgx_ra_get_msg1(ra_ctx, enclave_id, sgx_ra_get_ga, msg1);
+	});
+	tmpThread.join();
+
+	return (enclaveRet == SGX_SUCCESS);
+}
+
+extern "C" size_t ocall_sgx_ra_proc_msg2(const uint64_t enclave_id, const uint32_t ra_ctx, const sgx_ra_msg2_t* msg2, const size_t msg2_size, uint8_t** out_msg3)
+{
+	if (!msg2 || !out_msg3)
+	{
+		return 0;
+	}
+
+	*out_msg3 = nullptr;
+	
+	sgx_ra_msg3_t* tmpMsg3 = nullptr;
+	uint32_t tmpMsg3Size = 0;
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	std::thread tmpThread([&enclaveRet, enclave_id, ra_ctx, msg2, msg2_size, &tmpMsg3, &tmpMsg3Size]() {
+		enclaveRet = sgx_ra_proc_msg2(ra_ctx, enclave_id, sgx_ra_proc_msg2_trusted, sgx_ra_get_msg3_trusted,
+			msg2, static_cast<uint32_t>(msg2_size), &tmpMsg3, &tmpMsg3Size);
+	});
+	tmpThread.join();
+
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		return 0;
+	}
+
+	//Copy msg3 to our buffer pointer to avoid the mix use of malloc and delete[];
+	*out_msg3 = new uint8_t[tmpMsg3Size];
+	std::memcpy(*out_msg3, tmpMsg3, tmpMsg3Size);
+	std::free(tmpMsg3);
+
+	return tmpMsg3Size;
+}
+
+extern "C" int ocall_sgx_ra_send_msg0s(void* const connection_ptr)
+{
+	try
+	{
+		sgx_ra_msg0s_t msg0s;
+		sgx_status_t enclaveRet = sgx_get_extended_epid_group_id(&msg0s.extended_grp_id);
+		if (enclaveRet != SGX_SUCCESS)
+		{
+			return false;
+		}
+
+		return StaticConnection::SendPack(connection_ptr, &msg0s, sizeof(msg0s));
+	}
+	catch (const std::exception&)
+	{
+		return false;
+	}
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

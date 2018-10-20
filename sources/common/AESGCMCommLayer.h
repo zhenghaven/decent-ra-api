@@ -27,6 +27,8 @@ public:
 	AESGCMCommLayer& operator=(const AESGCMCommLayer& other) = delete;
 	AESGCMCommLayer& operator=(AESGCMCommLayer&& other);
 
+	virtual operator bool() const override;
+
 	virtual bool DecryptMsg(std::string& outMsg, const std::string& inMsg);// override;
 
 	virtual bool EncryptMsg(std::string& outMsg, const std::string& inMsg);// override;

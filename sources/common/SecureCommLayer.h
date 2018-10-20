@@ -13,5 +13,7 @@ public:
 
 	virtual bool ReceiveMsg(void* const connectionPtr, std::string& outMsg) = 0;
 	virtual bool SendMsg(void* const connectionPtr, const std::string& inMsg) = 0;
+
+	virtual operator bool() const = 0;
 };
 

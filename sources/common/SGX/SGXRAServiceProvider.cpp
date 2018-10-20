@@ -24,9 +24,8 @@
 #include "../GeneralKeyTypes.h"
 #include "../CryptoKeyContainer.h"
 
-#include "../SGX/ias_report_cert.h"
-#include "../SGX/sgx_constants.h"
-#include "../SGX/ias_report.h"
+#include "../SGX/IasReportCert.h"
+#include "../SGX/sgx_structs.h"
 #include "../SGX/IasReport.h"
 
 enum class ClientRAState
@@ -321,7 +320,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 	/*TODO: Add switch for quote_type */
 	outMsg2.quote_type = SGX_QUOTE_LINKABLE_SIGNATURE;
 	
-	outMsg2.kdf_id = SAMPLE_AES_CMAC_KDF_ID;
+	outMsg2.kdf_id = SGX_DEFAULT_AES_CMAC_KDF_ID;
 
 	General256Hash hashToBeSigned;
 	MbedTlsHelper::CalcHashSha256(&spCTX.m_pubKey, 2 * sizeof(sgx_ec256_public_t), hashToBeSigned);
@@ -335,12 +334,10 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg1(const std::string& clientId, const sgx_
 	outMsg2.sig_rl_size = 0;
 
 	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
-	General128Tag cmac;
-	if (!MbedTlsHelper::CalcCmacAes128(spCTX.m_smk, reinterpret_cast<uint8_t*>(&(outMsg2.g_b)), cmac_size, cmac))
+	if (!MbedTlsHelper::CalcCmacAes128(spCTX.m_smk, reinterpret_cast<uint8_t*>(&(outMsg2.g_b)), cmac_size, outMsg2.mac))
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-	std::copy(cmac.begin(), cmac.end(), std::begin(outMsg2.mac));
 
 	spCTX.m_state = ClientRAState::MSG1_DONE;
 
@@ -380,12 +377,9 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 
 	//Make sure that msg3_size is bigger than sgx_mac_t.
 	uint32_t mac_size = msg3Len - sizeof(sgx_mac_t);
-	const uint8_t *p_msg3_cmaced = inMsg3;
-	p_msg3_cmaced += sizeof(sgx_mac_t);
+	const uint8_t *p_msg3_cmaced = inMsg3 + sizeof(sgx_mac_t);
 
-	General128Tag msg3Mac;
-	std::copy(std::begin(msg3.mac), std::end(msg3.mac), msg3Mac.begin());
-	if (!MbedTlsHelper::VerifyCmacAes128(spCTX.m_smk, p_msg3_cmaced, mac_size, msg3Mac))
+	if (!MbedTlsHelper::VerifyCmacAes128(spCTX.m_smk, p_msg3_cmaced, mac_size, msg3.mac))
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -396,21 +390,18 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 
 	sgx_report_data_t report_data = { 0 };
 
-	{
-		sgx_sha_state_handle_t sha_handle = nullptr;
-		// Verify the report_data in the Quote matches the expected value.
-		// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
-		// The second 32 bytes of report_data are set to zero.
-		General256Hash reportDataHash;
-		MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, {
-			{&(spCTX.m_peerEncrKey), sizeof(sgx_ec256_public_t)},
-			{&(spCTX.m_pubKey), sizeof(sgx_ec256_public_t)},
-			{&(spCTX.m_vk), sizeof(sgx_ec_key_128bit_t)},
-			},
-			reportDataHash);
+	// Verify the report_data in the Quote matches the expected value.
+	// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
+	// The second 32 bytes of report_data are set to zero.
+	General256Hash reportDataHash;
+	MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, {
+		{&(spCTX.m_peerEncrKey), sizeof(sgx_ec256_public_t)},
+		{&(spCTX.m_pubKey), sizeof(sgx_ec256_public_t)},
+		{&(spCTX.m_vk), sizeof(sgx_ec_key_128bit_t)},
+		},
+		reportDataHash);
 		
-		std::copy(reportDataHash.begin(), reportDataHash.end(), report_data.d);
-	}
+	std::copy(reportDataHash.begin(), reportDataHash.end(), report_data.d);
 	
 	if (outOriRD)
 	{
@@ -483,11 +474,9 @@ bool SGXRAEnclave::VerifyIASReport(sgx_ias_report_t& outIasReport, const std::st
 	//COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", "Simulated!");
 #endif // !SIMULATING_ENCLAVE
 
-	sgx_status_t sgxRet;
 	std::string idStr;
 	std::string nonceInReport;
-	sgxRet = ParseIasReport(outIasReport, idStr, nonceInReport, iasReportStr);
-	if (sgxRet != SGX_SUCCESS)
+	if (!ParseIasReport(outIasReport, idStr, nonceInReport, iasReportStr))
 	{
 		return false;
 	}

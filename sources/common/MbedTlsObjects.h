@@ -220,6 +220,7 @@ namespace MbedTlsObj
 		ECKeyPair(const general_secp256r1_private_t& prv);
 		ECKeyPair(const general_secp256r1_private_t& prv, const general_secp256r1_public_t& pub);
 		ECKeyPair(const std::string& pemStr);
+		ECKeyPair(ECKeyPair&& other);
 		virtual ~ECKeyPair() {}
 
 		bool ToGeneralPrivateKey(PrivateKeyWrap& outKey) const;

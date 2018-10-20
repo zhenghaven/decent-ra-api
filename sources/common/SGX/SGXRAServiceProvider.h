@@ -22,7 +22,7 @@ typedef struct _sgx_report_data_t sgx_report_data_t;
 typedef struct _spid_t sgx_spid_t;
 typedef uint32_t sgx_ra_context_t;
 
-typedef struct _ias_report_t sgx_ias_report_t;
+typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 class AESGCMCommLayer;
 

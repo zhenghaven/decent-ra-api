@@ -16,7 +16,6 @@
 
 #include "../common/DataCoding.h"
 #include "../common/SGX/SGXCryptoConversions.h"
-#include "../common/SGX/ias_report.h"
 #include "../common/DecentRAReport.h"
 
 #include "../DecentMessages/DecentMessage.h"
@@ -224,11 +223,8 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, SGXDecentEnclave::GetIasReportNonce);
 
 	sgx_ra_msg3_t& msg3Ref = *reinterpret_cast<sgx_ra_msg3_t*>(msg3.data());
-	Json::Value iasReqRoot;
-	iasReqRoot["isvEnclaveQuote"] = SerializeStruct(msg3Ref.quote, msg3.size() - sizeof(sgx_ra_msg3_t));
-	iasReqRoot["nonce"] = iasNonce;
 
-	webRet = m_ias->GetQuoteReport(iasReqRoot.toStyledString(), iasReport, reportSign, reportCertChain);
+	webRet = m_ias->GetQuoteReport(msg3Ref, msg3.size(), iasNonce, false, iasReport, reportSign, reportCertChain);
 	if (!webRet)
 	{
 		throw SGXEnclaveRuntimeException(SGX_ERROR_UNEXPECTED, "ias->GetQuoteReport");

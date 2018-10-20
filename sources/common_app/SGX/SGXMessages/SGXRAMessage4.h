@@ -5,7 +5,7 @@
 #include <sgx_key_exchange.h>
 #include <sgx_tcrypto.h>
 
-#include "../../../common/SGX/ias_report.h"
+#include "../../../common/SGX/sgx_structs.h"
 
 class SGXRAMessage4 : public SGXRAClientMessage
 {

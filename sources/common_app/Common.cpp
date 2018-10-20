@@ -116,3 +116,13 @@ extern "C" void ocall_get_system_utc_time(const time_t* timer, tm* out_time)
 
 	Common::GetSystemUtcTime(*timer, *out_time);
 }
+
+extern "C" void ocall_common_del_buf_char(char* ptr)
+{
+	delete[] ptr;
+}
+
+extern "C" void ocall_common_del_buf_uint8(uint8_t* ptr)
+{
+	delete[] ptr;
+}

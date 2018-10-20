@@ -6,7 +6,6 @@
 #include <Enclave_u.h>
 
 #include "../../common/DataCoding.h"
-#include "../../common/SGX/sgx_constants.h"
 
 #include "SGXMessages/SGXRAMessage.h"
 #include "SGXEnclaveRuntimeException.h"

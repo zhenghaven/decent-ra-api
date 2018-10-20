@@ -17,6 +17,7 @@ public:
 
 	virtual ~SGXLACommLayer();
 
+	virtual operator bool() const override;
 	const sgx_dh_session_enclave_identity_t* GetIdentity() const;
 
 private:

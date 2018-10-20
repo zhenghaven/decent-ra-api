@@ -19,7 +19,7 @@
 #include "../../common/GeneralKeyTypes.h"
 #include "../../common/AESGCMCommLayer.h"
 #include "../../common/CryptoKeyContainer.h"
-#include "../../common/SGX/ias_report.h"
+#include "../../common/SGX/sgx_structs.h"
 #include "../../common/SGX/IasReport.h"
 
 struct RAClientContext
