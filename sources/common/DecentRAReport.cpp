@@ -11,7 +11,6 @@
 
 #include "SGX/IasReport.h"
 #include "SGX/sgx_structs.h"
-#include "SGX/SGXRAServiceProvider.h"
 #include "SGX/SGXCryptoConversions.h"
 
 bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)

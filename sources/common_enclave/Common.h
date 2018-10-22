@@ -1,9 +1,5 @@
 #pragma once
 
-//A temporary way to handle the error.
-//TODO: Find a secure way to handle the error.
-#include "DecentError.h"
-
 #define COMMON_PRINTF ocall_printf
 
 #define LOGW(...) ocall_log_w(__FILE__, __LINE__, __VA_ARGS__);

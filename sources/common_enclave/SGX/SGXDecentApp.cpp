@@ -27,7 +27,6 @@
 #include "../../common/DecentCertContainer.h"
 
 #include "../../common/SGX/SGXCryptoConversions.h"
-#include "../../common/SGX/SGXRAServiceProvider.h"
 
 namespace
 {

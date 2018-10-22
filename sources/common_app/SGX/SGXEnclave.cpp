@@ -20,11 +20,8 @@
 
 #include "../../common/DataCoding.h"
 #include "../../common/Connection.h"
-#include "../../common/SGX/sgx_structs.h"
 
 #include "SGXEnclaveRuntimeException.h"
-#include "SGXClientRASession.h"
-#include "SGXMessages/SGXRAMessage.h"
 
 #include <Enclave_u.h>
 
