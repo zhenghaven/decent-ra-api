@@ -14,7 +14,7 @@ const SgxRaProcessorClient::SpSignPubKeyVerifier SgxRaProcessorClient::sk_accept
 	}
 );
 
-const SgxRaProcessorClient::raConfigChecker SgxRaProcessorClient::sk_acceptAnyRaConfig(
+const SgxRaProcessorClient::RaConfigChecker SgxRaProcessorClient::sk_acceptAnyRaConfig(
 	[](const sgx_ra_config& raConfig) -> bool
 	{
 		if (raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE)
@@ -31,7 +31,7 @@ const SgxRaProcessorClient::raConfigChecker SgxRaProcessorClient::sk_acceptAnyRa
 	}
 );
 
-SgxRaProcessorClient::SgxRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, raConfigChecker configChecker) :
+SgxRaProcessorClient::SgxRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
 	m_enclaveId(enclaveId),
 	m_raCtxId(),
 	m_ctxInited(false),
@@ -90,9 +90,7 @@ bool SgxRaProcessorClient::ProcessMsg0r(const sgx_ra_msg0r_t & msg0r, sgx_ra_msg
 		return false;
 	}
 
-	int retVal = 0;
-	if (ocall_sgx_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
-		!retVal)
+	if (!GetMsg1(msg1))
 	{
 		return false;
 	}
@@ -223,6 +221,17 @@ bool SgxRaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128Bit
 	}
 	enclaveRet = sgx_ra_get_keys(m_raCtxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(mk.data()));
 	if (enclaveRet != SGX_SUCCESS)
+	{
+		return false;
+	}
+	return true;
+}
+
+bool SgxRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
+{
+	int retVal = 0;
+	if (ocall_sgx_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
+		!retVal)
 	{
 		return false;
 	}

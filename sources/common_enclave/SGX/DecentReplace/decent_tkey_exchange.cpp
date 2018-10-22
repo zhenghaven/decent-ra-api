@@ -86,7 +86,7 @@ typedef struct _ra_db_item_t
     ra_state                    state;
     sgx_spinlock_t              item_lock;
     uintptr_t                   derive_key_cb;
-	ReportDataGenerator         report_data_gener;
+	SgxReportDataGenerator      report_data_gener;
 }ra_db_item_t;
 
 #pragma pack(pop)
@@ -367,14 +367,14 @@ extern "C" sgx_status_t decent_ra_proc_msg2_trusted(
 			sgx_spin_unlock(&item->item_lock);
 			break;
 		}
-		std::vector<uint8_t> decentReportData(SGX_REPORT_DATA_SIZE, 0);
-		if (!item->report_data_gener(report_data.d, decentReportData, SGX_REPORT_DATA_SIZE))
+		sgx_report_data_t decent_report_data = { { 0 } };
+		if (!item->report_data_gener(report_data, decent_report_data))
 		{
 			se_ret = SGX_ERROR_UNEXPECTED;
 			sgx_spin_unlock(&item->item_lock);
 			break;
 		}
-		std::memcpy(report_data.d, decentReportData.data(), SGX_REPORT_DATA_SIZE);
+		std::memcpy(&report_data, &decent_report_data, sizeof(sgx_report_data_t));
 		//REPORTDATA = H
 		se_ret = sgx_create_report(p_qe_target, &report_data, p_report);
 		if (SGX_SUCCESS != se_ret)
@@ -605,7 +605,7 @@ sgx_status_t decent_ra_init_ex(
 	const sgx_ec256_public_t *p_pub_key,
 	int b_pse,
 	sgx_ra_derive_secret_keys_t derive_key_cb,
-	ReportDataGenerator func,
+	SgxReportDataGenerator func,
 	sgx_ra_context_t *p_context)
 {
 	int valid = 0;
@@ -746,7 +746,7 @@ sgx_status_t decent_ra_init_ex(
 sgx_status_t decent_ra_init(
 	const sgx_ec256_public_t *p_pub_key,
 	int b_pse,
-	ReportDataGenerator func,
+	SgxReportDataGenerator func,
 	sgx_ra_context_t *p_context)
 {
 

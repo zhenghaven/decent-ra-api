@@ -50,8 +50,12 @@ public:
 	const General128BitKey& GetSK() const;
 	const General128BitKey& GetMK() const;
 
-protected:
 	virtual bool GetMsg0r(sgx_ra_msg0r_t& msg0r);
+	const std::string& GetIasReportStr() const;
+	const std::string& GetIasReportCert() const;
+	const std::string& GetIasReportSign() const;
+
+protected:
 	virtual bool CheckExGrpId(const uint32_t id) const;
 	virtual bool CheckKeyDerivationFuncId(const uint16_t id) const;
 	virtual bool CheckReportStatus(const sgx_ias_report_t& report) const;
@@ -86,4 +90,8 @@ private:
 	SgxReportDataVerifier m_rpDataVrfy;
 	std::unique_ptr<sgx_ias_report_t> m_iasReport;
 	bool m_isAttested;
+
+	std::string m_iasReportStr;
+	std::string m_reportCert;
+	std::string m_reportSign;
 };

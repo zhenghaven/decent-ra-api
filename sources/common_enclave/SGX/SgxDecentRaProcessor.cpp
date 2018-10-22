@@ -1,0 +1,157 @@
+#include "../../common/ModuleConfigInternal.h"
+#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
+
+#include "SgxDecentRaProcessor.h"
+
+#include <Enclave_t.h>
+
+#include "../../common/CommonTool.h"
+#include "../../common/MbedTlsObjects.h"
+#include "../../common/MbedTlsHelpers.h"
+#include "../../common/DecentRAReport.h"
+#include "../../common/CryptoKeyContainer.h"
+#include "../../common/DecentCertContainer.h"
+
+#include "../../common/SGX/sgx_structs.h"
+#include "../../common/SGX/SGXCryptoConversions.h"
+
+#include "DecentReplace/decent_tkey_exchange.h"
+
+const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::defaultDecentConfigChecker(
+	[](const sgx_ra_config& raConfig) {
+		return raConfig.enable_pse == 1 && raConfig.linkable_sign == SGX_QUOTE_LINKABLE_SIGNATURE;
+	}
+);
+
+SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
+	SgxRaProcessorClient(enclaveId, signKeyVerifier, configChecker)
+{
+}
+
+SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(const uint64_t enclaveId) :
+	SgxRaProcessorClient(enclaveId, 
+		[](const sgx_ec256_public_t& pubKey) {
+			std::shared_ptr<const general_secp256r1_public_t> serverKey = DecentCertContainer::Get().GetServerKeyGeneral();
+
+			return serverKey && 
+				consttime_memequal(SgxEc256Type2General(&pubKey), serverKey.get(), sizeof(general_secp256r1_public_t));
+		},
+		defaultDecentConfigChecker
+		)
+{
+}
+
+SgxDecentRaProcessorClient::~SgxDecentRaProcessorClient()
+{
+}
+
+SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(SgxDecentRaProcessorClient && other) :
+	SgxRaProcessorClient(std::forward<SgxRaProcessorClient>(other))
+{
+}
+
+bool SgxDecentRaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
+{
+	COMMON_PRINTF("BP1\n");
+	size_t retVal = 0;
+	uint8_t* tmpMsg3 = nullptr;
+	if (ocall_decent_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
+		!retVal)
+	{
+		return false;
+	}
+	COMMON_PRINTF("BP1\n");
+
+	msg3.resize(retVal);
+	std::copy(tmpMsg3, tmpMsg3 + retVal, msg3.begin());
+
+	ocall_common_del_buf_uint8(tmpMsg3);
+
+	return true;
+}
+
+bool SgxDecentRaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_ec256_public_t & pubKey)
+{
+	sgx_status_t ret;
+	if (raConfig.enable_pse)
+	{
+		//int busy_retry_times = 2; do {} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
+		ret = sgx_create_pse_session();
+		if (ret != SGX_SUCCESS)
+			return false;
+	}
+	ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, 
+		[](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
+		{
+			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = CryptoKeyContainer::GetInstance().GetSignKeyPair();
+
+			COMMON_PRINTF("BP3\n");
+			std::string pubKeyPem = signPub->ToPubPemString();
+			if (pubKeyPem.size() == 0)
+			{
+				return false;
+			}
+			COMMON_PRINTF("BP3\n");
+
+			General256Hash reportDataHash;
+			MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, {
+				{&initData, SGX_SHA256_HASH_SIZE},
+				{pubKeyPem.data(), pubKeyPem.size()},
+				},
+				reportDataHash);
+
+			std::memcpy(&outData, reportDataHash.data(), SGX_SHA256_HASH_SIZE);
+			return true;
+		},
+		&m_raCtxId);
+
+	if (raConfig.enable_pse)
+	{
+		sgx_close_pse_session();
+	}
+
+	m_ctxInited = (ret == SGX_SUCCESS);
+	return m_ctxInited;
+}
+
+void SgxDecentRaProcessorClient::CloseRaContext()
+{
+	if (m_ctxInited)
+	{
+		decent_ra_close(m_raCtxId);
+	}
+}
+
+bool SgxDecentRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
+{
+	int retVal = 0;
+	if (ocall_decent_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
+		!retVal)
+	{
+		return false;
+	}
+	return true;
+}
+
+const sgx_ra_config SgxDecentRaProcessorSp::defaultDecentRaConfig{ SGX_QUOTE_LINKABLE_SIGNATURE, SGX_DEFAULT_AES_CMAC_KDF_ID, 1 };
+
+std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr, 
+	const sgx_ec256_public_t & peerSignkey)
+{
+	sgx_ec256_public_t signKey(peerSignkey);
+	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair(), defaultDecentRaConfig,
+		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
+	{
+		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(signKey));
+		std::string pubKeyPem = pubKey.ToPubPemString();
+		if (pubKeyPem.size() == 0)
+		{
+			return false;
+		}
+		return Decent::RAReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
+			consttime_memequal(initData.d + (sizeof(initData) / 2), expected.d + (sizeof(expected) / 2), sizeof(expected) / 2) == 1;
+	});
+}
+
+#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
+

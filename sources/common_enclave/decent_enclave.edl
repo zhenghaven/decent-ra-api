@@ -4,6 +4,14 @@ enclave {
 	
 	from "decent_tkey_exchange.edl" import *;
 	
+	untrusted 
+	{
+		int ocall_decent_ra_get_msg1(uint64_t enclave_id, uint32_t ra_ctx, [out] sgx_ra_msg1_t* msg1);
+
+		size_t ocall_decent_ra_proc_msg2(uint64_t enclave_id, uint32_t ra_ctx, [in, size=msg2_size] const sgx_ra_msg2_t* msg2, size_t msg2_size, 
+		[out] uint8_t** out_msg3);
+	};
+
 	trusted 
 	{
 		//Decent Functions:
@@ -13,7 +21,7 @@ enclave {
 		
 		public int ecall_decent_process_ias_ra_report([in, string] const char* reportStr);
 
-		public sgx_status_t ecall_decent_server_generate_x509([in, string] const char* selfReport);
+		public sgx_status_t ecall_decent_server_generate_x509([user_check] const void* ias_connector, uint64_t enclave_Id);
 
 		public size_t ecall_decent_server_get_x509_pem([out, size = buf_len] char* buf, size_t buf_len);
 		

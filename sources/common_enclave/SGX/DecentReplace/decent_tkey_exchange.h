@@ -44,7 +44,7 @@
 #include <functional>
 #include <vector>
 
-typedef std::function<bool(const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen)> ReportDataGenerator;
+typedef std::function<bool(const sgx_report_data_t& initData, sgx_report_data_t& outData)> SgxReportDataGenerator;
 
 #ifdef  __cplusplus
 extern "C" {
@@ -80,7 +80,7 @@ extern "C" {
 	sgx_status_t SGXAPI decent_ra_init(
 		const sgx_ec256_public_t *p_pub_key,
 		int b_pse,
-		ReportDataGenerator func,
+		SgxReportDataGenerator func,
 		sgx_ra_context_t *p_context);
 
 	/*
@@ -150,7 +150,7 @@ extern "C" {
 		const sgx_ec256_public_t *p_pub_key,
 		int b_pse,
 		sgx_ra_derive_secret_keys_t derive_key_cb,
-		ReportDataGenerator func,
+		SgxReportDataGenerator func,
 		sgx_ra_context_t *p_context);
 
 	/*

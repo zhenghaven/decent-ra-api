@@ -14,6 +14,7 @@
 #include <cppcodec/base64_rfc4648.hpp>
 #include <mbedtls/md.h>
 
+#include "../CommonTool.h"
 #include "../DataCoding.h"
 #include "../MbedTlsObjects.h"
 #include "../MbedTlsHelpers.h"
@@ -86,7 +87,10 @@ SgxRaProcessorSp::SgxRaProcessorSp(const void* const iasConnectorPtr, const std:
 	m_vk(General128BitKey()),
 	m_rpDataVrfy(rpDataVrfy),
 	m_iasReport(new sgx_ias_report_t),
-	m_isAttested(false)
+	m_isAttested(false),
+	m_iasReportStr(),
+	m_reportCert(),
+	m_reportSign()
 {
 }
 
@@ -113,7 +117,10 @@ SgxRaProcessorSp::SgxRaProcessorSp(SgxRaProcessorSp && other) :
 	m_vk(std::move(other.m_vk)),
 	m_rpDataVrfy(std::move(other.m_rpDataVrfy)),
 	m_iasReport(std::move(other.m_iasReport)),
-	m_isAttested(other.m_isAttested)
+	m_isAttested(other.m_isAttested),
+	m_iasReportStr(std::move(other.m_iasReportStr)),
+	m_reportCert(std::move(other.m_reportCert)),
+	m_reportSign(std::move(other.m_reportSign))
 {
 	other.m_iasConnectorPtr = nullptr;
 	other.m_smk.fill(0);
@@ -207,6 +214,7 @@ bool SgxRaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8
 bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_ra_msg4_t & msg4, 
 	sgx_report_data_t * outOriRD)
 {
+	COMMON_PRINTF("BP2\n");
 	if (!consttime_memequal(&(m_peerEncrKey), &msg3.g_a, sizeof(sgx_ec256_public_t)))
 	{
 		return false;
@@ -245,13 +253,9 @@ bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, s
 		std::memcpy(outOriRD, &report_data, sizeof(sgx_report_data_t));
 	}
 
-	std::string iasReport;
-	std::string reportCert;
-	std::string reportSign;
-
 	if (!StaticIasConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse, 
-		iasReport, reportSign, reportCert) ||
-		!CheckIasReport(*m_iasReport, iasReport, reportCert, reportSign, report_data))
+		m_iasReportStr, m_reportSign, m_reportCert) ||
+		!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data))
 	{
 		return false;
 	}
@@ -312,6 +316,21 @@ bool SgxRaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
 		return false;
 	}
 	return true;
+}
+
+const std::string & SgxRaProcessorSp::GetIasReportStr() const
+{
+	return m_iasReportStr;
+}
+
+const std::string & SgxRaProcessorSp::GetIasReportCert() const
+{
+	return m_reportCert;
+}
+
+const std::string & SgxRaProcessorSp::GetIasReportSign() const
+{
+	return m_reportSign;
 }
 
 bool SgxRaProcessorSp::CheckExGrpId(const uint32_t id) const

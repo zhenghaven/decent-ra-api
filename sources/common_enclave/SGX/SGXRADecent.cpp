@@ -5,9 +5,9 @@
 #include <map>
 #include <memory>
 
-#include "../Common.h"
 #include "../DecentCrypto.h"
 
+#include "../../common/CommonTool.h"
 #include "../../common/DataCoding.h"
 #include "../../common/DecentCrypto.h"
 #include "../../common/DecentRAReport.h"
@@ -23,6 +23,8 @@
 #include "decent_ra_tools.h"
 #include "DecentReplace/decent_tkey_exchange.h"
 #include "SGXRAClient.h"
+#include "SgxSelfRaReportGenerator.h"
+#include "SgxDecentRaProcessor.h"
 
 #include "../../common/TLSCommLayer.h"
 
@@ -33,6 +35,7 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	SGXRAEnclave::SetSPID(*inSpid);
+	SgxRaProcessorSp::SetSpid(*inSpid);
 
 	std::string selfHash = Decent::Crypto::GetProgSelfHashBase64();
 
@@ -46,40 +49,23 @@ extern "C" void ecall_decent_terminate()
 
 }
 
-extern "C" sgx_status_t ecall_decent_server_generate_x509(const char* selfReport)
+extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias_connector, const uint64_t enclave_Id)
 {
 	std::shared_ptr<const general_secp256r1_public_t> signPub = CryptoKeyContainer::GetInstance().GetSignPubKey();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = CryptoKeyContainer::GetInstance().GetSignKeyPair();
 
-	std::string selfId(SerializeStruct(*signPub));
-	bool isClientAttested = SGXRAEnclave::IsClientAttested(selfId);
-	bool isServerAttested = SGXRAEnclave::IsAttestedToServer(selfId);
+	std::unique_ptr<SgxRaProcessorSp> spProcesor = SgxDecentRaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub));
+	std::unique_ptr<SgxDecentRaProcessorClient> clientProcessor = Common::make_unique<SgxDecentRaProcessorClient>(
+		enclave_Id,
+		[](const sgx_ec256_public_t& pubKey) {
+			return true;
+		},
+		SgxDecentRaProcessorClient::defaultDecentConfigChecker
+		);
 
-	if (isClientAttested && isServerAttested)
-	{
-		//g_decentProtoPubKey = selfId;
-		std::shared_ptr<const Decent::ServerX509> serverCert(new Decent::ServerX509(*signkeyPair, 
-			Decent::Crypto::GetProgSelfHashBase64(), Decent::RAReport::sk_ValueReportTypeSgx, selfReport));
-		if (!serverCert)
-		{
-			return SGX_ERROR_UNEXPECTED;
-		}
-		DecentCertContainer::Get().SetServerCert(serverCert);
-
-		std::shared_ptr<const Decent::AppX509> dummyAppCert(new Decent::AppX509(*signkeyPair, *serverCert, *signkeyPair,
-			Decent::Crypto::GetProgSelfHashBase64(), Decent::RAReport::sk_ValueReportTypeSgx, ""));
-		DecentCertContainer::Get().SetCert(dummyAppCert);
-
-		Decent::Crypto::RefreshDecentAppAppClientSideConfig();
-		Decent::Crypto::RefreshDecentAppAppServerSideConfig();
-		Decent::Crypto::RefreshDecentAppClientServerSideConfig();
-
-		SGXRAEnclave::DropClientRAState(selfId);
-		SGXRAEnclave::DropRAStateToServer(selfId);
-		return SGX_SUCCESS;
-	}
-
-	return SGX_ERROR_INVALID_PARAMETER;
+	SgxSelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
+	
+	return SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
 extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
@@ -138,7 +124,7 @@ extern "C" sgx_status_t ecall_process_ra_msg1_decent(const char* client_id, cons
 	}
 
 	sgx_ec256_public_t clientSignkey(*in_key);
-	ReportDataVerifier reportDataVerifier = [clientSignkey](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
+	SgxReportDataVerifier reportDataVerifier = [clientSignkey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
 		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(clientSignkey));
 		std::string pubKeyPem = pubKey.ToPubPemString();
@@ -146,7 +132,7 @@ extern "C" sgx_status_t ecall_process_ra_msg1_decent(const char* client_id, cons
 		{
 			return false;
 		}
-		return Decent::RAReport::DecentReportDataVerifier(pubKeyPem, initData, inData);
+		return Decent::RAReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(sgx_report_data_t) / 2);
 	};
 
 	SGXRAEnclave::SetReportDataVerifier(client_id, reportDataVerifier); //Imposible to return false on this call.
@@ -161,7 +147,7 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* serverID, 
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	ReportDataGenerator rdGenerator = [](const uint8_t* initData, std::vector<uint8_t>& outData, const size_t inLen) -> bool
+	SgxReportDataGenerator rdGenerator = [](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
 	{
 		std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = CryptoKeyContainer::GetInstance().GetSignKeyPair();
 
@@ -178,7 +164,7 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* serverID, 
 		{
 			return false;
 		}
-		enclaveRet = sgx_sha256_update(initData, SGX_SHA256_HASH_SIZE / 2, shaState);
+		enclaveRet = sgx_sha256_update(initData.d, SGX_SHA256_HASH_SIZE, shaState);
 		if (enclaveRet != SGX_SUCCESS)
 		{
 			sgx_sha256_close(shaState);
@@ -190,8 +176,7 @@ extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* serverID, 
 			sgx_sha256_close(shaState);
 			return false;
 		}
-		outData.resize(SGX_SHA256_HASH_SIZE, 0);
-		enclaveRet = sgx_sha256_get_hash(shaState, reinterpret_cast<sgx_sha256_hash_t*>(outData.data()));
+		enclaveRet = sgx_sha256_get_hash(shaState, reinterpret_cast<sgx_sha256_hash_t*>(&outData));
 		if (enclaveRet != SGX_SUCCESS)
 		{
 			sgx_sha256_close(shaState);

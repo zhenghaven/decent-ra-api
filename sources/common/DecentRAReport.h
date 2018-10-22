@@ -21,7 +21,7 @@ namespace Decent
 		constexpr char const sk_ValueReportTypeSgx[]     = "SGX";
 
 
-		bool DecentReportDataVerifier(const std::string& pubSignKey, const uint8_t* initData, const std::vector<uint8_t>& inData);
+		bool DecentReportDataVerifier(const std::string& pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size);
 
 		bool ProcessSelfRaReport(const std::string& platformType, const std::string& pubKeyPem, const std::string& raReport, const std::string& inHashStr, sgx_ias_report_t& outIasReport);
 		

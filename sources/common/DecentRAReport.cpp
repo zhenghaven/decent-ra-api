@@ -14,10 +14,10 @@
 #include "SGX/SGXRAServiceProvider.h"
 #include "SGX/SGXCryptoConversions.h"
 
-bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t * initData, const std::vector<uint8_t>& inData)
+bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)
 {
-	if (pubSignKey.size() == 0 ||
-		inData.size() / 2 != GENERAL_256BIT_32BYTE_SIZE)
+	if (size != GENERAL_256BIT_32BYTE_SIZE ||
+		pubSignKey.size() == 0 )
 	{
 		return false;
 	}
@@ -25,11 +25,11 @@ bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, 
 	General256Hash hashRes;
 	MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, 
 		{
-			{initData, GENERAL_256BIT_32BYTE_SIZE / 2},
+			{initData, size},
 			{pubSignKey.data(), pubSignKey.size()},
 		}, hashRes);
 
-	return consttime_memequal(inData.data(), hashRes.data(), hashRes.size()) == 1;
+	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;
 }
 
 bool Decent::RAReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, const std::string & inHashStr, sgx_ias_report_t & outIasReport)
@@ -64,9 +64,9 @@ bool Decent::RAReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, cons
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);
 
-	ReportDataVerifier reportDataVerifier = [pubKeyPem](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
+	SgxReportDataVerifier reportDataVerifier = [pubKeyPem](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
-		return DecentReportDataVerifier(pubKeyPem, initData, inData);
+		return DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(sgx_report_data_t) / 2);
 	};
 	/*TODO: determine if we need to add nonce in here.*/
 	bool reportVerifyRes = SGXRAEnclave::VerifyIASReport(outIasReport, iasReportStr, iasCertChain, iasSign, oriReportData, reportDataVerifier, nullptr);

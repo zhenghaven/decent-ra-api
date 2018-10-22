@@ -4,7 +4,7 @@
 
 #include "SGXDecentEnclave.h"
 
-#include <iostream>
+#include <thread>
 
 #include <sgx_ukey_exchange.h>
 
@@ -242,7 +242,7 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	decentReportBody[Decent::RAReport::sk_LabelIasCertChain] = reportCertChain;
 	decentReportBody[Decent::RAReport::sk_LabelOriRepData] = SerializeStruct(oriReportData);
 
-	enclaveRet = ecall_decent_server_generate_x509(GetEnclaveId(), &retval, root.toStyledString().c_str());
+	enclaveRet = ecall_decent_server_generate_x509(GetEnclaveId(), &retval, m_ias.get(), GetEnclaveId());
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_generate_x509);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_server_generate_x509);
 
@@ -263,6 +263,53 @@ std::string SGXDecentEnclave::GenerateDecentSelfRAReport()
 	retReport.resize(certLen);
 
 	return retReport;
+}
+
+extern "C" int ocall_decent_ra_get_msg1(const uint64_t enclave_id, const uint32_t ra_ctx, sgx_ra_msg1_t* msg1)
+{
+	if (!msg1)
+	{
+		return false;
+	}
+
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	std::thread tmpThread([&enclaveRet, enclave_id, ra_ctx, msg1]() {
+		enclaveRet = sgx_ra_get_msg1(ra_ctx, enclave_id, decent_ra_get_ga, msg1);
+	});
+	tmpThread.join();
+
+	return (enclaveRet == SGX_SUCCESS);
+}
+
+extern "C" size_t ocall_decent_ra_proc_msg2(const uint64_t enclave_id, const uint32_t ra_ctx, const sgx_ra_msg2_t* msg2, const size_t msg2_size, uint8_t** out_msg3)
+{
+	if (!msg2 || !out_msg3)
+	{
+		return 0;
+	}
+
+	*out_msg3 = nullptr;
+
+	sgx_ra_msg3_t* tmpMsg3 = nullptr;
+	uint32_t tmpMsg3Size = 0;
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	std::thread tmpThread([&enclaveRet, enclave_id, ra_ctx, msg2, msg2_size, &tmpMsg3, &tmpMsg3Size]() {
+		enclaveRet = sgx_ra_proc_msg2(ra_ctx, enclave_id, decent_ra_proc_msg2_trusted, decent_ra_get_msg3_trusted,
+			msg2, static_cast<uint32_t>(msg2_size), &tmpMsg3, &tmpMsg3Size);
+	});
+	tmpThread.join();
+
+	if (enclaveRet != SGX_SUCCESS)
+	{
+		return 0;
+	}
+
+	//Copy msg3 to our buffer pointer to avoid the mix use of malloc and delete[];
+	*out_msg3 = new uint8_t[tmpMsg3Size];
+	std::memcpy(*out_msg3, tmpMsg3, tmpMsg3Size);
+	std::free(tmpMsg3);
+
+	return tmpMsg3Size;
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

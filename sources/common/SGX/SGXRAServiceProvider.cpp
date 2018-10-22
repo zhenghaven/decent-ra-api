@@ -65,7 +65,7 @@ struct RASPContext
 	//End Do Not Move.
 
 	std::string m_nonce;
-	ReportDataVerifier m_reportDataVerifier;
+	SgxReportDataVerifier m_reportDataVerifier;
 	//sgx_ec256_dh_shared_t m_sharedKey;
 	General128BitKey m_smk;
 	std::unique_ptr<General128BitKey> m_mk;
@@ -90,9 +90,9 @@ struct RASPContext
 		m_iasReport(new sgx_ias_report_t),
 		m_isValid(m_encrKeyPair && m_encrKeyPair.ToGeneralPublicKey(m_pubKey) && m_nonce.size() == IAS_REQUEST_NONCE_SIZE)
 	{
-		m_reportDataVerifier = [](const uint8_t* initData, const std::vector<uint8_t>& inData) -> bool
+		m_reportDataVerifier = [](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 		{
-			return consttime_memequal(initData, inData.data(), inData.size()) == 1;
+			return consttime_memequal(&initData, &expected, sizeof(initData)) == 1;
 		};
 	}
 
@@ -159,7 +159,7 @@ static inline std::shared_ptr<RASPContext> FetchSpCtx(const std::string& clientI
 	return (it != g_clientsMap.end()) ? it->second : nullptr;
 }
 
-bool SGXRAEnclave::SetReportDataVerifier(const std::string & clientID, ReportDataVerifier func)
+bool SGXRAEnclave::SetReportDataVerifier(const std::string & clientID, SgxReportDataVerifier func)
 {
 	std::shared_ptr<RASPContext> spCTXPtr(FetchSpCtx(clientID));
 	if (!spCTXPtr)
@@ -439,7 +439,7 @@ sgx_status_t SGXRAEnclave::ProcessRaMsg3(const std::string& clientId, const uint
 	return SGX_SUCCESS;
 }
 
-bool SGXRAEnclave::VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCertStr, const std::string& reportSign, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce)
+bool SGXRAEnclave::VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCertStr, const std::string& reportSign, const sgx_report_data_t& oriRD, SgxReportDataVerifier rdVerifier, const char* nonce)
 {
 #ifndef SIMULATING_ENCLAVE
 	MbedTlsObj::X509Cert trustedIasCert(IAS_REPORT_CERT);
@@ -503,7 +503,7 @@ bool SGXRAEnclave::VerifyIASReport(sgx_ias_report_t& outIasReport, const std::st
 	}
 
 	const sgx_report_data_t& reportData = outIasReport.m_quote.report_body.report_data;
-	bool isReportDataMatch = rdVerifier(oriRD.d, std::vector<uint8_t>(reportData.d, reportData.d + sizeof(sgx_report_data_t)));
+	bool isReportDataMatch = rdVerifier(oriRD, reportData);
 	//COMMON_PRINTF("IAS Report Is Report Data Match:    %s \n", isReportDataMatch ? "Yes!" : "No!");
 
 #ifndef SIMULATING_ENCLAVE

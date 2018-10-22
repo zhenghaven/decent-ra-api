@@ -20,12 +20,12 @@ class SgxRaProcessorClient
 {
 public:
 	typedef std::function<bool(const sgx_ec256_public_t& pubKey)> SpSignPubKeyVerifier;
-	typedef std::function<bool(const sgx_ra_config& raConfig)> raConfigChecker;
+	typedef std::function<bool(const sgx_ra_config& raConfig)> RaConfigChecker;
 	static const SpSignPubKeyVerifier sk_acceptAnyPubKey;
-	static const raConfigChecker sk_acceptAnyRaConfig;
+	static const RaConfigChecker sk_acceptAnyRaConfig;
 
 public:
-	SgxRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, raConfigChecker configChecker);
+	SgxRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker);
 	virtual ~SgxRaProcessorClient();
 
 	SgxRaProcessorClient(const SgxRaProcessorClient& other) = delete;
@@ -45,6 +45,7 @@ protected:
 	virtual void CloseRaContext();
 	virtual bool CheckKeyDerivationFuncId(const uint16_t id) const;
 	virtual bool DeriveSharedKeys(General128BitKey& mk, General128BitKey& sk);
+	virtual bool GetMsg1(sgx_ra_msg1_t& msg1);
 
 	uint64_t m_enclaveId;
 	uint32_t m_raCtxId;
@@ -59,6 +60,6 @@ private:
 	std::unique_ptr<sgx_ias_report_t> m_iasReport;
 
 	SpSignPubKeyVerifier m_signKeyVerifier;
-	raConfigChecker m_configChecker;
+	RaConfigChecker m_configChecker;
 	bool m_isAttested;
 };

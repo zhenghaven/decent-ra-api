@@ -4,15 +4,12 @@
 #include <string>
 #include <utility>
 #include <memory>
+#include <functional>
+#include <vector>
 
 #include <sgx_error.h>
 
 #include "../../common/GeneralKeyTypes.h"
-
-#include <functional>
-#include <vector>
-typedef std::function<bool(const uint8_t* initData, const std::vector<uint8_t>& inData)> ReportDataVerifier;
-
 
 typedef struct _ra_msg1_t sgx_ra_msg1_t;
 typedef struct _ra_msg2_t sgx_ra_msg2_t;
@@ -26,15 +23,17 @@ typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 class AESGCMCommLayer;
 
+typedef std::function<bool(const sgx_report_data_t& initData, const sgx_report_data_t& expected)> SgxReportDataVerifier;
+
 namespace SGXRAEnclave
 {
-	bool SetReportDataVerifier(const std::string& clientID, ReportDataVerifier func);
+	bool SetReportDataVerifier(const std::string& clientID, SgxReportDataVerifier func);
 	void DropClientRAState(const std::string& clientID);
 	bool IsClientAttested(const std::string& clientID);
 	bool ReleaseClientKeys(const std::string& clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport, std::unique_ptr<General128BitKey>& outSK, std::unique_ptr<General128BitKey>& outMK);
 	AESGCMCommLayer* ReleaseClientKeys(const std::string& clientID, std::unique_ptr<sgx_ias_report_t>& outIasReport);
 	void SetSPID(const sgx_spid_t& spid);
-	bool VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign, const sgx_report_data_t& oriRD, ReportDataVerifier rdVerifier, const char* nonce);
+	bool VerifyIASReport(sgx_ias_report_t& outIasReport, const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign, const sgx_report_data_t& oriRD, SgxReportDataVerifier rdVerifier, const char* nonce);
 
 	sgx_status_t ServiceProviderInit();
 	void ServiceProviderTerminate();

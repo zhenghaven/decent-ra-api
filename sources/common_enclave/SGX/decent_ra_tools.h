@@ -29,7 +29,7 @@ extern "C" {
 	*
 	* \return	SGX_SUCCESS for success, otherwise please refers to sgx_error.h .
 	*/
-	sgx_status_t enclave_init_decent_ra(const sgx_ec256_public_t *p_pub_key, int b_pse, ReportDataGenerator func, sgx_ra_derive_secret_keys_t derive_key_cb, sgx_ra_context_t *p_context);
+	sgx_status_t enclave_init_decent_ra(const sgx_ec256_public_t *p_pub_key, int b_pse, SgxReportDataGenerator func, sgx_ra_derive_secret_keys_t derive_key_cb, sgx_ra_context_t *p_context);
 
 #ifdef __cplusplus
 }
