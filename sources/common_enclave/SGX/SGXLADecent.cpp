@@ -43,11 +43,11 @@ static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity
 }
 
 
-extern "C" sgx_status_t ecall_decent_proc_app_x509_req(const char* peerId, void* const connectionPtr)
+extern "C" sgx_status_t ecall_decent_proc_app_x509_req(void* const connectionPtr)
 {
 	auto serverCert = DecentCertContainer::Get().GetServerCert();
 
-	if (!peerId || !connectionPtr || !serverCert || !*serverCert)
+	if (!connectionPtr || !serverCert || !*serverCert)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}

@@ -8,25 +8,16 @@
 #include "../DecentCrypto.h"
 
 #include "../../common/CommonTool.h"
-#include "../../common/DataCoding.h"
-#include "../../common/DecentCrypto.h"
 #include "../../common/DecentRAReport.h"
-#include "../../common/AESGCMCommLayer.h"
 #include "../../common/CryptoKeyContainer.h"
 #include "../../common/DecentCertContainer.h"
 
-#include "../../common/SGX/IasReport.h"
-#include "../../common/SGX/sgx_structs.h"
-#include "../../common/SGX/SGXRAServiceProvider.h"
+#include "../../common/SGX/SgxRaSpCommLayer.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
 
-#include "decent_ra_tools.h"
-#include "DecentReplace/decent_tkey_exchange.h"
-#include "SGXRAClient.h"
 #include "SgxSelfRaReportGenerator.h"
 #include "SgxDecentRaProcessor.h"
-
-#include "../../common/TLSCommLayer.h"
+#include "SgxRaClientCommLayer.h"
 
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 {
@@ -34,7 +25,6 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	SGXRAEnclave::SetSPID(*inSpid);
 	SgxRaProcessorSp::SetSpid(*inSpid);
 
 	std::string selfHash = Decent::Crypto::GetProgSelfHashBase64();
@@ -60,7 +50,7 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias
 		[](const sgx_ec256_public_t& pubKey) {
 			return true;
 		},
-		SgxDecentRaProcessorClient::defaultDecentConfigChecker
+		SgxDecentRaProcessorClient::sk_acceptDefaultConfig
 		);
 
 	SgxSelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
@@ -76,8 +66,12 @@ extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
 		return 0;
 	}
 
-	std::string x509Pem = serverCert->ToPemString();
-	std::memcpy(buf, x509Pem.data(), buf_len > x509Pem.size() ? x509Pem.size() : buf_len);
+	const std::string& x509Pem = serverCert->ToPemString();
+
+	if (buf && buf_len >= x509Pem.size())
+	{
+		std::memcpy(buf, x509Pem.data(), x509Pem.size());
+	}
 
 	return x509Pem.size();
 }
@@ -110,125 +104,25 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
 	return 1;
 }
 
-extern "C" sgx_status_t ecall_process_ra_msg1_decent(const char* client_id, const sgx_ec256_public_t* in_key, const sgx_ra_msg1_t *in_msg1, sgx_ra_msg2_t *out_msg2)
-{
-	if (!client_id || !in_key || !in_msg1 || !out_msg2)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-
-	sgx_status_t enclaveRet = SGXRAEnclave::ProcessRaMsg1(client_id, *in_key, *in_msg1, *out_msg2);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return enclaveRet;
-	}
-
-	sgx_ec256_public_t clientSignkey(*in_key);
-	SgxReportDataVerifier reportDataVerifier = [clientSignkey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
-	{
-		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(clientSignkey));
-		std::string pubKeyPem = pubKey.ToPubPemString();
-		if (pubKeyPem.size() == 0)
-		{
-			return false;
-		}
-		return Decent::RAReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(sgx_report_data_t) / 2);
-	};
-
-	SGXRAEnclave::SetReportDataVerifier(client_id, reportDataVerifier); //Imposible to return false on this call.
-
-	return SGX_SUCCESS;
-}
-
-extern "C" sgx_status_t ecall_process_ra_msg0_resp_decent(const char* serverID, const sgx_ec256_public_t* inPubKey, int enablePSE, sgx_ra_context_t* outContextID)
-{
-	if (!serverID || !inPubKey || !outContextID)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-
-	SgxReportDataGenerator rdGenerator = [](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
-	{
-		std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = CryptoKeyContainer::GetInstance().GetSignKeyPair();
-
-		std::string pubKeyPem = signPub->ToPubPemString();
-		if (pubKeyPem.size() == 0)
-		{
-			return false;
-		}
-
-		//COMMON_PRINTF("Generating report data with Public Key:\n%s\n", pubKeyPem.c_str());
-		sgx_sha_state_handle_t shaState;
-		sgx_status_t enclaveRet = sgx_sha256_init(&shaState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return false;
-		}
-		enclaveRet = sgx_sha256_update(initData.d, SGX_SHA256_HASH_SIZE, shaState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			sgx_sha256_close(shaState);
-			return false;
-		}
-		enclaveRet = sgx_sha256_update(reinterpret_cast<const uint8_t*>(pubKeyPem.data()), static_cast<uint32_t>(pubKeyPem.size()), shaState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			sgx_sha256_close(shaState);
-			return false;
-		}
-		enclaveRet = sgx_sha256_get_hash(shaState, reinterpret_cast<sgx_sha256_hash_t*>(&outData));
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			sgx_sha256_close(shaState);
-			return false;
-		}
-		sgx_sha256_close(shaState);
-
-		return true;
-	};
-
-	sgx_status_t enclaveRet = enclave_init_decent_ra(inPubKey, enablePSE, rdGenerator, nullptr, outContextID);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return enclaveRet;
-	}
-
-	std::unique_ptr<CtxIdWrapper> sgxCtxId(new CtxIdWrapper(*outContextID, &decent_ra_close));
-	bool res = SGXRAEnclave::AddNewServerRAState(serverID, *inPubKey, sgxCtxId);
-	return res ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
-}
-
-extern "C" sgx_status_t ecall_process_ra_msg4_decent(const char* serverID, const sgx_ias_report_t* inMsg4, const sgx_ec256_signature_t* inMsg4Sign)
-{
-	if (!serverID || !inMsg4 || !inMsg4Sign)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-
-	return SGXRAEnclave::ProcessRaMsg4(serverID, *inMsg4, *inMsg4Sign, &decent_ra_get_keys);
-}
-
 //This function will be call at new node side.
-extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void* const connectionPtr)
+extern "C" sgx_status_t ecall_decent_recv_proto_key(void* const connection, const uint64_t enclave_id)
 {
-	auto serverCert = DecentCertContainer::Get().GetServerCert();
-
-	if (!nodeID || !connectionPtr || 
-		!serverCert ||
-		!(*serverCert) ||
-		!SGXRAEnclave::IsAttestedToServer(nodeID))
+	std::shared_ptr<const Decent::ServerX509> serverCert = DecentCertContainer::Get().GetServerCert();
+	if (!serverCert || !*serverCert || !connection)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	std::unique_ptr<AESGCMCommLayer> commLayer(SGXRAEnclave::ReleaseServerKeys(nodeID));
+	std::unique_ptr<SgxRaProcessorClient> raProcessor = Common::make_unique<SgxRaProcessorClient>(enclave_id, 
+		SgxDecentRaProcessorClient::sk_acceptServerKey, SgxDecentRaProcessorClient::sk_acceptDefaultConfig);
+	SgxRaClientCommLayer commLayer(connection, raProcessor);
 	if (!commLayer)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
 
 	std::string plainMsg;
-	if (!commLayer->ReceiveMsg(connectionPtr, plainMsg))
+	if (!commLayer.ReceiveMsg(connection, plainMsg))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -259,43 +153,36 @@ extern "C" sgx_status_t ecall_proc_decent_proto_key_msg(const char* nodeID, void
 }
 
 //This function will be call at existing node side.
-extern "C" sgx_status_t ecall_decent_send_protocol_key(const char* nodeID, void* const connectionPtr)
+extern "C" sgx_status_t ecall_decent_send_protocol_key(void* const connection, const void* const ias_connector)
 {
-	auto serverCert = DecentCertContainer::Get().GetServerCert();
+	std::shared_ptr<const Decent::ServerX509> serverCert = DecentCertContainer::Get().GetServerCert();
 
-	if (!nodeID || !connectionPtr ||
-		!serverCert ||
-		!(*serverCert))
+	if (!connection || !serverCert || !*serverCert)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	if (!SGXRAEnclave::IsClientAttested(nodeID))
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-	std::unique_ptr<sgx_ias_report_t> iasReport;
-	std::unique_ptr<AESGCMCommLayer> commLayer(SGXRAEnclave::ReleaseClientKeys(nodeID, iasReport));
-
-	if (!commLayer || !iasReport)
+	std::unique_ptr<SgxRaProcessorSp> raProcessor = Common::make_unique<SgxRaProcessorSp>(
+		ias_connector, CryptoKeyContainer::GetInstance().GetSignKeyPair(), 
+		SgxDecentRaProcessorSp::defaultRaConfig, SgxRaProcessorSp::sk_defaultRpDataVrfy
+		);
+	SgxRaSpCommLayer commLayer(connection, raProcessor);
+	if (!commLayer)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-	if (iasReport->m_status != static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK))
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
+
 
 	const General256Hash& targetHash = Decent::Crypto::GetGetProgSelfHash256();
 	
-	if (!consttime_memequal(iasReport->m_quote.report_body.mr_enclave.m, targetHash.data(), sizeof(sgx_measurement_t)))
+	if (!consttime_memequal(commLayer.GetIasReport().m_quote.report_body.mr_enclave.m, targetHash.data(), sizeof(sgx_measurement_t)))
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	COMMON_PRINTF("Accepted New Decent Node: %s\n", nodeID);
+	COMMON_PRINTF("Accepted New Decent Node.\n");
 
-	bool res = commLayer->SendMsg(connectionPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair()->ToPrvPemString());
+	bool res = commLayer.SendMsg(connection, CryptoKeyContainer::GetInstance().GetSignKeyPair()->ToPrvPemString());
 
 	//std::string testMsg = "Enclave Test Message.";
 	//TLSCommLayer testTls(connectionPtr, Decent::Crypto::GetDecentAppAppServerSideConfig(), true);

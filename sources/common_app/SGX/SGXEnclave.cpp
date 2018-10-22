@@ -75,10 +75,10 @@ sgx_enclave_id_t SGXEnclave::LaunchEnclave(const fs::path& enclavePath, const fs
 		}
 	}
 
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_sgx_ra_client_init(outEnclaveID, &retval);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_init_ra_client_environment);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_init_ra_client_environment);
+	int retval = 0;
+	enclaveRet = ecall_enclave_init(outEnclaveID, &retval);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_enclave_init);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION_INT(retval, ecall_enclave_init);
 
 	return outEnclaveID;
 }
@@ -102,34 +102,13 @@ SGXEnclave::SGXEnclave(const std::string& enclavePath, const KnownFolderType tok
 
 SGXEnclave::~SGXEnclave()
 {
-	ecall_sgx_ra_client_terminate(m_eid);
+	ecall_enclave_terminate(m_eid);
 	sgx_destroy_enclave(m_eid);
 }
 
 const char * SGXEnclave::GetPlatformType() const
 {
 	return sk_platformType;
-}
-
-void SGXEnclave::GetRAClientSignPubKey(sgx_ec256_public_t & outKey) const
-{
-	sgx_status_t retval = SGX_SUCCESS;
-
-	sgx_status_t enclaveRet = ecall_get_ra_client_pub_sig_key(GetEnclaveId(), &retval, &outKey);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_get_ra_client_pub_sig_key);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_get_ra_client_pub_sig_key);
-}
-
-const std::string SGXEnclave::GetRAClientSignPubKey() const
-{
-	sgx_ec256_public_t signPubKey;
-	GetRAClientSignPubKey(signPubKey);
-	return SerializeStruct(signPubKey);
-}
-
-ClientRASession* SGXEnclave::GetRAClientSession(Connection& connection)
-{
-	return new SGXClientRASession(connection, *this);
 }
 
 uint32_t SGXEnclave::GetExGroupID()
@@ -141,76 +120,9 @@ uint32_t SGXEnclave::GetExGroupID()
 	return res;
 }
 
-sgx_status_t SGXEnclave::ProcessRAMsg0Resp(const std::string & ServerID, const sgx_ec256_public_t & inKey, int enablePSE, sgx_ra_context_t & outContextID, sgx_ra_msg1_t & outMsg1)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_process_ra_msg0_resp(GetEnclaveId(), &retval, ServerID.c_str(), &inKey, enablePSE, &outContextID);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg0_resp);
-	if (retval != SGX_SUCCESS)
-	{
-		return retval;
-	}
-
-	enclaveRet = sgx_ra_get_msg1(outContextID, GetEnclaveId(), sgx_ra_get_ga, &outMsg1);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, sgx_ra_get_msg1);
-
-	return SGX_SUCCESS;
-}
-
-sgx_status_t SGXEnclave::ProcessRAMsg2(const std::string & ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t & inContextID)
-{
-	return SGXEnclave::ProcessRAMsg2(ServerID, inMsg2, outMsg3, inContextID, sgx_ra_proc_msg2_trusted, sgx_ra_get_msg3_trusted);
-}
-
-sgx_status_t SGXEnclave::ProcessRAMsg2(const std::string & ServerID, const std::vector<uint8_t>& inMsg2, std::vector<uint8_t>& outMsg3, sgx_ra_context_t & inContextID, sgx_ecall_proc_msg2_trusted_t proc_msg2_func, sgx_ecall_get_msg3_trusted_t get_msg3_func)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-	const sgx_ra_msg2_t& msg2Ref = *reinterpret_cast<const sgx_ra_msg2_t*>(inMsg2.data());
-	sgx_ra_msg3_t* outMsg3ptr = nullptr;
-	uint32_t msg3Size = 0;
-
-	retval = sgx_ra_proc_msg2(inContextID, GetEnclaveId(), proc_msg2_func, get_msg3_func, &msg2Ref, static_cast<uint32_t>(inMsg2.size()), &outMsg3ptr, &msg3Size);
-	if (retval != SGX_SUCCESS)
-	{
-		return retval;
-	}
-	//TODO: make sure if we really need to check this.
-	if (msg3Size == 0 || msg3Size <= sizeof(sgx_ra_msg3_t))
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	std::vector<uint8_t> tmpMsg3(reinterpret_cast<uint8_t*>(outMsg3ptr), reinterpret_cast<uint8_t*>(outMsg3ptr) + msg3Size);
-	outMsg3.swap(tmpMsg3);
-
-	std::free(outMsg3ptr);
-
-	return SGX_SUCCESS;
-}
-
-sgx_status_t SGXEnclave::ProcessRAMsg4(const std::string & ServerID, const sgx_ias_report_t & inMsg4, const sgx_ec256_signature_t & inMsg4Sign)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_process_ra_msg4(GetEnclaveId(), &retval, ServerID.c_str(), &inMsg4, &inMsg4Sign);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_process_ra_msg4);
-
-	return retval;
-}
-
 bool SGXEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
-	if (category == SGXRAClientMessage::sk_ValueCat)
-	{
-		return SGXClientRASession::SmartMsgEntryPoint(connection, *this, jsonMsg);
-	}
-	else
-	{
-		return false;
-	}
+	return false;
 }
 
 const sgx_enclave_id_t SGXEnclave::GetEnclaveId() const

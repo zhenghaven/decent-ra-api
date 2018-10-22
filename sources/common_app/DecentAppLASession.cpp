@@ -3,6 +3,7 @@
 #include <json/json.h>
 
 #include "EnclaveBase.h"
+#include "EnclaveServiceProviderBase.h"
 #include "DecentEnclave.h"
 #include "DecentAppEnclave.h"
 #include "DecentMessages/DecentAppMessage.h"
@@ -25,7 +26,7 @@ static inline T*  ParseMessageExpected(const Json::Value& json)
 	return new T(json);
 }
 
-bool DecentServerLASession::SmartMsgEntryPoint(Connection& connection, EnclaveBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
+bool DecentServerLASession::SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
 {
 	std::unique_ptr<DecentLogger> logger;
 
@@ -48,10 +49,9 @@ DecentServerLASession::~DecentServerLASession()
 {
 }
 
-DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const DecentAppHandshake& hsMsh) :
+DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentAppHandshake& hsMsh) :
 	CommSession(connection),
-	k_senderId(hwEnclave.GetRAClientSignPubKey()),
-	k_remoteSideId(hsMsh.GetSenderID()),
+	k_senderId(hwEnclave.GetSpPublicSignKey()),
 	m_decentEnclave(enclave)
 {
 	connection.SendPack(DecentAppHandshakeAck(k_senderId, enclave.GetDecentSelfRAReport()));
@@ -59,7 +59,7 @@ DecentServerLASession::DecentServerLASession(Connection& connection, EnclaveBase
 
 bool DecentServerLASession::PerformDecentServerSideLA(DecentLogger* logger)
 {
-	bool res = m_decentEnclave.ProcessAppX509Req(k_remoteSideId, m_connection);
+	bool res = m_decentEnclave.ProcessAppX509Req(m_connection);
 
 	logger->AddMessage('I', res ? "New App Attested Successfully!" : "New App Failed Attestion!");
 
@@ -69,7 +69,7 @@ bool DecentServerLASession::PerformDecentServerSideLA(DecentLogger* logger)
 
 void DecentAppLASession::SendHandshakeMessage(Connection& connection, EnclaveBase & hwEnclave)
 {
-	connection.SendPack(DecentAppHandshake(hwEnclave.GetRAClientSignPubKey()));
+	connection.SendPack(DecentAppHandshake(std::string("AppLaReq")));
 }
 
 bool DecentAppLASession::SmartMsgEntryPoint(Connection& connection, EnclaveBase & hwEnclave, DecentAppEnclave & enclave, const Json::Value & jsonMsg)
@@ -91,7 +91,6 @@ DecentAppLASession::~DecentAppLASession()
 
 DecentAppLASession::DecentAppLASession(Connection& connection, EnclaveBase& hwEnclave, DecentAppEnclave& enclave, const DecentAppHandshakeAck& hsAck) :
 	CommSession(connection),
-	k_senderId(hwEnclave.GetRAClientSignPubKey()),
 	k_remoteSideId(hsAck.GetSenderID()),
 	m_appEnclave(enclave),
 	k_selfReport(hsAck.GetSelfRAReport())

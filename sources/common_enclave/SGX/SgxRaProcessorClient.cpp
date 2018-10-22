@@ -6,6 +6,7 @@
 
 #include "../../common/SGX/sgx_structs.h"
 #include "../../common/CommonTool.h"
+#include "../../common/CryptoKeyContainer.h"
 
 const SgxRaProcessorClient::SpSignPubKeyVerifier SgxRaProcessorClient::sk_acceptAnyPubKey(
 	[](const sgx_ec256_public_t& pubKey) -> bool
@@ -236,4 +237,19 @@ bool SgxRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 		return false;
 	}
 	return true;
+}
+
+extern "C" int ecall_enclave_init()
+{
+	if (!CryptoKeyContainer::GetInstance())
+	{
+		return false;
+	}
+
+	return true;
+}
+
+extern "C" void ecall_enclave_terminate()
+{
+
 }

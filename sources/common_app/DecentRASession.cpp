@@ -9,9 +9,6 @@
 #include "EnclaveServiceProviderBase.h"
 #include "DecentEnclave.h"
 
-#include "ClientRASession.h"
-#include "ServiceProviderRASession.h"
-
 #include "DecentMessages/DecentMessage.h"
 #include "MessageException.h"
 
@@ -20,16 +17,9 @@
 
 #include "../common/DataCoding.h"
 
-static inline std::string ConstructSenderID(EnclaveServiceProviderBase & enclave)
-{
-	sgx_ec256_public_t signPubKey;
-	enclave.GetRAClientSignPubKey(signPubKey);
-	return SerializeStruct(signPubKey);
-}
-
 void DecentRASession::SendHandshakeMessage(Connection& connection, EnclaveServiceProviderBase & enclave)
 {
-	connection.SendPack(DecentRAHandshake(ConstructSenderID(enclave)));
+	connection.SendPack(DecentRAHandshake(enclave.GetSpPublicSignKey()));
 }
 
 bool DecentRASession::SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const Json::Value & jsonMsg)
@@ -73,7 +63,7 @@ DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderB
 
 DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const DecentRAHandshake & hsMsg) :
 	CommSession(connection),
-	k_senderId(ConstructSenderID(hwEnclave)),
+	k_senderId(hwEnclave.GetSpPublicSignKey()),
 	k_remoteSideId(hsMsg.GetSenderID()),
 	m_hwEnclave(hwEnclave),
 	m_decentEnclave(enclave),
@@ -84,7 +74,7 @@ DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderB
 
 DecentRASession::DecentRASession(Connection& connection, EnclaveServiceProviderBase & hwEnclave, DecentEnclave & enclave, const DecentRAHandshakeAck & ackMsg) :
 	CommSession(connection),
-	k_senderId(ConstructSenderID(hwEnclave)),
+	k_senderId(hwEnclave.GetSpPublicSignKey()),
 	k_remoteSideId(ackMsg.GetSenderID()),
 	m_hwEnclave(hwEnclave),
 	m_decentEnclave(enclave),
@@ -108,18 +98,7 @@ bool DecentRASession::ProcessClientSideRA(DecentLogger* logger)
 	}
 
 	bool res = true;
-
-	std::unique_ptr<ClientRASession> clientSession(m_hwEnclave.GetRAClientSession(m_connection));
-	res = clientSession->ProcessClientSideRA();
-
-	if (!res)
-	{
-		return false;
-	}
-
-	m_connection.SendPack(DecentProtocolKeyReq(k_senderId));
-
-	res = m_decentEnclave.ProcessDecentProtoKeyMsg(k_remoteSideId, m_connection);
+	res = m_decentEnclave.ReceiveProtocolKey(m_connection);
 
 	return false;
 }
@@ -133,18 +112,7 @@ bool DecentRASession::ProcessServerSideRA(DecentLogger* logger)
 
 	bool res = true;
 
-	std::unique_ptr<ServiceProviderRASession> spSession(m_hwEnclave.GetRASPSession(m_connection));
-	res = spSession->ProcessServerSideRA();
-	if (!res)
-	{
-		return false;
-	}
-
-	Json::Value keyReqJson;
-	m_connection.ReceivePack(keyReqJson);
-	DecentProtocolKeyReq keyReq(keyReqJson);
-
-	res = m_decentEnclave.SendProtocolKey(keyReq.GetSenderID(), m_connection);
+	res = m_decentEnclave.SendProtocolKey(m_connection);
 	if (res && logger)
 	{
 		logger->AddMessage('I', "New Node Attested Successfully!");

@@ -54,7 +54,7 @@ public:
 
 public:
 	DecentAppHandshake() = delete;
-	explicit DecentAppHandshake(const std::string& senderID);
+	DecentAppHandshake(const std::string& senderID);
 	explicit DecentAppHandshake(const Json::Value& msg);
 	virtual ~DecentAppHandshake();
 
@@ -75,7 +75,7 @@ public:
 
 public:
 	DecentAppHandshakeAck() = delete;
-	explicit DecentAppHandshakeAck(const std::string& senderID, const std::string& selfRAReport);
+	DecentAppHandshakeAck(const std::string& senderID, const std::string& selfRAReport);
 	explicit DecentAppHandshakeAck(const Json::Value& msg);
 	virtual ~DecentAppHandshakeAck();
 

@@ -64,20 +64,21 @@ bool Decent::RAReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, cons
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);
 
-	SgxReportDataVerifier reportDataVerifier = [pubKeyPem](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
-	{
-		return DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(sgx_report_data_t) / 2);
-	};
 	/*TODO: determine if we need to add nonce in here.*/
-	bool reportVerifyRes = SGXRAEnclave::VerifyIASReport(outIasReport, iasReportStr, iasCertChain, iasSign, oriReportData, reportDataVerifier, nullptr);
+	bool reportVerifyRes = ParseAndVerifyIasReport(outIasReport, iasReportStr, iasCertChain, iasSign, nullptr);
 	//COMMON_PRINTF("IAS Report Is Verified:             %s \n", reportVerifyRes ? "Yes!" : "No!");
 	
+	reportVerifyRes = reportVerifyRes && DecentReportDataVerifier(pubKeyPem, oriReportData.d,
+		outIasReport.m_quote.report_body.report_data.d, sizeof(sgx_report_data_t) / 2);
+	//COMMON_PRINTF("IAS Report Is Report Data Match:    %s \n", reportVerifyRes ? "Yes!" : "No!");
+
 	sgx_measurement_t targetHash;
 	DeserializeStruct(targetHash, inHashStr);
 
 	reportVerifyRes = reportVerifyRes && consttime_memequal(&outIasReport.m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t));
 	//COMMON_PRINTF("IAS Report Is Hash Match:           %s \n", reportVerifyRes ? "Yes!" : "No!");
 
+	/* TODO: Check Status of PSE: */
 	reportVerifyRes = reportVerifyRes && (outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK));
 	//COMMON_PRINTF("IAS Report Is Quote Status Valid:   %s \n", reportVerifyRes ? "Yes!" : "No!");
 

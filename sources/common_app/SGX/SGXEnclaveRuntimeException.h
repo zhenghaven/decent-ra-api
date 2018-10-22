@@ -12,6 +12,9 @@
 #define CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(X, Y) if(X != SGX_SUCCESS) {\
                                                   throw SGXEnclaveRuntimeException(X, #Y);}
 
+#define CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION_INT(X, Y) if(!X) {\
+                                                  throw SGXEnclaveRuntimeException(SGX_ERROR_UNEXPECTED, #Y);}
+
 class SGXEnclaveRuntimeException : public EnclaveException
 {
 public:

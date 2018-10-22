@@ -5,18 +5,18 @@
 
 namespace SgxDecentRaProcessorSp
 {
-	extern const sgx_ra_config defaultDecentRaConfig;
+	extern const sgx_ra_config defaultRaConfig;
 	std::unique_ptr<SgxRaProcessorSp> GetSgxDecentRaProcessorSp(const void* const iasConnectorPtr, const sgx_ec256_public_t& peerSignkey);
 }
 
 class SgxDecentRaProcessorClient : public SgxRaProcessorClient
 {
 public:
-	static const RaConfigChecker defaultDecentConfigChecker;
+	static const SpSignPubKeyVerifier sk_acceptServerKey;
+	static const RaConfigChecker sk_acceptDefaultConfig;
 
 public:
 	SgxDecentRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker);
-	SgxDecentRaProcessorClient(const uint64_t enclaveId);
 	virtual ~SgxDecentRaProcessorClient();
 
 	SgxDecentRaProcessorClient(const SgxDecentRaProcessorClient& other) = delete;

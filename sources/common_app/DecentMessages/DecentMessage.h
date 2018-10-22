@@ -86,22 +86,3 @@ protected:
 private:
 	const std::string m_selfRAReport;
 };
-
-class DecentProtocolKeyReq : public DecentMessage
-{
-public:
-	static constexpr char const sk_ValueType[] = "ProtoKeyReq";
-
-public:
-	DecentProtocolKeyReq() = delete;
-	explicit DecentProtocolKeyReq(const std::string& senderID);
-	explicit DecentProtocolKeyReq(const Json::Value& msg);
-	virtual ~DecentProtocolKeyReq();
-
-	virtual std::string GetMessageTypeStr() const override;
-
-protected:
-	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
-
-private:
-};

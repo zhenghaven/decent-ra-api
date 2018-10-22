@@ -160,33 +160,3 @@ Json::Value & DecentRAHandshakeAck::GetJsonMsg(Json::Value & outJson) const
 
 	return parent;
 }
-
-constexpr char DecentProtocolKeyReq::sk_ValueType[];
-
-DecentProtocolKeyReq::DecentProtocolKeyReq(const std::string & senderID) :
-	DecentMessage(senderID)
-{
-}
-
-DecentProtocolKeyReq::DecentProtocolKeyReq(const Json::Value & msg) :
-	DecentMessage(msg, sk_ValueType)
-{
-}
-
-DecentProtocolKeyReq::~DecentProtocolKeyReq()
-{
-}
-
-std::string DecentProtocolKeyReq::GetMessageTypeStr() const
-{
-	return sk_ValueType;
-}
-
-Json::Value & DecentProtocolKeyReq::GetJsonMsg(Json::Value & outJson) const
-{
-	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
-
-	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
-
-	return parent;
-}

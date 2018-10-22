@@ -25,18 +25,9 @@ enclave {
 
 		public size_t ecall_decent_server_get_x509_pem([out, size = buf_len] char* buf, size_t buf_len);
 		
-		public sgx_status_t ecall_process_ra_msg1_decent([in, string] const char* client_id, 
-		                                                 [in] const sgx_ec256_public_t* in_key, 
-		                                                 [in] const sgx_ra_msg1_t *in_msg1, 
-		                                                 [out] sgx_ra_msg2_t *out_msg2);
-
-		public sgx_status_t ecall_process_ra_msg0_resp_decent([in, string] const char* ServerID, [in] const sgx_ec256_public_t* inPubKey, int enablePSE, [out] sgx_ra_context_t* outContextID);
+		public sgx_status_t ecall_decent_recv_proto_key([user_check] void* connection, uint64_t enclave_id);
 		
-		public sgx_status_t ecall_process_ra_msg4_decent([in, string] const char* ServerID, [in] const sgx_ias_report_t* inMsg4, [in] const sgx_ec256_signature_t* inMsg4Sign);
-		
-		public sgx_status_t ecall_proc_decent_proto_key_msg([in, string] const char* nodeID, [user_check] void* connectionPtr);
-		
-		public sgx_status_t ecall_decent_send_protocol_key([in, string] const char* nodeID, [user_check] void* connectionPtr);
+		public sgx_status_t ecall_decent_send_protocol_key([user_check] void* connection, [user_check] const void* ias_connector);
 	};
 
 };

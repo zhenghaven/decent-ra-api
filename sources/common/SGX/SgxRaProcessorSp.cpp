@@ -214,7 +214,6 @@ bool SgxRaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8
 bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_ra_msg4_t & msg4, 
 	sgx_report_data_t * outOriRD)
 {
-	COMMON_PRINTF("BP2\n");
 	if (!consttime_memequal(&(m_peerEncrKey), &msg3.g_a, sizeof(sgx_ec256_public_t)))
 	{
 		return false;

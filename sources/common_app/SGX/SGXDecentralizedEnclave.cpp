@@ -37,17 +37,6 @@ SGXDecentralizedEnclave::~SGXDecentralizedEnclave()
 {
 }
 
-bool SGXDecentralizedEnclave::ToDecentralizedNode(const std::string & id, bool isSP)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	sgx_status_t retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_to_decentralized_node(GetEnclaveId(), &retval, id.c_str(), isSP);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_transit_to_decent_node);
-
-	return retval == SGX_SUCCESS;
-}
-
 bool SGXDecentralizedEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	return false;

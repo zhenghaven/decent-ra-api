@@ -17,27 +17,22 @@
 
 #include "DecentReplace/decent_tkey_exchange.h"
 
-const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::defaultDecentConfigChecker(
+const SgxRaProcessorClient::SpSignPubKeyVerifier SgxDecentRaProcessorClient::sk_acceptServerKey(
+	[](const sgx_ec256_public_t& pubKey) {
+	std::shared_ptr<const general_secp256r1_public_t> serverKey = DecentCertContainer::Get().GetServerKeyGeneral();
+
+	return serverKey &&
+		consttime_memequal(SgxEc256Type2General(&pubKey), serverKey.get(), sizeof(general_secp256r1_public_t));
+	}
+);
+const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) {
-		return raConfig.enable_pse == 1 && raConfig.linkable_sign == SGX_QUOTE_LINKABLE_SIGNATURE;
+	return raConfig.enable_pse == 1 && raConfig.linkable_sign == SGX_QUOTE_LINKABLE_SIGNATURE;
 	}
 );
 
 SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
 	SgxRaProcessorClient(enclaveId, signKeyVerifier, configChecker)
-{
-}
-
-SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(const uint64_t enclaveId) :
-	SgxRaProcessorClient(enclaveId, 
-		[](const sgx_ec256_public_t& pubKey) {
-			std::shared_ptr<const general_secp256r1_public_t> serverKey = DecentCertContainer::Get().GetServerKeyGeneral();
-
-			return serverKey && 
-				consttime_memequal(SgxEc256Type2General(&pubKey), serverKey.get(), sizeof(general_secp256r1_public_t));
-		},
-		defaultDecentConfigChecker
-		)
 {
 }
 
@@ -52,7 +47,6 @@ SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(SgxDecentRaProcessorClien
 
 bool SgxDecentRaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
 {
-	COMMON_PRINTF("BP1\n");
 	size_t retVal = 0;
 	uint8_t* tmpMsg3 = nullptr;
 	if (ocall_decent_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
@@ -60,7 +54,6 @@ bool SgxDecentRaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const s
 	{
 		return false;
 	}
-	COMMON_PRINTF("BP1\n");
 
 	msg3.resize(retVal);
 	std::copy(tmpMsg3, tmpMsg3 + retVal, msg3.begin());
@@ -85,13 +78,11 @@ bool SgxDecentRaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, c
 		{
 			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = CryptoKeyContainer::GetInstance().GetSignKeyPair();
 
-			COMMON_PRINTF("BP3\n");
 			std::string pubKeyPem = signPub->ToPubPemString();
 			if (pubKeyPem.size() == 0)
 			{
 				return false;
 			}
-			COMMON_PRINTF("BP3\n");
 
 			General256Hash reportDataHash;
 			MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, {
@@ -133,13 +124,13 @@ bool SgxDecentRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 	return true;
 }
 
-const sgx_ra_config SgxDecentRaProcessorSp::defaultDecentRaConfig{ SGX_QUOTE_LINKABLE_SIGNATURE, SGX_DEFAULT_AES_CMAC_KDF_ID, 1 };
+const sgx_ra_config SgxDecentRaProcessorSp::defaultRaConfig{ SGX_QUOTE_LINKABLE_SIGNATURE, SGX_DEFAULT_AES_CMAC_KDF_ID, 1 };
 
 std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr, 
 	const sgx_ec256_public_t & peerSignkey)
 {
 	sgx_ec256_public_t signKey(peerSignkey);
-	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair(), defaultDecentRaConfig,
+	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair(), defaultRaConfig,
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
 		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(signKey));

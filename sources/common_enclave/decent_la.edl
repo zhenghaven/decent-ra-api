@@ -1,6 +1,6 @@
 enclave {
 	trusted 
 	{
-		public sgx_status_t ecall_decent_proc_app_x509_req([in, string] const char* peerId, [user_check] void* connectionPtr);
+		public sgx_status_t ecall_decent_proc_app_x509_req([user_check] void* connectionPtr);
 	};
 };

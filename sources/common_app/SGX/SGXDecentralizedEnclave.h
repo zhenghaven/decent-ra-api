@@ -19,9 +19,6 @@ public:
 
 	virtual ~SGXDecentralizedEnclave();
 
-	//Decentralized methods:
-	virtual bool ToDecentralizedNode(const std::string& id, bool isSP) override;
-
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
 };
 

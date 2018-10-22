@@ -11,6 +11,7 @@ namespace Json
 class DecentEnclave;
 class DecentAppEnclave;
 class EnclaveBase;
+class EnclaveServiceProviderBase;
 class LocalAttestationSession;
 class DecentLogger;
 class DecentAppHandshake;
@@ -19,11 +20,11 @@ class DecentAppHandshakeAck;
 class DecentServerLASession : public CommSession
 {
 public:
-	static bool SmartMsgEntryPoint(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
+	static bool SmartMsgEntryPoint(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
 
 public:
 	DecentServerLASession() = delete;
-	DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const DecentAppHandshake& hsMsh);
+	DecentServerLASession(Connection& connection, EnclaveServiceProviderBase& hwEnclave, DecentEnclave& enclave, const DecentAppHandshake& hsMsh);
 	//DecentServerLASession(Connection& connection, EnclaveBase& hwEnclave, DecentEnclave& enclave, const Json::Value& jsonMsg);
 
 	virtual ~DecentServerLASession();
@@ -32,11 +33,10 @@ public:
 
 	virtual const std::string GetSenderID() const override { return k_senderId; }
 
-	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
+	virtual const std::string GetRemoteReceiverID() const override { return ""; }
 
 private:
 	const std::string k_senderId;
-	const std::string k_remoteSideId;
 	DecentEnclave& m_decentEnclave;
 };
 
@@ -55,12 +55,11 @@ public:
 
 	virtual bool PerformDecentAppSideLA();
 
-	virtual const std::string GetSenderID() const override { return k_senderId; }
+	virtual const std::string GetSenderID() const override { return ""; }
 
 	virtual const std::string GetRemoteReceiverID() const override { return k_remoteSideId; }
 
 private:
-	const std::string k_senderId;
 	const std::string k_remoteSideId;
 	DecentAppEnclave& m_appEnclave;
 

@@ -16,30 +16,7 @@ enclave {
 
 	trusted 
 	{
-		public sgx_status_t ecall_sgx_ra_sp_init();
-		
-		public void ecall_sgx_ra_sp_terminate();
-
-		public sgx_status_t ecall_get_ra_sp_pub_sig_key([out] sgx_ec256_public_t* out_key);
-
-		public void ecall_drop_client_ra_state([in, string] const char* server_id);
-
-		public sgx_status_t ecall_get_ias_nonce([in, string] const char* client_id, [out, size=32] char* outStr);
-
-		public sgx_status_t ecall_process_ra_msg1([in, string] const char* client_id, 
-		                                          [in] const sgx_ec256_public_t* in_key, 
-												  [in] const sgx_ra_msg1_t *in_msg1, 
-												  [out] sgx_ra_msg2_t *out_msg2);
-
-		public sgx_status_t ecall_process_ra_msg3([in, string] const char* client_id, 
-		                                          [in, size=msg3Len] const uint8_t* inMsg3, 
-												  uint32_t msg3Len, 
-												  [in, string] const char* ias_report, 
-												  [in, string] const char* report_sign, 
-												  [in, string] const char* report_cert, 
-												  [out] sgx_ias_report_t* out_msg4, 
-												  [out] sgx_ec256_signature_t* out_msg4_sign, 
-												  [user_check] sgx_report_data_t* out_ori_rd);
+		public int ecall_enclave_get_pub_sign_key([out] sgx_ec256_public_t* out_key);
 	};
 
 };
