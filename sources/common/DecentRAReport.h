@@ -6,6 +6,7 @@
 #include <vector>
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
+typedef struct _sgx_measurement_t sgx_measurement_t;
 
 namespace Decent
 {

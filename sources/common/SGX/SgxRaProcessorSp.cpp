@@ -68,7 +68,7 @@ void SgxRaProcessorSp::SetSpid(const sgx_spid_t & spid)
 }
 
 SgxRaProcessorSp::SgxRaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey, 
-	const sgx_ra_config& raConfig, SgxReportDataVerifier rpDataVrfy) :
+	const sgx_ra_config& raConfig, SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy) :
 	m_raConfig(raConfig),
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	m_spid(std::atomic_load(&g_sgxSpid)),
@@ -86,6 +86,7 @@ SgxRaProcessorSp::SgxRaProcessorSp(const void* const iasConnectorPtr, const std:
 	m_sk(General128BitKey()),
 	m_vk(General128BitKey()),
 	m_rpDataVrfy(rpDataVrfy),
+	m_quoteVrfy(quoteVrfy),
 	m_iasReport(new sgx_ias_report_t),
 	m_isAttested(false),
 	m_iasReportStr(),
@@ -116,6 +117,7 @@ SgxRaProcessorSp::SgxRaProcessorSp(SgxRaProcessorSp && other) :
 	m_sk(std::move(other.m_sk)),
 	m_vk(std::move(other.m_vk)),
 	m_rpDataVrfy(std::move(other.m_rpDataVrfy)),
+	m_quoteVrfy(std::move(other.m_quoteVrfy)),
 	m_iasReport(std::move(other.m_iasReport)),
 	m_isAttested(other.m_isAttested),
 	m_iasReportStr(std::move(other.m_iasReportStr)),
@@ -252,13 +254,28 @@ bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, s
 		std::memcpy(outOriRD, &report_data, sizeof(sgx_report_data_t));
 	}
 
+	const sgx_quote_t& quoteInMsg3 = reinterpret_cast<const sgx_quote_t&>(msg3.quote);
+
 	if (!StaticIasConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse, 
 		m_iasReportStr, m_reportSign, m_reportCert) ||
-		!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data))
+		!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data) ||
+		!consttime_memequal(&quoteInMsg3, &m_iasReport->m_quote, sizeof(sgx_quote_t) - sizeof(uint32_t)) )
 	{
 		return false;
 	}
 
+	if (m_raConfig.enable_pse)
+	{
+		General256Hash pseHash;
+		MbedTlsHelper::CalcHashSha256(&msg3.ps_sec_prop, sizeof(msg3.ps_sec_prop), pseHash);
+
+		if (!consttime_memequal(pseHash.data(), &m_iasReport->m_pse_hash, pseHash.size()))
+		{
+			return false;
+		}
+	}
+
+	/*TODO: verify the quote in msg3. */
 	m_isAttested = CheckReportStatus(*m_iasReport);
 	if (!m_isAttested)
 	{
@@ -393,16 +410,16 @@ bool SgxRaProcessorSp::CheckIasReport(sgx_ias_report_t & outIasReport,
 	const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, 
 	const sgx_report_data_t & oriRD) const
 {
-	if (!ParseAndVerifyIasReport(outIasReport, iasReportStr, reportCert, reportSign, m_nonce.c_str()))
+	if (!m_rpDataVrfy || !m_quoteVrfy)
 	{
 		return false;
 	}
 
-	if (!m_rpDataVrfy ||
-		!m_rpDataVrfy(oriRD, outIasReport.m_quote.report_body.report_data))
+	auto quoteVerifier = [this, oriRD](const sgx_ias_report_t & iasReport) -> bool
 	{
-		return false;
-	}
+		return m_rpDataVrfy(oriRD, iasReport.m_quote.report_body.report_data) &&
+			m_quoteVrfy(iasReport.m_quote);
+	};
 
-	return true;
+	return ParseAndVerifyIasReport(outIasReport, iasReportStr, reportCert, reportSign, m_nonce.c_str(), quoteVerifier);
 }

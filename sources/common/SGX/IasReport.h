@@ -42,6 +42,18 @@ enum ias_pse_status_t : uint8_t{
 	
 bool ParseIasReport(sgx_ias_report_t& outReport, std::string& outId, std::string& outNonce, const std::string& inStr);
 
-bool ParseAndVerifyIasReport(sgx_ias_report_t& outIasReport,
+//This function only checks report & PSE status (and report nonce).
+bool ParseAndCheckIasReport(sgx_ias_report_t& outIasReport,
 	const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
 	const char* nonce);
+
+//User provides verifier to verify the report.
+template<typename Vrfier>
+bool ParseAndVerifyIasReport(sgx_ias_report_t& outIasReport,
+	const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
+	const char* nonce, Vrfier vrfier)
+{
+	const sgx_ias_report_t& iasReport = outIasReport;
+	return ParseAndCheckIasReport(outIasReport, iasReportStr, reportCert, reportSign, nonce) &&
+		vrfier(iasReport);
+}

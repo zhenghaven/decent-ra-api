@@ -32,6 +32,7 @@ namespace
 	static General256Hash ConstructProgSelfHash()
 	{
 		General256Hash res = General256Hash();
+		static_assert(res.size() == sizeof(sgx_measurement_t), "Measurement size doesn't match!");
 		const sgx_measurement_t& enclaveHash = gsk_selfReport.body.mr_enclave;
 
 		static_assert(res.size() == sizeof(enclaveHash.m), "Enclave hash size doesn't match!");

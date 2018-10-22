@@ -235,6 +235,8 @@ bool IASUtil::GetQuoteReport(const std::string & jsonReqBody, std::string & outR
 	reportJson["id"] = "165171271757108173876306223827987629752";
 	reportJson["timestamp"] = "2015-09-29T10:07:26.711023";
 	reportJson["isvEnclaveQuoteStatus"] = "OK";
+	reportJson["pseManifestStatus"] = "OK";
+	reportJson["pseManifestHash"] = "7563016AF9AE650FCAE9D94FBEE7DA39264A5C6C2B85CCDA8337D208BA17709E";
 	reportJson["nonce"] = jsonRoot["nonce"].asString();
 	reportJson["isvEnclaveQuoteBody"] = quoteB64;
 

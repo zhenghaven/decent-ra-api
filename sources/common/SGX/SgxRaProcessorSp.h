@@ -15,6 +15,7 @@ typedef struct _ra_msg3_t sgx_ra_msg3_t;
 typedef struct _sgx_ra_msg4_t sgx_ra_msg4_t;
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
 typedef struct _sgx_report_data_t sgx_report_data_t;
+typedef struct _quote_t sgx_quote_t;
 typedef struct _spid_t sgx_spid_t;
 
 namespace MbedTlsObj
@@ -26,13 +27,14 @@ class SgxRaProcessorSp
 {
 public:
 	typedef std::function<bool(const sgx_report_data_t& initData, const sgx_report_data_t& expected)> SgxReportDataVerifier;
+	typedef std::function<bool(const sgx_quote_t& quote)> SgxQuoteVerifier;
 	static void SetSpid(const sgx_spid_t & spid);
 	static const SgxReportDataVerifier sk_defaultRpDataVrfy;
 	static const sgx_ra_config sk_defaultRaConfig;
 
 public:
 	SgxRaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey, 
-		const sgx_ra_config& raConfig, SgxReportDataVerifier rpDataVrfy);
+		const sgx_ra_config& raConfig, SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy);
 
 	virtual ~SgxRaProcessorSp();
 
@@ -88,6 +90,7 @@ private:
 	General128BitKey m_vk;
 
 	SgxReportDataVerifier m_rpDataVrfy;
+	SgxQuoteVerifier m_quoteVrfy;
 	std::unique_ptr<sgx_ias_report_t> m_iasReport;
 	bool m_isAttested;
 

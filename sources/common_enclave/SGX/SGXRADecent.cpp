@@ -5,8 +5,6 @@
 #include <map>
 #include <memory>
 
-#include "../DecentCrypto.h"
-
 #include "../../common/CommonTool.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/CryptoKeyContainer.h"
@@ -14,6 +12,8 @@
 
 #include "../../common/SGX/SgxRaSpCommLayer.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
+
+#include "../DecentCrypto.h"
 
 #include "SgxSelfRaReportGenerator.h"
 #include "SgxDecentRaProcessor.h"
@@ -164,20 +164,13 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(void* const connection, c
 
 	std::unique_ptr<SgxRaProcessorSp> raProcessor = Common::make_unique<SgxRaProcessorSp>(
 		ias_connector, CryptoKeyContainer::GetInstance().GetSignKeyPair(), 
-		SgxDecentRaProcessorSp::defaultRaConfig, SgxRaProcessorSp::sk_defaultRpDataVrfy
+		SgxDecentRaProcessorSp::defaultRaConfig, SgxRaProcessorSp::sk_defaultRpDataVrfy,
+		SgxDecentRaProcessorSp::defaultServerQuoteVerifier
 		);
 	SgxRaSpCommLayer commLayer(connection, raProcessor);
 	if (!commLayer)
 	{
 		return SGX_ERROR_UNEXPECTED;
-	}
-
-
-	const General256Hash& targetHash = Decent::Crypto::GetGetProgSelfHash256();
-	
-	if (!consttime_memequal(commLayer.GetIasReport().m_quote.report_body.mr_enclave.m, targetHash.data(), sizeof(sgx_measurement_t)))
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
 	COMMON_PRINTF("Accepted New Decent Node.\n");

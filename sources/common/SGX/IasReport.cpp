@@ -158,7 +158,7 @@ bool ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::strin
 	return true;
 }
 
-bool ParseAndVerifyIasReport(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
+bool ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
 {
 #ifndef SIMULATING_ENCLAVE
 	MbedTlsObj::X509Cert trustedIasCert(IAS_REPORT_CERT);
@@ -221,9 +221,5 @@ bool ParseAndVerifyIasReport(sgx_ias_report_t & outIasReport, const std::string 
 		}
 	}
 
-#ifndef SIMULATING_ENCLAVE
-	return certVerRes && signVerRes && isNonceMatch;
-#else
-	return isNonceMatch && isReportDataMatch;
-#endif // !SIMULATING_ENCLAVE
+	return isNonceMatch;
 }

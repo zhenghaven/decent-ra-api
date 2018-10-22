@@ -15,6 +15,8 @@
 #include "../../common/SGX/sgx_structs.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
 
+#include "../DecentCrypto.h"
+
 #include "DecentReplace/decent_tkey_exchange.h"
 
 const SgxRaProcessorClient::SpSignPubKeyVerifier SgxDecentRaProcessorClient::sk_acceptServerKey(
@@ -27,7 +29,8 @@ const SgxRaProcessorClient::SpSignPubKeyVerifier SgxDecentRaProcessorClient::sk_
 );
 const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) {
-	return raConfig.enable_pse == 1 && raConfig.linkable_sign == SGX_QUOTE_LINKABLE_SIGNATURE;
+	const sgx_ra_config& cmp = SgxDecentRaProcessorSp::defaultRaConfig;
+	return raConfig.enable_pse == cmp.enable_pse && raConfig.linkable_sign == cmp.linkable_sign && raConfig.ckdf_id == cmp.ckdf_id;
 	}
 );
 
@@ -125,6 +128,13 @@ bool SgxDecentRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 }
 
 const sgx_ra_config SgxDecentRaProcessorSp::defaultRaConfig{ SGX_QUOTE_LINKABLE_SIGNATURE, SGX_DEFAULT_AES_CMAC_KDF_ID, 1 };
+const SgxRaProcessorSp::SgxQuoteVerifier SgxDecentRaProcessorSp::defaultServerQuoteVerifier(
+	[](const sgx_quote_t& quote) -> bool
+{
+	const General256Hash& decentHash = Decent::Crypto::GetGetProgSelfHash256();
+	return consttime_memequal(decentHash.data(), &quote.report_body.mr_enclave, decentHash.size());
+}
+);
 
 std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr, 
 	const sgx_ec256_public_t & peerSignkey)
@@ -141,7 +151,8 @@ std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcesso
 		}
 		return Decent::RAReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
 			consttime_memequal(initData.d + (sizeof(initData) / 2), expected.d + (sizeof(expected) / 2), sizeof(expected) / 2) == 1;
-	});
+	},
+		defaultServerQuoteVerifier);
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

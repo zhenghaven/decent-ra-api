@@ -6,6 +6,7 @@
 namespace SgxDecentRaProcessorSp
 {
 	extern const sgx_ra_config defaultRaConfig;
+	extern const SgxRaProcessorSp::SgxQuoteVerifier defaultServerQuoteVerifier;
 	std::unique_ptr<SgxRaProcessorSp> GetSgxDecentRaProcessorSp(const void* const iasConnectorPtr, const sgx_ec256_public_t& peerSignkey);
 }
 
