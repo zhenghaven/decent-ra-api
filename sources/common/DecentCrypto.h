@@ -114,6 +114,5 @@ namespace Decent
 		std::shared_ptr<const ServerX509> m_decentCert;
 		Decent::Crypto::ServerRaReportVerfier m_decentCertVerifier;
 		Decent::Crypto::AppIdVerfier m_appCertVerifier;
-		void* m_rng;
 	};
 }

@@ -14,29 +14,33 @@ public:
 
 public:
 	DecentMessage() = delete;
-	DecentMessage(const std::string& senderID);
-	DecentMessage(const Json::Value& msg, const char* expectedType);
-	~DecentMessage();
+	DecentMessage(const std::string& senderID) :
+		Messages(senderID)
+	{}
 
-	virtual std::string GetMessageCategoryStr() const override;
+	DecentMessage(const Json::Value& msg, const char* expectedType);
+	~DecentMessage() {}
+
+	virtual std::string GetMessageCategoryStr() const override { return sk_ValueCat; }
 	virtual std::string GetMessageTypeStr() const = 0;
 
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
-
-private:
-
 };
 
 class DecentErrMsg : public DecentMessage, public ErrorMessage
 {
 public:
 	DecentErrMsg() = delete;
-	DecentErrMsg(const std::string& senderID, const std::string& errStr);
-	DecentErrMsg(const Json::Value& msg);
-	virtual ~DecentErrMsg();
+	DecentErrMsg(const std::string& senderID, const std::string& errStr) :
+		DecentMessage(senderID),
+		ErrorMessage(errStr)
+	{}
 
-	virtual std::string GetMessageTypeStr() const override;
+	DecentErrMsg(const Json::Value& msg);
+	virtual ~DecentErrMsg() {}
+
+	virtual std::string GetMessageTypeStr() const override { return sk_ValueType; }
 
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
@@ -49,16 +53,23 @@ public:
 
 public:
 	DecentRAHandshake() = delete;
-	explicit DecentRAHandshake(const std::string& senderID);
-	explicit DecentRAHandshake(const Json::Value& msg);
-	virtual ~DecentRAHandshake();
+	explicit DecentRAHandshake(const std::string& senderID) :
+		DecentMessage(senderID)
+	{}
 
-	virtual std::string GetMessageTypeStr() const override;
+	explicit DecentRAHandshake(const Json::Value& msg) :
+		DecentMessage(msg, sk_ValueType)
+	{}
+
+	virtual ~DecentRAHandshake() {}
+
+	virtual std::string GetMessageTypeStr() const override { return sk_ValueType; }
 
 protected:
-	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
-
-private:
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override
+	{
+		return DecentMessage::GetJsonMsg(outJson);
+	}
 };
 
 class DecentRAHandshakeAck : public DecentMessage
@@ -72,13 +83,17 @@ public:
 
 public:
 	DecentRAHandshakeAck() = delete;
-	explicit DecentRAHandshakeAck(const std::string& senderID, const std::string& selfRAReport);
+	explicit DecentRAHandshakeAck(const std::string& senderID, const std::string& selfRAReport) :
+		DecentMessage(senderID),
+		m_selfRAReport(selfRAReport)
+	{}
+
 	explicit DecentRAHandshakeAck(const Json::Value& msg);
-	virtual ~DecentRAHandshakeAck();
+	virtual ~DecentRAHandshakeAck() {}
 
-	virtual std::string GetMessageTypeStr() const override;
+	virtual std::string GetMessageTypeStr() const override { return sk_ValueType; }
 
-	virtual const std::string& GetSelfRAReport() const;
+	virtual const std::string& GetSelfRAReport() const { return m_selfRAReport; }
 
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;

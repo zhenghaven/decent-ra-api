@@ -18,12 +18,10 @@ const SgxRaProcessorClient::SpSignPubKeyVerifier SgxRaProcessorClient::sk_accept
 const SgxRaProcessorClient::RaConfigChecker SgxRaProcessorClient::sk_acceptAnyRaConfig(
 	[](const sgx_ra_config& raConfig) -> bool
 	{
-		if (raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE)
-		{
-			return false;
-		}
-
-		if (raConfig.enable_pse != 0 && raConfig.enable_pse != 1)
+		if ((raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE) ||
+			(raConfig.enable_pse != 0 && raConfig.enable_pse != 1) ||
+			(raConfig.allow_ofd_enc != 0 && raConfig.allow_ofd_enc != 1) ||
+			(raConfig.allow_ofd_pse != 0 && raConfig.allow_ofd_pse != 1))
 		{
 			return false;
 		}

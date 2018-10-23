@@ -54,14 +54,23 @@ public:
 
 public:
 	DecentAppHandshake() = delete;
-	DecentAppHandshake(const std::string& senderID);
-	explicit DecentAppHandshake(const Json::Value& msg);
-	virtual ~DecentAppHandshake();
+	DecentAppHandshake(const std::string& senderID) :
+		DecentAppMessage(senderID)
+	{}
 
-	virtual std::string GetMessageTypeStr() const override;
+	explicit DecentAppHandshake(const Json::Value& msg) :
+		DecentAppMessage(msg, sk_ValueType)
+	{}
+
+	virtual ~DecentAppHandshake() {}
+
+	virtual std::string GetMessageTypeStr() const override { return sk_ValueType; }
 
 protected:
-	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;
+	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override
+	{
+		return DecentAppMessage::GetJsonMsg(outJson);
+	}
 };
 
 class DecentAppHandshakeAck : public DecentAppMessage
@@ -75,13 +84,17 @@ public:
 
 public:
 	DecentAppHandshakeAck() = delete;
-	DecentAppHandshakeAck(const std::string& senderID, const std::string& selfRAReport);
+	DecentAppHandshakeAck(const std::string& senderID, const std::string& selfRAReport) :
+		DecentAppMessage(senderID),
+		m_selfRAReport(selfRAReport)
+	{}
+
 	explicit DecentAppHandshakeAck(const Json::Value& msg);
-	virtual ~DecentAppHandshakeAck();
+	virtual ~DecentAppHandshakeAck() {}
 
-	virtual std::string GetMessageTypeStr() const override;
+	virtual std::string GetMessageTypeStr() const override { return sk_ValueType; }
 
-	virtual const std::string& GetSelfRAReport() const;
+	virtual const std::string& GetSelfRAReport() const { return m_selfRAReport; }
 
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override;

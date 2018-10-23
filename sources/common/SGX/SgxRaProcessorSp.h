@@ -60,7 +60,6 @@ public:
 protected:
 	virtual bool CheckExGrpId(const uint32_t id) const;
 	virtual bool CheckKeyDerivationFuncId(const uint16_t id) const;
-	virtual bool CheckReportStatus(const sgx_ias_report_t& report) const;
 	virtual bool CheckIasReport(sgx_ias_report_t& outIasReport, 
 		const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign, 
 		const sgx_report_data_t& oriRD) const;

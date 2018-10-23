@@ -1465,8 +1465,10 @@ TlsConfig::TlsConfig(mbedtls_ssl_config * ptr) :
 }
 
 MbedTlsObj::TlsConfig::TlsConfig(TlsConfig && other) :
-	ObjBase(std::forward<ObjBase>(other))
+	ObjBase(std::forward<ObjBase>(other)),
+	m_rng(other.m_rng)
 {
+	other.m_rng = nullptr;
 }
 
 MbedTlsObj::TlsConfig::~TlsConfig()
@@ -1481,6 +1483,10 @@ void MbedTlsObj::TlsConfig::Destroy()
 		mbedtls_ssl_config_free(m_ptr);
 		delete m_ptr;
 	}
+	if (m_rng)
+	{
+		MbedTlsHelper::DrbgFree(m_rng);
+	}
 	m_ptr = nullptr;
 }
 
@@ -1489,6 +1495,20 @@ TlsConfig & MbedTlsObj::TlsConfig::operator=(TlsConfig && other)
 	if (this != &other)
 	{
 		ObjBase::operator=(std::forward<ObjBase>(other));
+		m_rng = other.m_rng;
+		other.m_rng = nullptr;
 	}
 	return *this;
+}
+
+void MbedTlsObj::TlsConfig::BasicInit()
+{
+	if (!m_ptr)
+	{
+		return;
+	}
+
+	mbedtls_ssl_config_init(m_ptr);
+	MbedTlsHelper::DrbgInit(m_rng);
+	mbedtls_ssl_conf_rng(m_ptr, &MbedTlsHelper::DrbgRandom, m_rng);
 }

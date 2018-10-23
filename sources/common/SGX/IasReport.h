@@ -5,6 +5,7 @@
 #include <string>
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
+typedef struct _sgx_ra_config sgx_ra_config;
 
 enum class ias_quote_status_t : uint8_t {
 	IAS_QUOTE_OK                          = 0,
@@ -47,13 +48,15 @@ bool ParseAndCheckIasReport(sgx_ias_report_t& outIasReport,
 	const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
 	const char* nonce);
 
+bool CheckIasReportStatus(const sgx_ias_report_t& iasReport, const sgx_ra_config& raConfig);
+
 //User provides verifier to verify the report.
 template<typename Vrfier>
 bool ParseAndVerifyIasReport(sgx_ias_report_t& outIasReport,
 	const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
-	const char* nonce, Vrfier vrfier)
+	const char* nonce, const sgx_ra_config& raConfig, Vrfier vrfier)
 {
 	const sgx_ias_report_t& iasReport = outIasReport;
 	return ParseAndCheckIasReport(outIasReport, iasReportStr, reportCert, reportSign, nonce) &&
-		vrfier(iasReport);
+		vrfier(iasReport) && CheckIasReportStatus(iasReport, raConfig);
 }

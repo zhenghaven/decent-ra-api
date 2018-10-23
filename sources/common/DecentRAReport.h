@@ -6,7 +6,7 @@
 #include <vector>
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
-typedef struct _sgx_measurement_t sgx_measurement_t;
+typedef struct _sgx_ra_config sgx_ra_config;
 
 namespace Decent
 {
@@ -21,10 +21,11 @@ namespace Decent
 
 		constexpr char const sk_ValueReportTypeSgx[]     = "SGX";
 
-
 		bool DecentReportDataVerifier(const std::string& pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size);
 
-		bool ProcessSelfRaReport(const std::string& platformType, const std::string& pubKeyPem, const std::string& raReport, const std::string& inHashStr, sgx_ias_report_t& outIasReport);
+		bool ProcessSelfRaReport(const std::string& platformType, const std::string& pubKeyPem, const std::string& raReport, const std::string& inHashStr);
+
+		const sgx_ra_config& GetSgxDecentRaConfig();
 		
 		bool ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string& raReport, const std::string& inHashStr, sgx_ias_report_t& outIasReport);
 	}

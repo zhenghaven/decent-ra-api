@@ -54,7 +54,18 @@ const SgxRaProcessorSp::SgxReportDataVerifier SgxRaProcessorSp::sk_defaultRpData
 	return consttime_memequal(&initData, &expected, sizeof(sgx_report_data_t)) == 1;
 });
 
-const sgx_ra_config SgxRaProcessorSp::sk_defaultRaConfig { SGX_QUOTE_LINKABLE_SIGNATURE, SGX_DEFAULT_AES_CMAC_KDF_ID, 1 };
+const sgx_ra_config SgxRaProcessorSp::sk_defaultRaConfig 
+{ 
+	SGX_QUOTE_LINKABLE_SIGNATURE, 
+	SGX_DEFAULT_AES_CMAC_KDF_ID,
+#ifndef SIMULATING_ENCLAVE
+	1,
+#else
+	0,
+#endif
+	1,
+	1
+};
 
 void SgxRaProcessorSp::SetSpid(const sgx_spid_t & spid)
 {
@@ -140,12 +151,10 @@ bool SgxRaProcessorSp::Init()
 		return false;
 	}
 
-	if (m_raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && m_raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE)
-	{
-		return false;
-	}
-
-	if(m_raConfig.enable_pse != 0 && m_raConfig.enable_pse != 1)
+	if ((m_raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && m_raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE) ||
+		(m_raConfig.enable_pse != 0 && m_raConfig.enable_pse != 1) ||
+		(m_raConfig.allow_ofd_enc != 0 && m_raConfig.allow_ofd_enc != 1) ||
+		(m_raConfig.allow_ofd_pse != 0 && m_raConfig.allow_ofd_pse != 1) )
 	{
 		return false;
 	}
@@ -256,31 +265,29 @@ bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, s
 
 	const sgx_quote_t& quoteInMsg3 = reinterpret_cast<const sgx_quote_t&>(msg3.quote);
 
-	if (!StaticIasConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse, 
-		m_iasReportStr, m_reportSign, m_reportCert) ||
-		!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data) ||
-		!consttime_memequal(&quoteInMsg3, &m_iasReport->m_quote, sizeof(sgx_quote_t) - sizeof(uint32_t)) )
+	do
 	{
-		return false;
-	}
-
-	if (m_raConfig.enable_pse)
-	{
-		General256Hash pseHash;
-		MbedTlsHelper::CalcHashSha256(&msg3.ps_sec_prop, sizeof(msg3.ps_sec_prop), pseHash);
-
-		if (!consttime_memequal(pseHash.data(), &m_iasReport->m_pse_hash, pseHash.size()))
+		if (!StaticIasConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse,
+			m_iasReportStr, m_reportSign, m_reportCert) ||
+			!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data) ||
+			!consttime_memequal(&quoteInMsg3, &m_iasReport->m_quote, sizeof(sgx_quote_t) - sizeof(uint32_t)))
 		{
-			return false;
+			break;
 		}
-	}
 
-	/*TODO: verify the quote in msg3. */
-	m_isAttested = CheckReportStatus(*m_iasReport);
-	if (!m_isAttested)
-	{
-		return false;
-	}
+		if (m_raConfig.enable_pse)
+		{
+			General256Hash pseHash;
+			MbedTlsHelper::CalcHashSha256(&msg3.ps_sec_prop, sizeof(msg3.ps_sec_prop), pseHash);
+
+			if (!consttime_memequal(pseHash.data(), &m_iasReport->m_pse_hash, pseHash.size()))
+			{
+				break;
+			}
+		}
+
+		m_isAttested = true;
+	} while (false);
 
 	std::memcpy(&msg4.report, m_iasReport.get(), sizeof(*m_iasReport));
 	msg4.is_accepted = m_isAttested ? 1 : 0;
@@ -293,7 +300,6 @@ bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, s
 	{
 		return false;
 	}
-
 
 	return true;
 }
@@ -359,28 +365,6 @@ bool SgxRaProcessorSp::CheckKeyDerivationFuncId(const uint16_t id) const
 	return id == SGX_DEFAULT_AES_CMAC_KDF_ID;
 }
 
-#define REPORT_STATUS_EQUAL(status, value) (status == static_cast<uint8_t>(value))
-
-bool SgxRaProcessorSp::CheckReportStatus(const sgx_ias_report_t & report) const
-{
-	return (
-				REPORT_STATUS_EQUAL(report.m_status, ias_quote_status_t::IAS_QUOTE_OK) 
-				||
-				REPORT_STATUS_EQUAL(report.m_status, ias_quote_status_t::IAS_QUOTE_GROUP_OUT_OF_DATE)
-		   ) 
-		   &&
-		   (
-				(!m_raConfig.enable_pse && REPORT_STATUS_EQUAL(report.m_pse_status, ias_pse_status_t::IAS_PSE_NA)) 
-			   || 
-				(m_raConfig.enable_pse 
-					&& (
-					REPORT_STATUS_EQUAL(report.m_pse_status, ias_pse_status_t::IAS_PSE_OK) ||
-					REPORT_STATUS_EQUAL(report.m_pse_status, ias_pse_status_t::IAS_PSE_OUT_OF_DATE)
-						)
-				)
-		   );
-}
-
 bool SgxRaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrPubKey)
 {
 	m_peerEncrKey = inEncrPubKey;
@@ -421,5 +405,5 @@ bool SgxRaProcessorSp::CheckIasReport(sgx_ias_report_t & outIasReport,
 			m_quoteVrfy(iasReport.m_quote);
 	};
 
-	return ParseAndVerifyIasReport(outIasReport, iasReportStr, reportCert, reportSign, m_nonce.c_str(), quoteVerifier);
+	return ParseAndVerifyIasReport(outIasReport, iasReportStr, reportCert, reportSign, m_nonce.c_str(), m_raConfig, quoteVerifier);
 }

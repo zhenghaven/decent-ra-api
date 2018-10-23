@@ -19,11 +19,6 @@ std::string DecentMessage::ParseType(const Json::Value & MsgRootContent)
 	throw MessageParseException();
 }
 
-DecentMessage::DecentMessage(const std::string & senderID) :
-	Messages(senderID)
-{
-}
-
 DecentMessage::DecentMessage(const Json::Value & msg, const char* expectedType) :
 	Messages(msg, sk_ValueCat)
 {
@@ -31,15 +26,6 @@ DecentMessage::DecentMessage(const Json::Value & msg, const char* expectedType) 
 	{
 		throw MessageParseException();
 	}
-}
-
-DecentMessage::~DecentMessage()
-{
-}
-
-std::string DecentMessage::GetMessageCategoryStr() const
-{
-	return sk_ValueCat;
 }
 
 Json::Value & DecentMessage::GetJsonMsg(Json::Value & outJson) const
@@ -52,25 +38,10 @@ Json::Value & DecentMessage::GetJsonMsg(Json::Value & outJson) const
 	return parent[sk_LabelRoot];
 }
 
-DecentErrMsg::DecentErrMsg(const std::string & senderID, const std::string & errStr) :
-	DecentMessage(senderID),
-	ErrorMessage(errStr)
-{
-}
-
 DecentErrMsg::DecentErrMsg(const Json::Value & msg) :
 	DecentMessage(msg, sk_ValueType),
 	ErrorMessage(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot])
 {
-}
-
-DecentErrMsg::~DecentErrMsg()
-{
-}
-
-std::string DecentErrMsg::GetMessageTypeStr() const
-{
-	return sk_ValueType;
 }
 
 Json::Value & DecentErrMsg::GetJsonMsg(Json::Value & outJson) const
@@ -85,34 +56,6 @@ Json::Value & DecentErrMsg::GetJsonMsg(Json::Value & outJson) const
 
 constexpr char DecentRAHandshake::sk_ValueType[];
 
-DecentRAHandshake::DecentRAHandshake(const std::string & senderID) :
-	DecentMessage(senderID)
-{
-}
-
-DecentRAHandshake::DecentRAHandshake(const Json::Value & msg) :
-	DecentMessage(msg, sk_ValueType)
-{
-}
-
-DecentRAHandshake::~DecentRAHandshake()
-{
-}
-
-std::string DecentRAHandshake::GetMessageTypeStr() const
-{
-	return sk_ValueType;
-}
-
-Json::Value & DecentRAHandshake::GetJsonMsg(Json::Value & outJson) const
-{
-	Json::Value& parent = DecentMessage::GetJsonMsg(outJson);
-
-	//parent[DecentMessage::sk_LabelType] = sk_ValueType;
-
-	return parent;
-}
-
 constexpr char DecentRAHandshakeAck::sk_LabelSelfReport[];
 constexpr char DecentRAHandshakeAck::sk_ValueType[];
 
@@ -125,30 +68,10 @@ std::string DecentRAHandshakeAck::ParseSelfRAReport(const Json::Value & DecentRo
 	throw MessageParseException();
 }
 
-DecentRAHandshakeAck::DecentRAHandshakeAck(const std::string & senderID, const std::string& selfRAReport) :
-	DecentMessage(senderID),
-	m_selfRAReport(selfRAReport)
-{
-}
-
 DecentRAHandshakeAck::DecentRAHandshakeAck(const Json::Value & msg) :
 	DecentMessage(msg, sk_ValueType),
 	m_selfRAReport(ParseSelfRAReport(msg[Messages::sk_LabelRoot][DecentMessage::sk_LabelRoot]))
 {
-}
-
-DecentRAHandshakeAck::~DecentRAHandshakeAck()
-{
-}
-
-std::string DecentRAHandshakeAck::GetMessageTypeStr() const
-{
-	return sk_ValueType;
-}
-
-const std::string & DecentRAHandshakeAck::GetSelfRAReport() const
-{
-	return m_selfRAReport;
 }
 
 Json::Value & DecentRAHandshakeAck::GetJsonMsg(Json::Value & outJson) const

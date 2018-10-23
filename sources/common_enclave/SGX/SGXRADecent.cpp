@@ -91,10 +91,8 @@ extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
 		return 0;
 	}
 
-	sgx_ias_report_t iasReport;
-
 	if (!Decent::RAReport::ProcessSelfRaReport(inCert->GetPlatformType(), inCert->GetEcPublicKey().ToPubPemString(),
-		inCert->GetSelfRaReport(), Decent::Crypto::GetProgSelfHashBase64(), iasReport))
+		inCert->GetSelfRaReport(), Decent::Crypto::GetProgSelfHashBase64()))
 	{
 		return 0;
 	}
@@ -164,7 +162,7 @@ extern "C" sgx_status_t ecall_decent_send_protocol_key(void* const connection, c
 
 	std::unique_ptr<SgxRaProcessorSp> raProcessor = Common::make_unique<SgxRaProcessorSp>(
 		ias_connector, CryptoKeyContainer::GetInstance().GetSignKeyPair(), 
-		SgxDecentRaProcessorSp::defaultRaConfig, SgxRaProcessorSp::sk_defaultRpDataVrfy,
+		Decent::RAReport::GetSgxDecentRaConfig(), SgxRaProcessorSp::sk_defaultRpDataVrfy,
 		SgxDecentRaProcessorSp::defaultServerQuoteVerifier
 		);
 	SgxRaSpCommLayer commLayer(connection, raProcessor);

@@ -347,6 +347,11 @@ namespace MbedTlsObj
 
 		virtual void Destroy() override;
 		virtual TlsConfig& operator=(TlsConfig&& other);
+
+		virtual void BasicInit();
+
+	private:
+		void* m_rng;
 	};
 
 }

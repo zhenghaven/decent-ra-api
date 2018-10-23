@@ -56,30 +56,6 @@ Json::Value & DecentAppErrMsg::GetJsonMsg(Json::Value & outJson) const
 
 constexpr char DecentAppHandshake::sk_ValueType[];
 
-DecentAppHandshake::DecentAppHandshake(const std::string & senderID) :
-	DecentAppMessage(senderID)
-{
-}
-
-DecentAppHandshake::DecentAppHandshake(const Json::Value & msg) :
-	DecentAppMessage(msg, sk_ValueType)
-{
-}
-
-DecentAppHandshake::~DecentAppHandshake()
-{
-}
-
-std::string DecentAppHandshake::GetMessageTypeStr() const
-{
-	return sk_ValueType;
-}
-
-Json::Value & DecentAppHandshake::GetJsonMsg(Json::Value & outJson) const
-{
-	return DecentAppMessage::GetJsonMsg(outJson);
-}
-
 constexpr char DecentAppHandshakeAck::sk_LabelSelfReport[];
 constexpr char DecentAppHandshakeAck::sk_ValueType[];
 
@@ -92,30 +68,10 @@ std::string DecentAppHandshakeAck::ParseSelfRAReport(const Json::Value & DecentA
 	throw MessageParseException();
 }
 
-DecentAppHandshakeAck::DecentAppHandshakeAck(const std::string & senderID, const std::string & selfRAReport) :
-	DecentAppMessage(senderID),
-	m_selfRAReport(selfRAReport)
-{
-}
-
 DecentAppHandshakeAck::DecentAppHandshakeAck(const Json::Value & msg) :
 	DecentAppMessage(msg, sk_ValueType),
 	m_selfRAReport(ParseSelfRAReport(msg[Messages::sk_LabelRoot][DecentAppMessage::sk_LabelRoot]))
 {
-}
-
-DecentAppHandshakeAck::~DecentAppHandshakeAck()
-{
-}
-
-std::string DecentAppHandshakeAck::GetMessageTypeStr() const
-{
-	return sk_ValueType;
-}
-
-const std::string & DecentAppHandshakeAck::GetSelfRAReport() const
-{
-	return m_selfRAReport;
 }
 
 Json::Value & DecentAppHandshakeAck::GetJsonMsg(Json::Value & outJson) const

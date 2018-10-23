@@ -29,8 +29,12 @@ const SgxRaProcessorClient::SpSignPubKeyVerifier SgxDecentRaProcessorClient::sk_
 );
 const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) {
-	const sgx_ra_config& cmp = SgxDecentRaProcessorSp::defaultRaConfig;
-	return raConfig.enable_pse == cmp.enable_pse && raConfig.linkable_sign == cmp.linkable_sign && raConfig.ckdf_id == cmp.ckdf_id;
+	const sgx_ra_config& cmp = Decent::RAReport::GetSgxDecentRaConfig();;
+	return raConfig.enable_pse == cmp.enable_pse && 
+		raConfig.linkable_sign == cmp.linkable_sign && 
+		raConfig.ckdf_id == cmp.ckdf_id &&
+		raConfig.allow_ofd_enc == cmp.allow_ofd_enc &&
+		raConfig.allow_ofd_pse == cmp.allow_ofd_pse;
 	}
 );
 
@@ -127,7 +131,6 @@ bool SgxDecentRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 	return true;
 }
 
-const sgx_ra_config SgxDecentRaProcessorSp::defaultRaConfig{ SGX_QUOTE_LINKABLE_SIGNATURE, SGX_DEFAULT_AES_CMAC_KDF_ID, 1 };
 const SgxRaProcessorSp::SgxQuoteVerifier SgxDecentRaProcessorSp::defaultServerQuoteVerifier(
 	[](const sgx_quote_t& quote) -> bool
 {
@@ -140,7 +143,8 @@ std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcesso
 	const sgx_ec256_public_t & peerSignkey)
 {
 	sgx_ec256_public_t signKey(peerSignkey);
-	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair(), defaultRaConfig,
+	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair(), 
+		Decent::RAReport::GetSgxDecentRaConfig(),
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
 		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(signKey));

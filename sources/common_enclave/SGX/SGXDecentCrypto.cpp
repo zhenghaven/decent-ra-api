@@ -96,18 +96,18 @@ std::shared_ptr<const TlsConfig> Decent::Crypto::GetDecentAppClientServerSideCon
 
 void Decent::Crypto::RefreshDecentAppAppServerSideConfig()
 {
-	std::shared_ptr<const TlsConfig> config(new TlsConfig(peerAppVerifier, true));
+	std::shared_ptr<const TlsConfig> config(std::make_shared<TlsConfig>(peerAppVerifier, true));
 	std::atomic_store(&gsk_decentAppAppServerSideConfig, config);
 }
 
 void Decent::Crypto::RefreshDecentAppAppClientSideConfig()
 {
-	std::shared_ptr<const TlsConfig> config(new TlsConfig(peerAppVerifier, false));
+	std::shared_ptr<const TlsConfig> config(std::make_shared<TlsConfig>(peerAppVerifier, false));
 	std::atomic_store(&gsk_decentAppAppClientSideConfig, config);
 }
 
 void Decent::Crypto::RefreshDecentAppClientServerSideConfig()
 {
-	std::shared_ptr<const TlsConfig> config(new TlsConfig(emptyAppVerifier, true));
+	std::shared_ptr<const TlsConfig> config(std::make_shared<TlsConfig>(emptyAppVerifier, true));
 	std::atomic_store(&gsk_decentAppClientServerSideConfig, config);
 }

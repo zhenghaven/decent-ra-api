@@ -2,6 +2,8 @@
 
 #include <sgx_dh.h>
 
+#include "../../common/CommonTool.h"
+#include "../../common/DataCoding.h"
 #include "../../common/Connection.h"
 
 SGXLACommLayer::SGXLACommLayer(void * const connectionPtr, bool isInitiator) :
@@ -46,8 +48,8 @@ SGXLACommLayer::SGXLACommLayer(std::unique_ptr<General128BitKey>& key, std::uniq
 std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > SGXLACommLayer::DoHandShake(void * const connectionPtr, bool isInitiator)
 {
 	std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > retValue;
-	std::unique_ptr<General128BitKey> keyPtr(new General128BitKey);
-	std::unique_ptr<sgx_dh_session_enclave_identity_t> idPtr(new sgx_dh_session_enclave_identity_t);
+	std::unique_ptr<General128BitKey> keyPtr(Common::make_unique<General128BitKey>());
+	std::unique_ptr<sgx_dh_session_enclave_identity_t> idPtr(Common::make_unique<sgx_dh_session_enclave_identity_t>());
 
 	sgx_dh_session_t session;
 	sgx_status_t enclaveRet = SGX_SUCCESS;
@@ -56,78 +58,43 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 
 	if (isInitiator)
 	{
-		enclaveRet = sgx_dh_init_session(SGX_DH_SESSION_INITIATOR, &session);
-		if (enclaveRet != SGX_SUCCESS)
+		if (sgx_dh_init_session(SGX_DH_SESSION_INITIATOR, &session) != SGX_SUCCESS)
 		{
 			return std::move(retValue);
 		}
+
+		sgx_dh_msg2_t msg2;
+		std::memset(&msg2, 0, sizeof(msg2));
 
 		if (!StaticConnection::ReceivePack(connectionPtr, inMsgBuf) ||
-			inMsgBuf.size() != sizeof(sgx_dh_msg1_t))
+			inMsgBuf.size() != sizeof(sgx_dh_msg1_t) ||
+			sgx_dh_initiator_proc_msg1(reinterpret_cast<const sgx_dh_msg1_t*>(inMsgBuf.data()), &msg2, &session) != SGX_SUCCESS ||
+			!StaticConnection::SendAndReceivePack(connectionPtr, &msg2, sizeof(msg2), inMsgBuf) ||
+			inMsgBuf.size() != sizeof(sgx_dh_msg3_t) ||
+			sgx_dh_initiator_proc_msg3(reinterpret_cast<const sgx_dh_msg3_t*>(inMsgBuf.data()), &session, 
+				reinterpret_cast<sgx_ec_key_128bit_t*>(keyPtr->data()), idPtr.get()) != SGX_SUCCESS)
 		{
 			return std::move(retValue);
-		}
-		{
-			sgx_dh_msg1_t& inMsg1 = reinterpret_cast<sgx_dh_msg1_t&>(inMsgBuf[0]);
-			outMsgBuf.resize(sizeof(sgx_dh_msg2_t));
-			sgx_dh_msg2_t& outMsg2 = reinterpret_cast<sgx_dh_msg2_t&>(outMsgBuf[0]);
-			enclaveRet = sgx_dh_initiator_proc_msg1(&inMsg1, &outMsg2, &session);
-			if (enclaveRet != SGX_SUCCESS)
-			{
-				return std::move(retValue);
-			}
-		}
-
-		if (!StaticConnection::SendPack(connectionPtr, outMsgBuf) ||
-			!StaticConnection::ReceivePack(connectionPtr, inMsgBuf) ||
-			inMsgBuf.size() != sizeof(sgx_dh_msg3_t))
-		{
-			return std::move(retValue);
-		}
-		{
-			sgx_dh_msg3_t& inMsg3 = reinterpret_cast<sgx_dh_msg3_t&>(inMsgBuf[0]);
-			enclaveRet = sgx_dh_initiator_proc_msg3(&inMsg3, &session, reinterpret_cast<sgx_ec_key_128bit_t*>(keyPtr->data()), idPtr.get());
-			if (enclaveRet != SGX_SUCCESS)
-			{
-				return std::move(retValue);
-			}
 		}
 	}
 	else
 	{
-		enclaveRet = sgx_dh_init_session(SGX_DH_SESSION_RESPONDER, &session);
-		if (enclaveRet != SGX_SUCCESS)
+		if (sgx_dh_init_session(SGX_DH_SESSION_RESPONDER, &session) != SGX_SUCCESS)
 		{
 			return std::move(retValue);
 		}
 
-		{
-			outMsgBuf.resize(sizeof(sgx_dh_msg1_t));
-			sgx_dh_msg1_t& outMsg1 = reinterpret_cast<sgx_dh_msg1_t&>(outMsgBuf[0]);
-			enclaveRet = sgx_dh_responder_gen_msg1(&outMsg1, &session);
-			if (enclaveRet != SGX_SUCCESS)
-			{
-				return std::move(retValue);
-			}
-		}
+		sgx_dh_msg1_t msg1;
+		sgx_dh_msg3_t msg3;
+		std::memset(&msg1, 0, sizeof(msg1));
+		std::memset(&msg3, 0, sizeof(msg3));
 
-		if (!StaticConnection::SendPack(connectionPtr, outMsgBuf) ||
-			!StaticConnection::ReceivePack(connectionPtr, inMsgBuf) ||
-			inMsgBuf.size() != sizeof(sgx_dh_msg2_t))
-		{
-			return std::move(retValue);
-		}
-		{
-			sgx_dh_msg2_t& inMsg2 = reinterpret_cast<sgx_dh_msg2_t&>(inMsgBuf[0]);
-			outMsgBuf.resize(sizeof(sgx_dh_msg3_t));
-			sgx_dh_msg3_t& outMsg3 = reinterpret_cast<sgx_dh_msg3_t&>(outMsgBuf[0]);
-			enclaveRet = sgx_dh_responder_proc_msg2(&inMsg2, &outMsg3, &session, reinterpret_cast<sgx_ec_key_128bit_t*>(keyPtr->data()), idPtr.get());
-			if (enclaveRet != SGX_SUCCESS)
-			{
-				return std::move(retValue);
-			}
-		}
-		if (!StaticConnection::SendPack(connectionPtr, outMsgBuf))
+		if (sgx_dh_responder_gen_msg1(&msg1, &session) != SGX_SUCCESS ||
+			!StaticConnection::SendAndReceivePack(connectionPtr, &msg1, sizeof(sgx_dh_msg1_t), inMsgBuf) ||
+			inMsgBuf.size() != sizeof(sgx_dh_msg2_t) ||
+			sgx_dh_responder_proc_msg2(reinterpret_cast<const sgx_dh_msg2_t*>(inMsgBuf.data()), &msg3, &session,
+				reinterpret_cast<sgx_ec_key_128bit_t*>(keyPtr->data()), idPtr.get()) != SGX_SUCCESS ||
+			!StaticConnection::SendPack(connectionPtr, &msg3, sizeof(msg3)))
 		{
 			return std::move(retValue);
 		}

@@ -306,12 +306,9 @@ TlsConfig::TlsConfig(TlsConfig && other) :
 	m_prvKey(std::move(other.m_prvKey)),
 	m_appCert(std::move(other.m_appCert)),
 	m_decentCert(std::move(other.m_decentCert)),
-	m_rng(other.m_rng),
 	m_decentCertVerifier(std::move(other.m_decentCertVerifier)),
 	m_appCertVerifier(std::move(other.m_appCertVerifier))
 {
-	other.m_rng = nullptr;
-
 	if (*this)
 	{
 		mbedtls_ssl_conf_verify(m_ptr, &TlsConfig::CertVerifyCallBack, this);
@@ -326,8 +323,6 @@ TlsConfig & TlsConfig::operator=(TlsConfig && other)
 		m_prvKey = std::move(other.m_prvKey);
 		m_appCert = std::move(other.m_appCert);
 		m_decentCert = std::move(other.m_decentCert);
-		m_rng = other.m_rng;
-		other.m_rng = nullptr;
 		m_decentCertVerifier = std::move(other.m_decentCertVerifier);
 		m_appCertVerifier = std::move(other.m_appCertVerifier);
 
@@ -344,17 +339,12 @@ void TlsConfig::Destroy()
 	m_prvKey.reset();
 	m_appCert.reset();
 	m_decentCert.reset();
-	if (m_rng)
-	{
-		MbedTlsHelper::DrbgFree(m_rng);
-	}
-	m_rng = nullptr;
 }
 
 Decent::TlsConfig TlsConfig::ConstructTlsConfig(bool isServer)
 {
 	Decent::TlsConfig config(new mbedtls_ssl_config);
-	mbedtls_ssl_config_init(config.GetInternalPtr());
+	config.BasicInit();
 
 	config.m_decentCert = DecentCertContainer::Get().GetServerCert();
 	config.m_prvKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
@@ -377,7 +367,6 @@ Decent::TlsConfig TlsConfig::ConstructTlsConfig(bool isServer)
 	}
 	
 	mbedtls_ssl_conf_ca_chain(config.GetInternalPtr(), config.m_decentCert->GetInternalPtr(), nullptr);
-	mbedtls_ssl_conf_rng(config.GetInternalPtr(), &MbedTlsHelper::DrbgRandom, config.m_rng);
 	mbedtls_ssl_conf_authmode(config.GetInternalPtr(), MBEDTLS_SSL_VERIFY_REQUIRED);
 
 	return config;
@@ -386,7 +375,6 @@ Decent::TlsConfig TlsConfig::ConstructTlsConfig(bool isServer)
 TlsConfig::TlsConfig(mbedtls_ssl_config * ptr) :
 	MbedTlsObj::TlsConfig(ptr)
 {
-	MbedTlsHelper::DrbgInit(m_rng);
 	if (*this)
 	{
 		mbedtls_ssl_conf_verify(m_ptr, &TlsConfig::CertVerifyCallBack, this);

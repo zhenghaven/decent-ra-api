@@ -47,7 +47,9 @@ extern "C" {
 	{
 		uint8_t   linkable_sign;  //On(1) or Off(0)
 		uint16_t  ckdf_id;
-		uint8_t   enable_pse;
+		uint8_t   enable_pse;     //Enabled(1) or Disabled(0)
+		uint8_t   allow_ofd_enc;  //Allow(1) or Disallow(0) out-of-date enclave.
+		uint8_t   allow_ofd_pse;  //Allow(1) or Disallow(0) out-of-date PSE.
 	} sgx_ra_config;
 
 	typedef struct _sgx_ra_msg0s_t

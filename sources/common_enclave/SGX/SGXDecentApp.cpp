@@ -43,31 +43,19 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509P
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	std::shared_ptr<Decent::ServerX509> inCert(new Decent::ServerX509(x509Pem));
+	std::shared_ptr<Decent::ServerX509> inCert(std::make_shared<Decent::ServerX509>(x509Pem));
 	if (!inCert || !(*inCert))
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	sgx_ias_report_t iasReport;
 	bool verifyRes = Decent::RAReport::ProcessSelfRaReport(inCert->GetPlatformType(), inCert->GetEcPublicKey().ToPubPemString(),
-		inCert->GetSelfRaReport(), gk_decentHash, iasReport);
+		inCert->GetSelfRaReport(), gk_decentHash);
 	//Won't be successful now, since the decent hash is unknown.
 	//if (!verifyRes)
 	//{
 	//	return SGX_ERROR_INVALID_PARAMETER;
 	//}
-
-	//=============== Not used now 
-	//sgx_measurement_t targetHash;
-	//DeserializeStruct(targetHash, gk_decentHash);
-	//const sgx_measurement_t& testHash = identity->mr_enclave;
-
-	//if (!consttime_memequal(&targetHash, &testHash, sizeof(sgx_measurement_t)))
-	//{
-	//	return SGX_ERROR_INVALID_PARAMETER;
-	//}
-	//===============
 
 	DecentCertContainer::Get().SetServerCert(inCert);
 	//COMMON_PRINTF("Accepted Decent Server.\n%s\n", DecentCertContainer::Get().GetServerCert()->ToPemString().c_str());

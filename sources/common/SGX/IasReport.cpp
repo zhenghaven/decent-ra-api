@@ -13,6 +13,7 @@
 #endif // ENCLAVE_ENVIRONMENT
 
 #include "../JsonTools.h"
+#include "../CommonTool.h"
 #include "../DataCoding.h"
 #include "../MbedTlsObjects.h"
 #include "../MbedTlsHelpers.h"
@@ -222,4 +223,27 @@ bool ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::string &
 	}
 
 	return isNonceMatch;
+}
+
+#define REP_STAT_EQ_QOT(status, value) (status == static_cast<uint8_t>(ias_quote_status_t::value))
+#define REP_STAT_EQ_PSE(status, value) (status == static_cast<uint8_t>(ias_pse_status_t::value))
+
+bool CheckIasReportStatus(const sgx_ias_report_t & iasReport, const sgx_ra_config & raConfig)
+{
+	return (
+		REP_STAT_EQ_QOT(iasReport.m_status, IAS_QUOTE_OK) ||
+		(REP_STAT_EQ_QOT(iasReport.m_status, IAS_QUOTE_GROUP_OUT_OF_DATE) && raConfig.allow_ofd_enc)
+		)
+		&&
+		(
+		(REP_STAT_EQ_PSE(iasReport.m_pse_status, IAS_PSE_NA) && !raConfig.enable_pse) ||
+		(
+			(
+			REP_STAT_EQ_PSE(iasReport.m_pse_status, IAS_PSE_OK) ||
+			(REP_STAT_EQ_PSE(iasReport.m_pse_status, IAS_PSE_OUT_OF_DATE) && raConfig.allow_ofd_pse)
+			)
+			&&
+			raConfig.enable_pse
+		)
+		);
 }
