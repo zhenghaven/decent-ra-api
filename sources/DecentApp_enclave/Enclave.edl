@@ -10,6 +10,7 @@ enclave {
 
 	trusted 
 	{
+		public int ecall_vote_app_proc_voter_msg([user_check] void* connection);
 	};
 
 };
