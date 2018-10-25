@@ -88,7 +88,7 @@ SgxRaProcessorSp::SgxRaProcessorSp(const void* const iasConnectorPtr, const std:
 #endif // DECENT_THREAD_SAFETY_HIGH
 	m_iasConnectorPtr(iasConnectorPtr),
 	m_mySignKey(mySignKey),
-	m_encrKeyPair(new MbedTlsObj::ECKeyPair(MbedTlsObj::ECKeyPair::generatePair)),
+	m_encrKeyPair(new MbedTlsObj::ECKeyPair(MbedTlsObj::gen)),
 	m_myEncrKey(),
 	m_peerEncrKey(),
 	m_nonce(ConstructNonce(IAS_REQUEST_NONCE_SIZE)),

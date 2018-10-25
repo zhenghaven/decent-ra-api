@@ -6,6 +6,7 @@
 #include <memory>
 #include <map>
 #include <string>
+#include <algorithm>
 
 #include <mbedtls/pk.h>
 #include <mbedtls/md.h>
@@ -142,7 +143,7 @@ BigNumber MbedTlsObj::BigNumber::FromLittleEndianBin(const uint8_t * in, const s
 {
 	std::vector<uint8_t> tmpBuf(std::reverse_iterator<const uint8_t*>(in + size), std::reverse_iterator<const uint8_t*>(in));
 
-	BigNumber res(BigNumber::generate);
+	BigNumber res(MbedTlsObj::gen);
 	if (!res ||
 		mbedtls_mpi_read_binary(res.GetInternalPtr(), tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
 	{
@@ -603,7 +604,7 @@ ECKeyPair::ECKeyPair(mbedtls_pk_context * ptr, bool isOwner) :
 {
 }
 
-ECKeyPair::ECKeyPair(GeneratePair) :
+ECKeyPair::ECKeyPair(const Generate&) :
 	ECKeyPair(GenerateEcKeyPair(), true)
 {
 }
@@ -671,7 +672,7 @@ bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const E
 		return false;
 	}
 
-	BigNumber sharedKey(BigNumber::generate);
+	BigNumber sharedKey(MbedTlsObj::gen);
 	EcGroupWarp grp;
 	if (!sharedKey || !grp.Copy(GetInternalECKey()->grp))
 	{
@@ -707,8 +708,8 @@ bool MbedTlsObj::ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, c
 	}
 
 	int mbedRet = 0;
-	BigNumber r(BigNumber::generate);
-	BigNumber s(BigNumber::generate);
+	BigNumber r(MbedTlsObj::gen);
+	BigNumber s(MbedTlsObj::gen);
 	EcGroupWarp grp;
 
 	if (!r ||!s || !grp.Copy(GetInternalECKey()->grp))
@@ -860,6 +861,17 @@ void MbedTlsObj::X509Req::Destroy()
 		delete m_ptr;
 	}
 	m_ptr = nullptr;
+}
+
+MbedTlsObj::X509Req& MbedTlsObj::X509Req::operator=(X509Req&& other)
+{
+	if (this != &other)
+	{
+		ObjBase::operator=(std::forward<ObjBase>(other));
+		m_pemStr = std::move(other.m_pemStr);
+		m_pubKey = std::move(other.m_pubKey);
+	}
+	return *this;
 }
 
 MbedTlsObj::X509Req::operator bool() const
@@ -1190,6 +1202,20 @@ void MbedTlsObj::X509Cert::Destroy()
 		delete m_ptr;
 	}
 	m_ptr = nullptr;
+}
+
+MbedTlsObj::X509Cert& MbedTlsObj::X509Cert::operator=(X509Cert&& other)
+{
+	if (this != &other)
+	{
+		ObjBase::operator=(std::forward<ObjBase>(other));
+		m_isOwner = other.m_isOwner;
+		m_pemStr = std::move(other.m_pemStr);
+		m_pubKey = std::move(other.m_pubKey);
+		m_certStack = std::move(other.m_certStack);
+		other.m_isOwner = false;
+	}
+	return *this;
 }
 
 MbedTlsObj::X509Cert::operator bool() const

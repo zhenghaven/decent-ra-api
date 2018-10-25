@@ -20,22 +20,22 @@ private:
 	{
 		if (isCreate)
 		{
-			shared_memory_object::remove(objName.c_str());
-			boost::interprocess::shared_memory_object retObj(create_only, objName.c_str(), read_write);
+			boost::interprocess::shared_memory_object::remove(objName.c_str());
+			boost::interprocess::shared_memory_object retObj(boost::interprocess::create_only, objName.c_str(), boost::interprocess::read_write);
 			retObj.truncate(sizeof(T));
 			LOGI("Created shared object, %s.\n", objName.c_str());
 			return std::move(retObj);
 		}
 		else
 		{
-			boost::interprocess::shared_memory_object retObj(open_only, objName.c_str(), read_write);
+			boost::interprocess::shared_memory_object retObj(boost::interprocess::open_only, objName.c_str(), boost::interprocess::read_write);
 			return std::move(retObj);
 		}
 	}
 
 	static boost::interprocess::mapped_region ContructMap(const boost::interprocess::shared_memory_object& sharedObj)
 	{
-		return boost::interprocess::mapped_region(sharedObj, read_write);
+		return boost::interprocess::mapped_region(sharedObj, boost::interprocess::read_write);
 	}
 
 public:
@@ -79,7 +79,7 @@ public:
 
 		if (m_isOwner)
 		{
-			bool isClosed = shared_memory_object::remove(objName.c_str());
+			bool isClosed = boost::interprocess::shared_memory_object::remove(objName.c_str());
 			LOGI("Attempted to close shared object, %s - %s!\n", objName.c_str(), isClosed ? "Successful!" : "Failed!");
 		}
 	}

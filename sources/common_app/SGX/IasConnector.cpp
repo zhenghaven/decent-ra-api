@@ -1,4 +1,4 @@
-#include "IASConnector.h"
+#include "IasConnector.h"
 
 #ifndef NOMINMAX
 # define NOMINMAX
@@ -25,7 +25,7 @@
 #ifdef SIMULATING_ENCLAVE
 #include <json/json.h>
 #include <sgx_report.h>
-#include "../../../common/DataCoding.h"
+#include "../../common/DataCoding.h"
 #endif // SIMULATING_ENCLAVE
 
 namespace

@@ -4,7 +4,6 @@
 #include <stdio.h>      /* vsnprintf */
 
 #include <Enclave_t.h>
-#include "..\..\common\CommonTool.h"
 
 static constexpr size_t PRINT_BUFFER_SIZE = 20 * BUFSIZ;
 

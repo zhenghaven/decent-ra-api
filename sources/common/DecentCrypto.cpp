@@ -53,6 +53,16 @@ void X509Req::Destroy()
 	m_ecPubKey.Destroy();
 }
 
+X509Req& X509Req::operator=(X509Req&& other)
+{
+	if (this != &other)
+	{
+		MbedTlsObj::X509Req::operator=(std::forward<MbedTlsObj::X509Req>(other));
+		m_ecPubKey = std::move(other.m_ecPubKey);
+	}
+	return *this;
+}
+
 X509Req::operator bool() const
 {
 	return MbedTlsObj::X509Req::operator bool() && m_ecPubKey;
@@ -119,6 +129,18 @@ void ServerX509::Destroy()
 	m_selfRaReport.clear();
 }
 
+ServerX509& ServerX509::operator=(ServerX509&& other)
+{
+	if (this != &other)
+	{
+		MbedTlsObj::X509Cert::operator=(std::forward<MbedTlsObj::X509Cert>(other));
+		m_platformType = std::move(other.m_platformType);
+		m_selfRaReport = std::move(other.m_selfRaReport);
+		m_ecPubKey = std::move(other.m_ecPubKey);
+	}
+	return *this;
+}
+
 ServerX509::operator bool() const
 {
 	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey;
@@ -181,6 +203,18 @@ void AppX509::Destroy()
 	m_ecPubKey.Destroy();
 	m_platformType.clear();
 	m_appId.clear();
+}
+
+AppX509& AppX509::operator=(AppX509&& other)
+{
+	if (this != &other)
+	{
+		MbedTlsObj::X509Cert::operator=(std::forward<MbedTlsObj::X509Cert>(other));
+		m_platformType = std::move(other.m_platformType);
+		m_appId = std::move(other.m_appId);
+		m_ecPubKey = std::move(other.m_ecPubKey);
+	}
+	return *this;
 }
 
 AppX509::operator bool() const

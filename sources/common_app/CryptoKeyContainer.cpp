@@ -3,6 +3,6 @@
 #include "../common/MbedTlsObjects.h"
 
 CryptoKeyContainer::CryptoKeyContainer() :
-	CryptoKeyContainer(new MbedTlsObj::ECKeyPair(MbedTlsObj::ECKeyPair::generatePair))
+	CryptoKeyContainer(new MbedTlsObj::ECKeyPair(MbedTlsObj::gen))
 {
 }
