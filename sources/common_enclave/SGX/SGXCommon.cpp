@@ -49,6 +49,10 @@ void ocall_log_w(const char * file, int line, const char * fmt, ...)
 	ocall_print_string_w(buf);
 }
 
+extern "C" void __cxa_deleted_virtual(void) {
+	abort();
+}
+
 void Common::GetSystemTime(time_t & timer)
 {
 	ocall_get_system_time(&timer);
