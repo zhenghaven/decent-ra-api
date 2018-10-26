@@ -1,6 +1,6 @@
 [submodule "hunter"]
 	path = hunter
-	url = https://github.com/ruslo/hunter.git
+	url = https://github.com/zhenghaven/hunter.git
 [submodule "libs/jsoncpp"]
 	path = libs/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
@@ -10,9 +10,20 @@
 [submodule "libs/Intel_SGX/linux-sgx"]
 	path = libs/Intel_SGX/linux-sgx
 	url = https://github.com/intel/linux-sgx.git
-[submodule "libs/boost"]
-	path = libs/boost
-	url = https://github.com/boostorg/boost.git
-[submodule "libs/Intel_SGX/intel-sgx-ssl"]
-	path = libs/Intel_SGX/intel-sgx-ssl
-	url = https://github.com/intel/intel-sgx-ssl.git
+[submodule "libs/cppcodec"]
+	path = libs/cppcodec
+	url = https://github.com/tplgy/cppcodec.git
+[submodule "libs/tclap"]
+	path = libs/tclap
+	url = https://git.code.sf.net/p/tclap/code
+[submodule "libs/curl"]
+	path = libs/curl
+	url = https://github.com/curl/curl.git
+[submodule "libs/mbedtls"]
+	path = libs/mbedtls
+	url = https://github.com/zhenghaven/mbedtls.git
+	branch = master
+[submodule "libs/rapidjson"]
+	path = libs/rapidjson
+	url = https://github.com/zhenghaven/rapidjson.git
+	branch = master
