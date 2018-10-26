@@ -108,10 +108,10 @@ std::pair<
 
 		std::string uuid = GenerateSessionId();
 
-		sharedObj_s2c.reset(new SharedObject<LocalSessionStruct>((uuid + LocalSessionStruct::NAME_S2C_POSTFIX), true));
-		sharedObj_c2s.reset(new SharedObject<LocalSessionStruct>((uuid + LocalSessionStruct::NAME_C2S_POSTFIX), true));
-		msgQ_s2c.reset(new LocalMessageQueue((uuid + LocalMessageQueue::NAME_S2C_POSTFIX), true));
-		msgQ_c2s.reset(new LocalMessageQueue((uuid + LocalMessageQueue::NAME_C2S_POSTFIX), true));
+		sharedObj_s2c.reset(new SharedObject<LocalSessionStruct>((uuid + SESSION_NAME_S2C_POSTFIX), true));
+		sharedObj_c2s.reset(new SharedObject<LocalSessionStruct>((uuid + SESSION_NAME_C2S_POSTFIX), true));
+		msgQ_s2c.reset(new LocalMessageQueue((uuid + QUEUE_NAME_S2C_POSTFIX), true));
+		msgQ_c2s.reset(new LocalMessageQueue((uuid + QUEUE_NAME_C2S_POSTFIX), true));
 
 		std::memcpy(obj->GetObject().m_msg, uuid.c_str(), sizeof(obj->GetObject().m_msg));
 		obj->GetObject().m_isMsgReady = true;

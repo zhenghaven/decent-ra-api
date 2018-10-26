@@ -62,10 +62,10 @@ Connection* LocalConnection::Connect(const std::string & serverName)
 }
 
 LocalConnection::LocalConnection(const std::string & sessionId) :
-	m_inSharedObj(new SharedObject<LocalSessionStruct>((sessionId + LocalSessionStruct::NAME_S2C_POSTFIX), false)),
-	m_outSharedObj(new SharedObject<LocalSessionStruct>((sessionId + LocalSessionStruct::NAME_C2S_POSTFIX), false)),
-	m_inMsgQ(new LocalMessageQueue(sessionId + LocalMessageQueue::NAME_S2C_POSTFIX, false)),
-	m_outMsgQ(new LocalMessageQueue(sessionId + LocalMessageQueue::NAME_C2S_POSTFIX, false))
+	m_inSharedObj(new SharedObject<LocalSessionStruct>((sessionId + SESSION_NAME_S2C_POSTFIX), false)),
+	m_outSharedObj(new SharedObject<LocalSessionStruct>((sessionId + SESSION_NAME_C2S_POSTFIX), false)),
+	m_inMsgQ(new LocalMessageQueue(sessionId + QUEUE_NAME_S2C_POSTFIX, false)),
+	m_outMsgQ(new LocalMessageQueue(sessionId + QUEUE_NAME_C2S_POSTFIX, false))
 {
 }
 

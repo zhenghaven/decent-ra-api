@@ -120,6 +120,9 @@ public:
 	bool IsClosed() const volatile noexcept { return m_isClosed; }
 };
 
+#define SESSION_NAME_S2C_POSTFIX "S2C_S"
+#define SESSION_NAME_C2S_POSTFIX "C2S_S"
+
 struct LocalSessionStruct
 {
 private:
@@ -127,8 +130,6 @@ private:
 
 public:
 	static constexpr size_t MSG_SIZE = 5;
-	static constexpr char const NAME_S2C_POSTFIX[] = "S2C_S";
-	static constexpr char const NAME_C2S_POSTFIX[] = "C2S_S";
 
 	boost::interprocess::interprocess_mutex m_msgLock;
 	boost::interprocess::interprocess_condition m_readySignal;
@@ -145,6 +146,9 @@ public:
 
 	bool IsClosed() const volatile noexcept { return m_isClosed; }
 };
+
+#define QUEUE_NAME_S2C_POSTFIX "S2C_M"
+#define QUEUE_NAME_C2S_POSTFIX "C2S_M"
 
 struct LocalMessageQueue
 {
@@ -172,8 +176,6 @@ public:
 	static constexpr unsigned int DEFAULT_PRIORITY = 0;
 	static constexpr size_t CHUNK_SIZE = sizeof(uint8_t);
 	static constexpr size_t MSG_SIZE = LocalSessionStruct::MSG_SIZE;
-	static constexpr char const NAME_S2C_POSTFIX[] = "S2C_M";
-	static constexpr char const NAME_C2S_POSTFIX[] = "C2S_M";
 
 	LocalMessageQueue(const std::string& name, const bool isOwner) :
 		m_msgQ(ConstructQueue(name, isOwner)),

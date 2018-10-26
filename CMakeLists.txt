@@ -40,6 +40,7 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
 set(Boost_NO_SYSTEM_PATHS ON)
 find_package(Boost CONFIG REQUIRED system filesystem date_time)
+set(Boost_Additional_Lib_Link -lrt)
 
 message(STATUS "")
 message(STATUS "==================================================")
@@ -359,6 +360,7 @@ target_link_libraries(LibTest_App
 					Boost::filesystem
 					Boost::date_time
 					Boost::system
+					${Boost_Additional_Lib_Link}
 					)
 
 
@@ -469,6 +471,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						Boost::filesystem
 						Boost::date_time
 						Boost::system
+						${Boost_Additional_Lib_Link}
 					)
 	
 endforeach()

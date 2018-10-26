@@ -92,6 +92,8 @@ namespace
 		return cppcodec::hex_lower::encode(gidcpy);
 	}
 }
+
+constexpr char const IASConnector::sk_iasUrl[];
 constexpr char const IASConnector::sk_iasSigRlPath[];
 constexpr char const IASConnector::sk_iasReportPath[];
 const std::string IASConnector::sk_iasUrlStr = sk_iasUrl;
