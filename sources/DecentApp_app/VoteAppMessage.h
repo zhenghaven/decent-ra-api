@@ -58,6 +58,10 @@ protected:
 	}
 };
 
+constexpr char const VoteAppMessage::sk_LabelRoot[];
+constexpr char const VoteAppMessage::sk_LabelType[];
+constexpr char const VoteAppMessage::sk_ValueCat[];
+
 class VoteAppHandshake : public VoteAppMessage
 {
 public:
@@ -84,6 +88,8 @@ protected:
 		return parent;
 	}
 };
+
+constexpr char const VoteAppHandshake::sk_ValueType[];
 
 class VoteAppHandshakeAck : public VoteAppMessage
 {
@@ -130,3 +136,6 @@ protected:
 private:
 	const std::string m_selfRAReport;
 };
+
+constexpr char const VoteAppHandshakeAck::sk_LabelSelfReport[];
+constexpr char const VoteAppHandshakeAck::sk_ValueType[];

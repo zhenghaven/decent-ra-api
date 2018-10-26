@@ -14,11 +14,6 @@ SGXServiceProvider::~SGXServiceProvider()
 {
 }
 
-const char * SGXServiceProvider::GetPlatformType() const
-{
-	return SGXServiceProviderBase::sk_platformType;
-}
-
 void SGXServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) const
 {
 	outKey = (*CryptoKeyContainer::GetInstance().GetSignPubKey());
