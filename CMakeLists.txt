@@ -7,6 +7,8 @@ set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module." FORCE)
 set(HUNTER_BOOST_RUNTIME_STATIC ON CACHE BOOL "Switch for using boost runtime static linking." FORCE)
 #set(DECENT_CXX_STANDARD_VER c++11 CACHE STRING "C++ standard version used by decent." FORCE)
 
+include("cmake/DownloadSgxSdk.cmake")
+
 #==========================================================
 #   Setup Hunter
 #==========================================================
@@ -40,7 +42,6 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
 set(Boost_NO_SYSTEM_PATHS ON)
 find_package(Boost CONFIG REQUIRED system filesystem date_time)
-set(Boost_Additional_Lib_Link -lrt)
 
 message(STATUS "")
 message(STATUS "==================================================")
@@ -106,6 +107,8 @@ if(MSVC)
 	
 	set(COMMON_APP_DEFINES WIN32_LEAN_AND_MEAN CURL_STATICLIB)
 	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
+	
+	set(Additional_Sys_Lib )
 #elseif(APPLE)
 #	set(COMMON_OPTIONS )
 #	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
@@ -125,6 +128,8 @@ else()
 	
 	set(COMMON_APP_DEFINES CURL_STATICLIB)
 	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
+	
+	set(Additional_Sys_Lib rt pthread)
 endif()
 
 set(DEBUG_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
@@ -197,7 +202,7 @@ set(CMAKE_C_FLAGS_DEBUGSIMULATION ${CMAKE_C_FLAGS_DEBUG})
 
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS Debug DebugSimulation)
-set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
+#set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
 
 message(STATUS "")
 message(STATUS "==================================================")
@@ -262,7 +267,6 @@ set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 
 
 set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS} 
-							 ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							 ${TCLAP_INCLUDE_DIR} 
 							 ${CURL_INCLUDE_DIR} 
 							 ${CPPCODEC_INCLUDE_DIR} 
@@ -271,10 +275,7 @@ set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS}
 #							 ${Boost_INCLUDE_DIRS} 
 							 )
 
-set(COMMON_ENCLAVE_INCLUDE_DIRS ${INTEL_SGX_SDK_INCLUDE_PATH} 
-							 ${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc 
-							 ${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME} 
-							 ${CPPCODEC_INCLUDE_DIR}
+set(COMMON_ENCLAVE_INCLUDE_DIRS ${CPPCODEC_INCLUDE_DIR}
 							 ${RAPIDJSON_INCLUDE_DIR}
 							 ${MBEDTLS_INCLUDE_DIR}
 							 )
@@ -360,7 +361,7 @@ target_link_libraries(LibTest_App
 					Boost::filesystem
 					Boost::date_time
 					Boost::system
-					${Boost_Additional_Lib_Link}
+					${Additional_Sys_Lib}
 					)
 
 
@@ -383,6 +384,37 @@ set(Enclave_Project_List DecentServer DecentApp)
 foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	
 	###########################################################
+	### EDL
+	###########################################################
+	
+	set(EDL_T_SOURCE_OUTPUT ${SOURCEDIR_${Proj_Name}_Enclave}/Enclave_t.h ${SOURCEDIR_${Proj_Name}_Enclave}/Enclave_t.c)
+	set(EDL_U_SOURCE_OUTPUT ${SOURCEDIR_${Proj_Name}_App}/Enclave_u.h ${SOURCEDIR_${Proj_Name}_App}/Enclave_u.c)
+	
+	add_custom_command(OUTPUT ${EDL_T_SOURCE_OUTPUT}
+		COMMAND "${INTEL_SGX_EDGER_PATH}"  
+		--trusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
+		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
+		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
+		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
+		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_Enclave}"
+		DEPENDS "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl"
+		COMMENT "Processing EDL for enclave..."
+	)
+	
+	add_custom_command(OUTPUT ${EDL_U_SOURCE_OUTPUT}
+		COMMAND "${INTEL_SGX_EDGER_PATH}"  
+		--untrusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
+		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
+		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
+		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
+		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_App}"
+		DEPENDS "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl"
+		COMMENT "Processing EDL for app..."
+	)
+	
+	add_custom_target(${Proj_Name}_EDL DEPENDS ${EDL_T_SOURCE_OUTPUT} ${EDL_U_SOURCE_OUTPUT})
+	
+	###########################################################
 	### Enclave
 	###########################################################
 
@@ -401,16 +433,6 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	set_target_properties(${Proj_Name}_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
 
 	add_custom_command(TARGET ${Proj_Name}_Enclave
-		PRE_BUILD
-		COMMAND "${INTEL_SGX_EDGER_PATH}"  
-		--trusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
-		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
-		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
-		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_Enclave}"
-	)
-
-	add_custom_command(TARGET ${Proj_Name}_Enclave
 		POST_BUILD
 		COMMAND "${INTEL_SGX_SIGNER_PATH}" sign 
 		-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
@@ -421,19 +443,21 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 
 	target_link_libraries(${Proj_Name}_Enclave 
 						${WHOLE_ARCHIVE_FLAG_BEGIN} 
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}>" 
+						IntelSGX::SDK_Trusted_Whole_lib 
 						${WHOLE_ARCHIVE_FLAG_END}
 						${GROUP_FLAG_BEGIN}
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
+						IntelSGX::SDK_Trusted_service 
+						IntelSGX::SDK_Trusted_stdc 
+						IntelSGX::SDK_Trusted_cxx 
+						IntelSGX::SDK_Trusted_key_exchange 
+						IntelSGX::SDK_Trusted_crypto 
 						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
 						${MBEDX509_ENCLAVE_LIBRARY} 
 						${MBEDTLS_ENCLAVE_LIBRARY} 
 						${GROUP_FLAG_END}
 						)
+	
+	add_dependencies(${Proj_Name}_Enclave ${Proj_Name}_EDL)
 
 	###########################################################
 	### App
@@ -450,20 +474,8 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
 
-	add_custom_command(TARGET ${Proj_Name}_App
-		PRE_BUILD
-		COMMAND "${INTEL_SGX_EDGER_PATH}"  
-		--untrusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
-		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
-		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
-		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_App}"
-	)
-
 	target_link_libraries(${Proj_Name}_App 
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
+						IntelSGX::SDK_Untrusted
 						${COMMON_STANDARD_LIBRARIES} 
 						jsoncpp_lib_static 
 						libcurl 
@@ -471,8 +483,10 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						Boost::filesystem
 						Boost::date_time
 						Boost::system
-						${Boost_Additional_Lib_Link}
+						${Additional_Sys_Lib}
 					)
+	
+	add_dependencies(${Proj_Name}_App ${Proj_Name}_EDL)
 	
 endforeach()
 
