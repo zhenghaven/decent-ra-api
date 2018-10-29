@@ -3,10 +3,12 @@ cmake_minimum_required(VERSION 3.11)
 #==========================================================
 #   Options for Decent Project
 #==========================================================
-set(INTEL_SGX_SSL_MODULE ON CACHE BOOL "Switch for SGX SSL module." FORCE)
 set(HUNTER_BOOST_RUNTIME_STATIC ON CACHE BOOL "Switch for using boost runtime static linking." FORCE)
 #set(DECENT_CXX_STANDARD_VER c++11 CACHE STRING "C++ standard version used by decent." FORCE)
 
+if(APPLE)
+	message(FATAL_ERROR "Mac OS is not supported for now.")
+endif()
 #==========================================================
 #   Setup Hunter
 #==========================================================
@@ -35,12 +37,15 @@ project(decent)
 #==========================================================
 #   Add Hunter Libraries
 #==========================================================
-hunter_add_package(Boost COMPONENTS filesystem date_time)
+set(BUILD_SHARED_LIBS OFF)
+set(BUILD_STATIC_LIBS ON)
+set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF)
+
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
 set(Boost_NO_SYSTEM_PATHS ON)
-find_package(Boost CONFIG REQUIRED system filesystem date_time)
-set(Boost_Additional_Lib_Link -lrt)
+hunter_add_package(Boost COMPONENTS filesystem)
+find_package(Boost CONFIG REQUIRED system filesystem)
 
 message(STATUS "")
 message(STATUS "==================================================")
@@ -52,18 +57,13 @@ message(STATUS "Boost Libraries: ${Boost_LIBRARIES}")
 message(STATUS "==================================================")
 message(STATUS "")
 
+set(OPENSSL_USE_STATIC_LIBS ON)
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 
 #==========================================================
 #   Setup options
 #==========================================================
-
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-option(BUILD_STATIC_LIBS "Build static libraries" ON)
-option(USE_MSVC_RUNTIME_LIBRARY_DLL OFF)
-
-set(OPENSSL_USE_STATIC_LIBS TRUE)
 
 if (WIN32)
 	macro(get_WIN32_WINNT version)
@@ -96,35 +96,32 @@ if(MSVC)
 	set(SIMULATE_OPTIONS /DSIMULATING_ENCLAVE)
 	set(RELEASE_OPTIONS /MT /Ox /Oi /Ob2 /fp:fast /GR- /DEDEBUG)# /DNDEBUG
 	
+	set(COMMON_CXX_OPTIONS )
+	
 	set(ENCLAVE_LINKER_OPTIONS "/NODEFAULTLIB /NOENTRY")
 	set(APP_DEBUG_LINKER_OPTIONS "/NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:msvcrtd.lib")
 	set(APP_RELEASE_LINKER_OPTIONS "/NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:msvcrtd.lib")
 	
-	set(COMMON_LINKER_OPTIONS )
-	set(DEBUG_LINKER_OPTIONS )
-	set(RELEASE_LINKER_OPTIONS )
-	
-	set(COMMON_APP_DEFINES WIN32_LEAN_AND_MEAN CURL_STATICLIB)
+	set(COMMON_APP_DEFINES WIN32_LEAN_AND_MEAN CURL_STATICLIB BOOST_DATE_TIME_NO_LIB)
 	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
-#elseif(APPLE)
-#	set(COMMON_OPTIONS )
-#	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
-#	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
+	
+	set(Additional_Sys_Lib )
 else()
 	set(COMMON_OPTIONS -pthread)
 	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
 	set(SIMULATE_OPTIONS -DSIMULATING_ENCLAVE)
 	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
 	
+	set(COMMON_CXX_OPTIONS -std=c++11)
+	
 	set(ENCLAVE_LINKER_OPTIONS "")
-	set(APP_LINKER_OPTIONS "")
+	set(APP_DEBUG_LINKER_OPTIONS "")
+	set(APP_RELEASE_LINKER_OPTIONS "")
 	
-	set(COMMON_LINKER_OPTIONS )
-	set(DEBUG_LINKER_OPTIONS )
-	set(RELEASE_LINKER_OPTIONS )
-	
-	set(COMMON_APP_DEFINES CURL_STATICLIB)
+	set(COMMON_APP_DEFINES CURL_STATICLIB BOOST_DATE_TIME_NO_LIB)
 	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
+	
+	set(Additional_Sys_Lib rt pthread)
 endif()
 
 set(DEBUG_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
@@ -132,26 +129,8 @@ set(DEBUGSIM_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS} ${SIMULATE_OPTIONS})
 set(RELEASE_OPTIONS ${COMMON_OPTIONS} ${RELEASE_OPTIONS})
 
 if(MSVC)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COMMON_LINKER_OPTIONS}")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS} /DEBUG")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS} /DEBUG")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${RELEASE_LINKER_OPTIONS} /INCREMENTAL:NO")
-else()
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COMMON_LINKER_OPTIONS}")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS}")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS}")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${RELEASE_LINKER_OPTIONS}")
+	set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
 endif()
-
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${COMMON_LINKER_OPTIONS}")
-set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS}")
-set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION "${CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION} ${DEBUG_LINKER_OPTIONS}")
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} ${RELEASE_LINKER_OPTIONS}")
-
-set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} ${COMMON_LINKER_OPTIONS}")
-set(CMAKE_STATIC_LINKER_FLAGS_DEBUG "${CMAKE_STATIC_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS}")
-set(CMAKE_STATIC_LINKER_FLAGS_DEBUGSIMULATION "${CMAKE_STATIC_LINKER_FLAGS_DEBUGSIMULATION} ${DEBUG_LINKER_OPTIONS}")
-set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} ${RELEASE_LINKER_OPTIONS}")
 
 add_compile_options(
 	"$<$<CONFIG:Debug>:${DEBUG_OPTIONS}>"
@@ -159,21 +138,7 @@ add_compile_options(
 	"$<$<CONFIG:Release>:${RELEASE_OPTIONS}>"
 )
 
-message(STATUS "")
-message(STATUS "==================================================")
-message(STATUS "==> Before modification: ")
-message(STATUS "CMake Standard Libraries:")
-message(STATUS "${CMAKE_CXX_STANDARD_LIBRARIES_INIT}")
-message(STATUS "CMake CXX Flags (Debug):")
-message(STATUS "${CMAKE_CXX_FLAGS_DEBUG}")
-message(STATUS "CMake CXX Flags (Release):")
-message(STATUS "${CMAKE_CXX_FLAGS_RELEASE}")
-message(STATUS "CMake CXX Link Flags (Debug):")
-message(STATUS "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-message(STATUS "CMake CXX Link Flags (Release):")
-message(STATUS "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-message(STATUS "==================================================")
-message(STATUS "")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_CXX_OPTIONS}")
 
 #Remove all standard libraries dependency here so that enclave DLL can be 
 # compiled properly. And it will be added back later for non-enclave apps.
@@ -185,29 +150,35 @@ set(CMAKE_C_STANDARD_LIBRARIES "")
 if(MSVC) 
 	#Removed Basic Runtime Checks in MSVC
 	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUGSIMULATION "${CMAKE_CXX_FLAGS_DEBUG}")
 	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUGSIMULATION "${CMAKE_CXX_FLAGS_DEBUG}")
 	STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUGSIMULATION ${CMAKE_CXX_FLAGS_DEBUG})
 set(CMAKE_C_FLAGS_DEBUGSIMULATION ${CMAKE_C_FLAGS_DEBUG})
+set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_EXE_LINKER_FLAGS_DEBUG})
+set(CMAKE_SHARED_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
+set(CMAKE_STATIC_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_STATIC_LINKER_FLAGS_DEBUG})
 
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS Debug DebugSimulation)
-set(CMAKE_MAP_IMPORTED_CONFIG_DEBUGSIMULATION Debug)
 
-message(STATUS "")
+#-------
+# Flag results:
+#-------
+message(STATUS "Final set of flags")
 message(STATUS "==================================================")
-message(STATUS "==> After modification: ")
 message(STATUS "CMake Standard Libraries:")
 message(STATUS "${CMAKE_CXX_STANDARD_LIBRARIES_INIT}")
+message(STATUS "CMake CXX Flags:")
+message(STATUS "${CMAKE_CXX_FLAGS}")
 message(STATUS "CMake CXX Flags (Debug):")
 message(STATUS "${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMake CXX Flags (Release):")
 message(STATUS "${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "CMake CXX Link Flags:")
+message(STATUS "${CMAKE_EXE_LINKER_FLAGS}")
 message(STATUS "CMake CXX Link Flags (Debug):")
 message(STATUS "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
 message(STATUS "CMake CXX Link Flags (Release):")
@@ -253,7 +224,8 @@ set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF CACHE BOOL "Set to ON to build JsonCpp 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 
 ##Intel SGX SDK
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/Intel_SGX)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/DownloadSgxSdk.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/FindSgxSdk.cmake)
 
 ##Header only libraries
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
@@ -262,7 +234,6 @@ set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 
 
 set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS} 
-							 ${INTEL_SGX_SDK_INCLUDE_PATH} 
 							 ${TCLAP_INCLUDE_DIR} 
 							 ${CURL_INCLUDE_DIR} 
 							 ${CPPCODEC_INCLUDE_DIR} 
@@ -271,10 +242,7 @@ set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS}
 #							 ${Boost_INCLUDE_DIRS} 
 							 )
 
-set(COMMON_ENCLAVE_INCLUDE_DIRS ${INTEL_SGX_SDK_INCLUDE_PATH} 
-							 ${INTEL_SGX_SDK_INCLUDE_PATH}/tlibc 
-							 ${INTEL_SGX_SDK_INCLUDE_PATH}/${INTEL_SGX_CXXLIB_NAME} 
-							 ${CPPCODEC_INCLUDE_DIR}
+set(COMMON_ENCLAVE_INCLUDE_DIRS ${CPPCODEC_INCLUDE_DIR}
 							 ${RAPIDJSON_INCLUDE_DIR}
 							 ${MBEDTLS_INCLUDE_DIR}
 							 )
@@ -348,6 +316,7 @@ endif()
 ###########################################################
 add_executable(LibTest_App ${SOURCES_COMMON} ${SOURCES_COMMON_APP} ${SOURCES_LibTest_App})
 target_include_directories(LibTest_App PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
+							 ${INTEL_SGX_SDK_INCLUDE_DIR} 
 							 ${SOURCESDIR_LibTest_App})
 
 target_compile_definitions(LibTest_App PRIVATE ${COMMON_APP_DEFINES})
@@ -358,9 +327,8 @@ target_link_libraries(LibTest_App
 					libcurl
 					${MBEDTLS_LIBRARY} 
 					Boost::filesystem
-					Boost::date_time
 					Boost::system
-					${Boost_Additional_Lib_Link}
+					${Additional_Sys_Lib}
 					)
 
 
@@ -383,6 +351,37 @@ set(Enclave_Project_List DecentServer DecentApp)
 foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	
 	###########################################################
+	### EDL
+	###########################################################
+	
+	set(EDL_T_SOURCE_OUTPUT ${SOURCEDIR_${Proj_Name}_Enclave}/Enclave_t.h ${SOURCEDIR_${Proj_Name}_Enclave}/Enclave_t.c)
+	set(EDL_U_SOURCE_OUTPUT ${SOURCEDIR_${Proj_Name}_App}/Enclave_u.h ${SOURCEDIR_${Proj_Name}_App}/Enclave_u.c)
+	
+	add_custom_command(OUTPUT ${EDL_T_SOURCE_OUTPUT}
+		COMMAND "${INTEL_SGX_EDGER_PATH}"  
+		--trusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
+		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
+		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
+		--search-path "${INTEL_SGX_SDK_INCLUDE_DIR}"
+		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_Enclave}"
+		DEPENDS "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl"
+		COMMENT "Processing EDL for enclave..."
+	)
+	
+	add_custom_command(OUTPUT ${EDL_U_SOURCE_OUTPUT}
+		COMMAND "${INTEL_SGX_EDGER_PATH}"  
+		--untrusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
+		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
+		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
+		--search-path "${INTEL_SGX_SDK_INCLUDE_DIR}"
+		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_App}"
+		DEPENDS "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl"
+		COMMENT "Processing EDL for app..."
+	)
+	
+	add_custom_target(${Proj_Name}_EDL DEPENDS ${EDL_T_SOURCE_OUTPUT} ${EDL_U_SOURCE_OUTPUT})
+	
+	###########################################################
 	### Enclave
 	###########################################################
 
@@ -390,25 +389,15 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	set(${Proj_Name}_Enclave_Lib "${Enclave_Prog_Prefix}${Proj_Name}_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.${Enclave_Prog_Postfix}")
 
 	add_library(${Proj_Name}_Enclave SHARED ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_${Proj_Name}_Enclave} ${SOURCES_${Proj_Name}_EDL})
-
-	target_compile_definitions(${Proj_Name}_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
-
-	target_compile_options(${Proj_Name}_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} -std=c++11 $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS}>)
-
+	#includes:
 	target_include_directories(${Proj_Name}_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS} 
 								 ${SOURCEDIR_${Proj_Name}_Enclave})
-
+	#defines:
+	target_compile_definitions(${Proj_Name}_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
+	#compiler flags:
+	target_compile_options(${Proj_Name}_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS}>)
+	#linker flags:
 	set_target_properties(${Proj_Name}_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
-
-	add_custom_command(TARGET ${Proj_Name}_Enclave
-		PRE_BUILD
-		COMMAND "${INTEL_SGX_EDGER_PATH}"  
-		--trusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
-		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
-		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
-		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_Enclave}"
-	)
 
 	add_custom_command(TARGET ${Proj_Name}_Enclave
 		POST_BUILD
@@ -421,58 +410,49 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 
 	target_link_libraries(${Proj_Name}_Enclave 
 						${WHOLE_ARCHIVE_FLAG_BEGIN} 
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}>" 
+						IntelSGX::SDK_Trusted_Whole_lib 
 						${WHOLE_ARCHIVE_FLAG_END}
 						${GROUP_FLAG_BEGIN}
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
+						IntelSGX::SDK_Trusted_service 
+						IntelSGX::SDK_Trusted_stdc 
+						IntelSGX::SDK_Trusted_cxx 
+						IntelSGX::SDK_Trusted_key_exchange 
+						IntelSGX::SDK_Trusted_crypto 
 						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
 						${MBEDX509_ENCLAVE_LIBRARY} 
 						${MBEDTLS_ENCLAVE_LIBRARY} 
 						${GROUP_FLAG_END}
 						)
+	
+	add_dependencies(${Proj_Name}_Enclave ${Proj_Name}_EDL)
 
 	###########################################################
 	### App
 	###########################################################
 
 	add_executable(${Proj_Name}_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_${Proj_Name}_App} ${SOURCES_${Proj_Name}_EDL})
-	target_include_directories(${Proj_Name}_App 
-								PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
+	#includes:
+	target_include_directories(${Proj_Name}_App PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
 								 ${SOURCEDIR_${Proj_Name}_App})
-
+	#defines:
 	target_compile_definitions(${Proj_Name}_App PRIVATE ${COMMON_APP_DEFINES} ENCLAVE_FILENAME="${${Proj_Name}_Enclave_File}" TOKEN_FILENAME="${Proj_Name}_Enclave.token")
-
+	#linker flags:
 	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_DEBUG "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
 
-	add_custom_command(TARGET ${Proj_Name}_App
-		PRE_BUILD
-		COMMAND "${INTEL_SGX_EDGER_PATH}"  
-		--untrusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
-		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
-		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave" 
-		--search-path "${INTEL_SGX_SDK_INCLUDE_PATH}"
-		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_App}"
-	)
-
 	target_link_libraries(${Proj_Name}_App 
-						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>" 
-						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>" 
-						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
 						${COMMON_STANDARD_LIBRARIES} 
+						IntelSGX::SDK_Untrusted
 						jsoncpp_lib_static 
 						libcurl 
 						${MBEDTLS_LIBRARY} 
 						Boost::filesystem
-						Boost::date_time
 						Boost::system
-						${Boost_Additional_Lib_Link}
+						${Additional_Sys_Lib}
 					)
+	
+	add_dependencies(${Proj_Name}_App ${Proj_Name}_EDL ${Proj_Name}_Enclave)
 	
 endforeach()
 

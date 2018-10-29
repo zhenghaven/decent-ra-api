@@ -49,9 +49,11 @@ void ocall_log_w(const char * file, int line, const char * fmt, ...)
 	ocall_print_string_w(buf);
 }
 
+#ifdef __GNUC__
 extern "C" void __cxa_deleted_virtual(void) {
 	abort();
 }
+#endif //__GNUC__
 
 void Common::GetSystemTime(time_t & timer)
 {
