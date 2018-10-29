@@ -1,24 +1,23 @@
-#ifndef NOMINMAX
-# define NOMINMAX
-#endif
+
+#include <cstdio>
 
 #include <iostream>
 #include <string>
 
-#include <cstdio>
-
-//#include <openssl/crypto.h>
-#include <json/json.h>
 #include <sgx_uae_service.h>
-#include <curl/curl.h>
-#include <openssl/pem.h>
-#include <openssl/x509.h>
-#include <openssl/evp.h>
-#include <cppcodec/base64_rfc4648.hpp>
 
-#include "../common_app/SGX/IAS/IASUtil.h"
-#include "../common/SGX/ias_report_cert.h"
-#include "../common/OpenSSLTools.h"
+#include <boost/asio/ip/address_v4.hpp>
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/ssl.h>
+
+#include "../common/MbedTlsObjects.h"
+#include "../common/MbedTlsHelpers.h"
+#include "../common/DecentRAReport.h"
+#include "../common/DecentCrypto.h"
+#include "../common/TLSCommLayer.h"
+#include "../common_app/Networking/TCPConnection.h"
+
+#include "../DecentApp_app/VoteAppMessage.h"
 
 #ifdef _MSC_VER
 
@@ -48,55 +47,84 @@ std::string GetSGXDeviceStatusStr(const sgx_device_status_t& sgx_device_status)
 
 #endif
 
+static constexpr char const voteAppCaStr[] = "-----BEGIN CERTIFICATE-----\n\
+MIIBdTCCARqgAwIBAgILAJLcv58ab0wEwA4wDAYIKoZIzj0EAwIFADAiMSAwHgYD\n\
+VQQDExdEZWNlbnQgVm90ZSBBcHAgUm9vdCBDQTAgFw0xODEwMjIxMDMyMjFaGA8y\n\
+MDg2MTEwOTEzNDYyOFowIjEgMB4GA1UEAxMXRGVjZW50IFZvdGUgQXBwIFJvb3Qg\n\
+Q0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARiHmZy/OFVfF82RUGKQ/24CQH/\n\
+Zb3pcEg1enLmyzH3TLNPTa11v2KuWyu5+t46eBg5B/YH0b0o6HpzzxnsbOQCozMw\n\
+MTAMBgNVHRMEBTADAQH/MA4GA1UdDwEB/wQEAwIBzjARBglghkgBhvhCAQEEBAMC\n\
+AMQwDAYIKoZIzj0EAwIFAANHADBEAiBvii+PgcSb13JBHPSD2FPIOmMxI6TeHDrp\n\
+tNv/Ivr6DgIgJQ5ZX3y8zE+dIf/Ox+lAGZrNnoqgOyZrmi0OD29ssCw=\n\
+-----END CERTIFICATE-----";
+
+static const MbedTlsObj::X509Cert voteAppCa(voteAppCaStr);
+
+static MbedTlsObj::TlsConfig ConstructTlsConfig(const MbedTlsObj::ECKeyPair& prvKey, const MbedTlsObj::X509Cert& cert,
+	const Decent::ServerX509& decentCert)
+{
+	MbedTlsObj::TlsConfig config(new mbedtls_ssl_config);
+	config.BasicInit();
+
+	if (mbedtls_ssl_config_defaults(config.GetInternalPtr(), MBEDTLS_SSL_IS_CLIENT,
+		MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_SUITEB) != 0)
+	{
+		config.Destroy();
+		return config;
+	}
+
+	if (!prvKey || !cert ||
+		mbedtls_ssl_conf_own_cert(config.GetInternalPtr(), cert.GetInternalPtr(), prvKey.GetInternalPtr()) != 0)
+	{
+		config.Destroy();
+		return config;
+	}
+
+	mbedtls_ssl_conf_ca_chain(config.GetInternalPtr(), decentCert.GetInternalPtr(), nullptr);
+	mbedtls_ssl_conf_authmode(config.GetInternalPtr(), MBEDTLS_SSL_VERIFY_REQUIRED);
+
+	return config;
+}
+
 int main() {
-	std::cout << "JsonCPP test:" << std::endl;
-	std::cout << "================================" << std::endl;
-	Json::Value obj;
-	obj["A"] = 1;
-	obj["B"] = 2;
-	obj["C"] = 3;
-	obj["D"] = 4;
-	std::cout << obj.toStyledString() << std::endl;
-	std::cout << "================================" << std::endl << std::endl << std::endl;
+
+	uint32_t hostIP = boost::asio::ip::address_v4::from_string("128.114.52.211").to_uint();
+	uint16_t hostPort = 57755U;
+
+	std::string serverKeyPem = "-----BEGIN EC PRIVATE KEY-----\n\
+MHcCAQEEIAQmvQO92cvo/q4j5To+3E797wyqRrWRoqvRTo4VB/kroAoGCCqGSM49\n\
+AwEHoUQDQgAEYh5mcvzhVXxfNkVBikP9uAkB/2W96XBINXpy5ssx90yzT02tdb9i\n\
+rlsrufreOngYOQf2B9G9KOh6c88Z7GzkAg==\n\
+-----END EC PRIVATE KEY-----";
+	std::shared_ptr<MbedTlsObj::ECKeyPair> serverKey(std::make_shared<MbedTlsObj::ECKeyPair>(serverKeyPem));
+
+	std::shared_ptr<MbedTlsObj::ECKeyPair> clientKey(std::make_shared<MbedTlsObj::ECKeyPair>(MbedTlsObj::ECKeyPair::generatePair));
+
+	std::shared_ptr<MbedTlsObj::X509Cert> clientCert(std::make_shared<MbedTlsObj::X509Cert>(voteAppCa, *serverKey, *clientKey, 
+		MbedTlsObj::BigNumber::GenRandomNumber(10), LONG_MAX, true, -1,
+		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
+		MBEDTLS_X509_NS_CERT_TYPE_SSL_CA | MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT | MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER,
+		"CN=Decent Voter",
+		std::map<std::string, std::pair<bool, std::string> >()));
+
+	std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort + 5);
+
+	connection->SendPack(VoteAppHandshake(clientKey->ToPubPemString()));
 	
-	CURL *hnd = curl_easy_init();
+	Json::Value recvJson;
+	connection->ReceivePack(recvJson);
+	VoteAppHandshakeAck hsAck(recvJson);
 
-	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "GET");
-	curl_easy_setopt(hnd, CURLOPT_URL, "https://google.com");
-	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
-	curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L);
+	std::shared_ptr<Decent::ServerX509> decentCert(std::make_shared<Decent::ServerX509>(hsAck.GetSelfRAReport()));
+	bool verifyRes = Decent::RAReport::ProcessSelfRaReport(decentCert->GetPlatformType(), decentCert->GetEcPublicKey().ToPubPemString(),
+		decentCert->GetSelfRaReport(), "");
 
-	struct curl_slist *headers = NULL;
-	headers = curl_slist_append(headers, "Cache-Control: no-cache");
-	curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers);
+	std::shared_ptr<const MbedTlsObj::TlsConfig> config(std::make_shared<MbedTlsObj::TlsConfig>(ConstructTlsConfig(*clientKey, *clientCert, *decentCert)));
+	TLSCommLayer testTls(connection.get(), config, true);
 
-	CURLcode ret = curl_easy_perform(hnd);
-
-	curl_easy_cleanup(hnd);
-
-	int sslRes = 0;
-
-	std::vector<X509*> certs;
-	LoadX509CertsFromStr(certs, IAS_REPORT_CERT);
-	X509* iasCert = certs[0];
-
-	std::string s1 = "{\r\n\"isvEnclaveQuote\": \"AgABAPAKAAAHAAYAAAAAAN0WQP4NKMmoswWvTU52WL4AAAAAAAAAAAAAAAAAAAAABQUCBAECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAHAAAAAAAAADHQElNZvJ5D+ILaWmNeFeIj2MyOXBG1pUSQdE428ixtAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnnferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwECALZcM+G8O0Ys+P0oIWxtVbWdSF9QCxaucw3ak8gwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqAIAABFPePLzujWuMPeJyvsNK8oFfwLdAWBDyKGajC5xhNzJw/bLsveZ8HtfK2LZnrU5PLEZkWBn2Y1awZ6FBpkHed7PRLHtbRcOSmapOpPnKot7yqBgpyotsRXvNaF1zDNmIzk6AQeaLdKl4Tlj+zbuAdF+LSCRHqbBTEcLFimI/lXEjgIimbmVXrza5iHQw0TDy/ayl1y1X0EfML6FGgzEI9dcMAnXTPxGRzoYBxmjuAWF8vdNxRfmJ3N++8zGwNQRiip4fzfx/ojfak/R4PKVILsR0N8FFcREg3gBOXSibI238b2FHEYCoxFcBfLMS+bHkPLRwzSERhxUP/jOFWTLp5lPRjbgEtDvcPoi8qlzkVGzpsrmWA8w473XjnoiuhRW+PjGtNo59M1eh4VEHmgBAAC49nn3pD9+jxjfhbDAhMFeZR62Be61dmKV/JyDlyZ4IFLxcy26soHPzWa0ZvTulmTW5MqRDyZeSe0vQ7Pkz+IuUCf2jsxB6ktBiSZpGYBWqtI7V5KKbViFxdpVbU+3kxev+YBgo0jxUiCXWA2aXkmows9vg65t2oezendW4vxUklRMPQhH+MRV0eRaFyFtXiXSd4jZQ2/lKvMgYz/wIizITVSk8zt9JxaOI3RsfFgaRslSvCbMgsoagTsedKIxpwImkg6e/G8eAXlQ8S51NsIsjwgoBH8/e8H8AhBF+PdH7emWrJIudwdL3/QZF6eK+PI5d0dfKTBdv0HTR8n0AGY5wW2IBTEUQrGbTrhbG9JVxfqc3ykkgF9ZiAXilvNx8iLRTvVVV8Gtzp5t8w/fYiL8YO68gJbE+Z+Vm6AHpdj4rQNm4OowNVTgNpHPk3J6EnUII7hikqEc+VRCYLmg3/Y472YTmY3BXARp/xfRFJmaTpujQ4JHxTLs\"\r\n}";
-	std::string s2;
-	std::string s3;
-	std::string s4;
-	IASUtil::GetQuoteReport(s1, s2, s3, s4, IASUtil::GetDefaultCertPath(), IASUtil::GetDefaultKeyPath());
-
-	LoadX509CertsFromStr(certs, s4);
-
-	bool certVerRes = VerifyIasReportCert(iasCert, certs);
-
-	std::vector<uint8_t> buffer1 = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(s3);
-
-	bool signVerRes = VerifyIasReportSignature(s2, buffer1, certs[0]);
-
-	FreeX509Cert(&iasCert);
-	FreeX509Cert(certs);
-
+	std::string voteBuf(1, '\0');
+	voteBuf[0] = 1;
+	testTls.SendMsg(connection.get(), voteBuf);
 	std::cout << "Done! Enter anything to exit..." << std::endl;
 	getchar();
 
