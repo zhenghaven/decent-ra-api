@@ -96,7 +96,7 @@ if(MSVC)
 	set(SIMULATE_OPTIONS /DSIMULATING_ENCLAVE)
 	set(RELEASE_OPTIONS /MT /Ox /Oi /Ob2 /fp:fast /GR- /DEDEBUG)# /DNDEBUG
 	
-	set(COMMON_CXX_OPTIONS )
+	set(COMMON_ENCLAVE_CXX_OPTIONS )
 	
 	set(ENCLAVE_LINKER_OPTIONS "/NODEFAULTLIB /NOENTRY")
 	set(APP_DEBUG_LINKER_OPTIONS "/NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:msvcrtd.lib")
@@ -112,7 +112,7 @@ else()
 	set(SIMULATE_OPTIONS -DSIMULATING_ENCLAVE)
 	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
 	
-	set(COMMON_CXX_OPTIONS -std=c++11)
+	set(COMMON_ENCLAVE_CXX_OPTIONS -std=c++11)
 	
 	set(ENCLAVE_LINKER_OPTIONS "")
 	set(APP_DEBUG_LINKER_OPTIONS "")
@@ -137,8 +137,6 @@ add_compile_options(
 	"$<$<CONFIG:DebugSimulation>:${DEBUGSIM_OPTIONS}>"
 	"$<$<CONFIG:Release>:${RELEASE_OPTIONS}>"
 )
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_CXX_OPTIONS}")
 
 #Remove all standard libraries dependency here so that enclave DLL can be 
 # compiled properly. And it will be added back later for non-enclave apps.
@@ -395,7 +393,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 	#defines:
 	target_compile_definitions(${Proj_Name}_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 	#compiler flags:
-	target_compile_options(${Proj_Name}_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS}>)
+	target_compile_options(${Proj_Name}_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
 	set_target_properties(${Proj_Name}_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
 
