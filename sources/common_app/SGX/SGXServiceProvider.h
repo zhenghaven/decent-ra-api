@@ -18,8 +18,6 @@ public:
 
 	virtual ~SGXServiceProvider(); 
 
-	virtual const char* GetPlatformType() const override;
-
 	virtual void GetSpPublicSignKey(general_secp256r1_public_t& outKey) const override;
 
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;

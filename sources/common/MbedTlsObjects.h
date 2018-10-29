@@ -21,9 +21,18 @@ typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 
 namespace MbedTlsObj
 {
+	//Dummy struct to indicate the need for generating a new big number.
+	struct Generate
+	{
+		explicit Generate() = default;
+	};
+	constexpr Generate gen;
+
 	template<typename T>
 	class ObjBase
 	{
+	public:
+
 	public:
 		ObjBase() = delete;
 
@@ -84,19 +93,13 @@ namespace MbedTlsObj
 		{
 			return FromLittleEndianBin(reinterpret_cast<const uint8_t*>(&in), sizeof(T));
 		}
-		//Dummy struct to indicate the need for generating a new big number.
-		struct Generate
-		{
-			explicit Generate() = default;
-		};
-
-		static constexpr Generate generate{};
 
 	public:
 		BigNumber() = delete;
 		BigNumber(const Generate&);
 		BigNumber(BigNumber&& other);
 		BigNumber(mbedtls_mpi* ptr);
+		BigNumber(const BigNumber& other) = delete;
 		virtual ~BigNumber();
 
 		virtual void Destroy() override;
@@ -120,6 +123,7 @@ namespace MbedTlsObj
 		virtual ~PKey();
 
 		virtual void Destroy() override;
+		virtual PKey& operator=(const PKey& other) = delete;
 		virtual PKey& operator=(PKey&& other);
 
 		virtual bool VerifySignatureSha256(const General256Hash& hash, const std::vector<uint8_t>& signature) const;
@@ -136,6 +140,7 @@ namespace MbedTlsObj
 		virtual ~Gcm();
 
 		virtual void Destroy() override;
+		virtual Gcm& operator=(const Gcm& other) = delete;
 		virtual Gcm& operator=(Gcm&& other);
 
 		virtual bool Encrypt(const uint8_t* inData, uint8_t* outData, const size_t dataLen, 
@@ -183,6 +188,7 @@ namespace MbedTlsObj
 		ECKeyPublic(ECKeyPublic&& other);
 		virtual ~ECKeyPublic() {}
 
+		virtual ECKeyPublic& operator=(const ECKeyPublic& other) = delete;
 		virtual ECKeyPublic& operator=(ECKeyPublic&& other);
 
 		bool ToGeneralPublicKey(general_secp256r1_public_t& outKey) const;
@@ -205,18 +211,11 @@ namespace MbedTlsObj
 	class ECKeyPair : public ECKeyPublic
 	{
 	public:
-		//Dummy struct to indicate the need for generating a new key pair.
-		struct GeneratePair
-		{
-			explicit GeneratePair() = default;
-		};
-
-		static constexpr GeneratePair generatePair{};
 
 	public:
 		ECKeyPair() = delete;
 		ECKeyPair(mbedtls_pk_context* ptr, bool isOwner);
-		ECKeyPair(GeneratePair);
+		ECKeyPair(const Generate&);
 		ECKeyPair(const general_secp256r1_private_t& prv);
 		ECKeyPair(const general_secp256r1_private_t& prv, const general_secp256r1_public_t& pub);
 		ECKeyPair(const std::string& pemStr);
@@ -250,8 +249,11 @@ namespace MbedTlsObj
 		X509Req(const std::string& pemStr);
 		X509Req(mbedtls_x509_csr* ptr, const std::string& pemStr);
 		X509Req(const PKey& keyPair, const std::string& commonName);
+		X509Req(const X509Req& other) = delete;
 		virtual ~X509Req();
 
+		virtual X509Req& operator=(const X509Req& other) = delete;
+		virtual X509Req& operator=(X509Req&& other);
 		virtual void Destroy() override;
 		virtual operator bool() const override;
 
@@ -272,6 +274,7 @@ namespace MbedTlsObj
 		X509Crl() = delete;
 		X509Crl(const std::string& pemStr);
 		X509Crl(mbedtls_x509_crl* ptr, const std::string& pemStr);
+		X509Crl(const X509Crl& other) = delete;
 		virtual ~X509Crl();
 
 		virtual void Destroy() override;
@@ -297,8 +300,11 @@ namespace MbedTlsObj
 		X509Cert(const PKey& prvKey,
 			const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 			const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap);
+		X509Cert(const X509Cert& other) = delete;
 		virtual ~X509Cert();
 
+		virtual X509Cert& operator=(const X509Cert& other) = delete;
+		virtual X509Cert& operator=(X509Cert&& other);
 		virtual void Destroy() override;
 		virtual operator bool() const override;
 
@@ -334,6 +340,7 @@ namespace MbedTlsObj
 		Aes128Gcm(Aes128Gcm&& other);
 		virtual ~Aes128Gcm() {}
 
+		virtual Aes128Gcm& operator=(const Aes128Gcm& other) = delete;
 		virtual Aes128Gcm& operator=(Aes128Gcm&& other);
 
 	};
@@ -343,9 +350,11 @@ namespace MbedTlsObj
 	public:
 		TlsConfig(mbedtls_ssl_config* ptr);
 		TlsConfig(TlsConfig&& other);
+		TlsConfig(const TlsConfig& other) = delete;
 		virtual ~TlsConfig();
 
 		virtual void Destroy() override;
+		virtual TlsConfig& operator=(const TlsConfig& other) = delete;
 		virtual TlsConfig& operator=(TlsConfig&& other);
 
 		virtual void BasicInit();

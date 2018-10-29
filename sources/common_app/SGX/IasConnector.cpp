@@ -1,4 +1,4 @@
-#include "IASConnector.h"
+#include "IasConnector.h"
 
 #ifndef NOMINMAX
 # define NOMINMAX
@@ -25,7 +25,7 @@
 #ifdef SIMULATING_ENCLAVE
 #include <json/json.h>
 #include <sgx_report.h>
-#include "../../../common/DataCoding.h"
+#include "../../common/DataCoding.h"
 #endif // SIMULATING_ENCLAVE
 
 namespace
@@ -93,6 +93,9 @@ namespace
 	}
 }
 
+constexpr char const IASConnector::sk_iasUrl[];
+constexpr char const IASConnector::sk_iasSigRlPath[];
+constexpr char const IASConnector::sk_iasReportPath[];
 const std::string IASConnector::sk_iasUrlStr = sk_iasUrl;
 const std::string IASConnector::sk_defaultCertPath = fs::path(gsk_defaultIasPath).append("client.crt").string();
 const std::string IASConnector::sk_defaultKeyPath = fs::path(gsk_defaultIasPath).append("client.pem").string();

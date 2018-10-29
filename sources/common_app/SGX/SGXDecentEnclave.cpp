@@ -5,6 +5,7 @@
 #include "SGXDecentEnclave.h"
 
 #include <thread>
+#include <cstring>
 
 #include <sgx_ukey_exchange.h>
 

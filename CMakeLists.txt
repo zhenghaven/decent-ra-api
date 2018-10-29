@@ -40,6 +40,7 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
 set(Boost_NO_SYSTEM_PATHS ON)
 find_package(Boost CONFIG REQUIRED system filesystem date_time)
+set(Boost_Additional_Lib_Link -lrt)
 
 message(STATUS "")
 message(STATUS "==================================================")
@@ -110,7 +111,7 @@ if(MSVC)
 #	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
 #	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
 else()
-	set(COMMON_OPTIONS -std=c++11 -pthread)
+	set(COMMON_OPTIONS -pthread)
 	set(DEBUG_OPTIONS -O0 -g -DDEBUG -UNDEBUG -UEDEBUG)
 	set(SIMULATE_OPTIONS -DSIMULATING_ENCLAVE)
 	set(RELEASE_OPTIONS -O2 -UEDEBUG -UDEBUG) #-DNDEBUG defined by default
@@ -130,10 +131,17 @@ set(DEBUG_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS})
 set(DEBUGSIM_OPTIONS ${COMMON_OPTIONS} ${DEBUG_OPTIONS} ${SIMULATE_OPTIONS})
 set(RELEASE_OPTIONS ${COMMON_OPTIONS} ${RELEASE_OPTIONS})
 
+if(MSVC)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COMMON_LINKER_OPTIONS}")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS} /DEBUG")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS} /DEBUG")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${RELEASE_LINKER_OPTIONS} /INCREMENTAL:NO")
+else()
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COMMON_LINKER_OPTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUGSIMULATION "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${RELEASE_LINKER_OPTIONS}")
+endif()
 
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${COMMON_LINKER_OPTIONS}")
 set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${DEBUG_LINKER_OPTIONS}")
@@ -220,6 +228,8 @@ set(MBEDTLS_INCLUDE_DIRS ${MBEDTLS_INCLUDE_DIR})
 set(MBEDCRYPTO_LIBRARY mbedcrypto)
 set(MBEDX509_LIBRARY mbedx509)
 set(MBEDTLS_LIBRARY mbedtls)
+set(MBEDCRYPTO_ENCLAVE_LIBRARY mbedcrypto_enclave)
+set(MBEDX509_ENCLAVE_LIBRARY mbedx509_enclave)
 set(MBEDTLS_ENCLAVE_LIBRARY mbedtls_enclave)
 
 
@@ -350,6 +360,7 @@ target_link_libraries(LibTest_App
 					Boost::filesystem
 					Boost::date_time
 					Boost::system
+					${Boost_Additional_Lib_Link}
 					)
 
 
@@ -382,7 +393,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 
 	target_compile_definitions(${Proj_Name}_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 
-	target_compile_options(${Proj_Name}_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS}>)
+	target_compile_options(${Proj_Name}_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} -std=c++11 $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS}>)
 
 	target_include_directories(${Proj_Name}_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS} 
 								 ${SOURCEDIR_${Proj_Name}_Enclave})
@@ -418,6 +429,8 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						"$<$<CONFIG:Debug>:${INTEL_SGX_SDK_LIB_GROUP_DEBUG}>" 
 						"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_GROUP_DEBUGSIM}>" 
 						"$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_GROUP_RELEASE}>" 
+						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
+						${MBEDX509_ENCLAVE_LIBRARY} 
 						${MBEDTLS_ENCLAVE_LIBRARY} 
 						${GROUP_FLAG_END}
 						)
@@ -458,6 +471,7 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						Boost::filesystem
 						Boost::date_time
 						Boost::system
+						${Boost_Additional_Lib_Link}
 					)
 	
 endforeach()

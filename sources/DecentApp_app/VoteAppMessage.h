@@ -130,3 +130,4 @@ protected:
 private:
 	const std::string m_selfRAReport;
 };
+

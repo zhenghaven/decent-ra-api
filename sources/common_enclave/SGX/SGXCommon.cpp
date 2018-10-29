@@ -4,7 +4,6 @@
 #include <stdio.h>      /* vsnprintf */
 
 #include <Enclave_t.h>
-#include "..\..\common\CommonTool.h"
 
 static constexpr size_t PRINT_BUFFER_SIZE = 20 * BUFSIZ;
 
@@ -48,6 +47,10 @@ void ocall_log_w(const char * file, int line, const char * fmt, ...)
 	vsnprintf(buf, PRINT_BUFFER_SIZE, buf, ap);
 	va_end(ap);
 	ocall_print_string_w(buf);
+}
+
+extern "C" void __cxa_deleted_virtual(void) {
+	abort();
 }
 
 void Common::GetSystemTime(time_t & timer)

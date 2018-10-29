@@ -130,6 +130,7 @@ elseif(UNIX)
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tservice.a 
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tstdc.a 
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tcxx.a 
+				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tkey_exchange.a
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tcrypto.a)
 	
 	set(INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE -lsgx_uae_service -lsgx_urts)
@@ -142,6 +143,7 @@ elseif(UNIX)
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tservice.a 
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tstdc.a 
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tcxx.a 
+				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tkey_exchange.a
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tcrypto.a)
 	
 	set(INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG -lsgx_uae_service -lsgx_urts)
@@ -153,9 +155,11 @@ elseif(UNIX)
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tservice_sim.a
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tstdc.a
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tcxx.a
+				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tkey_exchange.a
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tcrypto.a)
 	
 	file(GLOB INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM 
+				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_ukey_exchange.a
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_uae_service_sim.so
 				${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_urts_sim.so)
 	
