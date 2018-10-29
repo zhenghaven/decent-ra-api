@@ -3,6 +3,18 @@
 #include <sgx_tcrypto.h>
 #include "../general_key_types.h"
 
+//In newer version of gcc, the definition of offsetof in SGX SDK is not acceptable.
+#ifdef ENCLAVE_ENVIRONMENT
+#ifdef __GNUC__
+#define myoffsetof(s,m) __builtin_offsetof(s,m)
+#elif defined(__cplusplus)
+#define myoffsetof(s,m) ((::size_t)&reinterpret_cast<char const volatile&>((((s*)0)->m)))
+#else
+#define myoffsetof(s,m) ((size_t)&(((s*)0)->m))
+#endif
+#endif // ENCLAVE_ENVIRONMENT
+
+
 #define SGX_GENERAL_KEY_TYPE_ERROR_MSG "The key type of SGX is incompatible with the general key type!"
 
 static_assert(sizeof(sgx_ec256_private_t) == sizeof(general_secp256r1_private_t), SGX_GENERAL_KEY_TYPE_ERROR_MSG);
