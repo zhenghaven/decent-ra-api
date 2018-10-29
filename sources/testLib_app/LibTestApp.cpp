@@ -98,7 +98,7 @@ rlsrufreOngYOQf2B9G9KOh6c88Z7GzkAg==\n\
 -----END EC PRIVATE KEY-----";
 	std::shared_ptr<MbedTlsObj::ECKeyPair> serverKey(std::make_shared<MbedTlsObj::ECKeyPair>(serverKeyPem));
 
-	std::shared_ptr<MbedTlsObj::ECKeyPair> clientKey(std::make_shared<MbedTlsObj::ECKeyPair>(MbedTlsObj::ECKeyPair::generatePair));
+	std::shared_ptr<MbedTlsObj::ECKeyPair> clientKey(std::make_shared<MbedTlsObj::ECKeyPair>(MbedTlsObj::gen));
 
 	std::shared_ptr<MbedTlsObj::X509Cert> clientCert(std::make_shared<MbedTlsObj::X509Cert>(voteAppCa, *serverKey, *clientKey, 
 		MbedTlsObj::BigNumber::GenRandomNumber(10), LONG_MAX, true, -1,
