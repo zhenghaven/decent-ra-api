@@ -9,8 +9,6 @@ class DecentEnclave
 public:
 	virtual std::string GetDecentSelfRAReport() const = 0;
 	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) = 0;
-	virtual bool ReceiveProtocolKey(Connection& connection) = 0;
-	virtual bool SendProtocolKey(Connection& connection) = 0;
 	virtual bool ProcessAppX509Req(Connection& connection) = 0;
 
 protected:

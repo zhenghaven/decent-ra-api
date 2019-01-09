@@ -56,18 +56,8 @@ int main(int argc, char ** argv)
 	TCLAP::CmdLine cmd("Decent Remote Attestation", ' ', "ver", true);
 
 #ifndef DEBUG
-	TCLAP::SwitchArg argIsRoot("r", "root", "Start as root server", false);
-	cmd.add(argIsRoot);
-	TCLAP::ValueArg<std::string> argRootAddr("a", "root-addr", "IP Address for root server", false, "127.0.0.1", "IP Addr");
-	cmd.add(argRootAddr);
-	TCLAP::ValueArg<uint16_t>  argRootPort("b", "root-port", "TCP port for root server", false, 0, "TCP Port Num");
-	cmd.add(argRootPort);
-	TCLAP::ValueArg<std::string> argServerAddr("c", "server-addr", "IP Address for this server", true, "127.0.0.1", "IP Addr");
-	cmd.add(argServerAddr);
-	TCLAP::ValueArg<uint16_t>  argServerPort("d", "server-port", "TCP port for this server", true, 0, "TCP Port Num");
+	TCLAP::ValueArg<uint16_t>  argServerPort("p", "port", "Port number for on-coming local connection.", true, 0, "[0-65535]");
 	cmd.add(argServerPort);
-	TCLAP::ValueArg<uint16_t>  argLocalPort("l", "local-port", "Port number (local connection) for this server", true, 0, "Port Num");
-	cmd.add(argLocalPort);
 #else
 	TCLAP::ValueArg<int> testOpt("t", "test-opt", "Test Option Number", false, 0, "A single digit number.");
 	cmd.add(testOpt);
@@ -76,24 +66,17 @@ int main(int argc, char ** argv)
 	cmd.parse(argc, argv);
 
 #ifndef DEBUG
-	bool isRootServer = argIsRoot.getValue();
-	std::string rootServerAddr = argRootAddr.getValue();
-	uint16_t rootServerPort = argRootPort.getValue();
-	std::string serverAddr = argServerAddr.getValue();
+	std::string serverAddr = "127.0.0.1";
 	uint16_t serverPort = argServerPort.getValue();
 	std::string localAddr = "DecentServerLocal";
-	uint16_t localPort = argLocalPort.getValue();
 #else
-	bool isRootServer = testOpt.getValue() == 0 ? true :  false;
-	std::string rootServerAddr = "127.0.0.1";
 	uint16_t rootServerPort = 57755U;
-	std::string serverAddr = rootServerAddr;
-	uint16_t serverPort = isRootServer ? rootServerPort : rootServerPort + 1;
+
+	std::string serverAddr = "127.0.0.1";
+	uint16_t serverPort = rootServerPort + testOpt.getValue();
 	std::string localAddr = "DecentServerLocal";
-	uint16_t localPort = serverPort;
 #endif
 
-	uint32_t rootServerIp = boost::asio::ip::address_v4::from_string(rootServerAddr).to_uint();
 	uint32_t serverIp = boost::asio::ip::address_v4::from_string(serverAddr).to_uint();
 
 
@@ -108,19 +91,19 @@ int main(int argc, char ** argv)
 
 	std::shared_ptr<SGXDecentEnclave> enclave(
 		std::make_shared<SGXDecentEnclave>(
-			g_sgxSPID, iasConnector, isRootServer, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
+			g_sgxSPID, iasConnector, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
 
-	if (!isRootServer)
-	{
-		std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(rootServerIp, rootServerPort);
-		DecentRASession::SendHandshakeMessage(*connection, *enclave);
-		Json::Value jsonRoot;
-		connection->ReceivePack(jsonRoot);
-		enclave->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
-	}
+	//if (!isRootServer)
+	//{
+	//	std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(rootServerIp, rootServerPort);
+	//	DecentRASession::SendHandshakeMessage(*connection, *enclave);
+	//	Json::Value jsonRoot;
+	//	connection->ReceivePack(jsonRoot);
+	//	enclave->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
+	//}
 
 	std::unique_ptr<Server> server(std::make_unique<TCPServer>(serverIp, serverPort));
-	std::unique_ptr<Server> localServer(std::make_unique<LocalServer>(localAddr + std::to_string(localPort)));
+	std::unique_ptr<Server> localServer(std::make_unique<LocalServer>(localAddr + std::to_string(serverPort)));
 
 	smartServer.AddServer(server, enclave);
 	smartServer.AddServer(localServer, enclave);

@@ -57,7 +57,7 @@ int main(int argc, char ** argv)
 	//std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
 	DecentAppLASession::SendHandshakeMessage(*connection, enclave);
 	Json::Value jsonRoot;
-	connection->Receive(jsonRoot);
+	connection->ReceivePack(jsonRoot);
 	enclave.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
 
 	printf("Enter a character before exit ...\n");

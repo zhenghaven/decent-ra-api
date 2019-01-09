@@ -13,17 +13,15 @@ typedef struct _spid_t sgx_spid_t;
 class SGXDecentEnclave : public SGXEnclaveServiceProvider, virtual public DecentEnclave
 {
 public:
-	SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const bool isFirstNode, const std::string& enclavePath, const std::string& tokenPath);
-	SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const bool isFirstNode, const fs::path& enclavePath, const fs::path& tokenPath);
-	SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const bool isFirstNode, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const std::string& tokenPath);
+	SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
+	SGXDecentEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 	virtual ~SGXDecentEnclave();
 
 	//DecentEnclave methods:
 	virtual std::string GetDecentSelfRAReport() const override;
 	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
-	virtual bool ReceiveProtocolKey(Connection& connection) override;
-	virtual bool SendProtocolKey(Connection& connection) override;
 	virtual bool ProcessAppX509Req(Connection& connection) override;
 
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
