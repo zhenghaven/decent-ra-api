@@ -28,10 +28,21 @@ extern "C" {
 		uint8_t k[64];
 	} sgx_epid_pseudonym_t;
 
+	typedef struct _sgx_timestamp_t
+	{
+		uint16_t m_year;
+		uint8_t  m_month;
+		uint8_t  m_day;
+
+		uint8_t  m_hour;
+		uint8_t  m_min;
+		float  m_sec;
+	} sgx_timestamp_t;
+
 	typedef struct _sgx_ias_report_t
 	{
 		//number                m_id;            //Don't know the size yet.
-		//string                m_timestamp;     //Don't use it now.
+		sgx_timestamp_t         m_timestamp;     //Mandatory field (Parsed based on API) (chrono is not availble, couldn't find a better data type now).
 		uint8_t                 m_status;        //Mandatory field (enum ias_quote_status_t)
 		uint8_t                 m_revoc_reason;  //Optional field (validated by m_status) (enum ias_revoc_reason_t)
 		uint8_t                 m_pse_status;    //Optional field (validated by itself) (enum ias_pse_status_t)

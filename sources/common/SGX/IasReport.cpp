@@ -81,6 +81,87 @@ static inline ias_revoc_reason_t parse_revoc_reason(const int in_num)
 	}
 }
 
+/*
+ * There is no much date time libs we can use in sgx SDK. And, since the timestamp format 
+ * used by IAS API is very straight forward to parse, we can just use our simple functions to parse.
+ */
+static bool ParseTimestampDate(const std::string& dateStr, sgx_timestamp_t& outTime)
+{
+	size_t nextPos = 0;
+	size_t nextPosAbs = 0;
+
+	int tmpOut[3];
+	bool isValid = true;
+	for (size_t i = 0; i < 3; ++i)
+	{
+		try
+		{
+			tmpOut[i] = std::stoi(dateStr.substr(nextPosAbs), &nextPos);
+			isValid = true & isValid;
+		}
+		catch (const std::exception&)
+		{
+			isValid = false;
+		}
+		nextPosAbs += nextPos + 1;
+	}
+	outTime.m_year = static_cast<uint16_t>(tmpOut[0]); //Year
+	outTime.m_month = static_cast<uint8_t>(tmpOut[1]); //Month
+	outTime.m_day = static_cast<uint8_t>(tmpOut[2]); //Day
+
+	return isValid;
+}
+
+static bool ParseTimestampTime(const std::string& timeStr, sgx_timestamp_t& outTime)
+{
+	size_t nextPos = 0;
+	size_t nextPosAbs = 0;
+
+	int tmpOut[2];
+	bool isValid = true;
+	for (size_t i = 0; i < 2; ++i)
+	{
+		try
+		{
+			tmpOut[i] = std::stoi(timeStr.substr(nextPosAbs), &nextPos);
+			isValid = true & isValid;
+		}
+		catch (const std::exception&)
+		{
+			isValid = false;
+		}
+		nextPosAbs += nextPos + 1;
+	}
+	outTime.m_hour = static_cast<uint8_t>(tmpOut[0]); //Year
+	outTime.m_min = static_cast<uint8_t>(tmpOut[1]); //Month
+
+	try
+	{
+		outTime.m_sec = std::stof(timeStr.substr(nextPosAbs), &nextPos);
+		isValid = true & isValid;
+	}
+	catch (const std::exception&)
+	{
+		isValid = false;
+	}
+
+	return isValid;
+}
+
+static bool ParseTimestamp(const std::string& timeStr, sgx_timestamp_t& outTime)
+{
+	size_t middlePos = timeStr.find('T');
+	if (middlePos == std::string::npos || middlePos + 1 == timeStr.size())
+	{
+		return false;
+	}
+
+	bool isValid = ParseTimestampDate(timeStr.substr(0, middlePos), outTime);
+	isValid = isValid & ParseTimestampTime(timeStr.substr(middlePos + 1), outTime);
+	
+	return isValid;
+}
+
 bool ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
 {
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
@@ -97,7 +178,8 @@ bool ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::strin
 	outId = jsonDoc["id"].JSON_AS_STRING();
 
 	//Timestamp:
-	if (!jsonDoc.JSON_HAS_MEMBER("timestamp") || !jsonDoc["timestamp"].JSON_IS_STRING())
+	if (!jsonDoc.JSON_HAS_MEMBER("timestamp") || !jsonDoc["timestamp"].JSON_IS_STRING()
+		|| !ParseTimestamp(jsonDoc["timestamp"].JSON_AS_STRING(), outReport.m_timestamp))
 	{
 		return false;
 	}
