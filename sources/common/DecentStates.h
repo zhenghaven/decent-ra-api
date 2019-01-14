@@ -3,6 +3,10 @@
 namespace Decent
 {
 	class CertContainer;
+	namespace WhiteList
+	{
+		class DecentServer;
+	}
 
 	class States
 	{
@@ -29,7 +33,18 @@ namespace Decent
 			return m_certContainer;
 		}
 
+		WhiteList::DecentServer& GetServerWhiteList()
+		{
+			return m_serverWhiteList;
+		}
+
+		const WhiteList::DecentServer& GetServerWhiteList() const
+		{
+			return m_serverWhiteList;
+		}
+
 	private:
 		CertContainer & m_certContainer;
+		WhiteList::DecentServer & m_serverWhiteList;
 	};
 }

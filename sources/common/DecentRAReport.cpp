@@ -12,6 +12,12 @@
 #include "SGX/IasReport.h"
 #include "SGX/sgx_structs.h"
 
+namespace
+{
+	static constexpr uint32_t sk_sec2MicroSec = 1000000;
+	static constexpr uint32_t sk_microSec2NanoSec = 1000;
+}
+
 bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)
 {
 	if (size != GENERAL_256BIT_32BYTE_SIZE ||
@@ -30,12 +36,23 @@ bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, 
 	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;
 }
 
-bool Decent::RAReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, const std::string & inHashStr)
+bool Decent::RAReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, const std::string & inHashStr, TimeStamp& outTimestamp)
 {
 	if (platformType == sk_ValueReportTypeSgx)
 	{
 		sgx_ias_report_t outIasReport;
-		return ProcessSgxSelfRaReport(pubKeyPem, raReport, inHashStr, outIasReport);
+		bool verifyRes = ProcessSgxSelfRaReport(pubKeyPem, raReport, inHashStr, outIasReport);
+		outTimestamp.m_year = outIasReport.m_timestamp.m_year;
+		outTimestamp.m_month = outIasReport.m_timestamp.m_month;
+		outTimestamp.m_day = outIasReport.m_timestamp.m_day;
+
+		outTimestamp.m_hour = outIasReport.m_timestamp.m_hour;
+		outTimestamp.m_min = outIasReport.m_timestamp.m_min;
+		outTimestamp.m_sec = static_cast<uint8_t>(outIasReport.m_timestamp.m_sec);
+		//TODO: Fix time precision later.
+		outTimestamp.m_nanoSec = static_cast<uint32_t>((outIasReport.m_timestamp.m_sec - outTimestamp.m_sec) * sk_sec2MicroSec) * sk_microSec2NanoSec;
+
+		return verifyRes;
 	}
 	return false;
 }

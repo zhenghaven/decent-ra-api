@@ -112,15 +112,16 @@ namespace Decent
 
 		virtual void Destroy() override;
 
-	private:
-		static TlsConfig ConstructTlsConfig(bool isServer);
-		static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
-		int CertVerifyCallBack(mbedtls_x509_crt* cert, int depth, uint32_t* flag);
+	protected:
 		TlsConfig(mbedtls_ssl_config* ptr);
+		int CertVerifyCallBack(mbedtls_x509_crt* cert, int depth, uint32_t* flag);
+
+	private:
+		static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
 
 		std::shared_ptr<const MbedTlsObj::ECKeyPair> m_prvKey;
 		std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
-		std::shared_ptr<const ServerX509> m_decentCert;
+
 		Decent::Crypto::AppIdVerfier m_appCertVerifier;
 	};
 }

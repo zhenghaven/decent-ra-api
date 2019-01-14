@@ -13,7 +13,14 @@
 #include "DecentCertContainer.h"
 #include "DecentRAReport.h"
 
+#include "WhiteList/DecentServer.h"
+
 using namespace Decent;
+
+namespace
+{
+	static constexpr int MBEDTLS_SUCCESS_RET = 0;
+}
 
 const mbedtls_x509_crt_profile & Decent::Crypto::GetX509Profile()
 {
@@ -268,42 +275,29 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 	{
 	case 0: //App Cert
 	{
-		//if (!m_appCertVerifier)
-		//{
-		//	return MBEDTLS_ERR_X509_FATAL_ERROR;
-		//}
+		if (!m_appCertVerifier)
+		{
+			return MBEDTLS_ERR_X509_FATAL_ERROR;
+		}
 
 		AppX509 appCert(cert);
 
 		//*flag |= ((appCert && 
 		//	m_appCertVerifier(appCert.GetEcPublicKey(), appCert.GetPlatformType(), appCert.GetAppId())) ? 0 :
 		//	MBEDTLS_X509_BADCERT_NOT_TRUSTED);
-		COMMON_PRINTF("TLS callback app cert: \n %s \n", appCert.ToPemString().c_str());
 
 		*flag = 0;
 
-		return 0;
+		return MBEDTLS_SUCCESS_RET;
 	}
 	case 1: //Decent Cert
 	{
-		//std::shared_ptr<const ServerX509> decentCert = DecentCertContainer::Get().GetServerCert();
-		//if (decentCert && decentCert.get()->GetInternalPtr() == cert)
-		//{
-		//	*flag = 0;
-		//	return 0; //In most case, should return at here.
-		//}
-		
-		//if (!m_decentCertVerifier)
-		//{
-		//	return MBEDTLS_ERR_X509_FATAL_ERROR;
-		//}
-
 		ServerX509 serverCert(cert);
-		COMMON_PRINTF("TLS callback server cert: \n %s \n", serverCert.ToPemString().c_str());
+		bool verifyRes = Decent::States::Get().GetServerWhiteList().AddTrustedNode(serverCert);
 
-		*flag = 0;
+		*flag = verifyRes ? MBEDTLS_SUCCESS_RET : MBEDTLS_X509_BADCERT_NOT_TRUSTED;
 		
-		return 0;
+		return MBEDTLS_SUCCESS_RET;
 	}
 	default:
 		return MBEDTLS_ERR_X509_FATAL_ERROR;
@@ -311,16 +305,36 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 }
 
 TlsConfig::TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, bool isServer) :
-	Decent::TlsConfig(ConstructTlsConfig(isServer))
+	MbedTlsObj::TlsConfig(new mbedtls_ssl_config),
+	m_prvKey(CryptoKeyContainer::GetInstance().GetSignKeyPair()),
+	m_cert(Decent::States::Get().GetCertContainer().GetCert()),
+	m_appCertVerifier(appIdVerifier)
 {
-	m_appCertVerifier.swap(appIdVerifier);
+	MbedTlsObj::TlsConfig::BasicInit();
+
+	int endpoint = isServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT;
+
+	if (!MbedTlsObj::TlsConfig::operator bool() || //Make sure basic init is successful.
+		!m_prvKey || !*m_prvKey || //Make sure private exists.
+		!m_cert || !*m_cert || //Make sure cert exists.
+		mbedtls_ssl_config_defaults(GetInternalPtr(), endpoint, MBEDTLS_SSL_TRANSPORT_STREAM,
+			MBEDTLS_SSL_PRESET_SUITEB) != MBEDTLS_SUCCESS_RET || //Setup config default.
+		mbedtls_ssl_conf_own_cert(GetInternalPtr(), m_cert->GetInternalPtr(),
+			m_prvKey->GetInternalPtr()) != MBEDTLS_SUCCESS_RET //Setup own certificate.
+		)
+	{
+		MbedTlsObj::TlsConfig::Destroy();
+		return;
+	}
+
+	mbedtls_ssl_conf_ca_chain(GetInternalPtr(), m_cert->GetInternalPtr(), nullptr);
+	mbedtls_ssl_conf_authmode(GetInternalPtr(), MBEDTLS_SSL_VERIFY_REQUIRED);
 }
 
 TlsConfig::TlsConfig(TlsConfig && other) :
 	MbedTlsObj::TlsConfig(std::forward<TlsConfig>(other)),
 	m_prvKey(std::move(other.m_prvKey)),
 	m_cert(std::move(other.m_cert)),
-	m_decentCert(std::move(other.m_decentCert)),
 	m_appCertVerifier(std::move(other.m_appCertVerifier))
 {
 	if (*this)
@@ -336,7 +350,6 @@ TlsConfig & TlsConfig::operator=(TlsConfig && other)
 		MbedTlsObj::TlsConfig::operator=(std::forward<MbedTlsObj::TlsConfig>(other));
 		m_prvKey = std::move(other.m_prvKey);
 		m_cert = std::move(other.m_cert);
-		m_decentCert = std::move(other.m_decentCert);
 		m_appCertVerifier = std::move(other.m_appCertVerifier);
 
 		if (*this)
@@ -351,38 +364,6 @@ void TlsConfig::Destroy()
 {
 	m_prvKey.reset();
 	m_cert.reset();
-	m_decentCert.reset();
-}
-
-Decent::TlsConfig TlsConfig::ConstructTlsConfig(bool isServer)
-{
-	Decent::TlsConfig config(new mbedtls_ssl_config);
-	config.BasicInit();
-
-	//config.m_decentCert = DecentCertContainer::Get().GetServerCert();
-	config.m_prvKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
-	config.m_cert = Decent::States::Get().GetCertContainer().GetCert();
-
-	if (//!config.m_decentCert || !*config.m_decentCert ||
-		mbedtls_ssl_config_defaults(config.GetInternalPtr(), isServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT, 
-		MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_SUITEB) != 0)
-	{
-		config.Destroy();
-		return config;
-	}
-
-	if (config.m_prvKey && *config.m_prvKey && config.m_cert && *config.m_cert &&
-		mbedtls_ssl_conf_own_cert(config.GetInternalPtr(), config.m_cert->GetInternalPtr(),
-		config.m_prvKey->GetInternalPtr()) != 0)
-	{
-		config.Destroy();
-		return config;
-	}
-	
-	mbedtls_ssl_conf_ca_chain(config.GetInternalPtr(), config.m_cert->GetInternalPtr(), nullptr);
-	mbedtls_ssl_conf_authmode(config.GetInternalPtr(), MBEDTLS_SSL_VERIFY_REQUIRED);
-
-	return config;
 }
 
 TlsConfig::TlsConfig(mbedtls_ssl_config * ptr) :

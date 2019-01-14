@@ -7,21 +7,27 @@
 
 namespace Decent
 {
+	class ServerX509;
+
 	namespace WhiteList
 	{
 		class DecentServer
 		{
 		public:
-			static DecentServer& Get();
+			DecentServer();
+			virtual ~DecentServer();
 
-		public:
-			~DecentServer();
+			virtual bool AddTrustedNode(const ServerX509& cert);
+			virtual bool IsNodeTrusted(const std::string& key) const;
+			virtual bool GetAcceptedTimestamp(const std::string& key, TimeStamp& outTime) const;
+
+		protected:
+			virtual bool VerifyCertFirstTime(const ServerX509& cert) const;
+			virtual bool VerifyCertAfterward(const ServerX509& cert) const;
 
 		private:
-			DecentServer();
-
 			std::map<std::string, TimeStamp> m_acceptedNodes;
-			std::mutex m_acceptedNodesMutex;
+			mutable std::mutex m_acceptedNodesMutex;
 		};
 	}
 }

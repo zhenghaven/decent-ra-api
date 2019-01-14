@@ -121,15 +121,13 @@ rlsrufreOngYOQf2B9G9KOh6c88Z7GzkAg==\n\
 	connection->ReceivePack(recvJson);
 	VoteAppHandshakeAck hsAck(recvJson);
 
-	std::shared_ptr<Decent::ServerX509> decentCert(std::make_shared<Decent::ServerX509>(hsAck.GetSelfRAReport()));
-	bool verifyRes = Decent::RAReport::ProcessSelfRaReport(decentCert->GetPlatformType(), decentCert->GetEcPublicKey().ToPubPemString(),
-		decentCert->GetSelfRaReport(), "");
+	//std::shared_ptr<Decent::ServerX509> decentCert(std::make_shared<Decent::ServerX509>(hsAck.GetSelfRAReport()));
 
 	Decent::Crypto::AppIdVerfier appIdVerifier = [](const MbedTlsObj::ECKeyPublic&, const std::string&, const std::string&)
 	{
 		return true;
 	};
-	std::shared_ptr<const MbedTlsObj::TlsConfig> config(std::make_shared<MbedTlsObj::TlsConfig>(Decent::TlsConfig(appIdVerifier, false)));
+	std::shared_ptr<const Decent::TlsConfig> config(std::make_shared<Decent::TlsConfig>(Decent::TlsConfig(appIdVerifier, false)));
 	TLSCommLayer testTls(connection.get(), config, true);
 
 	std::string voteBuf(1, '\0');

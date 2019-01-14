@@ -8,7 +8,9 @@ namespace Decent
 	{
 		namespace HardCoded
 		{
-			static const WhiteListType& Get();
+			constexpr char const sk_decentServerLabel[] = "DecentServer";
+
+			const WhiteListType& Get();
 		}
 	}
 }
