@@ -60,17 +60,17 @@ std::string SGXDecentEnclave::GetDecentSelfRAReport() const
 {
 	return m_selfRaReport;
 }
-
-bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
-{
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	int retval = SGX_SUCCESS;
-
-	enclaveRet = ecall_decent_process_ias_ra_report(GetEnclaveId(), &retval, inReport.c_str());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_process_ias_ra_report);
-
-	return retval != 0;
-}
+//
+//bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
+//{
+//	sgx_status_t enclaveRet = SGX_SUCCESS;
+//	int retval = SGX_SUCCESS;
+//
+//	enclaveRet = ecall_decent_process_ias_ra_report(GetEnclaveId(), &retval, inReport.c_str());
+//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_process_ias_ra_report);
+//
+//	return retval != 0;
+//}
 
 bool SGXDecentEnclave::ProcessAppX509Req(Connection& connection)
 {

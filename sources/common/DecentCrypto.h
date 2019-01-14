@@ -103,8 +103,6 @@ namespace Decent
 	public:
 		TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, bool isServer);
 
-		TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, Decent::Crypto::ServerRaReportVerfier serverReportVerifier, bool isServer);
-
 		TlsConfig(TlsConfig&& other);
 		TlsConfig(const TlsConfig& other) = delete;
 		virtual ~TlsConfig() {}
@@ -121,9 +119,8 @@ namespace Decent
 		TlsConfig(mbedtls_ssl_config* ptr);
 
 		std::shared_ptr<const MbedTlsObj::ECKeyPair> m_prvKey;
-		std::shared_ptr<const AppX509> m_appCert;
+		std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
 		std::shared_ptr<const ServerX509> m_decentCert;
-		Decent::Crypto::ServerRaReportVerfier m_decentCertVerifier;
 		Decent::Crypto::AppIdVerfier m_appCertVerifier;
 	};
 }

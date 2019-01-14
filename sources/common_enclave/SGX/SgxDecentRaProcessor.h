@@ -12,7 +12,6 @@ namespace SgxDecentRaProcessorSp
 class SgxDecentRaProcessorClient : public SgxRaProcessorClient
 {
 public:
-	static const SpSignPubKeyVerifier sk_acceptServerKey;
 	static const RaConfigChecker sk_acceptDefaultConfig;
 
 public:

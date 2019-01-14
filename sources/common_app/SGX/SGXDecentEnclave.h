@@ -21,7 +21,7 @@ public:
 
 	//DecentEnclave methods:
 	virtual std::string GetDecentSelfRAReport() const override;
-	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
+	//virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
 	virtual bool ProcessAppX509Req(Connection& connection) override;
 
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;

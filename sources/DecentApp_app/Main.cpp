@@ -12,12 +12,15 @@
 
 #include "../common_app/SGX/SGXEnclaveUtil.h"
 #include "../common_app/Common.h"
-#include "../common_app/SGX/SGXDecentAppEnclave.h"
 #include "../common_app/DecentAppLASession.h"
 #include "../common_app/Messages.h"
 
 #include "../common_app/Networking/LocalConnection.h"
 #include "../common_app/Networking/TCPConnection.h"
+#include "../common_app/Networking/TCPServer.h"
+#include "../common_app/Networking/DecentSmartServer.h"
+
+#include "DecentVoteApp.h"
 
 /**
  * \brief	Main entry-point for this application
@@ -46,19 +49,28 @@ int main(int argc, char ** argv)
 	sgx_status_t deviceStatusResErr = GetSGXDeviceStatus(deviceStatusRes);
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", GetSGXErrorMessage(deviceStatusResErr).c_str());
 
-	uint32_t hostIP = boost::asio::ip::address_v4::from_string("128.114.52.211").to_uint();
+	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;
 
 	std::cout << "================ This is App side ================" << std::endl;
 
-	SGXDecentAppEnclave enclave(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
+	std::shared_ptr<DecentVoteApp> enclave(
+		std::make_shared<DecentVoteApp>(
+			ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
+	//DecentVoteApp enclave(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
 
 	std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
 	//std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
-	DecentAppLASession::SendHandshakeMessage(*connection, enclave);
+	DecentAppLASession::SendHandshakeMessage(*connection, *enclave);
 	Json::Value jsonRoot;
 	connection->ReceivePack(jsonRoot);
-	enclave.ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
+	enclave->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
+	
+	std::unique_ptr<Server> server(std::make_unique<TCPServer>(hostIP, hostPort + 5));
+
+	DecentSmartServer smartServer;
+	smartServer.AddServer(server, enclave);
+	smartServer.RunUtilUserTerminate();
 
 	printf("Enter a character before exit ...\n");
 	getchar();

@@ -1,6 +1,7 @@
 #include "SelfRaReportGenerator.h"
 
 #include "DecentCrypto.h"
+#include "../common/DecentStates.h"
 #include "../common/DecentCrypto.h"
 #include "../common/CryptoKeyContainer.h"
 #include "../common/DecentCertContainer.h"
@@ -24,12 +25,9 @@ bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator
 	{
 		return false;
 	}
-	DecentCertContainer::Get().SetServerCert(serverCert);
+	Decent::States::Get().GetCertContainer().SetCert(serverCert);
 
-	std::shared_ptr<const Decent::AppX509> dummyAppCert(new Decent::AppX509(*signkeyPair, *serverCert, *signkeyPair,
-		Decent::Crypto::GetProgSelfHashBase64(), platformType, ""));
-	DecentCertContainer::Get().SetCert(dummyAppCert);
-
+	//TODO: We probably don't need these:
 	Decent::Crypto::RefreshDecentAppAppClientSideConfig();
 	Decent::Crypto::RefreshDecentAppAppServerSideConfig();
 	Decent::Crypto::RefreshDecentAppClientServerSideConfig();

@@ -10,6 +10,9 @@
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/ssl.h>
 
+#include "../common/DecentStates.h"
+#include "../common/DecentCertContainer.h"
+#include "../common/CryptoKeyContainer.h"
 #include "../common/MbedTlsObjects.h"
 #include "../common/MbedTlsHelpers.h"
 #include "../common/DecentRAReport.h"
@@ -88,7 +91,7 @@ static MbedTlsObj::TlsConfig ConstructTlsConfig(const MbedTlsObj::ECKeyPair& prv
 
 int main() {
 
-	uint32_t hostIP = boost::asio::ip::address_v4::from_string("128.114.52.211").to_uint();
+	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;
 
 	std::string serverKeyPem = "-----BEGIN EC PRIVATE KEY-----\n\
@@ -107,6 +110,9 @@ rlsrufreOngYOQf2B9G9KOh6c88Z7GzkAg==\n\
 		"CN=Decent Voter",
 		std::map<std::string, std::pair<bool, std::string> >()));
 
+	Decent::States::Get().GetCertContainer().SetCert(clientCert);
+	CryptoKeyContainer::GetInstance().UpdateSignKeyPair(clientKey);
+
 	std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort + 5);
 
 	connection->SendPack(VoteAppHandshake(clientKey->ToPubPemString()));
@@ -119,7 +125,11 @@ rlsrufreOngYOQf2B9G9KOh6c88Z7GzkAg==\n\
 	bool verifyRes = Decent::RAReport::ProcessSelfRaReport(decentCert->GetPlatformType(), decentCert->GetEcPublicKey().ToPubPemString(),
 		decentCert->GetSelfRaReport(), "");
 
-	std::shared_ptr<const MbedTlsObj::TlsConfig> config(std::make_shared<MbedTlsObj::TlsConfig>(ConstructTlsConfig(*clientKey, *clientCert, *decentCert)));
+	Decent::Crypto::AppIdVerfier appIdVerifier = [](const MbedTlsObj::ECKeyPublic&, const std::string&, const std::string&)
+	{
+		return true;
+	};
+	std::shared_ptr<const MbedTlsObj::TlsConfig> config(std::make_shared<MbedTlsObj::TlsConfig>(Decent::TlsConfig(appIdVerifier, false)));
 	TLSCommLayer testTls(connection.get(), config, true);
 
 	std::string voteBuf(1, '\0');

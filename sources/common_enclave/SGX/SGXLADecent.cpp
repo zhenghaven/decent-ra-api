@@ -12,17 +12,19 @@
 #include "../../common/DecentCertContainer.h"
 
 #include "../../common/DataCoding.h"
+#include "../../common/DecentStates.h"
 #include "../../common/DecentCrypto.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/MbedTlsObjects.h"
 #include "../../common/CryptoKeyContainer.h"
 
+//Decent Server side function:
 static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity_t& identity, const Decent::X509Req& x509Req, SecureCommLayer& commLayer, void* const connectionPtr)
 {
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
-	std::shared_ptr<const Decent::ServerX509> serverCert = DecentCertContainer::Get().GetServerCert();
+	std::shared_ptr<const Decent::ServerX509> serverCert = std::dynamic_pointer_cast<const Decent::ServerX509>(Decent::States::Get().GetCertContainer().GetCert());
 
-	if (!x509Req.VerifySignature())
+	if (!serverCert || !*serverCert || !x509Req.VerifySignature())
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
@@ -42,12 +44,10 @@ static inline sgx_status_t SendAppX509Cert(const sgx_dh_session_enclave_identity
 	return SGX_SUCCESS;
 }
 
-
+//Decent Server side function:
 extern "C" sgx_status_t ecall_decent_proc_app_x509_req(void* const connectionPtr)
 {
-	auto serverCert = DecentCertContainer::Get().GetServerCert();
-
-	if (!connectionPtr || !serverCert || !*serverCert)
+	if (!connectionPtr)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}

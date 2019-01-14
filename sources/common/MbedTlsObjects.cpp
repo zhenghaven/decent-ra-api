@@ -1075,7 +1075,7 @@ static std::string GetFormatedTime(const time_t& timer)
 	return res;
 }
 
-static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const PKey& prvKey, const PKey& pubKey,
+static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvKey, const PKey& pubKey,
 	const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap)
 {
@@ -1084,7 +1084,8 @@ static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const PK
 	{
 		return std::string();
 	}
-
+	
+	const bool hasCa = caCert && *caCert;
 	mbedtls_x509write_cert cert;
 	mbedtls_x509write_crt_init(&cert);
 
@@ -1110,7 +1111,7 @@ static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const PK
 
 	size_t extTotalSize = 0;
 
-	int mbedRet = caCert ? MbedTlsHelper::MbedTlsAsn1DeepCopy(cert.issuer, caCert->issuer) : 
+	int mbedRet = hasCa ? MbedTlsHelper::MbedTlsAsn1DeepCopy(cert.issuer, caCert->GetInternalPtr()->issuer) :
 		(mbedtls_x509write_crt_set_issuer_name(&cert, x509NameList.c_str()) == MBEDTLS_SUCCESS_RET);
 	for (auto it = extMap.begin(); it != extMap.end() && mbedRet; ++it)
 	{
@@ -1144,7 +1145,7 @@ static std::string ConstructNewX509Cert(const mbedtls_x509_crt* caCert, const PK
 		mbedRet, reinterpret_cast<uint8_t*>(tmpRes.data()), tmpRes.size(), &extTotalSize);
 
 	mbedtls_x509write_crt_free(&cert);
-	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) : std::string();
+	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) + (hasCa ? caCert->ToPemString() : std::string()) : std::string();
 }
 
 MbedTlsObj::X509Cert::X509Cert(const std::string & pemStr) :
@@ -1171,7 +1172,7 @@ MbedTlsObj::X509Cert::X509Cert(mbedtls_x509_crt * ptr) :
 MbedTlsObj::X509Cert::X509Cert(const X509Cert & caCert, const PKey & prvKey, const PKey & pubKey,
 	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
-	X509Cert(ConstructNewX509Cert(caCert.GetInternalPtr(), prvKey, pubKey, 
+	X509Cert(ConstructNewX509Cert(&caCert, prvKey, pubKey, 
 		serialNum, validTime, isCa, maxChainDepth, keyUsage, nsType,
 		x509NameList, extMap))
 {

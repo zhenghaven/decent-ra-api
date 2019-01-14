@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "../../common/CommonTool.h"
+#include "../../common/DecentStates.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/CryptoKeyContainer.h"
 #include "../../common/DecentCertContainer.h"
@@ -19,6 +20,7 @@
 #include "SgxDecentRaProcessor.h"
 #include "SgxRaClientCommLayer.h"
 
+//Initialize Decent enclave.
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 {
 	if (!inSpid)
@@ -34,11 +36,13 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	return SGX_SUCCESS;
 }
 
+//Deinitialize Decent enclave.
 extern "C" void ecall_decent_terminate()
 {
 
 }
 
+//Self attestation.
 extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias_connector, const uint64_t enclave_Id)
 {
 	std::shared_ptr<const general_secp256r1_public_t> signPub = CryptoKeyContainer::GetInstance().GetSignPubKey();
@@ -58,9 +62,10 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias
 	return SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
+//Output cert to the untrusted side.
 extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
 {
-	auto serverCert = DecentCertContainer::Get().GetServerCert();
+	auto serverCert = Decent::States::Get().GetCertContainer().GetCert();
 	if (!serverCert || !(*serverCert))
 	{
 		return 0;
@@ -68,38 +73,9 @@ extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
 
 	const std::string& x509Pem = serverCert->ToPemString();
 
-	if (buf && buf_len >= x509Pem.size())
-	{
-		std::memcpy(buf, x509Pem.data(), x509Pem.size());
-	}
+	std::memcpy(buf, x509Pem.data(), buf_len >= x509Pem.size() ? x509Pem.size() : buf_len);
 
 	return x509Pem.size();
-}
-
-extern "C" int ecall_decent_process_ias_ra_report(const char* x509Pem)
-{
-	auto serverCert = DecentCertContainer::Get().GetServerCert();
-
-	if (!x509Pem || serverCert)
-	{
-		return 0;
-	}
-
-	std::shared_ptr<Decent::ServerX509> inCert(new Decent::ServerX509(x509Pem));
-	if (!inCert || !(*inCert))
-	{
-		return 0;
-	}
-
-	if (!Decent::RAReport::ProcessSelfRaReport(inCert->GetPlatformType(), inCert->GetEcPublicKey().ToPubPemString(),
-		inCert->GetSelfRaReport(), Decent::Crypto::GetProgSelfHashBase64()))
-	{
-		return 0;
-	}
-	DecentCertContainer::Get().SetServerCert(inCert);
-	//COMMON_PRINTF("Accepted New Decent Node: %s\n", g_decentProtoPubKey.c_str());
-
-	return 1;
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

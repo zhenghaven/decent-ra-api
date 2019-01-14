@@ -18,8 +18,6 @@ enclave {
 		public sgx_status_t ecall_decent_init([in] const sgx_spid_t* inSpid);
 		
 		public void ecall_decent_terminate();
-		
-		public int ecall_decent_process_ias_ra_report([in, string] const char* reportStr);
 
 		public sgx_status_t ecall_decent_server_generate_x509([user_check] const void* ias_connector, uint64_t enclave_Id);
 

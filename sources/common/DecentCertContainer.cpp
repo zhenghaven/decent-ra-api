@@ -1,35 +1,42 @@
 #include "DecentCertContainer.h"
 
-#include "GeneralKeyTypes.h"
-#include "DecentCrypto.h"
+#ifdef DECENT_THREAD_SAFETY_HIGH
+#include <atomic>
+#endif // DECENT_THREAD_SAFETY_HIGH
 
-DecentCertContainer & DecentCertContainer::Get()
+#include "DecentCrypto.h"
+#include "CommonTool.h"
+
+Decent::CertContainer::CertContainer()
 {
-	static DecentCertContainer inst;
-	return inst;
 }
 
-bool DecentCertContainer::SetServerCert(std::shared_ptr<const Decent::ServerX509> serverCert)
+Decent::CertContainer::~CertContainer()
 {
-	if (!serverCert || !*serverCert)
-	{
-		return false;
-	}
+}
 
-	std::shared_ptr<general_secp256r1_public_t> serverKeyGeneral(new general_secp256r1_public_t);
-	if (!serverKeyGeneral || 
-		!serverCert->GetEcPublicKey().ToGeneralPublicKey(*serverKeyGeneral))
-	{
-		return false;
-	}
-
+std::shared_ptr<const MbedTlsObj::X509Cert> Decent::CertContainer::GetCert() const
+{
 #ifdef DECENT_THREAD_SAFETY_HIGH
-	std::atomic_store(&m_serverCert, serverCert);
-	std::atomic_store(&m_serverKeyGeneral, serverKeyGeneral);
+	return std::atomic_load(&m_cert);
 #else
-	m_serverCert = serverCert;
-	m_serverKeyGeneral = serverKeyGeneral;
+	return m_cert;
 #endif // DECENT_THREAD_SAFETY_HIGH
+}
+
+bool Decent::CertContainer::SetCert(std::shared_ptr<const MbedTlsObj::X509Cert> cert)
+{
+	if (!cert || !*cert)
+	{
+		return false;
+	}
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&m_cert, cert);
+#else
+	m_cert = cert;
+#endif // DECENT_THREAD_SAFETY_HIGH
+
+	COMMON_PRINTF("Saved Cert: \n %s \n", cert->ToPemString().c_str());
 
 	return true;
 }

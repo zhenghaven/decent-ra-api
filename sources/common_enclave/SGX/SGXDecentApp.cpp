@@ -21,6 +21,7 @@
 #include "../DecentCrypto.h"
 #include "../../common/JsonTools.h"
 #include "../../common/DataCoding.h"
+#include "../../common/DecentStates.h"
 #include "../../common/DecentCrypto.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/CryptoKeyContainer.h"
@@ -36,12 +37,12 @@ namespace
 
 extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509Pem)
 {
-	auto serverCert = DecentCertContainer::Get().GetServerCert();
+	//auto serverCert = DecentCertContainer::Get().GetServerCert();
 
-	if (!x509Pem || serverCert)
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
+	//if (!x509Pem || serverCert)
+	//{
+	//	return SGX_ERROR_INVALID_PARAMETER;
+	//}
 
 	std::shared_ptr<Decent::ServerX509> inCert(std::make_shared<Decent::ServerX509>(x509Pem));
 	if (!inCert || !(*inCert))
@@ -57,7 +58,7 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509P
 	//	return SGX_ERROR_INVALID_PARAMETER;
 	//}
 
-	DecentCertContainer::Get().SetServerCert(inCert);
+	//DecentCertContainer::Get().SetServerCert(inCert);
 	//COMMON_PRINTF("Accepted Decent Server.\n%s\n", DecentCertContainer::Get().GetServerCert()->ToPemString().c_str());
 
 	return SGX_SUCCESS;
@@ -65,7 +66,7 @@ extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509P
 
 //Send x509 req to decent server.
 extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* const connectionPtr)
-{
+{//TODO: remove "decentId".
 	if (!decentId || !connectionPtr)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
@@ -77,7 +78,7 @@ extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* co
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-
+	//TODO: check Decent server Hash here instead.
 	CryptoKeyContainer& keyContainer = CryptoKeyContainer::GetInstance();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
 
@@ -102,27 +103,28 @@ extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* co
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	DecentCertContainer::Get().SetCert(cert);
+	Decent::States::Get().GetCertContainer().SetCert(cert);
 
+	//TODO: We don't need these:
 	Decent::Crypto::RefreshDecentAppAppClientSideConfig();
 	Decent::Crypto::RefreshDecentAppAppServerSideConfig();
 	Decent::Crypto::RefreshDecentAppClientServerSideConfig();
 
-	COMMON_PRINTF("Received X509 from Decent Server. \n%s\n", DecentCertContainer::Get().GetCert()->ToPemString().c_str());
+	//COMMON_PRINTF("Received X509 from Decent Server. \n%s\n", Decent::States::Get().GetCertContainer().GetCert()->ToPemString().c_str());
 
 	return SGX_SUCCESS;
 }
 
 extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)
 {
-	auto cert = DecentCertContainer::Get().GetCert();
+	auto cert = Decent::States::Get().GetCertContainer().GetCert();
 	if (!cert || !(*cert))
 	{
 		return 0;
 	}
 
 	std::string x509Pem = cert->ToPemString();
-	std::memcpy(buf, x509Pem.data(), buf_len > x509Pem.size() ? x509Pem.size() : buf_len);
+	std::memcpy(buf, x509Pem.data(), buf_len >= x509Pem.size() ? x509Pem.size() : buf_len);
 
 	return x509Pem.size();
 }

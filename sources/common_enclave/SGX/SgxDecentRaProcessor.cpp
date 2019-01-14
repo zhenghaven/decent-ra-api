@@ -19,14 +19,6 @@
 
 #include "DecentReplace/decent_tkey_exchange.h"
 
-const SgxRaProcessorClient::SpSignPubKeyVerifier SgxDecentRaProcessorClient::sk_acceptServerKey(
-	[](const sgx_ec256_public_t& pubKey) {
-	std::shared_ptr<const general_secp256r1_public_t> serverKey = DecentCertContainer::Get().GetServerKeyGeneral();
-
-	return serverKey &&
-		consttime_memequal(SgxEc256Type2General(&pubKey), serverKey.get(), sizeof(general_secp256r1_public_t));
-	}
-);
 const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) {
 	const sgx_ra_config& cmp = Decent::RAReport::GetSgxDecentRaConfig();;

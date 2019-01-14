@@ -2,6 +2,7 @@
 
 #include <mbedtls/ssl.h>
 
+#include "../common/DecentStates.h"
 #include "../common/DecentCrypto.h"
 #include "../common/TLSCommLayer.h"
 #include "../common/MbedTlsObjects.h"
@@ -52,7 +53,7 @@ static MbedTlsObj::TlsConfig ConstructTlsConfig(const MbedTlsObj::ECKeyPair& prv
 extern "C" int ecall_vote_app_proc_voter_msg(void* connection)
 {
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> prvKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
-	std::shared_ptr<const Decent::AppX509> appCert = DecentCertContainer::Get().GetCert();
+	std::shared_ptr<const Decent::AppX509> appCert = std::dynamic_pointer_cast<const Decent::AppX509>(Decent::States::Get().GetCertContainer().GetCert());
 
 	std::shared_ptr<const MbedTlsObj::TlsConfig> config(std::make_shared<MbedTlsObj::TlsConfig>(ConstructTlsConfig(*prvKey, *appCert)));
 	TLSCommLayer testTls(connection, config, true);
