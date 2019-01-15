@@ -14,6 +14,8 @@
 #include "../../common/SGX/SgxRaSpCommLayer.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
 
+#include "../WhiteList/ConstManager.h"
+
 #include "../DecentCrypto.h"
 
 #include "SgxSelfRaReportGenerator.h"
@@ -76,6 +78,12 @@ extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
 	std::memcpy(buf, x509Pem.data(), buf_len >= x509Pem.size() ? x509Pem.size() : buf_len);
 
 	return x509Pem.size();
+}
+
+//Load const white list to the const white list manager.
+extern "C" int ecall_decent_server_load_const_white_list(const char* key, const char* listJson)
+{
+	return Decent::WhiteList::ConstManager::Get().AddWhiteList(key, listJson);
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

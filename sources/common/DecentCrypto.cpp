@@ -151,7 +151,7 @@ ServerX509& ServerX509::operator=(ServerX509&& other)
 
 ServerX509::operator bool() const
 {
-	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey;
+	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_selfRaReport.size() > 0;
 }
 
 const std::string & ServerX509::GetPlatformType() const
@@ -227,7 +227,7 @@ AppX509& AppX509::operator=(AppX509&& other)
 
 AppX509::operator bool() const
 {
-	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey;
+	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0;
 }
 
 const std::string & AppX509::GetPlatformType() const
@@ -292,11 +292,15 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 	}
 	case 1: //Decent Cert
 	{
-		ServerX509 serverCert(cert);
-		bool verifyRes = Decent::States::Get().GetServerWhiteList().AddTrustedNode(serverCert);
+		const ServerX509 serverCert(cert);
+		if (!serverCert)
+		{
+			*flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+			return MBEDTLS_SUCCESS_RET;
+		}
 
+		const bool verifyRes = Decent::States::Get().GetServerWhiteList().AddTrustedNode(serverCert);
 		*flag = verifyRes ? MBEDTLS_SUCCESS_RET : MBEDTLS_X509_BADCERT_NOT_TRUSTED;
-		
 		return MBEDTLS_SUCCESS_RET;
 	}
 	default:
