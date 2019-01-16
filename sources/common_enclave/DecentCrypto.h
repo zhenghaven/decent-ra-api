@@ -13,12 +13,12 @@ namespace Decent
 
 		const General256Hash& GetGetProgSelfHash256();
 
-		std::shared_ptr<const TlsConfig> GetDecentAppAppServerSideConfig();
-		std::shared_ptr<const TlsConfig> GetDecentAppAppClientSideConfig();
-		std::shared_ptr<const TlsConfig> GetDecentAppClientServerSideConfig();
+		//std::shared_ptr<const TlsConfig> GetDecentAppAppServerSideConfig();
+		//std::shared_ptr<const TlsConfig> GetDecentAppAppClientSideConfig();
+		//std::shared_ptr<const TlsConfig> GetDecentAppClientServerSideConfig();
 
-		void RefreshDecentAppAppServerSideConfig();
-		void RefreshDecentAppAppClientSideConfig();
-		void RefreshDecentAppClientServerSideConfig();
+		//void RefreshDecentAppAppServerSideConfig();
+		//void RefreshDecentAppAppClientSideConfig();
+		//void RefreshDecentAppClientServerSideConfig();
 	}
 }

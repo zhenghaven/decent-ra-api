@@ -2,6 +2,7 @@
 
 #include "../DecentCrypto.h"
 #include "../DecentRAReport.h"
+#include "../DecentStates.h"
 
 #include "HardCoded.h"
 
@@ -20,14 +21,13 @@ bool Decent::WhiteList::DecentServer::AddTrustedNode(const Decent::ServerX509 & 
 		return true;
 	}
 
-	auto serverHashIt = HardCoded::Get().find(HardCoded::sk_decentServerLabel);
-	if (serverHashIt == HardCoded::Get().cend())
+	std::string serverHash;
+	if (!Decent::States::Get().GetHardCodedWhiteList().GetHash(HardCoded::sk_decentServerLabel, serverHash))
 	{
 		return false;
 	}
 
 	TimeStamp timestamp;
-	const std::string& serverHash = serverHashIt->second;
 	bool verifyRes = Decent::RAReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
 		cert.GetSelfRaReport(), serverHash, timestamp);
 

@@ -60,34 +60,49 @@ std::string SGXDecentEnclave::GetDecentSelfRAReport() const
 {
 	return m_selfRaReport;
 }
-//
-//bool SGXDecentEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
+
+//bool SGXDecentEnclave::ProcessAppX509Req(Connection& connection)
 //{
 //	sgx_status_t enclaveRet = SGX_SUCCESS;
-//	int retval = SGX_SUCCESS;
+//	sgx_status_t retval = SGX_SUCCESS;
 //
-//	enclaveRet = ecall_decent_process_ias_ra_report(GetEnclaveId(), &retval, inReport.c_str());
-//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_process_ias_ra_report);
+//	enclaveRet = ecall_decent_proc_app_x509_req(GetEnclaveId(), &retval, &connection);
+//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_proc_app_x509_req);
 //
-//	return retval != 0;
+//	return retval == SGX_SUCCESS;
 //}
 
-bool SGXDecentEnclave::ProcessAppX509Req(Connection& connection)
+void SGXDecentEnclave::LoadConstWhiteList(const std::string & key, const std::string & whiteList)
+{
+	sgx_status_t enclaveRet = SGX_SUCCESS;
+	int retval = 0;
+
+	enclaveRet = ecall_decent_server_load_const_white_list(GetEnclaveId(), &retval, key.c_str(), whiteList.c_str());
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_load_const_white_list);
+}
+
+void SGXDecentEnclave::ProcessAppCertReq(const std::string & wListKey, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_decent_proc_app_x509_req(GetEnclaveId(), &retval, &connection);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_proc_app_x509_req);
-
-	return retval == SGX_SUCCESS;
+	enclaveRet = ecall_decent_server_proc_app_cert_req(GetEnclaveId(), &retval, wListKey.c_str(), &connection);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_proc_app_cert_req);
 }
 
 bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
-	if (category == DecentAppMessage::sk_ValueCat)
+	if (category == DecentLoadWhiteList::sk_ValueCat)
 	{
-		return DecentServerLASession::SmartMsgEntryPoint(connection, *this, *this, jsonMsg);
+		DecentLoadWhiteList wlistMsg(jsonMsg);
+		LoadConstWhiteList(wlistMsg.GetKey(), wlistMsg.GetWhiteList());
+		return false;
+	}
+	else if (category == DecentRequestAppCert::sk_ValueCat)
+	{
+		DecentRequestAppCert certReqMsg(jsonMsg);
+		ProcessAppCertReq(certReqMsg.GetKey(), connection);
+		return false;
 	}
 	else
 	{

@@ -5,7 +5,10 @@
 #include <map>
 #include <memory>
 
+#include <sgx_dh.h>
+
 #include "../../common/CommonTool.h"
+#include "../../common/DataCoding.h"
 #include "../../common/DecentStates.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/CryptoKeyContainer.h"
@@ -17,6 +20,8 @@
 #include "../WhiteList/ConstManager.h"
 
 #include "../DecentCrypto.h"
+
+#include "SGXLACommLayer.h"
 
 #include "SgxSelfRaReportGenerator.h"
 #include "SgxDecentRaProcessor.h"
@@ -84,6 +89,48 @@ extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
 extern "C" int ecall_decent_server_load_const_white_list(const char* key, const char* listJson)
 {
 	return Decent::WhiteList::ConstManager::Get().AddWhiteList(key, listJson);
+}
+
+extern "C" sgx_status_t ecall_decent_server_proc_app_cert_req(const char* key, void* const connection)
+{
+	if (!key || !connection)
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	std::string plainMsg;
+	SGXLACommLayer commLayer(connection, true);
+	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
+	if (!identity ||
+		!commLayer.ReceiveMsg(connection, plainMsg))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+	Decent::X509Req appX509Req(plainMsg);
+	if (!appX509Req || !appX509Req.VerifySignature())
+	{
+		return SGX_ERROR_INVALID_PARAMETER;
+	}
+
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
+	std::shared_ptr<const Decent::ServerX509> serverCert = std::dynamic_pointer_cast<const Decent::ServerX509>(Decent::States::Get().GetCertContainer().GetCert());
+
+	if (!serverCert || !*serverCert || 
+		!signKey || !*signKey)
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	std::string whiteList = Decent::WhiteList::ConstManager::Get().GetWhiteList(key);
+	Decent::AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity->mr_enclave), Decent::RAReport::sk_ValueReportTypeSgx, SerializeStruct(*identity), whiteList);
+
+	if (!appX509 ||
+		!commLayer.SendMsg(connection, appX509.ToPemString()))
+	{
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	return SGX_SUCCESS;
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

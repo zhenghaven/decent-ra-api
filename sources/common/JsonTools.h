@@ -13,6 +13,10 @@
 #define JSON_AS_STRING GetString
 #define JSON_AS_CSTRING JSON_AS_STRING
 #define JSON_AS_INT32 GetInt
+#define JSON_IT_BEGIN MemberBegin
+#define JSON_IT_END MemberEnd
+#define JSON_IT_GETKEY(X) (X->name)
+#define JSON_IT_GETVALUE(X) (X->value)
 #else
 #define JSON_EDITION Json
 #define JSON_DOCUMENT_TYPE Value
@@ -24,6 +28,10 @@
 #define JSON_AS_STRING asString
 #define JSON_AS_CSTRING asCString
 #define JSON_AS_INT32 asInt
+#define JSON_IT_BEGIN begin
+#define JSON_IT_END end
+#define JSON_IT_GETKEY(X) (X.key())
+#define JSON_IT_GETVALUE(X) (*X)
 #endif
 
 #ifdef ENCLAVE_ENVIRONMENT

@@ -1,5 +1,7 @@
 #include "ConstManager.h"
 
+#include "../../Common/CommonTool.h"
+
 using namespace Decent::WhiteList;
 
 ConstManager & ConstManager::Get()
@@ -31,5 +33,8 @@ bool Decent::WhiteList::ConstManager::AddWhiteList(const std::string & key, cons
 	
 	std::unique_lock<std::mutex> listMapLock(m_listMapMutex);
 	m_listMap[key] = listJson;
-	return false;
+
+	COMMON_PRINTF("Loaded Const WhiteList: Key = %s. \n%s \n", key.c_str(), listJson.c_str());
+
+	return true;
 }

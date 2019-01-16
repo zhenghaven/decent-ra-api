@@ -6,7 +6,10 @@
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/ssl.h>
 
+#include <sgx_dh.h>
+
 #include "CommonTool.h"
+#include "DataCoding.h"
 #include "DecentStates.h"
 #include "MbedTlsHelpers.h"
 #include "CryptoKeyContainer.h"
@@ -14,6 +17,8 @@
 #include "DecentRAReport.h"
 
 #include "WhiteList/DecentServer.h"
+#include "WhiteList/HardCoded.h"
+#include "WhiteList/Loaded.h"
 
 using namespace Decent;
 
@@ -32,6 +37,18 @@ const mbedtls_x509_crt_profile & Decent::Crypto::GetX509Profile()
 	};
 	
 	return inst;
+}
+
+std::string Decent::Crypto::GetHashFromAppId(const std::string & platformType, const std::string & appIdStr)
+{
+	if (platformType == Decent::RAReport::sk_ValueReportTypeSgx)
+	{
+		sgx_dh_session_enclave_identity_t appId;
+		DeserializeStruct(appId, appIdStr);
+
+		return SerializeStruct(appId.mr_enclave);
+	}
+	return std::string();
 }
 
 X509Req::X509Req(const std::string & pemStr) :
@@ -188,7 +205,7 @@ AppX509::AppX509(mbedtls_x509_crt * cert) :
 
 AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey, 
 	const ServerX509 & caCert, const MbedTlsObj::ECKeyPair & serverPrvKey, 
-	const std::string & enclaveHash, const std::string & platformType, const std::string & appId) :
+	const std::string & enclaveHash, const std::string & platformType, const std::string & appId, const std::string& whiteList) :
 	MbedTlsObj::X509Cert(caCert, serverPrvKey, pubKey, MbedTlsObj::BigNumber::GenRandomNumber(GENERAL_256BIT_32BYTE_SIZE), LONG_MAX, true, -1,
 		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
 		MBEDTLS_X509_NS_CERT_TYPE_SSL_CA | MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT | MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER,
@@ -196,10 +213,12 @@ AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey,
 		std::map<std::string, std::pair<bool, std::string> >{
 		std::pair<std::string, std::pair<bool, std::string> >(Decent::Crypto::X509ExtPlatformTypeOid, std::pair<bool, std::string>(false, platformType)),
 		std::pair<std::string, std::pair<bool, std::string> >(Decent::Crypto::X509ExtLaIdentityOid, std::pair<bool, std::string>(false, appId)),
+		std::pair<std::string, std::pair<bool, std::string> >(Decent::Crypto::X509ExtWhiteListOid, std::pair<bool, std::string>(false, whiteList)),
 	}
 	),
 	m_platformType(platformType),
 	m_appId(appId),
+	m_whiteList(whiteList),
 	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
 		? &m_ptr->pk : nullptr, false)
 {
@@ -227,7 +246,7 @@ AppX509& AppX509::operator=(AppX509&& other)
 
 AppX509::operator bool() const
 {
-	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0;
+	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0 && m_whiteList.size() > 0;
 }
 
 const std::string & AppX509::GetPlatformType() const
@@ -238,6 +257,11 @@ const std::string & AppX509::GetPlatformType() const
 const std::string & AppX509::GetAppId() const
 {
 	return m_appId;
+}
+
+const std::string & Decent::AppX509::GetWhiteList() const
+{
+	return m_whiteList;
 }
 
 const MbedTlsObj::ECKeyPublic & AppX509::GetEcPublicKey() const
@@ -251,12 +275,14 @@ void AppX509::ParseExtensions()
 	{
 		std::pair<std::string, std::pair<bool, std::string> >(Decent::Crypto::X509ExtPlatformTypeOid, std::pair<bool, std::string>(false, std::string())),
 		std::pair<std::string, std::pair<bool, std::string> >(Decent::Crypto::X509ExtLaIdentityOid, std::pair<bool, std::string>(false, std::string())),
+		std::pair<std::string, std::pair<bool, std::string> >(Decent::Crypto::X509ExtWhiteListOid, std::pair<bool, std::string>(false, std::string())),
 	};
 
 	if (GetExtensions(extMap))
 	{
 		m_platformType.swap(extMap[Decent::Crypto::X509ExtPlatformTypeOid].second);
 		m_appId.swap(extMap[Decent::Crypto::X509ExtLaIdentityOid].second);
+		m_whiteList.swap(extMap[Decent::Crypto::X509ExtWhiteListOid].second);
 	}
 }
 
@@ -275,20 +301,14 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 	{
 	case 0: //App Cert
 	{
-		if (!m_appCertVerifier)
+		AppX509 appCert(cert);
+		if (!appCert)
 		{
-			return MBEDTLS_ERR_X509_FATAL_ERROR;
+			*flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+			return MBEDTLS_SUCCESS_RET;
 		}
 
-		AppX509 appCert(cert);
-
-		//*flag |= ((appCert && 
-		//	m_appCertVerifier(appCert.GetEcPublicKey(), appCert.GetPlatformType(), appCert.GetAppId())) ? 0 :
-		//	MBEDTLS_X509_BADCERT_NOT_TRUSTED);
-
-		*flag = 0;
-
-		return MBEDTLS_SUCCESS_RET;
+		return AppCertVerifyCallBack(appCert, depth, *flag);
 	}
 	case 1: //Decent Cert
 	{
@@ -299,20 +319,55 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 			return MBEDTLS_SUCCESS_RET;
 		}
 
-		const bool verifyRes = Decent::States::Get().GetServerWhiteList().AddTrustedNode(serverCert);
-		*flag = verifyRes ? MBEDTLS_SUCCESS_RET : MBEDTLS_X509_BADCERT_NOT_TRUSTED;
-		return MBEDTLS_SUCCESS_RET;
+		return ServerCertVerifyCallBack(serverCert, depth, *flag);
 	}
 	default:
 		return MBEDTLS_ERR_X509_FATAL_ERROR;
 	}
 }
 
-TlsConfig::TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, bool isServer) :
+int Decent::TlsConfig::AppCertVerifyCallBack(const AppX509 & cert, int depth, uint32_t & flag)
+{
+	using namespace Decent::WhiteList;
+
+	if (flag != MBEDTLS_SUCCESS_RET)
+	{//App cert is invalid!
+		return MBEDTLS_SUCCESS_RET;
+	}
+
+	//Check Loaded Lists are match!!
+	StaticTypeList peerLoadedList(Loaded::ParseWhiteListFromJson(cert.GetWhiteList()));
+	if (peerLoadedList != Decent::States::Get().GetLoadedWhiteList())
+	{
+		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+		return MBEDTLS_SUCCESS_RET;
+	}
+
+	//Check peer's hash is in the white list.
+	std::string peerHash = Decent::Crypto::GetHashFromAppId(cert.GetPlatformType(), cert.GetAppId());
+
+	if (!Decent::States::Get().GetLoadedWhiteList().CheckWhiteListWithHint(peerHash, m_expectedAppName) &&
+		!Decent::States::Get().GetHardCodedWhiteList().CheckWhiteListWithHint(peerHash, m_expectedAppName))
+	{
+		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+		return MBEDTLS_SUCCESS_RET;
+	}
+
+	return MBEDTLS_SUCCESS_RET;
+}
+
+int Decent::TlsConfig::ServerCertVerifyCallBack(const ServerX509 & cert, int depth, uint32_t & flag)
+{
+	const bool verifyRes = Decent::States::Get().GetServerWhiteList().AddTrustedNode(cert);
+	flag = verifyRes ? MBEDTLS_SUCCESS_RET : MBEDTLS_X509_BADCERT_NOT_TRUSTED;
+	return MBEDTLS_SUCCESS_RET;
+}
+
+TlsConfig::TlsConfig(const std::string& expectedAppName, bool isServer) :
 	MbedTlsObj::TlsConfig(new mbedtls_ssl_config),
 	m_prvKey(CryptoKeyContainer::GetInstance().GetSignKeyPair()),
 	m_cert(Decent::States::Get().GetCertContainer().GetCert()),
-	m_appCertVerifier(appIdVerifier)
+	m_expectedAppName(expectedAppName)
 {
 	MbedTlsObj::TlsConfig::BasicInit();
 
@@ -339,7 +394,7 @@ TlsConfig::TlsConfig(TlsConfig && other) :
 	MbedTlsObj::TlsConfig(std::forward<TlsConfig>(other)),
 	m_prvKey(std::move(other.m_prvKey)),
 	m_cert(std::move(other.m_cert)),
-	m_appCertVerifier(std::move(other.m_appCertVerifier))
+	m_expectedAppName(std::move(other.m_expectedAppName))
 {
 	if (*this)
 	{
@@ -354,7 +409,7 @@ TlsConfig & TlsConfig::operator=(TlsConfig && other)
 		MbedTlsObj::TlsConfig::operator=(std::forward<MbedTlsObj::TlsConfig>(other));
 		m_prvKey = std::move(other.m_prvKey);
 		m_cert = std::move(other.m_cert);
-		m_appCertVerifier = std::move(other.m_appCertVerifier);
+		m_expectedAppName = std::move(other.m_expectedAppName);
 
 		if (*this)
 		{

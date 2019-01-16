@@ -28,9 +28,9 @@ bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator
 	Decent::States::Get().GetCertContainer().SetCert(serverCert);
 
 	//TODO: We probably don't need these:
-	Decent::Crypto::RefreshDecentAppAppClientSideConfig();
-	Decent::Crypto::RefreshDecentAppAppServerSideConfig();
-	Decent::Crypto::RefreshDecentAppClientServerSideConfig();
+	//Decent::Crypto::RefreshDecentAppAppClientSideConfig();
+	//Decent::Crypto::RefreshDecentAppAppServerSideConfig();
+	//Decent::Crypto::RefreshDecentAppClientServerSideConfig();
 
 	return true;
 }

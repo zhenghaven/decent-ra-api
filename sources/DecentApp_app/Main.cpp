@@ -12,13 +12,13 @@
 
 #include "../common_app/SGX/SGXEnclaveUtil.h"
 #include "../common_app/Common.h"
-#include "../common_app/DecentAppLASession.h"
-#include "../common_app/Messages.h"
 
 #include "../common_app/Networking/LocalConnection.h"
 #include "../common_app/Networking/TCPConnection.h"
 #include "../common_app/Networking/TCPServer.h"
 #include "../common_app/Networking/DecentSmartServer.h"
+
+#include "../common_app/WhiteList/Requester.h"
 
 #include "DecentVoteApp.h"
 
@@ -54,23 +54,27 @@ int main(int argc, char ** argv)
 
 	std::cout << "================ This is App side ================" << std::endl;
 
-	std::shared_ptr<DecentVoteApp> enclave(
-		std::make_shared<DecentVoteApp>(
-			ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
-	//DecentVoteApp enclave(ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME);
-
 	std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
 	//std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
-	DecentAppLASession::SendHandshakeMessage(*connection, *enclave);
-	Json::Value jsonRoot;
-	connection->ReceivePack(jsonRoot);
-	enclave->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
-	
-	std::unique_ptr<Server> server(std::make_unique<TCPServer>(hostIP, hostPort + 5));
 
-	DecentSmartServer smartServer;
-	smartServer.AddServer(server, enclave);
-	smartServer.RunUtilUserTerminate();
+	Decent::WhiteList::Requester::Get().SendRequest(*connection); //Send WhiteList request.
+
+	connection = std::make_unique<TCPConnection>(hostIP, hostPort);
+
+	std::shared_ptr<DecentVoteApp> enclave(
+		std::make_shared<DecentVoteApp>(
+			ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME, "TestHashList_01", *connection));
+
+	//DecentAppLASession::SendHandshakeMessage(*connection, *enclave);
+	//Json::Value jsonRoot;
+	//connection->ReceivePack(jsonRoot);
+	//enclave->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
+	//
+	//std::unique_ptr<Server> server(std::make_unique<TCPServer>(hostIP, hostPort + 5));
+
+	//DecentSmartServer smartServer;
+	//smartServer.AddServer(server, enclave);
+	//smartServer.RunUtilUserTerminate();
 
 	printf("Enter a character before exit ...\n");
 	getchar();

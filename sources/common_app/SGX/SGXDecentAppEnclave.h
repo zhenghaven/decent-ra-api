@@ -8,20 +8,20 @@
 
 #include <memory>
 
-typedef struct _report_body_t sgx_report_body_t;
-typedef struct _sgx_ec256_signature_t sgx_ec256_signature_t;
+class Connection;
 
 class SGXDecentAppEnclave : public SGXEnclave, virtual public DecentAppEnclave
 {
 public:
 	SGXDecentAppEnclave() = delete;
-	
-	using SGXEnclave::SGXEnclave;
+	SGXDecentAppEnclave(const std::string& enclavePath, const std::string& tokenPath, const std::string& wListKey, Connection& serverConn);
+	SGXDecentAppEnclave(const fs::path& enclavePath, const fs::path& tokenPath, const std::string& wListKey, Connection& serverConn);
+	SGXDecentAppEnclave(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName, const std::string& wListKey, Connection& serverConn);
 	
 	virtual ~SGXDecentAppEnclave();
 
-	virtual bool ProcessDecentSelfRAReport(std::string& inReport) override;
-	virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
+	//virtual bool ProcessDecentSelfRAReport(std::string& inReport) override;
+	//virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
 
 	virtual bool GetX509FromServer(const std::string& decentId, Connection& connection) override;
 
@@ -31,6 +31,8 @@ public:
 	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
 
 private:
+	bool InitEnclave(const std::string& wListKey, Connection& serverConn);
+
 	std::string m_decentRAReport;
 	std::string m_appCert;
 };

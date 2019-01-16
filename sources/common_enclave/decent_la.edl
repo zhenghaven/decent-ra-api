@@ -1,6 +1,0 @@
-enclave {
-	trusted 
-	{
-		public sgx_status_t ecall_decent_proc_app_x509_req([user_check] void* connectionPtr);
-	};
-};

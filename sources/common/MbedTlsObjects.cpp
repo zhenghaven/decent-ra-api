@@ -1226,7 +1226,7 @@ MbedTlsObj::X509Cert::operator bool() const
 
 bool MbedTlsObj::X509Cert::GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const
 {
-	if (!*this)
+	if (!MbedTlsObj::X509Cert::operator bool())
 	{
 		return false;
 	}

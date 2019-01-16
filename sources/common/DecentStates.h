@@ -2,10 +2,13 @@
 
 namespace Decent
 {
+	class AppX509;
 	class CertContainer;
 	namespace WhiteList
 	{
 		class DecentServer;
+		class Loaded;
+		class HardCoded;
 	}
 
 	class States
@@ -43,8 +46,21 @@ namespace Decent
 			return m_serverWhiteList;
 		}
 
+		WhiteList::HardCoded& GetHardCodedWhiteList()
+		{
+			return m_hardCodedWhiteList;
+		}
+
+		const WhiteList::HardCoded& GetHardCodedWhiteList() const
+		{
+			return m_hardCodedWhiteList;
+		}
+
+		const WhiteList::Loaded& GetLoadedWhiteList(Decent::AppX509* certPtr = nullptr) const;
+
 	private:
 		CertContainer & m_certContainer;
 		WhiteList::DecentServer & m_serverWhiteList;
+		WhiteList::HardCoded & m_hardCodedWhiteList;
 	};
 }

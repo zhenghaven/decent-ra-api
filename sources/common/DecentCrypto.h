@@ -11,12 +11,15 @@ namespace Decent
 	{
 		constexpr char const X509ExtPlatformTypeOid[] = "2.25.294010332531314719175946865483017979201";
 		constexpr char const X509ExtSelfRaReportOid[] = "2.25.210204819921761154072721866869208165061";
-		constexpr char const X509ExtLaIdentityOid[] = "2.25.128165920542469106824459777090692906263";
+		constexpr char const X509ExtLaIdentityOid[]   = "2.25.128165920542469106824459777090692906263";
+		constexpr char const X509ExtWhiteListOid[]    = "2.25.219117063696833207876173044031738000021";
 
 		const mbedtls_x509_crt_profile& GetX509Profile();
 
 		typedef std::function<bool(const MbedTlsObj::ECKeyPublic&, const std::string&, const std::string&)> ServerRaReportVerfier;
 		typedef std::function<bool(const MbedTlsObj::ECKeyPublic&, const std::string&, const std::string&)> AppIdVerfier;
+
+		std::string GetHashFromAppId(const std::string& platformType, const std::string& appIdStr);
 	}
 
 	class X509Req : public MbedTlsObj::X509Req
@@ -76,7 +79,7 @@ namespace Decent
 		AppX509(mbedtls_x509_crt* cert);
 		AppX509(const MbedTlsObj::ECKeyPublic& pubKey,
 			const ServerX509& caCert, const MbedTlsObj::ECKeyPair& serverPrvKey, 
-			const std::string& enclaveHash, const std::string& platformType, const std::string& appId);
+			const std::string& enclaveHash, const std::string& platformType, const std::string& appId, const std::string& whiteList);
 		AppX509(const AppX509& other) = delete;
 		virtual ~AppX509() {}
 
@@ -87,6 +90,7 @@ namespace Decent
 
 		const std::string& GetPlatformType() const;
 		const std::string& GetAppId() const;
+		const std::string& GetWhiteList() const;
 
 		const MbedTlsObj::ECKeyPublic& GetEcPublicKey() const;
 
@@ -95,13 +99,14 @@ namespace Decent
 
 		std::string m_platformType;
 		std::string m_appId;
+		std::string m_whiteList;
 		MbedTlsObj::ECKeyPublic m_ecPubKey;
 	};
 
 	class TlsConfig : public MbedTlsObj::TlsConfig
 	{
 	public:
-		TlsConfig(Decent::Crypto::AppIdVerfier appIdVerifier, bool isServer);
+		TlsConfig(const std::string& expectedAppName, bool isServer);
 
 		TlsConfig(TlsConfig&& other);
 		TlsConfig(const TlsConfig& other) = delete;
@@ -115,13 +120,14 @@ namespace Decent
 	protected:
 		TlsConfig(mbedtls_ssl_config* ptr);
 		int CertVerifyCallBack(mbedtls_x509_crt* cert, int depth, uint32_t* flag);
+		int AppCertVerifyCallBack(const AppX509& cert, int depth, uint32_t& flag);
+		int ServerCertVerifyCallBack(const ServerX509& cert, int depth, uint32_t& flag);
 
 	private:
 		static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
 
 		std::shared_ptr<const MbedTlsObj::ECKeyPair> m_prvKey;
 		std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
-
-		Decent::Crypto::AppIdVerfier m_appCertVerifier;
+		std::string m_expectedAppName;
 	};
 }

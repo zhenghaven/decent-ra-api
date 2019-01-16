@@ -1,16 +1,19 @@
 #pragma once
 
-#include "WhiteList.h"
+#include "StaticTypeList.h"
 
 namespace Decent
 {
 	namespace WhiteList
 	{
-		namespace HardCoded
+		class HardCoded : public StaticTypeList
 		{
-			constexpr char const sk_decentServerLabel[] = "DecentServer";
+		public:
+			static constexpr char const sk_decentServerLabel[] = "DecentServer";
 
-			const WhiteListType& Get();
-		}
+			HardCoded();
+
+			~HardCoded() {}
+		};
 	}
 }
