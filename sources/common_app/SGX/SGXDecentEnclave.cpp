@@ -15,10 +15,7 @@
 
 #include "../common/DataCoding.h"
 
-#include "../DecentMessages/DecentMessage.h"
 #include "../DecentMessages/DecentAppMessage.h"
-#include "../DecentAppLASession.h"
-#include "../DecentRASession.h"
 
 #include "SGXEnclaveRuntimeException.h"
 

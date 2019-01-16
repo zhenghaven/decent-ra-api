@@ -11,7 +11,7 @@
 
 namespace
 {
-	std::map<sgx_status_t, std::pair<std::string, std::string> > g_sgxErrorMsg = 
+	const std::map<sgx_status_t, std::pair<std::string, std::string> > g_sgxErrorMsg = 
 	{
 		//0x0...
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_SUCCESS, std::pair<std::string, std::string>("Success.", "")),
@@ -112,7 +112,7 @@ namespace
 #endif
 	};
 
-	std::map<sgx_device_status_t, std::string> g_sgxDeviceStatus = 
+	const std::map<sgx_device_status_t, std::string> g_sgxDeviceStatus = 
 	{
 		std::pair<sgx_device_status_t, std::string>(SGX_ENABLED, "Enabled"),
 		std::pair<sgx_device_status_t, std::string>(SGX_DISABLED_REBOOT_REQUIRED, "A reboot is required to finish enabling SGX"),
@@ -127,22 +127,24 @@ namespace
 
 std::string GetSGXErrorMessage(const sgx_status_t ret)
 {
-	if (g_sgxErrorMsg.find(ret) == g_sgxErrorMsg.end())
+	auto it = g_sgxErrorMsg.find(ret);
+	if (it == g_sgxErrorMsg.cend())
 	{
 		LOGE("Error: Cannot find the error message specified!");
 		return "Error: Cannot find the error message specified!";
 	}
-	return g_sgxErrorMsg[ret].first;
+	return it->second.first;
 }
 
 std::string GetSGXDeviceStatusStr(const sgx_device_status_t ret)
 {
-	if (g_sgxDeviceStatus.find(ret) == g_sgxDeviceStatus.end())
+	auto it = g_sgxDeviceStatus.find(ret);
+	if (it == g_sgxDeviceStatus.cend())
 	{
 		LOGE("Error: Cannot find the status string specified!");
 		return "Error: Cannot find the status string specified!";
 	}
-	return g_sgxDeviceStatus[ret];
+	return it->second;
 }
 
 sgx_status_t GetSGXDeviceStatus(sgx_device_status_t & res)

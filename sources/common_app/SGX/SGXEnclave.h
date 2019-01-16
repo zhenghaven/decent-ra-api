@@ -52,7 +52,6 @@ protected:
 private:
 	const sgx_enclave_id_t m_eid;
 	const std::string m_enclavePath;
-	//const fs::path m_tokenPath;
 
 };
 

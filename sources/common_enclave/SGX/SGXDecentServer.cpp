@@ -9,12 +9,12 @@
 
 #include "../../common/CommonTool.h"
 #include "../../common/DataCoding.h"
+#include "../../common/DecentCrypto.h"
 #include "../../common/DecentStates.h"
 #include "../../common/DecentRAReport.h"
 #include "../../common/CryptoKeyContainer.h"
 #include "../../common/DecentCertContainer.h"
 
-#include "../../common/SGX/SgxRaSpCommLayer.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
 
 #include "../WhiteList/ConstManager.h"
@@ -22,10 +22,8 @@
 #include "../DecentCrypto.h"
 
 #include "SGXLACommLayer.h"
-
 #include "SgxSelfRaReportGenerator.h"
 #include "SgxDecentRaProcessor.h"
-#include "SgxRaClientCommLayer.h"
 
 //Initialize Decent enclave.
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
@@ -36,7 +34,7 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	}
 	SgxRaProcessorSp::SetSpid(*inSpid);
 
-	std::string selfHash = Decent::Crypto::GetProgSelfHashBase64();
+	std::string selfHash = Decent::Crypto::GetSelfHashBase64();
 
 	ocall_printf("Enclave Program Hash: %s\n", selfHash.c_str());
 

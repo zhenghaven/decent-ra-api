@@ -3,86 +3,17 @@
 
 #include <string>
 #include <memory>
-#include <cstring>
-
-#include <sgx_report.h>
-#include <sgx_error.h>
-#include <sgx_ecp_types.h>
-#include <sgx_dh.h>
-#include <sgx_tcrypto.h>
-
-#include <rapidjson/document.h>
 
 #include <Enclave_t.h>
 
 #include "SGXLACommLayer.h"
 
 #include "../Common.h"
-#include "../DecentCrypto.h"
-#include "../../common/JsonTools.h"
-#include "../../common/DataCoding.h"
 #include "../../common/DecentStates.h"
 #include "../../common/DecentCrypto.h"
-#include "../../common/DecentRAReport.h"
 #include "../../common/CryptoKeyContainer.h"
 #include "../../common/DecentCertContainer.h"
 
-#include "../../common/SGX/SGXCryptoConversions.h"
-//
-//namespace
-//{
-//	//Hardcoded decent enclave's hash. (Not used until decent program is stable)
-//	static constexpr char gk_decentHash[] = "";
-//}
-//
-//extern "C" sgx_status_t ecall_decent_app_process_ias_ra_report(const char* x509Pem)
-//{
-//	//auto serverCert = DecentCertContainer::Get().GetServerCert();
-//
-//	//if (!x509Pem || serverCert)
-//	//{
-//	//	return SGX_ERROR_INVALID_PARAMETER;
-//	//}
-//
-//	std::shared_ptr<Decent::ServerX509> inCert(std::make_shared<Decent::ServerX509>(x509Pem));
-//	if (!inCert || !(*inCert))
-//	{
-//		return SGX_ERROR_UNEXPECTED;
-//	}
-//
-//	bool verifyRes = Decent::RAReport::ProcessSelfRaReport(inCert->GetPlatformType(), inCert->GetEcPublicKey().ToPubPemString(),
-//		inCert->GetSelfRaReport(), gk_decentHash);
-//	//Won't be successful now, since the decent hash is unknown.
-//	//if (!verifyRes)
-//	//{
-//	//	return SGX_ERROR_INVALID_PARAMETER;
-//	//}
-//
-//	//DecentCertContainer::Get().SetServerCert(inCert);
-//	//COMMON_PRINTF("Accepted Decent Server.\n%s\n", DecentCertContainer::Get().GetServerCert()->ToPemString().c_str());
-//
-//	return SGX_SUCCESS;
-//}
-//
-////Send x509 req to decent server.
-//extern "C" sgx_status_t ecall_decent_app_get_x509(const char* decentId, void* const connectionPtr)
-//{//TODO: remove "decentId".
-//	if (!decentId || !connectionPtr)
-//	{
-//		return SGX_ERROR_INVALID_PARAMETER;
-//	}
-//
-//
-//	//TODO: We don't need these:
-//	Decent::Crypto::RefreshDecentAppAppClientSideConfig();
-//	Decent::Crypto::RefreshDecentAppAppServerSideConfig();
-//	Decent::Crypto::RefreshDecentAppClientServerSideConfig();
-//
-//	//COMMON_PRINTF("Received X509 from Decent Server. \n%s\n", Decent::States::Get().GetCertContainer().GetCert()->ToPemString().c_str());
-//
-//	return SGX_SUCCESS;
-//}
-//
 extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)
 {
 	auto cert = Decent::States::Get().GetCertContainer().GetCert();

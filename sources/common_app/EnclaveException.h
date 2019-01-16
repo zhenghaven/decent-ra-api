@@ -5,13 +5,12 @@
 class EnclaveException : public std::exception
 {
 public:
-	EnclaveException();
-	virtual ~EnclaveException();
+	EnclaveException() {}
+
+	virtual ~EnclaveException() {}
 
 	virtual const char* what() const throw()
 	{
 		return "General Enclave Exception.";
 	}
-private:
-
 };

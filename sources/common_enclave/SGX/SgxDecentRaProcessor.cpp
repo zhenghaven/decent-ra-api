@@ -126,8 +126,9 @@ bool SgxDecentRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 const SgxRaProcessorSp::SgxQuoteVerifier SgxDecentRaProcessorSp::defaultServerQuoteVerifier(
 	[](const sgx_quote_t& quote) -> bool
 {
-	const General256Hash& decentHash = Decent::Crypto::GetGetProgSelfHash256();
-	return consttime_memequal(decentHash.data(), &quote.report_body.mr_enclave, decentHash.size());
+	const std::vector<uint8_t>& decentHash = Decent::Crypto::GetSelfHash();
+	return sizeof(quote.report_body.mr_enclave) == decentHash.size() &&
+		consttime_memequal(decentHash.data(), &quote.report_body.mr_enclave, decentHash.size());
 }
 );
 

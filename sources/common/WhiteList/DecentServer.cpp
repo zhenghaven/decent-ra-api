@@ -8,11 +8,15 @@
 
 using namespace Decent::WhiteList;
 
-Decent::WhiteList::DecentServer::~DecentServer()
+DecentServer::DecentServer()
 {
 }
 
-bool Decent::WhiteList::DecentServer::AddTrustedNode(const Decent::ServerX509 & cert)
+DecentServer::~DecentServer()
+{
+}
+
+bool DecentServer::AddTrustedNode(const Decent::ServerX509 & cert)
 {
 	std::string pubKeyPem = cert.GetEcPublicKey().ToPubPemString();
 	
@@ -45,13 +49,13 @@ bool Decent::WhiteList::DecentServer::AddTrustedNode(const Decent::ServerX509 & 
 	return true;
 }
 
-bool Decent::WhiteList::DecentServer::IsNodeTrusted(const std::string & key) const
+bool DecentServer::IsNodeTrusted(const std::string & key) const
 {
 	std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
 	return m_acceptedNodes.find(key) != m_acceptedNodes.cend();
 }
 
-bool Decent::WhiteList::DecentServer::GetAcceptedTimestamp(const std::string & key, TimeStamp& outTime) const
+bool DecentServer::GetAcceptedTimestamp(const std::string & key, TimeStamp& outTime) const
 {
 	std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
 	auto it = m_acceptedNodes.find(key);
@@ -63,16 +67,12 @@ bool Decent::WhiteList::DecentServer::GetAcceptedTimestamp(const std::string & k
 	return isFound;
 }
 
-bool Decent::WhiteList::DecentServer::VerifyCertFirstTime(const ServerX509 & cert) const
+bool DecentServer::VerifyCertFirstTime(const Decent::ServerX509 & cert) const
 {
 	return true;
 }
 
-bool Decent::WhiteList::DecentServer::VerifyCertAfterward(const ServerX509 & cert) const
+bool DecentServer::VerifyCertAfterward(const Decent::ServerX509 & cert) const
 {
 	return true;
-}
-
-Decent::WhiteList::DecentServer::DecentServer()
-{
 }

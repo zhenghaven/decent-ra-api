@@ -9,7 +9,6 @@
 #include "SGXEnclaveRuntimeException.h"
 
 #include "../../common/DataCoding.h"
-#include "../DecentAppLASession.h"
 #include "../DecentMessages/DecentAppMessage.h"
 #include "../WhiteList/Requester.h"
 #include "../Networking/Connection.h"
@@ -38,40 +37,10 @@ SGXDecentAppEnclave::~SGXDecentAppEnclave()
 {
 }
 
-//bool SGXDecentAppEnclave::ProcessDecentSelfRAReport(std::string & inReport)
-//{
-//	sgx_status_t enclaveRet = SGX_SUCCESS;
-//	sgx_status_t retval = SGX_SUCCESS;
-//	enclaveRet = ecall_decent_app_process_ias_ra_report(GetEnclaveId(), &retval, inReport.c_str());
-//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_process_ias_ra_report);
-//
-//	if (retval == SGX_SUCCESS)
-//	{
-//		m_decentRAReport.swap(inReport);
-//	}
-//
-//	return retval == SGX_SUCCESS;
-//}
-//
-//bool SGXDecentAppEnclave::ProcessDecentSelfRAReport(const std::string & inReport)
-//{
-//	std::string reportCopy(inReport);
-//
-//	return ProcessDecentSelfRAReport(reportCopy);
-//}
-
 bool SGXDecentAppEnclave::GetX509FromServer(const std::string & decentId, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-	//enclaveRet = ecall_decent_app_get_x509(GetEnclaveId(), &retval, decentId.c_str(), &connection);
-	//CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_send_x509_req);
-
-	//if (retval != SGX_SUCCESS)
-	//{
-	//	return false;
-	//}
-
 
 	size_t certLen = 0;
 	std::string retReport(5000, '\0');
@@ -90,11 +59,6 @@ bool SGXDecentAppEnclave::GetX509FromServer(const std::string & decentId, Connec
 	retReport.resize(certLen);
 
 	return retval == SGX_SUCCESS;
-}
-
-const std::string & SGXDecentAppEnclave::GetDecentRAReport() const
-{
-	return m_decentRAReport;
 }
 
 const std::string & SGXDecentAppEnclave::GetAppCert() const

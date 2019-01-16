@@ -1,10 +1,11 @@
 #include "SelfRaReportGenerator.h"
 
-#include "DecentCrypto.h"
 #include "../common/DecentStates.h"
 #include "../common/DecentCrypto.h"
 #include "../common/CryptoKeyContainer.h"
 #include "../common/DecentCertContainer.h"
+
+#include "../common_enclave/DecentCrypto.h"
 
 bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator & reportGenerator)
 {
@@ -20,17 +21,12 @@ bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = CryptoKeyContainer::GetInstance().GetSignKeyPair();
 
 	std::shared_ptr<const Decent::ServerX509> serverCert(new Decent::ServerX509(*signkeyPair,
-		Decent::Crypto::GetProgSelfHashBase64(), platformType, selfRaReport));
+		Decent::Crypto::GetSelfHashBase64(), platformType, selfRaReport));
 	if (!serverCert || !*serverCert)
 	{
 		return false;
 	}
 	Decent::States::Get().GetCertContainer().SetCert(serverCert);
-
-	//TODO: We probably don't need these:
-	//Decent::Crypto::RefreshDecentAppAppClientSideConfig();
-	//Decent::Crypto::RefreshDecentAppAppServerSideConfig();
-	//Decent::Crypto::RefreshDecentAppClientServerSideConfig();
 
 	return true;
 }

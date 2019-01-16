@@ -31,7 +31,7 @@ VoteAppServerSession::VoteAppServerSession(Connection & connection, DecentVoteAp
 	k_remoteSideId(hsMsg.GetSenderID()),
 	m_enclave(hwEnclave)
 {
-	connection.SendPack(VoteAppHandshakeAck(k_senderId, hwEnclave.GetDecentRAReport()));
+	connection.SendPack(VoteAppHandshakeAck(k_senderId, hwEnclave.GetAppCert()));
 }
 
 bool VoteAppServerSession::ProcessServerSide(DecentLogger * logger)

@@ -10,9 +10,9 @@
 #include <json/json.h>
 
 #include "../common_app/SGX/SGXEnclaveUtil.h"
+#include "../common_app/SGX/SGXDecentEnclave.h"
 #include "../common_app/Common.h"
 #include "../common_app/Messages.h"
-#include "../common_app/DecentRASession.h"
 
 #include "../common_app/Networking/TCPConnection.h"
 #include "../common_app/Networking/TCPServer.h"
@@ -21,8 +21,6 @@
 #include "../common_app/Networking/DecentSmartServer.h"
 
 #include "../common_app/SGX/IasConnector.h"
-
-#include "ExampleEnclave.h"
 
 static sgx_spid_t g_sgxSPID = { {
 		0xDD,
