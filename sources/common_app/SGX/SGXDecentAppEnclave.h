@@ -20,9 +20,6 @@ public:
 	
 	virtual ~SGXDecentAppEnclave();
 
-	//virtual bool ProcessDecentSelfRAReport(std::string& inReport) override;
-	//virtual bool ProcessDecentSelfRAReport(const std::string& inReport) override;
-
 	virtual bool GetX509FromServer(const std::string& decentId, Connection& connection) override;
 
 	virtual const std::string& GetAppCert() const override;

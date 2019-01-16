@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../common_app/Messages.h"
+#include "../common_app/SmartMessages.h"
 
 #include <json/json.h>
 
 #include "../common_app/MessageException.h"
 
-class VoteAppMessage : public Messages
+class VoteAppMessage : public SmartMessages
 {
 public:
 	static constexpr char const sk_LabelRoot[] = "VoteApp";
@@ -28,13 +28,13 @@ public:
 public:
 	VoteAppMessage() = delete;
 	VoteAppMessage(const std::string& senderID) :
-		Messages(senderID)
+		SmartMessages(senderID)
 	{}
 
 	VoteAppMessage(const Json::Value& msg, const char* expectedType) :
-		Messages(msg, sk_ValueCat)
+		SmartMessages(msg, sk_ValueCat)
 	{
-		if (expectedType && ParseType(msg[Messages::sk_LabelRoot]) != expectedType)
+		if (expectedType && ParseType(msg[SmartMessages::sk_LabelRoot]) != expectedType)
 		{
 			throw MessageParseException();
 		}
@@ -49,7 +49,7 @@ public:
 protected:
 	virtual Json::Value& GetJsonMsg(Json::Value& outJson) const override
 	{
-		Json::Value& parent = Messages::GetJsonMsg(outJson);
+		Json::Value& parent = SmartMessages::GetJsonMsg(outJson);
 
 		parent[sk_LabelRoot] = Json::objectValue;
 		parent[sk_LabelRoot][sk_LabelType] = GetMessageTypeStr();
@@ -110,7 +110,7 @@ public:
 
 	explicit VoteAppHandshakeAck(const Json::Value& msg) :
 		VoteAppMessage(msg, sk_ValueType),
-		m_selfRAReport(ParseSelfRAReport(msg[Messages::sk_LabelRoot][VoteAppMessage::sk_LabelRoot]))
+		m_selfRAReport(ParseSelfRAReport(msg[SmartMessages::sk_LabelRoot][VoteAppMessage::sk_LabelRoot]))
 	{}
 
 	virtual ~VoteAppHandshakeAck() {}

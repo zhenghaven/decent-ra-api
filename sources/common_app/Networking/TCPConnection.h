@@ -32,7 +32,7 @@ namespace Json
 	class Value;
 }
 
-class Messages;
+class SmartMessages;
 
 class TCPConnection : public Connection
 {

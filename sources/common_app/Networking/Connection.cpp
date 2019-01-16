@@ -4,7 +4,7 @@
 
 #include <json/json.h>
 
-#include "../Messages.h"
+#include "../SmartMessages.h"
 #include "../../common/Connection.h"
 #include "../../common/JsonTools.h"
 
@@ -166,7 +166,7 @@ void Connection::SendPack(const std::vector<uint8_t>& msg)
 	SendPack(msg.data(), msg.size());
 }
 
-void Connection::SendPack(const Messages & msg)
+void Connection::SendPack(const SmartMessages & msg)
 {
 	SendPack(msg.ToJsonString());
 }

@@ -7,7 +7,7 @@ namespace Json
 	class Value;
 }
 
-class Messages
+class SmartMessages
 {
 public:
 	static constexpr char const sk_LabelRoot[]     = "SmartServerMsg";
@@ -18,11 +18,11 @@ public:
 	static std::string ParseCat(const Json::Value& msg);
 
 public:
-	Messages() = delete;
-	Messages(const std::string& senderID);
-	Messages(const Json::Value& msg, const char* expectedCat);
+	SmartMessages() = delete;
+	SmartMessages(const std::string& senderID);
+	SmartMessages(const Json::Value& msg, const char* expectedCat);
 
-	virtual ~Messages() {}
+	virtual ~SmartMessages() {}
 
 	virtual std::string GetMessageCategoryStr() const = 0;
 

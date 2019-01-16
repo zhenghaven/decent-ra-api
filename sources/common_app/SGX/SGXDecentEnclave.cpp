@@ -13,9 +13,9 @@
 
 #include <Enclave_u.h>
 
-#include "../common/DataCoding.h"
+#include "../../common/DataCoding.h"
 
-#include "../DecentMessages/DecentAppMessage.h"
+#include "../Decent/Messages.h"
 
 #include "SGXEnclaveRuntimeException.h"
 
@@ -58,17 +58,6 @@ std::string SGXDecentEnclave::GetDecentSelfRAReport() const
 	return m_selfRaReport;
 }
 
-//bool SGXDecentEnclave::ProcessAppX509Req(Connection& connection)
-//{
-//	sgx_status_t enclaveRet = SGX_SUCCESS;
-//	sgx_status_t retval = SGX_SUCCESS;
-//
-//	enclaveRet = ecall_decent_proc_app_x509_req(GetEnclaveId(), &retval, &connection);
-//	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_proc_app_x509_req);
-//
-//	return retval == SGX_SUCCESS;
-//}
-
 void SGXDecentEnclave::LoadConstWhiteList(const std::string & key, const std::string & whiteList)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
@@ -89,15 +78,17 @@ void SGXDecentEnclave::ProcessAppCertReq(const std::string & wListKey, Connectio
 
 bool SGXDecentEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
-	if (category == DecentLoadWhiteList::sk_ValueCat)
+	using namespace Decent::Message;
+
+	if (category == LoadWhiteList::sk_ValueCat)
 	{
-		DecentLoadWhiteList wlistMsg(jsonMsg);
+		LoadWhiteList wlistMsg(jsonMsg);
 		LoadConstWhiteList(wlistMsg.GetKey(), wlistMsg.GetWhiteList());
 		return false;
 	}
-	else if (category == DecentRequestAppCert::sk_ValueCat)
+	else if (category == RequestAppCert::sk_ValueCat)
 	{
-		DecentRequestAppCert certReqMsg(jsonMsg);
+		RequestAppCert certReqMsg(jsonMsg);
 		ProcessAppCertReq(certReqMsg.GetKey(), connection);
 		return false;
 	}

@@ -9,7 +9,7 @@ namespace Json
 	class Value;
 }
 
-class Messages;
+class SmartMessages;
 
 class Connection
 {
@@ -22,7 +22,7 @@ public:
 	virtual void SendPack(const void* const dataPtr, const size_t size);
 	virtual void SendPack(const std::string& msg);
 	virtual void SendPack(const std::vector<uint8_t>& msg);
-	virtual void SendPack(const Messages& msg);
+	virtual void SendPack(const SmartMessages& msg);
 	virtual void SendPack(const Json::Value& msg);
 
 	virtual size_t ReceiveRaw(void* const bufPtr, const size_t size) = 0;

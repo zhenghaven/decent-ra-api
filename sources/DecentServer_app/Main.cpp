@@ -12,7 +12,7 @@
 #include "../common_app/SGX/SGXEnclaveUtil.h"
 #include "../common_app/SGX/SGXDecentEnclave.h"
 #include "../common_app/Common.h"
-#include "../common_app/Messages.h"
+#include "../common_app/SmartMessages.h"
 
 #include "../common_app/Networking/TCPConnection.h"
 #include "../common_app/Networking/TCPServer.h"

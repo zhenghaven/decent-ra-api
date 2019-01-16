@@ -6,7 +6,7 @@
 #include <boost/asio/io_service.hpp>
 #include <json/json.h>
 
-#include "../Messages.h"
+#include "../SmartMessages.h"
 #include "../Common.h"
 
 #include "Server.h"
@@ -161,7 +161,7 @@ void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, s
 			try
 			{
 				connectionPtr->ReceivePack(jsonRoot);
-				isEnded = !(handler->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connectionPtr));
+				isEnded = !(handler->ProcessSmartMessage(SmartMessages::ParseCat(jsonRoot), jsonRoot, *connectionPtr));
 			}
 			catch (const std::exception&)
 			{

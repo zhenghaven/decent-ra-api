@@ -9,7 +9,7 @@
 
 bool VoteAppServerSession::SmartMsgEntryPoint(Connection & connection, DecentVoteApp & hwEnclave, const Json::Value & jsonMsg)
 {
-	const std::string inType = VoteAppMessage::ParseType(jsonMsg[Messages::sk_LabelRoot]);
+	const std::string inType = VoteAppMessage::ParseType(jsonMsg[SmartMessages::sk_LabelRoot]);
 	if (inType == VoteAppHandshake::sk_ValueType)
 	{
 		VoteAppHandshake hsMsg(jsonMsg);

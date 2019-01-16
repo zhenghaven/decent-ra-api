@@ -9,7 +9,7 @@
 #include "SGXEnclaveRuntimeException.h"
 
 #include "../../common/DataCoding.h"
-#include "../DecentMessages/DecentAppMessage.h"
+#include "../Decent/Messages.h"
 #include "../WhiteList/Requester.h"
 #include "../Networking/Connection.h"
 
@@ -73,7 +73,9 @@ bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, cons
 
 bool SGXDecentAppEnclave::InitEnclave(const std::string & wListKey, Connection & serverConn)
 {
-	serverConn.SendPack(DecentRequestAppCert(wListKey)); //Send request.
+	using namespace Decent::Message;
+
+	serverConn.SendPack(RequestAppCert(wListKey)); //Send request.
 
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;

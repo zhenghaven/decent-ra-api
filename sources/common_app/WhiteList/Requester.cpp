@@ -5,7 +5,7 @@
 
 #include <json/json.h>
 
-#include "../DecentMessages/DecentAppMessage.h"
+#include "../Decent/Messages.h"
 #include "../Networking/Connection.h"
 
 using namespace Decent::WhiteList;
@@ -22,7 +22,9 @@ Requester::~Requester()
 
 bool Requester::SendRequest(Connection & connection) const
 {
-	connection.SendPack(DecentLoadWhiteList(m_key, ConstructWhiteList()));
+	using namespace Decent::Message;
+
+	connection.SendPack(LoadWhiteList(m_key, ConstructWhiteList()));
 	return true;
 }
 

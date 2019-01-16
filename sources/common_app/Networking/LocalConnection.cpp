@@ -7,13 +7,6 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
-#include <json/json.h>
-
-#include "../../common/JsonTools.h"
-
-//#include "../Common.h"
-#include "../Messages.h"
-
 #include "LocalServer.h"
 #include "LocalConnectionStructs.h"
 #include "NetworkException.h"
