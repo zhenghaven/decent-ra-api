@@ -4,9 +4,10 @@
 
 #include <mbedtls/ssl.h>
 
+#include "MbedTls/MbedTlsObjects.h"
+
 #include "CommonTool.h"
 #include "Connection.h"
-#include "MbedTlsObjects.h"
 
 namespace
 {

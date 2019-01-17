@@ -1,4 +1,4 @@
-#include "../common/MbedTlsSubFunc.h"
+#include "../../common/MbedTls/MbedTlsSubFunc.h"
 
 #include <mutex>
 
@@ -14,7 +14,7 @@ struct MyMutexStruct
 	}
 };
 
-void DecentMbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
+void MbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
 		mutex->m_ptr)
@@ -25,7 +25,7 @@ void DecentMbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 	mutex->m_ptr = new MyMutexStruct;
 }
 
-void DecentMbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
+void MbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
 		!mutex->m_ptr)
@@ -38,7 +38,7 @@ void DecentMbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
 	mutex->m_ptr = nullptr;
 }
 
-int DecentMbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
+int MbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
 		!mutex->m_ptr)
@@ -51,7 +51,7 @@ int DecentMbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 	return 0;
 }
 
-int DecentMbedTls::mbedtls_mutex_unlock(mbedtls_threading_mutex_t *mutex)
+int MbedTls::mbedtls_mutex_unlock(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
 		!mutex->m_ptr)

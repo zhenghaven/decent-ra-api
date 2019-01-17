@@ -2,11 +2,11 @@
 
 #include <mbedtls/ssl.h>
 
-#include "../common/DecentStates.h"
-#include "../common/DecentCrypto.h"
 #include "../common/TLSCommLayer.h"
-#include "../common/MbedTlsObjects.h"
-#include "../common/MbedTlsHelpers.h"
+#include "../common/MbedTls/MbedTlsObjects.h"
+#include "../common/MbedTls/MbedTlsHelpers.h"
+#include "../common/Decent/States.h"
+#include "../common/Decent/Crypto.h"
 #include "../common/Decent/KeyContainer.h"
 #include "../common/Decent/CertContainer.h"
 

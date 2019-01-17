@@ -6,13 +6,13 @@
 #include <Enclave_t.h>
 
 #include "../../common/CommonTool.h"
-#include "../../common/DecentStates.h"
-#include "../../common/MbedTlsObjects.h"
-#include "../../common/MbedTlsHelpers.h"
-#include "../../common/DecentRAReport.h"
+#include "../../common/MbedTls/MbedTlsObjects.h"
+#include "../../common/MbedTls/MbedTlsHelpers.h"
+#include "../../common/Decent/States.h"
+#include "../../common/Decent/RaReport.h"
 #include "../../common/Decent/KeyContainer.h"
 
-#include "../../common/SGX/SGXCryptoConversions.h"
+#include "../../common/SGX/SgxCryptoConversions.h"
 
 #include "../DecentCrypto.h"
 
@@ -20,7 +20,7 @@
 
 const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) {
-	const sgx_ra_config& cmp = Decent::RAReport::GetSgxDecentRaConfig();;
+	const sgx_ra_config& cmp = Decent::RaReport::GetSgxDecentRaConfig();;
 	return raConfig.enable_pse == cmp.enable_pse && 
 		raConfig.linkable_sign == cmp.linkable_sign && 
 		raConfig.ckdf_id == cmp.ckdf_id &&
@@ -136,7 +136,7 @@ std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcesso
 {
 	sgx_ec256_public_t signKey(peerSignkey);
 	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, Decent::States::Get().GetKeyContainer().GetSignKeyPair(),
-		Decent::RAReport::GetSgxDecentRaConfig(),
+		Decent::RaReport::GetSgxDecentRaConfig(),
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
 		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(signKey));
@@ -145,7 +145,7 @@ std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcesso
 		{
 			return false;
 		}
-		return Decent::RAReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
+		return Decent::RaReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
 			consttime_memequal(initData.d + (sizeof(initData) / 2), expected.d + (sizeof(expected) / 2), sizeof(expected) / 2) == 1;
 	},
 		defaultServerQuoteVerifier);

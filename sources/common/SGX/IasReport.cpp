@@ -15,8 +15,9 @@
 #include "../JsonTools.h"
 #include "../CommonTool.h"
 #include "../DataCoding.h"
-#include "../MbedTlsObjects.h"
-#include "../MbedTlsHelpers.h"
+#include "../consttime_memequal.h"
+#include "../MbedTls/MbedTlsObjects.h"
+#include "../MbedTls/MbedTlsHelpers.h"
 #include "IasReportCert.h"
 #include "sgx_structs.h"
 

@@ -5,7 +5,7 @@
 #include <sgx_tcrypto.h>
 
 #include "../../common/CommonTool.h"
-#include "../../common/SGX/SGXCryptoConversions.h"
+#include "../../common/SGX/SgxCryptoConversions.h"
 
 namespace
 {

@@ -4,7 +4,7 @@
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-#include "../DecentCrypto.h"
+#include "../Decent/Crypto.h"
 #include "../CommonTool.h"
 
 Decent::CertContainer::CertContainer()

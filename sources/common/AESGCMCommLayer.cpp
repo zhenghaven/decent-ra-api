@@ -1,7 +1,8 @@
 #include "AESGCMCommLayer.h"
 
+#include "MbedTls/MbedTlsHelpers.h"
+
 #include "GeneralKeyTypes.h"
-#include "MbedTlsHelpers.h"
 #include "DataCoding.h"
 #include "JsonTools.h"
 #include "CommonTool.h"

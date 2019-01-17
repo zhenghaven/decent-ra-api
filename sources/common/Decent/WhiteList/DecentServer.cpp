@@ -1,8 +1,8 @@
 #include "DecentServer.h"
 
-#include "../DecentCrypto.h"
-#include "../DecentRAReport.h"
-#include "../DecentStates.h"
+#include "../Crypto.h"
+#include "../RaReport.h"
+#include "../States.h"
 
 #include "HardCoded.h"
 
@@ -32,7 +32,7 @@ bool DecentServer::AddTrustedNode(const Decent::ServerX509 & cert)
 	}
 
 	TimeStamp timestamp;
-	bool verifyRes = Decent::RAReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
+	bool verifyRes = Decent::RaReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
 		cert.GetSelfRaReport(), serverHash, timestamp);
 
 	//TODO: enable this once the DecentServer is released.

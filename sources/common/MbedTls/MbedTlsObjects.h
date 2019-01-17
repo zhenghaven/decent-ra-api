@@ -4,9 +4,10 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include <map>
 
-#include "GeneralKeyTypes.h"
+#include "../GeneralKeyTypes.h"
 
 typedef struct mbedtls_mpi mbedtls_mpi;
 typedef struct mbedtls_pk_context mbedtls_pk_context;

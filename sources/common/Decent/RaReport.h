@@ -5,14 +5,14 @@
 #include <string>
 #include <vector>
 
-#include "CommonType.h"
+#include "../CommonType.h"
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
 typedef struct _sgx_ra_config sgx_ra_config;
 
 namespace Decent
 {
-	namespace RAReport
+	namespace RaReport
 	{
 		constexpr char const sk_LabelRoot[]           = "DecentSelfRAReport";
 

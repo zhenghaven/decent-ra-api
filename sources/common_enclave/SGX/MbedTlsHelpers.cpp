@@ -1,4 +1,6 @@
-#include "../common/MbedTlsHelpers.h"
+//#if ENCLAVE_PLATFORM_SGX
+
+#include "../common/MbedTls/MbedTlsHelpers.h"
 
 #include <sgx_trts.h>
 
@@ -20,3 +22,5 @@ int MbedTlsHelper::DrbgRandom(void * ctx, unsigned char * output, size_t output_
 void MbedTlsHelper::DrbgFree(void *& ctx)
 {
 }
+
+//#endif //ENCLAVE_PLATFORM_SGX

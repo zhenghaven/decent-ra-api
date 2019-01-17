@@ -5,7 +5,7 @@
 
 #include <Enclave_u.h>
 
-#include "../../common/SGX/SGXCryptoConversions.h"
+#include "../../common/SGX/SgxCryptoConversions.h"
 #include "SGXEnclaveRuntimeException.h"
 
 SGXEnclaveServiceProvider::SGXEnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string & enclavePath, const std::string & tokenPath) :

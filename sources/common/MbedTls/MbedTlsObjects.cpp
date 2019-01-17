@@ -25,8 +25,8 @@
 
 #include <cppcodec/base64_rfc4648.hpp>
 
-#include "../common/MbedTlsHelpers.h"
-#include "../common/CommonTool.h"
+#include "MbedTlsHelpers.h"
+#include "../CommonTool.h"
 
 using namespace MbedTlsObj;
 

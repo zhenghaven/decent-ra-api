@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "../CommonTool.h"
+#include "../../CommonTool.h"
 
 using namespace Decent::WhiteList;
 

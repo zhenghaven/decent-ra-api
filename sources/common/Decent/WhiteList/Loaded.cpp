@@ -6,10 +6,10 @@
 #include <json/json.h>
 #endif // ENCLAVE_ENVIRONMENT
 
-#include "../JsonTools.h"
+#include "../../JsonTools.h"
+#include "../../CommonTool.h"
 
-#include "../CommonTool.h"
-#include "../DecentCrypto.h"
+#include "../Crypto.h"
 
 using namespace Decent::WhiteList;
 

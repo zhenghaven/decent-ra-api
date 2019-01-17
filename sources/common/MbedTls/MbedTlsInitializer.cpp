@@ -2,8 +2,8 @@
 
 #include <mbedtls/threading.h>
 
-#include "../common/MbedTlsSubFunc.h"
-#include "../common/CommonTool.h"
+#include "../CommonTool.h"
+#include "MbedTlsSubFunc.h"
 
 namespace
 {
@@ -26,9 +26,9 @@ MbedTlsInitializer::MbedTlsInitializer()
 	COMMON_PRINTF("Initializing Mbed TLS ...\n");
 
 	mbedtls_threading_set_alt(
-		&DecentMbedTls::mbedtls_mutex_init,
-		&DecentMbedTls::mbedtls_mutex_free,
-		&DecentMbedTls::mbedtls_mutex_lock,
-		&DecentMbedTls::mbedtls_mutex_unlock
+		&MbedTls::mbedtls_mutex_init,
+		&MbedTls::mbedtls_mutex_free,
+		&MbedTls::mbedtls_mutex_lock,
+		&MbedTls::mbedtls_mutex_unlock
 	);
 }

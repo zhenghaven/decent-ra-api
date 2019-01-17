@@ -1,16 +1,17 @@
-
-#include "DecentRAReport.h"
+#include "RaReport.h"
 
 #include <rapidjson/document.h>
 
-#include "CommonTool.h"
+#include "../consttime_memequal.h"
+#include "../CommonTool.h"
+#include "../DataCoding.h"
 
-#include "DataCoding.h"
-#include "DecentCrypto.h"
-#include "MbedTlsHelpers.h"
+#include "../MbedTls/MbedTlsHelpers.h"
 
-#include "SGX/IasReport.h"
-#include "SGX/sgx_structs.h"
+#include "../SGX/IasReport.h"
+#include "../SGX/sgx_structs.h"
+
+#include "Crypto.h"
 
 namespace
 {
@@ -18,7 +19,7 @@ namespace
 	static constexpr uint32_t sk_microSec2NanoSec = 1000;
 }
 
-bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)
+bool Decent::RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)
 {
 	if (size != GENERAL_256BIT_32BYTE_SIZE ||
 		pubSignKey.size() == 0 )
@@ -36,7 +37,7 @@ bool Decent::RAReport::DecentReportDataVerifier(const std::string & pubSignKey, 
 	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;
 }
 
-bool Decent::RAReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, const std::string & inHashStr, TimeStamp& outTimestamp)
+bool Decent::RaReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, const std::string & inHashStr, TimeStamp& outTimestamp)
 {
 	if (platformType == sk_ValueReportTypeSgx)
 	{
@@ -57,7 +58,7 @@ bool Decent::RAReport::ProcessSelfRaReport(const std::string & platformType, con
 	return false;
 }
 
-const sgx_ra_config & Decent::RAReport::GetSgxDecentRaConfig()
+const sgx_ra_config & Decent::RaReport::GetSgxDecentRaConfig()
 {
 	static const sgx_ra_config raCfg
 	{
@@ -74,7 +75,7 @@ const sgx_ra_config & Decent::RAReport::GetSgxDecentRaConfig()
 	return raCfg;
 }
 
-bool Decent::RAReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string & raReport, const std::string & inHashStr, sgx_ias_report_t & outIasReport)
+bool Decent::RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string & raReport, const std::string & inHashStr, sgx_ias_report_t & outIasReport)
 {
 	if (raReport.size() == 0)
 	{
@@ -84,16 +85,16 @@ bool Decent::RAReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, cons
 	rapidjson::Document jsonDoc;
 	jsonDoc.Parse(raReport.c_str());
 
-	if (!jsonDoc.HasMember(Decent::RAReport::sk_LabelRoot))
+	if (!jsonDoc.HasMember(Decent::RaReport::sk_LabelRoot))
 	{
 		return false;
 	}
-	rapidjson::Value& jsonRoot = jsonDoc[Decent::RAReport::sk_LabelRoot];
+	rapidjson::Value& jsonRoot = jsonDoc[Decent::RaReport::sk_LabelRoot];
 
-	std::string iasReportStr = jsonRoot[Decent::RAReport::sk_LabelIasReport].GetString();
-	std::string iasSign = jsonRoot[Decent::RAReport::sk_LabelIasSign].GetString();
-	std::string iasCertChain = jsonRoot[Decent::RAReport::sk_LabelIasCertChain].GetString();
-	std::string oriRDB64 = jsonRoot[Decent::RAReport::sk_LabelOriRepData].GetString();
+	std::string iasReportStr = jsonRoot[Decent::RaReport::sk_LabelIasReport].GetString();
+	std::string iasSign = jsonRoot[Decent::RaReport::sk_LabelIasSign].GetString();
+	std::string iasCertChain = jsonRoot[Decent::RaReport::sk_LabelIasCertChain].GetString();
+	std::string oriRDB64 = jsonRoot[Decent::RaReport::sk_LabelOriRepData].GetString();
 
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);

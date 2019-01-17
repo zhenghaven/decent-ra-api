@@ -16,13 +16,14 @@
 
 #include "../CommonTool.h"
 #include "../DataCoding.h"
-#include "../MbedTlsObjects.h"
-#include "../MbedTlsHelpers.h"
+#include "../consttime_memequal.h"
+#include "../MbedTls/MbedTlsObjects.h"
+#include "../MbedTls/MbedTlsHelpers.h"
 
 #include "sgx_structs.h"
 #include "IasReport.h"
 #include "IasConnector.h"
-#include "SGXCryptoConversions.h"
+#include "SgxCryptoConversions.h"
 
 namespace
 {

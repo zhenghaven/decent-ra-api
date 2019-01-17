@@ -7,6 +7,8 @@
 #include <mbedtls/md.h>
 #include <mbedtls/cmac.h>
 
+#include "../consttime_memequal.h"
+
 namespace
 {
 	static constexpr int MBEDTLS_SUCCESS_RET = 0;

@@ -9,13 +9,13 @@
 
 #include "../../common/CommonTool.h"
 #include "../../common/DataCoding.h"
-#include "../../common/DecentCrypto.h"
-#include "../../common/DecentStates.h"
-#include "../../common/DecentRAReport.h"
+#include "../../common/Decent/Crypto.h"
+#include "../../common/Decent/States.h"
+#include "../../common/Decent/RaReport.h"
 #include "../../common/Decent/KeyContainer.h"
 #include "../../common/Decent/CertContainer.h"
 
-#include "../../common/SGX/SGXCryptoConversions.h"
+#include "../../common/SGX/SgxCryptoConversions.h"
 
 #include "../WhiteList/ConstManager.h"
 
@@ -122,7 +122,7 @@ extern "C" sgx_status_t ecall_decent_server_proc_app_cert_req(const char* key, v
 	}
 
 	std::string whiteList = Decent::WhiteList::ConstManager::Get().GetWhiteList(key);
-	Decent::AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity->mr_enclave), Decent::RAReport::sk_ValueReportTypeSgx, SerializeStruct(*identity), whiteList);
+	Decent::AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity->mr_enclave), Decent::RaReport::sk_ValueReportTypeSgx, SerializeStruct(*identity), whiteList);
 
 	if (!appX509 ||
 		!commLayer.SendMsg(connection, appX509.ToPemString()))

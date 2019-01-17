@@ -2,7 +2,7 @@
 
 #include <mbedtls/threading.h>
 
-namespace DecentMbedTls
+namespace MbedTls
 {
 	void mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex);
 	void mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex);

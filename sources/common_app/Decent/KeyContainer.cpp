@@ -4,7 +4,7 @@
 #include <exception>
 
 #include "../common/CommonTool.h"
-#include "../common/MbedTlsObjects.h"
+#include "../common/MbedTls/MbedTlsObjects.h"
 
 namespace
 {

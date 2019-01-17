@@ -1,4 +1,4 @@
-#include "DecentCrypto.h"
+#include "Crypto.h"
 
 #include <climits>
 
@@ -8,13 +8,13 @@
 
 #include <sgx_dh.h>
 
-#include "CommonTool.h"
-#include "DataCoding.h"
-#include "DecentStates.h"
-#include "MbedTlsHelpers.h"
-#include "Decent/KeyContainer.h"
-#include "Decent/CertContainer.h"
-#include "DecentRAReport.h"
+#include "../CommonTool.h"
+#include "../DataCoding.h"
+#include "../MbedTls/MbedTlsHelpers.h"
+#include "../Decent/States.h"
+#include "KeyContainer.h"
+#include "CertContainer.h"
+#include "RaReport.h"
 
 #include "WhiteList/DecentServer.h"
 #include "WhiteList/HardCoded.h"
@@ -41,7 +41,7 @@ const mbedtls_x509_crt_profile & Decent::Crypto::GetX509Profile()
 
 std::string Decent::Crypto::GetHashFromAppId(const std::string & platformType, const std::string & appIdStr)
 {
-	if (platformType == Decent::RAReport::sk_ValueReportTypeSgx)
+	if (platformType == Decent::RaReport::sk_ValueReportTypeSgx)
 	{
 		sgx_dh_session_enclave_identity_t appId;
 		DeserializeStruct(appId, appIdStr);

@@ -3,7 +3,7 @@
 #include <map>
 #include <mutex>
 
-#include "../CommonType.h"
+#include "../../CommonType.h"
 
 namespace Decent
 {

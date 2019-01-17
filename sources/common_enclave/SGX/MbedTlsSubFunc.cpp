@@ -1,4 +1,6 @@
-#include "../../common/MbedTlsSubFunc.h"
+//#if ENCLAVE_PLATFORM_SGX
+
+#include "../../common/MbedTls/MbedTlsSubFunc.h"
 
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
@@ -6,7 +8,7 @@
 #include <sgx_trts.h>
 #include <sgx_thread.h>
 
-void DecentMbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
+void MbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex || 
 		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)))
@@ -19,7 +21,7 @@ void DecentMbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 	sgx_thread_mutex_init(sgxMutex, nullptr);
 }
 
-void DecentMbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
+void MbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
 		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)) ||
@@ -33,7 +35,7 @@ void DecentMbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
 	sgx_thread_mutex_destroy(sgxMutex);
 }
 
-int DecentMbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
+int MbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
 		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)) ||
@@ -48,7 +50,7 @@ int DecentMbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 	return sgx_thread_mutex_lock(sgxMutex) == 0 ? 0 : -1;
 }
 
-int DecentMbedTls::mbedtls_mutex_unlock(mbedtls_threading_mutex_t *mutex)
+int MbedTls::mbedtls_mutex_unlock(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
 		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)) ||
@@ -84,3 +86,5 @@ extern "C" int snprintf_enclave(char *s, size_t n, const char *fmt, ...)
 	va_end(ap);
 	return ret;
 }
+
+//#endif //ENCLAVE_PLATFORM_SGX

@@ -5,7 +5,7 @@
 #include <exception>
 
 #include "../CommonTool.h"
-#include "../MbedTlsObjects.h"
+#include "../MbedTls/MbedTlsObjects.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>

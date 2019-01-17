@@ -1,4 +1,4 @@
-#include "../common/WhiteList/HardCoded.h"
+#include "../common/Decent/WhiteList/HardCoded.h"
 #include "../common_app/WhiteList/Requester.h"
 
 using namespace Decent::WhiteList;

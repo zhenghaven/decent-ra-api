@@ -3,7 +3,7 @@
 
 #include "SGXServiceProvider.h"
 
-#include "../../common/DecentStates.h"
+#include "../../common/Decent/States.h"
 #include "../../common/Decent/KeyContainer.h"
 
 SGXServiceProvider::SGXServiceProvider(const std::shared_ptr<IASConnector>& ias) :

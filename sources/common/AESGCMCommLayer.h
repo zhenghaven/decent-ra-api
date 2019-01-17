@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "GeneralKeyTypes.h"
-#include "MbedTlsObjects.h"
+#include "MbedTls/MbedTlsObjects.h"
 
 class AESGCMCommLayer : virtual public SecureCommLayer
 {
@@ -37,6 +37,5 @@ public:
 	virtual bool SendMsg(void* const connectionPtr, const std::string& inMsg) override;
 
 private:
-	//AesGcm128bKeyType m_sk;
 	MbedTlsObj::Aes128Gcm m_gcm;
 };

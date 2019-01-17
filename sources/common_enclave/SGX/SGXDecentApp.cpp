@@ -9,8 +9,8 @@
 #include "SGXLACommLayer.h"
 
 #include "../Common.h"
-#include "../../common/DecentStates.h"
-#include "../../common/DecentCrypto.h"
+#include "../../common/Decent/States.h"
+#include "../../common/Decent/Crypto.h"
 #include "../../common/Decent/KeyContainer.h"
 #include "../../common/Decent/CertContainer.h"
 

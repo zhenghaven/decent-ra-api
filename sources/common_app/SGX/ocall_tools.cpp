@@ -1,6 +1,8 @@
+//#if ENCLAVE_PLATFORM_SGX
+
 #include <cstdio>
 
-#include "Common.h"
+#include "../Common.h"
 
 extern "C" void ocall_print_string(const char *str)
 {
@@ -20,3 +22,5 @@ extern "C" void ocall_print_string_e(const char *str)
 	printf("%s", str);
 	SetConsoleColor(ConsoleColors::Default, ConsoleColors::Default);
 }
+
+//#endif //ENCLAVE_PLATFORM_SGX
