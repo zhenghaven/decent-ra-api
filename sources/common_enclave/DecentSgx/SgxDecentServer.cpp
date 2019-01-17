@@ -17,13 +17,12 @@
 
 #include "../../common/SGX/SgxCryptoConversions.h"
 
-#include "../WhiteList/ConstManager.h"
+#include "../Decent/WhiteList/ConstManager.h"
+#include "../Decent/Crypto.h"
 
-#include "../DecentCrypto.h"
-
-#include "SGXLACommLayer.h"
-#include "SgxSelfRaReportGenerator.h"
-#include "SgxDecentRaProcessor.h"
+#include "../SGX/LocAttCommLayer.h"
+#include "../DecentSgx/SelfRaReportGenerator.h"
+#include "../DecentSgx/RaProcessor.h"
 
 //Initialize Decent enclave.
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
@@ -32,7 +31,7 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	SgxRaProcessorSp::SetSpid(*inSpid);
+	Sgx::RaProcessorSp::SetSpid(*inSpid);
 
 	std::string selfHash = Decent::Crypto::GetSelfHashBase64();
 
@@ -50,22 +49,25 @@ extern "C" void ecall_decent_terminate()
 //Self attestation.
 extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias_connector, const uint64_t enclave_Id)
 {
-	const Decent::KeyContainer& keyContainer = Decent::States::Get().GetKeyContainer();
+	using namespace Decent;
+	using namespace DecentSgx;
+
+	const KeyContainer& keyContainer = States::Get().GetKeyContainer();
 	std::shared_ptr<const general_secp256r1_public_t> signPub = keyContainer.GetSignPubKey();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = keyContainer.GetSignKeyPair();
 
-	std::unique_ptr<SgxRaProcessorSp> spProcesor = SgxDecentRaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub));
-	std::unique_ptr<SgxDecentRaProcessorClient> clientProcessor = Common::make_unique<SgxDecentRaProcessorClient>(
+	std::unique_ptr<Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub));
+	std::unique_ptr<RaProcessorClient> clientProcessor = Common::make_unique<RaProcessorClient>(
 		enclave_Id,
 		[](const sgx_ec256_public_t& pubKey) {
 			return true;
 		},
-		SgxDecentRaProcessorClient::sk_acceptDefaultConfig
+		RaProcessorClient::sk_acceptDefaultConfig
 		);
 
-	SgxSelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
+	DecentSgx::SelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
 	
-	return SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
+	return DecentSgx::SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
 //Output cert to the untrusted side.
@@ -98,7 +100,7 @@ extern "C" sgx_status_t ecall_decent_server_proc_app_cert_req(const char* key, v
 	}
 
 	std::string plainMsg;
-	SGXLACommLayer commLayer(connection, true);
+	Sgx::LocAttCommLayer commLayer(connection, true);
 	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
 	if (!identity ||
 		!commLayer.ReceiveMsg(connection, plainMsg))

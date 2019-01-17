@@ -1,4 +1,4 @@
-#include "SGXLACommLayer.h"
+#include "LocAttCommLayer.h"
 
 #include <sgx_dh.h>
 
@@ -6,12 +6,14 @@
 #include "../../common/DataCoding.h"
 #include "../../common/Connection.h"
 
-SGXLACommLayer::SGXLACommLayer(void * const connectionPtr, bool isInitiator) :
-	SGXLACommLayer(std::move(DoHandShake(connectionPtr, isInitiator)))
+using namespace Sgx;
+
+LocAttCommLayer::LocAttCommLayer(void * const connectionPtr, bool isInitiator) :
+	LocAttCommLayer(std::move(DoHandShake(connectionPtr, isInitiator)))
 {
 }
 
-SGXLACommLayer::SGXLACommLayer(SGXLACommLayer && other) :
+LocAttCommLayer::LocAttCommLayer(LocAttCommLayer && other) :
 	AESGCMCommLayer(std::forward<AESGCMCommLayer>(other)),
 	m_identity(std::move(other.m_identity)),
 	m_isHandShaked(other.m_isHandShaked)
@@ -19,33 +21,33 @@ SGXLACommLayer::SGXLACommLayer(SGXLACommLayer && other) :
 	other.m_isHandShaked = false;
 }
 
-SGXLACommLayer::~SGXLACommLayer()
+LocAttCommLayer::~LocAttCommLayer()
 {
 }
 
-SGXLACommLayer::operator bool() const
+LocAttCommLayer::operator bool() const
 {
 	return AESGCMCommLayer::operator bool() && m_isHandShaked;
 }
 
-const sgx_dh_session_enclave_identity_t* SGXLACommLayer::GetIdentity() const
+const sgx_dh_session_enclave_identity_t* LocAttCommLayer::GetIdentity() const
 {
 	return m_identity.get();
 }
 
-SGXLACommLayer::SGXLACommLayer(std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t>> keyAndId) :
-	SGXLACommLayer(keyAndId.first, keyAndId.second, keyAndId.first && keyAndId.second)
+LocAttCommLayer::LocAttCommLayer(std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t>> keyAndId) :
+	LocAttCommLayer(keyAndId.first, keyAndId.second, keyAndId.first && keyAndId.second)
 {
 }
 
-SGXLACommLayer::SGXLACommLayer(std::unique_ptr<General128BitKey>& key, std::unique_ptr<sgx_dh_session_enclave_identity_t>& id, bool isValid) :
+LocAttCommLayer::LocAttCommLayer(std::unique_ptr<General128BitKey>& key, std::unique_ptr<sgx_dh_session_enclave_identity_t>& id, bool isValid) :
 	AESGCMCommLayer(isValid ? std::move(*key) : General128BitKey()),
 	m_isHandShaked(isValid),
 	m_identity(std::move(id))
 {
 }
 
-std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > SGXLACommLayer::DoHandShake(void * const connectionPtr, bool isInitiator)
+std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > LocAttCommLayer::DoHandShake(void * const connectionPtr, bool isInitiator)
 {
 	std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > retValue;
 	std::unique_ptr<General128BitKey> keyPtr(Common::make_unique<General128BitKey>());

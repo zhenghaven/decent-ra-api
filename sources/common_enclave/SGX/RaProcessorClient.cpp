@@ -1,4 +1,4 @@
-#include "SgxRaProcessorClient.h"
+#include "RaProcessorClient.h"
 
 #include <sgx_tkey_exchange.h>
 
@@ -8,14 +8,16 @@
 #include "../../common/CommonTool.h"
 #include "../../common/Decent/KeyContainer.h"
 
-const SgxRaProcessorClient::SpSignPubKeyVerifier SgxRaProcessorClient::sk_acceptAnyPubKey(
+using namespace Sgx;
+
+const RaProcessorClient::SpSignPubKeyVerifier RaProcessorClient::sk_acceptAnyPubKey(
 	[](const sgx_ec256_public_t& pubKey) -> bool
 	{
 		return true;
 	}
 );
 
-const SgxRaProcessorClient::RaConfigChecker SgxRaProcessorClient::sk_acceptAnyRaConfig(
+const RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptAnyRaConfig(
 	[](const sgx_ra_config& raConfig) -> bool
 	{
 		if ((raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE) ||
@@ -30,7 +32,7 @@ const SgxRaProcessorClient::RaConfigChecker SgxRaProcessorClient::sk_acceptAnyRa
 	}
 );
 
-SgxRaProcessorClient::SgxRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
+RaProcessorClient::RaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
 	m_enclaveId(enclaveId),
 	m_raCtxId(),
 	m_ctxInited(false),
@@ -45,14 +47,14 @@ SgxRaProcessorClient::SgxRaProcessorClient(const uint64_t enclaveId, SpSignPubKe
 {
 }
 
-SgxRaProcessorClient::~SgxRaProcessorClient()
+RaProcessorClient::~RaProcessorClient()
 {
 	m_mk.fill(0);
 	m_sk.fill(0);
 	CloseRaContext();
 }
 
-SgxRaProcessorClient::SgxRaProcessorClient(SgxRaProcessorClient && other) :
+RaProcessorClient::RaProcessorClient(RaProcessorClient && other) :
 	m_enclaveId(other.m_enclaveId),
 	m_raCtxId(other.m_raCtxId),
 	m_ctxInited(other.m_ctxInited),
@@ -72,7 +74,7 @@ SgxRaProcessorClient::SgxRaProcessorClient(SgxRaProcessorClient && other) :
 	other.m_isAttested = false;
 }
 
-bool SgxRaProcessorClient::ProcessMsg0r(const sgx_ra_msg0r_t & msg0r, sgx_ra_msg1_t & msg1)
+bool RaProcessorClient::ProcessMsg0r(const sgx_ra_msg0r_t & msg0r, sgx_ra_msg1_t & msg1)
 {
 	if (!m_configChecker(msg0r.ra_config) ||
 		!CheckKeyDerivationFuncId(msg0r.ra_config.ckdf_id) ||
@@ -97,7 +99,7 @@ bool SgxRaProcessorClient::ProcessMsg0r(const sgx_ra_msg0r_t & msg0r, sgx_ra_msg
 	return true;
 }
 
-bool SgxRaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
+bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
 {
 	size_t retVal = 0;
 	uint8_t* tmpMsg3 = nullptr;
@@ -115,7 +117,7 @@ bool SgxRaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t 
 	return true;
 }
 
-bool SgxRaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
+bool RaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 
@@ -156,27 +158,27 @@ bool SgxRaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
 	return m_isAttested;
 }
 
-bool SgxRaProcessorClient::IsAttested() const
+bool RaProcessorClient::IsAttested() const
 {
 	return m_isAttested;
 }
 
-const General128BitKey & SgxRaProcessorClient::GetMK() const
+const General128BitKey & RaProcessorClient::GetMK() const
 {
 	return m_mk;
 }
 
-const General128BitKey & SgxRaProcessorClient::GetSK() const
+const General128BitKey & RaProcessorClient::GetSK() const
 {
 	return m_sk;
 }
 
-sgx_ias_report_t * SgxRaProcessorClient::ReleaseIasReport()
+sgx_ias_report_t * RaProcessorClient::ReleaseIasReport()
 {
 	return m_iasReport.release();
 }
 
-bool SgxRaProcessorClient::InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey)
+bool RaProcessorClient::InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey)
 {
 	sgx_status_t ret;
 	if (raConfig.enable_pse)
@@ -197,7 +199,7 @@ bool SgxRaProcessorClient::InitRaContext(const sgx_ra_config& raConfig, const sg
 	return m_ctxInited;
 }
 
-void SgxRaProcessorClient::CloseRaContext()
+void RaProcessorClient::CloseRaContext()
 {
 	if (m_ctxInited)
 	{
@@ -205,12 +207,12 @@ void SgxRaProcessorClient::CloseRaContext()
 	}
 }
 
-bool SgxRaProcessorClient::CheckKeyDerivationFuncId(const uint16_t id) const
+bool RaProcessorClient::CheckKeyDerivationFuncId(const uint16_t id) const
 {
 	return id == SGX_DEFAULT_AES_CMAC_KDF_ID;
 }
 
-bool SgxRaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128BitKey & sk)
+bool RaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128BitKey & sk)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	enclaveRet = sgx_ra_get_keys(m_raCtxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(sk.data()));
@@ -226,7 +228,7 @@ bool SgxRaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128Bit
 	return true;
 }
 
-bool SgxRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
+bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 {
 	int retVal = 0;
 	if (ocall_sgx_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||

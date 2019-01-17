@@ -1,7 +1,7 @@
 #include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL
 
-#include "SgxDecentRaProcessor.h"
+#include "RaProcessor.h"
 
 #include <Enclave_t.h>
 
@@ -14,11 +14,13 @@
 
 #include "../../common/SGX/SgxCryptoConversions.h"
 
-#include "../DecentCrypto.h"
+#include "../Decent/Crypto.h"
 
 #include "DecentReplace/decent_tkey_exchange.h"
 
-const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::sk_acceptDefaultConfig(
+using namespace DecentSgx;
+
+const Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) {
 	const sgx_ra_config& cmp = Decent::RaReport::GetSgxDecentRaConfig();;
 	return raConfig.enable_pse == cmp.enable_pse && 
@@ -29,21 +31,21 @@ const SgxRaProcessorClient::RaConfigChecker SgxDecentRaProcessorClient::sk_accep
 	}
 );
 
-SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
-	SgxRaProcessorClient(enclaveId, signKeyVerifier, configChecker)
+RaProcessorClient::RaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
+	::Sgx::RaProcessorClient(enclaveId, signKeyVerifier, configChecker)
 {
 }
 
-SgxDecentRaProcessorClient::~SgxDecentRaProcessorClient()
+RaProcessorClient::~RaProcessorClient()
 {
 }
 
-SgxDecentRaProcessorClient::SgxDecentRaProcessorClient(SgxDecentRaProcessorClient && other) :
-	SgxRaProcessorClient(std::forward<SgxRaProcessorClient>(other))
+RaProcessorClient::RaProcessorClient(RaProcessorClient && other) :
+	::Sgx::RaProcessorClient(std::forward<::Sgx::RaProcessorClient>(other))
 {
 }
 
-bool SgxDecentRaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
+bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
 {
 	size_t retVal = 0;
 	uint8_t* tmpMsg3 = nullptr;
@@ -61,7 +63,7 @@ bool SgxDecentRaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const s
 	return true;
 }
 
-bool SgxDecentRaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_ec256_public_t & pubKey)
+bool RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_ec256_public_t & pubKey)
 {
 	sgx_status_t ret;
 	if (raConfig.enable_pse)
@@ -103,7 +105,7 @@ bool SgxDecentRaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, c
 	return m_ctxInited;
 }
 
-void SgxDecentRaProcessorClient::CloseRaContext()
+void RaProcessorClient::CloseRaContext()
 {
 	if (m_ctxInited)
 	{
@@ -111,7 +113,7 @@ void SgxDecentRaProcessorClient::CloseRaContext()
 	}
 }
 
-bool SgxDecentRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
+bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 {
 	int retVal = 0;
 	if (ocall_decent_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
@@ -122,7 +124,7 @@ bool SgxDecentRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 	return true;
 }
 
-const SgxRaProcessorSp::SgxQuoteVerifier SgxDecentRaProcessorSp::defaultServerQuoteVerifier(
+const Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQuoteVerifier(
 	[](const sgx_quote_t& quote) -> bool
 {
 	const std::vector<uint8_t>& decentHash = Decent::Crypto::GetSelfHash();
@@ -131,11 +133,11 @@ const SgxRaProcessorSp::SgxQuoteVerifier SgxDecentRaProcessorSp::defaultServerQu
 }
 );
 
-std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr, 
+std::unique_ptr<Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr, 
 	const sgx_ec256_public_t & peerSignkey)
 {
 	sgx_ec256_public_t signKey(peerSignkey);
-	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, Decent::States::Get().GetKeyContainer().GetSignKeyPair(),
+	return Common::make_unique<Sgx::RaProcessorSp>(iasConnectorPtr, Decent::States::Get().GetKeyContainer().GetSignKeyPair(),
 		Decent::RaReport::GetSgxDecentRaConfig(),
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{

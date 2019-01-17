@@ -1,4 +1,4 @@
-#include "SgxRaProcessorSp.h"
+#include "RaProcessorSp.h"
 
 #include <cstdint>
 #include <cstring>
@@ -25,6 +25,8 @@
 #include "IasConnector.h"
 #include "SgxCryptoConversions.h"
 
+using namespace Sgx;
+
 namespace
 {
 	//typedef bool(*KeyDeriveFuncType)(const General256BitKey& key, const std::string& label, General128BitKey& outKey);
@@ -50,12 +52,12 @@ namespace
 
 }
 
-const SgxRaProcessorSp::SgxReportDataVerifier SgxRaProcessorSp::sk_defaultRpDataVrfy([](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
+const RaProcessorSp::SgxReportDataVerifier RaProcessorSp::sk_defaultRpDataVrfy([](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 {
 	return consttime_memequal(&initData, &expected, sizeof(sgx_report_data_t)) == 1;
 });
 
-const sgx_ra_config SgxRaProcessorSp::sk_defaultRaConfig 
+const sgx_ra_config RaProcessorSp::sk_defaultRaConfig 
 { 
 	SGX_QUOTE_LINKABLE_SIGNATURE, 
 	SGX_DEFAULT_AES_CMAC_KDF_ID,
@@ -68,7 +70,7 @@ const sgx_ra_config SgxRaProcessorSp::sk_defaultRaConfig
 	1
 };
 
-void SgxRaProcessorSp::SetSpid(const sgx_spid_t & spid)
+void RaProcessorSp::SetSpid(const sgx_spid_t & spid)
 {
 	std::shared_ptr<const sgx_spid_t> tmpSPID = std::make_shared<const sgx_spid_t>(spid);
 
@@ -79,7 +81,7 @@ void SgxRaProcessorSp::SetSpid(const sgx_spid_t & spid)
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-SgxRaProcessorSp::SgxRaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey, 
+RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey, 
 	const sgx_ra_config& raConfig, SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy) :
 	m_raConfig(raConfig),
 #ifdef DECENT_THREAD_SAFETY_HIGH
@@ -107,7 +109,7 @@ SgxRaProcessorSp::SgxRaProcessorSp(const void* const iasConnectorPtr, const std:
 {
 }
 
-SgxRaProcessorSp::~SgxRaProcessorSp()
+RaProcessorSp::~RaProcessorSp()
 {
 	m_smk.fill(0);
 	m_mk.fill(0);
@@ -115,7 +117,7 @@ SgxRaProcessorSp::~SgxRaProcessorSp()
 	m_vk.fill(0);
 }
 
-SgxRaProcessorSp::SgxRaProcessorSp(SgxRaProcessorSp && other) :
+RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
 	m_raConfig(std::move(other.m_raConfig)),
 	m_spid(std::move(other.m_spid)),
 	m_iasConnectorPtr(other.m_iasConnectorPtr),
@@ -144,7 +146,7 @@ SgxRaProcessorSp::SgxRaProcessorSp(SgxRaProcessorSp && other) :
 	other.m_isAttested = false;
 }
 
-bool SgxRaProcessorSp::Init()
+bool RaProcessorSp::Init()
 {
 	if (!m_encrKeyPair || !*m_encrKeyPair || !m_mySignKey || !*m_mySignKey ||
 		!m_encrKeyPair->ToGeneralPubKey(m_myEncrKey))
@@ -168,7 +170,7 @@ bool SgxRaProcessorSp::Init()
 	return true;
 }
 
-bool SgxRaProcessorSp::ProcessMsg0(const sgx_ra_msg0s_t & msg0s, sgx_ra_msg0r_t & msg0r)
+bool RaProcessorSp::ProcessMsg0(const sgx_ra_msg0s_t & msg0s, sgx_ra_msg0r_t & msg0r)
 {
 	if (!CheckExGrpId(msg0s.extended_grp_id))
 	{
@@ -178,7 +180,7 @@ bool SgxRaProcessorSp::ProcessMsg0(const sgx_ra_msg0s_t & msg0s, sgx_ra_msg0r_t 
 	return GetMsg0r(msg0r);
 }
 
-bool SgxRaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>& msg2)
+bool RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>& msg2)
 {
 	if (!SetPeerEncrPubKey(SgxEc256Type2General(msg1.g_a)))
 	{
@@ -223,7 +225,7 @@ bool SgxRaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8
 	return true;
 }
 
-bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_ra_msg4_t & msg4, 
+bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_ra_msg4_t & msg4, 
 	sgx_report_data_t * outOriRD)
 {
 	if (!consttime_memequal(&(m_peerEncrKey), &msg3.g_a, sizeof(sgx_ec256_public_t)))
@@ -305,32 +307,32 @@ bool SgxRaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, s
 	return true;
 }
 
-const sgx_ra_config & SgxRaProcessorSp::GetRaConfig() const
+const sgx_ra_config & RaProcessorSp::GetRaConfig() const
 {
 	return m_raConfig;
 }
 
-bool SgxRaProcessorSp::IsAttested() const
+bool RaProcessorSp::IsAttested() const
 {
 	return m_isAttested;
 }
 
-sgx_ias_report_t * SgxRaProcessorSp::ReleaseIasReport()
+sgx_ias_report_t * RaProcessorSp::ReleaseIasReport()
 {
 	return m_iasReport.release();
 }
 
-const General128BitKey & SgxRaProcessorSp::GetSK() const
+const General128BitKey & RaProcessorSp::GetSK() const
 {
 	return m_sk;
 }
 
-const General128BitKey & SgxRaProcessorSp::GetMK() const
+const General128BitKey & RaProcessorSp::GetMK() const
 {
 	return m_mk;
 }
 
-bool SgxRaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
+bool RaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
 {
 	msg0r.ra_config = m_raConfig;
 
@@ -341,32 +343,32 @@ bool SgxRaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
 	return true;
 }
 
-const std::string & SgxRaProcessorSp::GetIasReportStr() const
+const std::string & RaProcessorSp::GetIasReportStr() const
 {
 	return m_iasReportStr;
 }
 
-const std::string & SgxRaProcessorSp::GetIasReportCert() const
+const std::string & RaProcessorSp::GetIasReportCert() const
 {
 	return m_reportCert;
 }
 
-const std::string & SgxRaProcessorSp::GetIasReportSign() const
+const std::string & RaProcessorSp::GetIasReportSign() const
 {
 	return m_reportSign;
 }
 
-bool SgxRaProcessorSp::CheckExGrpId(const uint32_t id) const
+bool RaProcessorSp::CheckExGrpId(const uint32_t id) const
 {
 	return id == 0;
 }
 
-bool SgxRaProcessorSp::CheckKeyDerivationFuncId(const uint16_t id) const
+bool RaProcessorSp::CheckKeyDerivationFuncId(const uint16_t id) const
 {
 	return id == SGX_DEFAULT_AES_CMAC_KDF_ID;
 }
 
-bool SgxRaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrPubKey)
+bool RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrPubKey)
 {
 	m_peerEncrKey = inEncrPubKey;
 
@@ -391,7 +393,7 @@ bool SgxRaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEn
 	return true;
 }
 
-bool SgxRaProcessorSp::CheckIasReport(sgx_ias_report_t & outIasReport,
+bool RaProcessorSp::CheckIasReport(sgx_ias_report_t & outIasReport,
 	const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, 
 	const sgx_report_data_t & oriRD) const
 {

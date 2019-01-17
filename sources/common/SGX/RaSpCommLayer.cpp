@@ -1,14 +1,15 @@
-#include "SgxRaSpCommLayer.h"
+#include "RaSpCommLayer.h"
 
 #include <sgx_key_exchange.h>
 
 #include "../Connection.h"
 
 #include "sgx_structs.h"
+#include "RaProcessorSp.h"
 
-#include "SgxRaProcessorSp.h"
+using namespace Sgx;
 
-static std::unique_ptr<SgxRaProcessorSp> DoHandShake(void* const connectionPtr, std::unique_ptr<SgxRaProcessorSp>& raProcessor)
+static std::unique_ptr<RaProcessorSp> DoHandShake(void* const connectionPtr, std::unique_ptr<RaProcessorSp>& raProcessor)
 {
 	if (!connectionPtr || !raProcessor ||
 		!raProcessor->Init())
@@ -39,12 +40,12 @@ static std::unique_ptr<SgxRaProcessorSp> DoHandShake(void* const connectionPtr, 
 	return std::move(raProcessor);
 }
 
-SgxRaSpCommLayer::SgxRaSpCommLayer(void * const connectionPtr, std::unique_ptr<SgxRaProcessorSp>& raProcessor) :
-	SgxRaSpCommLayer(DoHandShake(connectionPtr, raProcessor))
+RaSpCommLayer::RaSpCommLayer(void * const connectionPtr, std::unique_ptr<RaProcessorSp>& raProcessor) :
+	RaSpCommLayer(DoHandShake(connectionPtr, raProcessor))
 {
 }
 
-SgxRaSpCommLayer::SgxRaSpCommLayer(SgxRaSpCommLayer && other) :
+RaSpCommLayer::RaSpCommLayer(RaSpCommLayer && other) :
 	AESGCMCommLayer(std::forward<AESGCMCommLayer>(other)),
 	m_isHandShaked(other.m_isHandShaked),
 	m_iasReport(std::move(other.m_iasReport))
@@ -52,21 +53,21 @@ SgxRaSpCommLayer::SgxRaSpCommLayer(SgxRaSpCommLayer && other) :
 	other.m_isHandShaked = false;
 }
 
-const sgx_ias_report_t & SgxRaSpCommLayer::GetIasReport() const
+const sgx_ias_report_t & RaSpCommLayer::GetIasReport() const
 {
 	return *m_iasReport;
 }
 
-SgxRaSpCommLayer::~SgxRaSpCommLayer()
+RaSpCommLayer::~RaSpCommLayer()
 {
 }
 
-SgxRaSpCommLayer::operator bool() const
+RaSpCommLayer::operator bool() const
 {
 	return AESGCMCommLayer::operator bool() && m_isHandShaked;
 }
 
-SgxRaSpCommLayer::SgxRaSpCommLayer(std::unique_ptr<SgxRaProcessorSp> raProcessor) :
+RaSpCommLayer::RaSpCommLayer(std::unique_ptr<RaProcessorSp> raProcessor) :
 	AESGCMCommLayer(raProcessor && raProcessor->IsAttested() ? raProcessor->GetSK() : General128BitKey()),
 	m_isHandShaked(raProcessor && raProcessor->IsAttested()),
 	m_iasReport(m_isHandShaked ? raProcessor->ReleaseIasReport() : new sgx_ias_report_t)

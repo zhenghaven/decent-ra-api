@@ -5,7 +5,9 @@
 #include "../common/Decent/KeyContainer.h"
 #include "../common/Decent/CertContainer.h"
 
-#include "../common_enclave/DecentCrypto.h"
+#include "Crypto.h"
+
+using namespace Decent;
 
 bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator & reportGenerator)
 {

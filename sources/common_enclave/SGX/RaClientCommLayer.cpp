@@ -1,13 +1,15 @@
-#include "SgxRaClientCommLayer.h"
+#include "RaClientCommLayer.h"
 
 #include <Enclave_t.h>
 
 #include "../../common/Connection.h"
 #include "../../common/SGX/sgx_structs.h"
 
-#include "SgxRaProcessorClient.h"
+#include "RaProcessorClient.h"
 
-static std::unique_ptr<SgxRaProcessorClient> DoHandShake(void* const connectionPtr, std::unique_ptr<SgxRaProcessorClient>& raProcessor)
+using namespace Sgx;
+
+static std::unique_ptr<Sgx::RaProcessorClient> DoHandShake(void* const connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor)
 {
 	if (!connectionPtr || !raProcessor)
 	{
@@ -43,12 +45,12 @@ static std::unique_ptr<SgxRaProcessorClient> DoHandShake(void* const connectionP
 	return std::move(raProcessor);
 }
 
-SgxRaClientCommLayer::SgxRaClientCommLayer(void* const connectionPtr, std::unique_ptr<SgxRaProcessorClient>& raProcessor) :
-	SgxRaClientCommLayer(DoHandShake(connectionPtr, raProcessor))
+RaClientCommLayer::RaClientCommLayer(void* const connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor) :
+	RaClientCommLayer(DoHandShake(connectionPtr, raProcessor))
 {
 }
 
-SgxRaClientCommLayer::SgxRaClientCommLayer(SgxRaClientCommLayer && other) :
+RaClientCommLayer::RaClientCommLayer(RaClientCommLayer && other) :
 	AESGCMCommLayer(std::forward<AESGCMCommLayer>(other)),
 	m_isHandShaked(other.m_isHandShaked),
 	m_iasReport(std::move(other.m_iasReport))
@@ -56,21 +58,21 @@ SgxRaClientCommLayer::SgxRaClientCommLayer(SgxRaClientCommLayer && other) :
 	other.m_isHandShaked = false;
 }
 
-const sgx_ias_report_t & SgxRaClientCommLayer::GetIasReport() const
+const sgx_ias_report_t & RaClientCommLayer::GetIasReport() const
 {
 	return *m_iasReport;
 }
 
-SgxRaClientCommLayer::~SgxRaClientCommLayer()
+RaClientCommLayer::~RaClientCommLayer()
 {
 }
 
-SgxRaClientCommLayer::operator bool() const
+RaClientCommLayer::operator bool() const
 {
 	return AESGCMCommLayer::operator bool() && m_isHandShaked;
 }
 
-SgxRaClientCommLayer::SgxRaClientCommLayer(std::unique_ptr<SgxRaProcessorClient> raProcessor) :
+RaClientCommLayer::RaClientCommLayer(std::unique_ptr<Sgx::RaProcessorClient> raProcessor) :
 	AESGCMCommLayer(raProcessor && raProcessor->IsAttested() ? raProcessor->GetSK() : General128BitKey()),
 	m_isHandShaked(raProcessor && raProcessor->IsAttested()),
 	m_iasReport(m_isHandShaked ? raProcessor->ReleaseIasReport() : new sgx_ias_report_t)

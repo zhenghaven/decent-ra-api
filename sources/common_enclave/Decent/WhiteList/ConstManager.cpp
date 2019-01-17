@@ -1,6 +1,6 @@
 #include "ConstManager.h"
 
-#include "../../Common/CommonTool.h"
+#include "../../../common/CommonTool.h"
 
 using namespace Decent::WhiteList;
 

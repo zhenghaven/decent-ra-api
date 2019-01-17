@@ -1,4 +1,4 @@
-#include "SgxSelfRaReportGenerator.h"
+#include "SelfRaReportGenerator.h"
 
 #include <rapidjson/document.h>
 
@@ -8,20 +8,22 @@
 #include "../../common/DataCoding.h"
 #include "../../common/Decent/RaReport.h"
 #include "../../common/SGX/sgx_structs.h"
-#include "../../common/SGX/SgxRaProcessorSp.h"
-#include "SgxDecentRaProcessor.h"
+#include "../../common/SGX/RaProcessorSp.h"
+#include "RaProcessor.h"
 
-SgxSelfRaReportGenerator::SgxSelfRaReportGenerator(std::unique_ptr<SgxRaProcessorSp>& raSp, std::unique_ptr<SgxDecentRaProcessorClient>& raClient) :
+using namespace DecentSgx;
+
+SelfRaReportGenerator::SelfRaReportGenerator(std::unique_ptr<Sgx::RaProcessorSp>& raSp, std::unique_ptr<DecentSgx::RaProcessorClient>& raClient) :
 	m_raSp(std::move(raSp)),
 	m_raClient(std::move(raClient))
 {
 }
 
-SgxSelfRaReportGenerator::~SgxSelfRaReportGenerator()
+SelfRaReportGenerator::~SelfRaReportGenerator()
 {
 }
 
-bool SgxSelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std::string & selfRaReport)
+bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std::string & selfRaReport)
 {
 	if (!m_raSp || !m_raClient)
 	{

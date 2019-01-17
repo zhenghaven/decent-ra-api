@@ -6,7 +6,7 @@
 
 #include <Enclave_t.h>
 
-#include "SGXLACommLayer.h"
+#include "../SGX/LocAttCommLayer.h"
 
 #include "../Common.h"
 #include "../../common/Decent/States.h"
@@ -35,7 +35,7 @@ extern "C" sgx_status_t ecall_decent_app_init(void* connection)
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	SGXLACommLayer commLayer(connection, false);
+	Sgx::LocAttCommLayer commLayer(connection, false);
 	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
 	if (!identity)
 	{
