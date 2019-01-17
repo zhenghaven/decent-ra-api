@@ -11,8 +11,8 @@
 #include <mbedtls/ssl.h>
 
 #include "../common/DecentStates.h"
-#include "../common/DecentCertContainer.h"
-#include "../common/CryptoKeyContainer.h"
+#include "../common/Decent/CertContainer.h"
+#include "../common/Decent/KeyContainer.h"
 #include "../common/MbedTlsObjects.h"
 #include "../common/MbedTlsHelpers.h"
 #include "../common/DecentRAReport.h"
@@ -111,7 +111,7 @@ rlsrufreOngYOQf2B9G9KOh6c88Z7GzkAg==\n\
 		std::map<std::string, std::pair<bool, std::string> >()));
 
 	Decent::States::Get().GetCertContainer().SetCert(clientCert);
-	CryptoKeyContainer::GetInstance().UpdateSignKeyPair(clientKey);
+	//Decent::States::Get().GetKeyContainer().UpdateSignKeyPair(clientKey);
 
 	std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort + 5);
 

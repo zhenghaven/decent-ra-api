@@ -6,13 +6,12 @@
 #include <Enclave_t.h>
 
 #include "../../common/CommonTool.h"
+#include "../../common/DecentStates.h"
 #include "../../common/MbedTlsObjects.h"
 #include "../../common/MbedTlsHelpers.h"
 #include "../../common/DecentRAReport.h"
-#include "../../common/CryptoKeyContainer.h"
-#include "../../common/DecentCertContainer.h"
+#include "../../common/Decent/KeyContainer.h"
 
-#include "../../common/SGX/sgx_structs.h"
 #include "../../common/SGX/SGXCryptoConversions.h"
 
 #include "../DecentCrypto.h"
@@ -75,7 +74,7 @@ bool SgxDecentRaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, c
 	ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, 
 		[](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
 		{
-			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = CryptoKeyContainer::GetInstance().GetSignKeyPair();
+			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = Decent::States::Get().GetKeyContainer().GetSignKeyPair();
 
 			std::string pubKeyPem = signPub->ToPubPemString();
 			if (pubKeyPem.size() == 0)
@@ -136,7 +135,7 @@ std::unique_ptr<SgxRaProcessorSp> SgxDecentRaProcessorSp::GetSgxDecentRaProcesso
 	const sgx_ec256_public_t & peerSignkey)
 {
 	sgx_ec256_public_t signKey(peerSignkey);
-	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, CryptoKeyContainer::GetInstance().GetSignKeyPair(), 
+	return Common::make_unique<SgxRaProcessorSp>(iasConnectorPtr, Decent::States::Get().GetKeyContainer().GetSignKeyPair(),
 		Decent::RAReport::GetSgxDecentRaConfig(),
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{

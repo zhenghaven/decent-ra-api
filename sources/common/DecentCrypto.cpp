@@ -12,8 +12,8 @@
 #include "DataCoding.h"
 #include "DecentStates.h"
 #include "MbedTlsHelpers.h"
-#include "CryptoKeyContainer.h"
-#include "DecentCertContainer.h"
+#include "Decent/KeyContainer.h"
+#include "Decent/CertContainer.h"
 #include "DecentRAReport.h"
 
 #include "WhiteList/DecentServer.h"
@@ -365,7 +365,7 @@ int Decent::TlsConfig::ServerCertVerifyCallBack(const ServerX509 & cert, int dep
 
 TlsConfig::TlsConfig(const std::string& expectedAppName, bool isServer) :
 	MbedTlsObj::TlsConfig(new mbedtls_ssl_config),
-	m_prvKey(CryptoKeyContainer::GetInstance().GetSignKeyPair()),
+	m_prvKey(Decent::States::Get().GetKeyContainer().GetSignKeyPair()),
 	m_cert(Decent::States::Get().GetCertContainer().GetCert()),
 	m_expectedAppName(expectedAppName)
 {

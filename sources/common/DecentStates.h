@@ -4,6 +4,8 @@ namespace Decent
 {
 	class AppX509;
 	class CertContainer;
+	class KeyContainer;
+
 	namespace WhiteList
 	{
 		class DecentServer;
@@ -36,6 +38,16 @@ namespace Decent
 			return m_certContainer;
 		}
 
+		KeyContainer& GetKeyContainer()
+		{
+			return m_keyContainer;
+		}
+
+		const KeyContainer& GetKeyContainer() const
+		{
+			return m_keyContainer;
+		}
+
 		WhiteList::DecentServer& GetServerWhiteList()
 		{
 			return m_serverWhiteList;
@@ -60,6 +72,7 @@ namespace Decent
 
 	private:
 		CertContainer & m_certContainer;
+		KeyContainer & m_keyContainer;
 		WhiteList::DecentServer & m_serverWhiteList;
 		WhiteList::HardCoded & m_hardCodedWhiteList;
 	};

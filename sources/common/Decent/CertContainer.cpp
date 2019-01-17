@@ -1,11 +1,11 @@
-#include "DecentCertContainer.h"
+#include "CertContainer.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-#include "DecentCrypto.h"
-#include "CommonTool.h"
+#include "../DecentCrypto.h"
+#include "../CommonTool.h"
 
 Decent::CertContainer::CertContainer()
 {

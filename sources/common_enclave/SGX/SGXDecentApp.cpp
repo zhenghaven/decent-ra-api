@@ -11,8 +11,8 @@
 #include "../Common.h"
 #include "../../common/DecentStates.h"
 #include "../../common/DecentCrypto.h"
-#include "../../common/CryptoKeyContainer.h"
-#include "../../common/DecentCertContainer.h"
+#include "../../common/Decent/KeyContainer.h"
+#include "../../common/Decent/CertContainer.h"
 
 extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)
 {
@@ -44,7 +44,7 @@ extern "C" sgx_status_t ecall_decent_app_init(void* connection)
 
 	//TODO: check Decent server Hash here instead.
 
-	CryptoKeyContainer& keyContainer = CryptoKeyContainer::GetInstance();
+	Decent::KeyContainer& keyContainer = Decent::States::Get().GetKeyContainer();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
 	Decent::X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 	if (!certReq)

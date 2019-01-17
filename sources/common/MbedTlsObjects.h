@@ -190,9 +190,11 @@ namespace MbedTlsObj
 
 		virtual ECKeyPublic& operator=(const ECKeyPublic& other) = delete;
 		virtual ECKeyPublic& operator=(ECKeyPublic&& other);
+		virtual operator bool() const override;
 
-		bool ToGeneralPublicKey(general_secp256r1_public_t& outKey) const;
-		general_secp256r1_public_t* ToGeneralPublicKey() const;
+		bool ToGeneralPubKey(general_secp256r1_public_t& outKey) const;
+		std::unique_ptr<general_secp256r1_public_t> ToGeneralPubKey() const;
+		general_secp256r1_public_t ToGeneralPubKeyChecked() const;
 
 		bool VerifySign(const general_secp256r1_signature_t& inSign, const uint8_t* hash, const size_t hashLen) const;
 
@@ -222,8 +224,12 @@ namespace MbedTlsObj
 		ECKeyPair(ECKeyPair&& other);
 		virtual ~ECKeyPair() {}
 
-		bool ToGeneralPrivateKey(PrivateKeyWrap& outKey) const;
-		PrivateKeyWrap* ToGeneralPrivateKeyWrap() const;
+		//bool ToGeneralPrivateKey(PrivateKeyWrap& outKey) const;
+		//PrivateKeyWrap* ToGeneralPrivateKeyWrap() const;
+
+		bool ToGeneralPrvKey(PrivateKeyWrap& outKey) const;
+		std::unique_ptr<PrivateKeyWrap> ToGeneralPrvKey() const;
+		PrivateKeyWrap ToGeneralPrvKeyChecked() const;
 
 		bool GenerateSharedKey(General256BitKey& outKey, const ECKeyPublic& peerPubKey);
 		bool EcdsaSign(general_secp256r1_signature_t& outSign, const uint8_t* hash, const size_t hashLen, const mbedtls_md_info_t* mdInfo) const;
@@ -237,9 +243,9 @@ namespace MbedTlsObj
 		std::string ToPrvPemString() const;
 		bool ToPrvDerArray(std::vector<uint8_t>& outArray) const;
 
-	private:
-		bool ToGeneralPrivateKey(general_secp256r1_private_t& outKey) const;
-		general_secp256r1_private_t* ToGeneralPrivateKey() const;
+	//private:
+	//	bool ToGeneralPrivateKey(general_secp256r1_private_t& outKey) const;
+	//	general_secp256r1_private_t* ToGeneralPrivateKey() const;
 	};
 
 	class X509Req : public ObjBase<mbedtls_x509_csr>

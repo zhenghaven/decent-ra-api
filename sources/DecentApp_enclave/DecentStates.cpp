@@ -1,6 +1,7 @@
 #include "../common/DecentStates.h"
 
-#include "../common/DecentCertContainer.h"
+#include "../common/Decent/CertContainer.h"
+#include "../common/Decent/KeyContainer.h"
 #include "../common/WhiteList/DecentServer.h"
 #include "../common/WhiteList/Loaded.h"
 #include "../common/WhiteList/HardCoded.h"
@@ -10,6 +11,7 @@ using namespace Decent;
 namespace
 {
 	static CertContainer certContainer;
+	static KeyContainer keyContainer;
 	static WhiteList::DecentServer serverWhiteList;
 	static WhiteList::HardCoded hardCodedWhiteList;
 }
@@ -17,7 +19,8 @@ namespace
 States::States() :
 	m_certContainer(certContainer),
 	m_serverWhiteList(serverWhiteList),
-	m_hardCodedWhiteList(hardCodedWhiteList)
+	m_hardCodedWhiteList(hardCodedWhiteList),
+	m_keyContainer(keyContainer)
 {
 }
 

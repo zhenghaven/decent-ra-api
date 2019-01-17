@@ -12,8 +12,8 @@
 #include "../../common/DecentCrypto.h"
 #include "../../common/DecentStates.h"
 #include "../../common/DecentRAReport.h"
-#include "../../common/CryptoKeyContainer.h"
-#include "../../common/DecentCertContainer.h"
+#include "../../common/Decent/KeyContainer.h"
+#include "../../common/Decent/CertContainer.h"
 
 #include "../../common/SGX/SGXCryptoConversions.h"
 
@@ -50,8 +50,9 @@ extern "C" void ecall_decent_terminate()
 //Self attestation.
 extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias_connector, const uint64_t enclave_Id)
 {
-	std::shared_ptr<const general_secp256r1_public_t> signPub = CryptoKeyContainer::GetInstance().GetSignPubKey();
-	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = CryptoKeyContainer::GetInstance().GetSignKeyPair();
+	const Decent::KeyContainer& keyContainer = Decent::States::Get().GetKeyContainer();
+	std::shared_ptr<const general_secp256r1_public_t> signPub = keyContainer.GetSignPubKey();
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = keyContainer.GetSignKeyPair();
 
 	std::unique_ptr<SgxRaProcessorSp> spProcesor = SgxDecentRaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub));
 	std::unique_ptr<SgxDecentRaProcessorClient> clientProcessor = Common::make_unique<SgxDecentRaProcessorClient>(
@@ -110,8 +111,9 @@ extern "C" sgx_status_t ecall_decent_server_proc_app_cert_req(const char* key, v
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = CryptoKeyContainer::GetInstance().GetSignKeyPair();
-	std::shared_ptr<const Decent::ServerX509> serverCert = std::dynamic_pointer_cast<const Decent::ServerX509>(Decent::States::Get().GetCertContainer().GetCert());
+	const Decent::States& globalStates = Decent::States::Get();
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = globalStates.GetKeyContainer().GetSignKeyPair();
+	std::shared_ptr<const Decent::ServerX509> serverCert = std::dynamic_pointer_cast<const Decent::ServerX509>(globalStates.GetCertContainer().GetCert());
 
 	if (!serverCert || !*serverCert || 
 		!signKey || !*signKey)

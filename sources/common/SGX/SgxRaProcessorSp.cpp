@@ -146,7 +146,7 @@ SgxRaProcessorSp::SgxRaProcessorSp(SgxRaProcessorSp && other) :
 bool SgxRaProcessorSp::Init()
 {
 	if (!m_encrKeyPair || !*m_encrKeyPair || !m_mySignKey || !*m_mySignKey ||
-		!m_encrKeyPair->ToGeneralPublicKey(m_myEncrKey))
+		!m_encrKeyPair->ToGeneralPubKey(m_myEncrKey))
 	{
 		return false;
 	}
@@ -333,7 +333,7 @@ bool SgxRaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
 {
 	msg0r.ra_config = m_raConfig;
 
-	if (!m_mySignKey->ToGeneralPublicKey(SgxEc256Type2General(msg0r.sp_pub_key)))
+	if (!m_mySignKey->ToGeneralPubKey(SgxEc256Type2General(msg0r.sp_pub_key)))
 	{
 		return false;
 	}

@@ -388,38 +388,82 @@ ECKeyPublic & ECKeyPublic::operator=(ECKeyPublic && other)
 	return *this;
 }
 
-bool ECKeyPublic::ToGeneralPublicKey(general_secp256r1_public_t & outKey) const
+MbedTlsObj::ECKeyPublic::operator bool() const
+{
+	return PKey::operator bool() &&
+		mbedtls_pk_can_do(GetInternalPtr(), mbedtls_pk_type_t::MBEDTLS_PK_ECKEY);
+}
+
+bool MbedTlsObj::ECKeyPublic::ToGeneralPubKey(general_secp256r1_public_t & outKey) const
 {
 	if (!*this)
 	{
 		return false;
 	}
-
-	const mbedtls_ecp_keypair* ecPtr = GetInternalECKey();
-
-	if (mbedtls_mpi_write_binary(&ecPtr->Q.X, outKey.x, sizeof(outKey.x)) != MBEDTLS_SUCCESS_RET ||
-		mbedtls_mpi_write_binary(&ecPtr->Q.Y, outKey.y, sizeof(outKey.y)) != MBEDTLS_SUCCESS_RET)
+	
+	const mbedtls_ecp_keypair& ecPtr = *GetInternalECKey();
+	
+	if (mbedtls_mpi_write_binary(&ecPtr.Q.X, outKey.x, sizeof(outKey.x)) != MBEDTLS_SUCCESS_RET ||
+		mbedtls_mpi_write_binary(&ecPtr.Q.Y, outKey.y, sizeof(outKey.y)) != MBEDTLS_SUCCESS_RET)
 	{
 		return false;
 	}
 	
 	std::reverse(std::begin(outKey.x), std::end(outKey.x));
 	std::reverse(std::begin(outKey.y), std::end(outKey.y));
-
+	
 	return true;
 }
 
-general_secp256r1_public_t * MbedTlsObj::ECKeyPublic::ToGeneralPublicKey() const
+std::unique_ptr<general_secp256r1_public_t> MbedTlsObj::ECKeyPublic::ToGeneralPubKey() const
 {
-	general_secp256r1_public_t* res = new general_secp256r1_public_t;
-	if (res && ToGeneralPublicKey(*res))
+	std::unique_ptr<general_secp256r1_public_t> pubKey = Common::make_unique<general_secp256r1_public_t>();
+	if (!pubKey || !ToGeneralPubKey(*pubKey))
 	{
-		return res;
+		return nullptr;
 	}
-
-	delete res;
-	return nullptr;
+	return std::move(pubKey);
 }
+
+general_secp256r1_public_t MbedTlsObj::ECKeyPublic::ToGeneralPubKeyChecked() const
+{
+	general_secp256r1_public_t pubKey;
+	ToGeneralPubKey(pubKey);
+	return pubKey;
+}
+
+//bool ECKeyPublic::ToGeneralPublicKey(general_secp256r1_public_t & outKey) const
+//{
+//	if (!*this)
+//	{
+//		return false;
+//	}
+//
+//	const mbedtls_ecp_keypair* ecPtr = GetInternalECKey();
+//
+//	if (mbedtls_mpi_write_binary(&ecPtr->Q.X, outKey.x, sizeof(outKey.x)) != MBEDTLS_SUCCESS_RET ||
+//		mbedtls_mpi_write_binary(&ecPtr->Q.Y, outKey.y, sizeof(outKey.y)) != MBEDTLS_SUCCESS_RET)
+//	{
+//		return false;
+//	}
+//	
+//	std::reverse(std::begin(outKey.x), std::end(outKey.x));
+//	std::reverse(std::begin(outKey.y), std::end(outKey.y));
+//
+//	return true;
+//}
+//
+//general_secp256r1_public_t * MbedTlsObj::ECKeyPublic::ToGeneralPublicKey() const
+//{
+//	general_secp256r1_public_t* res = new general_secp256r1_public_t;
+//	if (res && ToGeneralPublicKey(*res))
+//	{
+//		return res;
+//	}
+//
+//	delete res;
+//	return nullptr;
+//}
 
 bool MbedTlsObj::ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const uint8_t * hash, const size_t hashLen) const
 {
@@ -629,40 +673,78 @@ MbedTlsObj::ECKeyPair::ECKeyPair(ECKeyPair && other) :
 {
 }
 
-bool ECKeyPair::ToGeneralPrivateKey(general_secp256r1_private_t & outKey) const
+//bool ECKeyPair::ToGeneralPrivateKey(general_secp256r1_private_t & outKey) const
+//{
+//	if (!*this)
+//	{
+//		return false;
+//	}
+//
+//	const mbedtls_ecp_keypair* ecPtr = GetInternalECKey();
+//
+//	if (mbedtls_mpi_write_binary(&ecPtr->d, outKey.r, sizeof(outKey.r)) != MBEDTLS_SUCCESS_RET)
+//	{
+//		return false;
+//	}
+//
+//	std::reverse(std::begin(outKey.r), std::end(outKey.r));
+//
+//	return true;
+//}
+
+//bool ECKeyPair::ToGeneralPrivateKey(PrivateKeyWrap & outKey) const
+//{
+//	return ToGeneralPrivateKey(outKey.m_prvKey);
+//}
+//
+//PrivateKeyWrap * ECKeyPair::ToGeneralPrivateKeyWrap() const
+//{
+//	PrivateKeyWrap* res = new PrivateKeyWrap;
+//	if (res && ToGeneralPrivateKey(*res))
+//	{
+//		return res;
+//	}
+//
+//	delete res;
+//	return nullptr;
+//}
+
+bool MbedTlsObj::ECKeyPair::ToGeneralPrvKey(PrivateKeyWrap & outKey) const
 {
 	if (!*this)
 	{
 		return false;
 	}
 
-	const mbedtls_ecp_keypair* ecPtr = GetInternalECKey();
-
-	if (mbedtls_mpi_write_binary(&ecPtr->d, outKey.r, sizeof(outKey.r)) != MBEDTLS_SUCCESS_RET)
+	const mbedtls_ecp_keypair& ecPtr = *GetInternalECKey();
+	if (mbedtls_mpi_write_binary(&ecPtr.d, outKey.m_prvKey.r, sizeof(outKey.m_prvKey.r)) != MBEDTLS_SUCCESS_RET)
 	{
 		return false;
 	}
-
-	std::reverse(std::begin(outKey.r), std::end(outKey.r));
+	std::reverse(std::begin(outKey.m_prvKey.r), std::end(outKey.m_prvKey.r));
 
 	return true;
 }
 
-bool ECKeyPair::ToGeneralPrivateKey(PrivateKeyWrap & outKey) const
+std::unique_ptr<PrivateKeyWrap> MbedTlsObj::ECKeyPair::ToGeneralPrvKey() const
 {
-	return ToGeneralPrivateKey(outKey.m_prvKey);
+	std::unique_ptr<PrivateKeyWrap> prvKey = Common::make_unique<PrivateKeyWrap>();
+	if (!prvKey || !ToGeneralPrvKey(*prvKey))
+	{
+		return nullptr;
+	}
+	return std::move(prvKey);
 }
 
-PrivateKeyWrap * ECKeyPair::ToGeneralPrivateKeyWrap() const
+PrivateKeyWrap MbedTlsObj::ECKeyPair::ToGeneralPrvKeyChecked() const
 {
-	PrivateKeyWrap* res = new PrivateKeyWrap;
-	if (res && ToGeneralPrivateKey(*res))
+	PrivateKeyWrap prvKey;
+	if (ToGeneralPrvKey(prvKey))
 	{
-		return res;
+		return prvKey;
 	}
 
-	delete res;
-	return nullptr;
+	return PrivateKeyWrap();
 }
 
 bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic & peerPubKey)
@@ -731,17 +813,17 @@ bool MbedTlsObj::ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, c
 	return mbedRet == MBEDTLS_SUCCESS_RET && r.ToLittleEndianBinary(outSign.x) && s.ToLittleEndianBinary(outSign.y);
 }
 
-general_secp256r1_private_t * ECKeyPair::ToGeneralPrivateKey() const
-{
-	general_secp256r1_private_t* res = new general_secp256r1_private_t;
-	if (res && ToGeneralPrivateKey(*res))
-	{
-		return res;
-	}
-
-	delete res;
-	return nullptr;
-}
+//general_secp256r1_private_t * ECKeyPair::ToGeneralPrivateKey() const
+//{
+//	general_secp256r1_private_t* res = new general_secp256r1_private_t;
+//	if (res && ToGeneralPrivateKey(*res))
+//	{
+//		return res;
+//	}
+//
+//	delete res;
+//	return nullptr;
+//}
 
 std::string ECKeyPair::ToPrvPemString() const
 {
