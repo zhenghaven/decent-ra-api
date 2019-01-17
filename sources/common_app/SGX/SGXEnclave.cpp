@@ -72,10 +72,10 @@ sgx_enclave_id_t SGXEnclave::LaunchEnclave(const fs::path& enclavePath, const fs
 		}
 	}
 
-	int retval = 0;
+	sgx_status_t retval = SGX_SUCCESS;
 	enclaveRet = ecall_enclave_init(outEnclaveID, &retval);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_enclave_init);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION_INT(retval, ecall_enclave_init);
+	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_enclave_init);
 
 	return outEnclaveID;
 }

@@ -237,12 +237,11 @@ bool SgxRaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 	return true;
 }
 
-extern "C" int ecall_enclave_init()
+extern "C" sgx_status_t ecall_enclave_init()
 {
-	return true;
+	return SGX_SUCCESS;
 }
 
 extern "C" void ecall_enclave_terminate()
 {
-
 }

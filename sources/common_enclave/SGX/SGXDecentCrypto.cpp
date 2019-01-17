@@ -5,6 +5,8 @@
 
 #include <sgx_utils.h>
 
+#include "../../common/CommonTool.h"
+
 using namespace Decent::Crypto;
 
 namespace
@@ -16,6 +18,7 @@ namespace
 		if (enclaveRet != SGX_SUCCESS)
 		{
 			memset_s(&res, sizeof(res), 0, sizeof(res));
+			LOGW("Failed to create self report!");
 			throw std::exception("Failed to create self report!"); //This should be thrown at the program startup.
 		}
 

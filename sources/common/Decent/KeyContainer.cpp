@@ -16,7 +16,7 @@ using namespace Decent;
 
 namespace
 {
-	static std::unique_ptr<ECKeyPair> CosntructKeyPair(const std::unique_ptr<general_secp256r1_public_t>& pub, const std::unique_ptr<PrivateKeyWrap>& prv)
+	static std::unique_ptr<ECKeyPair> CosntructKeyPair(const std::shared_ptr<const general_secp256r1_public_t>& pub, const std::shared_ptr<const PrivateKeyWrap>& prv)
 	{
 		std::unique_ptr<ECKeyPair> keyPair;
 		if (pub && prv)
@@ -26,6 +26,7 @@ namespace
 
 		if (!keyPair || !*keyPair)
 		{
+			LOGW("Failed to create new key pair!");
 			throw std::exception("Failed to create new key pair!"); //This should be thrown at the program startup.
 		}
 
@@ -36,7 +37,7 @@ namespace
 KeyContainer::KeyContainer(std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<PrivateKeyWrap> > keyPair) :
 	m_signPubKey(std::move(keyPair.first)),
 	m_signPrvKey(std::move(keyPair.second)),
-	m_signPrvKeyObj(CosntructKeyPair(keyPair.first, keyPair.second))
+	m_signPrvKeyObj(std::move(CosntructKeyPair(m_signPubKey, m_signPrvKey)))
 {
 }
 

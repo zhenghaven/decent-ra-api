@@ -16,7 +16,7 @@ enclave {
 
 	trusted 
 	{
-		public int ecall_enclave_init();
+		public sgx_status_t ecall_enclave_init();
 		
 		public void ecall_enclave_terminate();
 	};

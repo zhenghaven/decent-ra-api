@@ -13,6 +13,7 @@ namespace
 		std::unique_ptr<MbedTlsObj::ECKeyPair> key = Common::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::gen);
 		if (!key || !*key)
 		{
+			LOGW("Failed to create new key pair!");
 			throw std::exception("Failed to create new key pair!"); //This should be thrown at the program startup.
 		}
 
