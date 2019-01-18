@@ -9,7 +9,9 @@
 
 #endif // _WIN32
 
-fs::path GetKnownFolderPath(KnownFolderType type)
+using namespace Decent::Tools;
+
+fs::path Decent::Tools::GetKnownFolderPath(KnownFolderType type)
 {
 	switch (type)
 	{

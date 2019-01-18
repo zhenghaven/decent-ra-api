@@ -8,8 +8,10 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../FileSystemUtil.h"
+#include "../Tools/FileSystemUtil.h"
 #include "../Common.h"
+
+using namespace Decent::Tools;
 
 DecentLoggerManager & DecentLoggerManager::GetInstance()
 {

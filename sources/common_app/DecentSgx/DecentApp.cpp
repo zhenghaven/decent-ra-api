@@ -15,6 +15,7 @@
 #include <Enclave_u.h>
 
 using namespace Decent::DecentSgx;
+using namespace Decent::Tools;
 using namespace Decent::Net;
 
 DecentApp::DecentApp(const std::string & enclavePath, const std::string & tokenPath, const std::string & wListKey, Connection & serverConn) :

@@ -23,6 +23,7 @@
 #include "DecentVoteApp.h"
 
 using namespace Decent;
+using namespace Decent::Tools;
 
 /**
  * \brief	Main entry-point for this application

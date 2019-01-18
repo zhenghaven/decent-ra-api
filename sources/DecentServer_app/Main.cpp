@@ -24,6 +24,7 @@
 #include "../common_app/SGX/IasConnector.h"
 
 using namespace Decent;
+using namespace Decent::Tools;
 
 static sgx_spid_t g_sgxSPID = { {
 		0xDD,

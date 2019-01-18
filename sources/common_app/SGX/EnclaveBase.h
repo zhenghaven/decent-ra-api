@@ -9,7 +9,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "../FileSystemDefs.h"
+#include "../Tools/FileSystemDefs.h"
 
 namespace boost
 {
@@ -35,7 +35,7 @@ namespace Decent
 			EnclaveBase() = delete;
 			EnclaveBase(const std::string& enclavePath, const std::string& tokenPath);
 			EnclaveBase(const fs::path& enclavePath, const fs::path& tokenPath);
-			EnclaveBase(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+			EnclaveBase(const std::string& enclavePath, const Decent::Tools::KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 			virtual ~EnclaveBase();
 

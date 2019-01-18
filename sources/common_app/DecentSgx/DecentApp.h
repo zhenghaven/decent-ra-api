@@ -23,7 +23,7 @@ namespace Decent
 			DecentApp() = delete;
 			DecentApp(const std::string& enclavePath, const std::string& tokenPath, const std::string& wListKey, Net::Connection& serverConn);
 			DecentApp(const fs::path& enclavePath, const fs::path& tokenPath, const std::string& wListKey, Net::Connection& serverConn);
-			DecentApp(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName, const std::string& wListKey, Net::Connection& serverConn);
+			DecentApp(const std::string& enclavePath, const Decent::Tools::KnownFolderType tokenLocType, const std::string& tokenFileName, const std::string& wListKey, Net::Connection& serverConn);
 
 			virtual ~DecentApp();
 

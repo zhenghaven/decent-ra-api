@@ -19,6 +19,7 @@
 #include "../SGX/EnclaveRuntimeException.h"
 
 using namespace Decent::DecentSgx;
+using namespace Decent::Tools;
 using namespace Decent::Net;
 using namespace Decent::Ias;
 

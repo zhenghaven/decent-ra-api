@@ -9,6 +9,7 @@
 #include "EnclaveRuntimeException.h"
 
 using namespace Decent::Sgx;
+using namespace Decent::Tools;
 
 EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Decent::Ias::Connector>& ias, const std::string & enclavePath, const std::string & tokenPath) :
 	Sgx::EnclaveBase(enclavePath, tokenPath),

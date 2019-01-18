@@ -20,7 +20,7 @@
 #include "../../common/Tools/DataCoding.h"
 #include "../../common/SGX/IasConnector.h"
 
-#include "../FileSystemUtil.h"
+#include "../Tools/FileSystemUtil.h"
 
 #ifdef SIMULATING_ENCLAVE
 #include <json/json.h>
