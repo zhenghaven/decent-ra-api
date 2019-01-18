@@ -3,7 +3,7 @@
 #include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL
 
-#include "../Enclave/EnclaveException.h"
+#include "../Base/EnclaveException.h"
 
 #include <string>
 

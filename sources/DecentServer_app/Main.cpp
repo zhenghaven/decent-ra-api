@@ -11,7 +11,7 @@
 #include <sgx_quote.h>
 
 #include "../common_app/SGX/EnclaveUtil.h"
-#include "../common_app/DecentSgx/DecentServer.h"
+#include "../common_app/RaSgx/DecentServer.h"
 #include "../common_app/Common.h"
 
 #include "../common_app/Net/SmartMessages.h"
@@ -91,8 +91,8 @@ int main(int argc, char ** argv)
 
 	std::cout << "================ Decent Server ================" << std::endl;
 
-	std::shared_ptr<DecentSgx::DecentServer> enclave(
-		std::make_shared<DecentSgx::DecentServer>(
+	std::shared_ptr<RaSgx::DecentServer> enclave(
+		std::make_shared<RaSgx::DecentServer>(
 			g_sgxSPID, iasConnector, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
 
 	//if (!isRootServer)

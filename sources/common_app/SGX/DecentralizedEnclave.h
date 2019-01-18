@@ -4,7 +4,7 @@
 #pragma once
 
 #include "EnclaveServiceProvider.h"
-#include "../Enclave/DecentralizedEnclave.h"
+#include "../Base/DecentralizedEnclave.h"
 
 #include <memory>
 

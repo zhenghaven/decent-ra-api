@@ -18,7 +18,7 @@
 #include "../Ra/Messages.h"
 #include "../SGX/EnclaveRuntimeException.h"
 
-using namespace Decent::DecentSgx;
+using namespace Decent::RaSgx;
 using namespace Decent::Tools;
 using namespace Decent::Net;
 using namespace Decent::Ias;

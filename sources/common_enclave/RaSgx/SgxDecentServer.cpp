@@ -21,12 +21,12 @@
 #include "../Ra/Crypto.h"
 
 #include "../SGX/LocAttCommLayer.h"
-#include "../DecentSgx/SelfRaReportGenerator.h"
-#include "../DecentSgx/RaProcessor.h"
+#include "../RaSgx/SelfRaReportGenerator.h"
+#include "../RaSgx/RaProcessor.h"
 
 using namespace Decent::Ra;
 using namespace Decent::Tools;
-using namespace Decent::DecentSgx;
+using namespace Decent::RaSgx;
 
 //Initialize Decent enclave.
 extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
@@ -66,9 +66,9 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias
 		RaProcessorClient::sk_acceptDefaultConfig
 		);
 
-	Decent::DecentSgx::SelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
+	Decent::RaSgx::SelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
 	
-	return Decent::DecentSgx::SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
+	return Decent::RaSgx::SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
 }
 
 //Output cert to the untrusted side.

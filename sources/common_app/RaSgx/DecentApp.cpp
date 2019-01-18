@@ -14,7 +14,7 @@
 
 #include <Enclave_u.h>
 
-using namespace Decent::DecentSgx;
+using namespace Decent::RaSgx;
 using namespace Decent::Tools;
 using namespace Decent::Net;
 

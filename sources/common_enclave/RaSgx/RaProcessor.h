@@ -5,7 +5,7 @@
 
 namespace Decent
 {
-	namespace DecentSgx
+	namespace RaSgx
 	{
 		namespace RaProcessorSp
 		{

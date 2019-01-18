@@ -18,7 +18,7 @@
 
 #include "DecentReplace/decent_tkey_exchange.h"
 
-using namespace Decent::DecentSgx;
+using namespace Decent::RaSgx;
 using namespace Decent::Ra;
 
 const Decent::Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaultConfig(

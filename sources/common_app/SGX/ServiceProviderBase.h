@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Enclave/ServiceProvider.h"
+#include "../Base/ServiceProvider.h"
 
 namespace Decent
 {

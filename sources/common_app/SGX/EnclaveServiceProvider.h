@@ -5,7 +5,7 @@
 
 #include "EnclaveBase.h"
 #include "ServiceProviderBase.h"
-#include "../Enclave/EnclaveServiceProvider.h"
+#include "../Base/EnclaveServiceProvider.h"
 
 #include <memory>
 

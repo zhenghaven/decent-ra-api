@@ -10,7 +10,7 @@ typedef struct _spid_t sgx_spid_t;
 
 namespace Decent
 {
-	namespace DecentSgx
+	namespace RaSgx
 	{
 		class DecentServer : public Sgx::EnclaveServiceProvider, virtual public Ra::DecentServer
 		{

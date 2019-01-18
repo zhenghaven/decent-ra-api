@@ -11,7 +11,7 @@
 #include "../../common/SGX/RaProcessorSp.h"
 #include "RaProcessor.h"
 
-using namespace Decent::DecentSgx;
+using namespace Decent::RaSgx;
 using namespace Decent::Tools;
 
 SelfRaReportGenerator::SelfRaReportGenerator(std::unique_ptr<Decent::Sgx::RaProcessorSp>& raSp, std::unique_ptr<RaProcessorClient>& raClient) :

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../common_app/DecentSgx/DecentApp.h"
+#include "../common_app/RaSgx/DecentApp.h"
 
-class DecentVoteApp : public Decent::DecentSgx::DecentApp
+class DecentVoteApp : public Decent::RaSgx::DecentApp
 {
 public:
-	using Decent::DecentSgx::DecentApp::DecentApp;
+	using Decent::RaSgx::DecentApp::DecentApp;
 
 	virtual ~DecentVoteApp() {}
 

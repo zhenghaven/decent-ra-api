@@ -15,7 +15,7 @@ namespace Decent
 		class Connection;
 	}
 
-	namespace DecentSgx
+	namespace RaSgx
 	{
 		class DecentApp : public Sgx::EnclaveBase, virtual public Ra::DecentApp
 		{
