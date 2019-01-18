@@ -4,16 +4,17 @@
 
 #include <sgx_key_exchange.h>
 
-#include "../../common/JsonTools.h"
-#include "../../common/DataCoding.h"
-#include "../../common/Decent/RaReport.h"
+#include "../../common/Tools/JsonTools.h"
+#include "../../common/Tools/DataCoding.h"
+#include "../../common/Ra/RaReport.h"
 #include "../../common/SGX/sgx_structs.h"
 #include "../../common/SGX/RaProcessorSp.h"
 #include "RaProcessor.h"
 
-using namespace DecentSgx;
+using namespace Decent::DecentSgx;
+using namespace Decent::Tools;
 
-SelfRaReportGenerator::SelfRaReportGenerator(std::unique_ptr<Sgx::RaProcessorSp>& raSp, std::unique_ptr<DecentSgx::RaProcessorClient>& raClient) :
+SelfRaReportGenerator::SelfRaReportGenerator(std::unique_ptr<Decent::Sgx::RaProcessorSp>& raSp, std::unique_ptr<RaProcessorClient>& raClient) :
 	m_raSp(std::move(raSp)),
 	m_raClient(std::move(raClient))
 {
@@ -25,6 +26,8 @@ SelfRaReportGenerator::~SelfRaReportGenerator()
 
 bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std::string & selfRaReport)
 {
+	using namespace Decent::Ra;
+
 	if (!m_raSp || !m_raClient)
 	{
 		return false;
@@ -48,17 +51,17 @@ bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std
 		return false;
 	}
 
-	platformType = Decent::RaReport::sk_ValueReportTypeSgx;
+	platformType = RaReport::sk_ValueReportTypeSgx;
 
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
 	JSON_EDITION::Value report;
-	JsonCommonSetString(jsonDoc, report, Decent::RaReport::sk_LabelIasReport, m_raSp->GetIasReportStr());
-	JsonCommonSetString(jsonDoc, report, Decent::RaReport::sk_LabelIasSign, m_raSp->GetIasReportSign());
-	JsonCommonSetString(jsonDoc, report, Decent::RaReport::sk_LabelIasCertChain, m_raSp->GetIasReportCert());
-	JsonCommonSetString(jsonDoc, report, Decent::RaReport::sk_LabelOriRepData, SerializeStruct(reportData));
+	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelIasReport, m_raSp->GetIasReportStr());
+	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelIasSign, m_raSp->GetIasReportSign());
+	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelIasCertChain, m_raSp->GetIasReportCert());
+	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelOriRepData, SerializeStruct(reportData));
 
 	JSON_EDITION::Value root;
-	JsonCommonSetObject(jsonDoc, root, Decent::RaReport::sk_LabelRoot, report);
+	JsonCommonSetObject(jsonDoc, root, RaReport::sk_LabelRoot, report);
 
 	selfRaReport = Json2StyleString(root);
 

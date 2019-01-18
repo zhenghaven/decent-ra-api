@@ -1,4 +1,4 @@
-#include "../../common/Decent/KeyContainer.h"
+#include "../../common/Ra/KeyContainer.h"
 
 #include <memory>
 
@@ -6,6 +6,8 @@
 
 #include "../../common/CommonTool.h"
 #include "../../common/SGX/SgxCryptoConversions.h"
+
+using namespace Decent::Ra;
 
 namespace
 {
@@ -29,8 +31,7 @@ namespace
 	}
 }
 
-
-Decent::KeyContainer::KeyContainer() :
+KeyContainer::KeyContainer() :
 	KeyContainer(std::move(ConstructKeyPair()))
 {
 }

@@ -9,14 +9,16 @@
 #include "../SGX/LocAttCommLayer.h"
 
 #include "../Common.h"
-#include "../../common/Decent/States.h"
-#include "../../common/Decent/Crypto.h"
-#include "../../common/Decent/KeyContainer.h"
-#include "../../common/Decent/CertContainer.h"
+#include "../../common/Ra/States.h"
+#include "../../common/Ra/Crypto.h"
+#include "../../common/Ra/KeyContainer.h"
+#include "../../common/Ra/CertContainer.h"
+
+using namespace Decent::Ra;
 
 extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)
 {
-	auto cert = Decent::States::Get().GetCertContainer().GetCert();
+	auto cert = States::Get().GetCertContainer().GetCert();
 	if (!cert || !(*cert))
 	{
 		return 0;
@@ -35,7 +37,7 @@ extern "C" sgx_status_t ecall_decent_app_init(void* connection)
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
-	Sgx::LocAttCommLayer commLayer(connection, false);
+	Decent::Sgx::LocAttCommLayer commLayer(connection, false);
 	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
 	if (!identity)
 	{
@@ -44,9 +46,9 @@ extern "C" sgx_status_t ecall_decent_app_init(void* connection)
 
 	//TODO: check Decent server Hash here instead.
 
-	Decent::KeyContainer& keyContainer = Decent::States::Get().GetKeyContainer();
+	KeyContainer& keyContainer = States::Get().GetKeyContainer();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
-	Decent::X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
+	X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 	if (!certReq)
 	{
 		return SGX_ERROR_UNEXPECTED;
@@ -61,14 +63,14 @@ extern "C" sgx_status_t ecall_decent_app_init(void* connection)
 
 	//Process X509 Message:
 
-	std::shared_ptr<Decent::AppX509> cert = std::make_shared<Decent::AppX509>(plainMsg);
+	std::shared_ptr<AppX509> cert = std::make_shared<AppX509>(plainMsg);
 	if (!cert || !*cert)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	Decent::States::Get().GetCertContainer().SetCert(cert);
-	Decent::States::Get().GetLoadedWhiteList(cert.get());
+	States::Get().GetCertContainer().SetCert(cert);
+	States::Get().GetLoadedWhiteList(cert.get());
 
 	return SGX_SUCCESS;
 }

@@ -3,10 +3,10 @@
 #include <sgx_dh.h>
 
 #include "../../common/CommonTool.h"
-#include "../../common/DataCoding.h"
-#include "../../common/Connection.h"
+#include "../../common/Net/Connection.h"
 
-using namespace Sgx;
+using namespace Decent::Sgx;
+using namespace Decent::Net;
 
 LocAttCommLayer::LocAttCommLayer(void * const connectionPtr, bool isInitiator) :
 	LocAttCommLayer(std::move(DoHandShake(connectionPtr, isInitiator)))
@@ -14,7 +14,7 @@ LocAttCommLayer::LocAttCommLayer(void * const connectionPtr, bool isInitiator) :
 }
 
 LocAttCommLayer::LocAttCommLayer(LocAttCommLayer && other) :
-	AESGCMCommLayer(std::forward<AESGCMCommLayer>(other)),
+	AesGcmCommLayer(std::forward<AesGcmCommLayer>(other)),
 	m_identity(std::move(other.m_identity)),
 	m_isHandShaked(other.m_isHandShaked)
 {
@@ -27,7 +27,7 @@ LocAttCommLayer::~LocAttCommLayer()
 
 LocAttCommLayer::operator bool() const
 {
-	return AESGCMCommLayer::operator bool() && m_isHandShaked;
+	return AesGcmCommLayer::operator bool() && m_isHandShaked;
 }
 
 const sgx_dh_session_enclave_identity_t* LocAttCommLayer::GetIdentity() const
@@ -41,7 +41,7 @@ LocAttCommLayer::LocAttCommLayer(std::pair<std::unique_ptr<General128BitKey>, st
 }
 
 LocAttCommLayer::LocAttCommLayer(std::unique_ptr<General128BitKey>& key, std::unique_ptr<sgx_dh_session_enclave_identity_t>& id, bool isValid) :
-	AESGCMCommLayer(isValid ? std::move(*key) : General128BitKey()),
+	AesGcmCommLayer(isValid ? std::move(*key) : General128BitKey()),
 	m_isHandShaked(isValid),
 	m_identity(std::move(id))
 {
@@ -68,10 +68,10 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 		sgx_dh_msg2_t msg2;
 		std::memset(&msg2, 0, sizeof(msg2));
 
-		if (!StaticConnection::ReceivePack(connectionPtr, inMsgBuf) ||
+		if (!StatConnection::ReceivePack(connectionPtr, inMsgBuf) ||
 			inMsgBuf.size() != sizeof(sgx_dh_msg1_t) ||
 			sgx_dh_initiator_proc_msg1(reinterpret_cast<const sgx_dh_msg1_t*>(inMsgBuf.data()), &msg2, &session) != SGX_SUCCESS ||
-			!StaticConnection::SendAndReceivePack(connectionPtr, &msg2, sizeof(msg2), inMsgBuf) ||
+			!StatConnection::SendAndReceivePack(connectionPtr, &msg2, sizeof(msg2), inMsgBuf) ||
 			inMsgBuf.size() != sizeof(sgx_dh_msg3_t) ||
 			sgx_dh_initiator_proc_msg3(reinterpret_cast<const sgx_dh_msg3_t*>(inMsgBuf.data()), &session, 
 				reinterpret_cast<sgx_ec_key_128bit_t*>(keyPtr->data()), idPtr.get()) != SGX_SUCCESS)
@@ -92,11 +92,11 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 		std::memset(&msg3, 0, sizeof(msg3));
 
 		if (sgx_dh_responder_gen_msg1(&msg1, &session) != SGX_SUCCESS ||
-			!StaticConnection::SendAndReceivePack(connectionPtr, &msg1, sizeof(sgx_dh_msg1_t), inMsgBuf) ||
+			!StatConnection::SendAndReceivePack(connectionPtr, &msg1, sizeof(sgx_dh_msg1_t), inMsgBuf) ||
 			inMsgBuf.size() != sizeof(sgx_dh_msg2_t) ||
 			sgx_dh_responder_proc_msg2(reinterpret_cast<const sgx_dh_msg2_t*>(inMsgBuf.data()), &msg3, &session,
 				reinterpret_cast<sgx_ec_key_128bit_t*>(keyPtr->data()), idPtr.get()) != SGX_SUCCESS ||
-			!StaticConnection::SendPack(connectionPtr, &msg3, sizeof(msg3)))
+			!StatConnection::SendPack(connectionPtr, &msg3, sizeof(msg3)))
 		{
 			return std::move(retValue);
 		}

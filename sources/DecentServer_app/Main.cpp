@@ -13,15 +13,17 @@
 #include "../common_app/SGX/EnclaveUtil.h"
 #include "../common_app/DecentSgx/DecentServer.h"
 #include "../common_app/Common.h"
-#include "../common_app/SmartMessages.h"
 
-#include "../common_app/Networking/TCPConnection.h"
-#include "../common_app/Networking/TCPServer.h"
-#include "../common_app/Networking/LocalConnection.h"
-#include "../common_app/Networking/LocalServer.h"
-#include "../common_app/Networking/SmartServer.h"
+#include "../common_app/Net/SmartMessages.h"
+#include "../common_app/Net/TCPConnection.h"
+#include "../common_app/Net/TCPServer.h"
+#include "../common_app/Net/LocalConnection.h"
+#include "../common_app/Net/LocalServer.h"
+#include "../common_app/Net/SmartServer.h"
 
 #include "../common_app/SGX/IasConnector.h"
+
+using namespace Decent;
 
 static sgx_spid_t g_sgxSPID = { {
 		0xDD,
@@ -83,8 +85,8 @@ int main(int argc, char ** argv)
 	sgx_status_t deviceStatusResErr = Sgx::GetDeviceStatus(deviceStatusRes);
 	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", Sgx::GetErrorMessage(deviceStatusResErr).c_str());
 
-	std::shared_ptr<IASConnector> iasConnector = std::make_shared<IASConnector>();
-	SmartServer smartServer;
+	std::shared_ptr<Ias::Connector> iasConnector = std::make_shared<Ias::Connector>();
+	Net::SmartServer smartServer;
 
 	std::cout << "================ Decent Server ================" << std::endl;
 
@@ -101,8 +103,8 @@ int main(int argc, char ** argv)
 	//	enclave->ProcessSmartMessage(Messages::ParseCat(jsonRoot), jsonRoot, *connection);
 	//}
 
-	std::unique_ptr<Server> server(std::make_unique<TCPServer>(serverIp, serverPort));
-	std::unique_ptr<Server> localServer(std::make_unique<LocalServer>(localAddr + std::to_string(serverPort)));
+	std::unique_ptr<Net::Server> server(std::make_unique<Net::TCPServer>(serverIp, serverPort));
+	std::unique_ptr<Net::Server> localServer(std::make_unique<Net::LocalServer>(localAddr + std::to_string(serverPort)));
 
 	smartServer.AddServer(server, enclave);
 	smartServer.AddServer(localServer, enclave);

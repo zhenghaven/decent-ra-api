@@ -2,7 +2,7 @@
 
 #include <string>
 #include <memory>
-#include "../common_app/CommSession.h"
+#include "../common_app/Net/CommSession.h"
 
 class DecentVoteApp;
 class VoteAppHandshake;
@@ -13,14 +13,14 @@ namespace Json
 	class Value;
 }
 
-class VoteAppServerSession : public CommSession
+class VoteAppServerSession : public Decent::Net::CommSession
 {
 public:
-	static bool SmartMsgEntryPoint(Connection& connection, DecentVoteApp& hwEnclave, const Json::Value& jsonMsg);
+	static bool SmartMsgEntryPoint(Decent::Net::Connection& connection, DecentVoteApp& hwEnclave, const Json::Value& jsonMsg);
 
 public:
 	VoteAppServerSession() = delete;
-	VoteAppServerSession(Connection& connection, DecentVoteApp& hwEnclave, const VoteAppHandshake& hsMsg);
+	VoteAppServerSession(Decent::Net::Connection& connection, DecentVoteApp& hwEnclave, const VoteAppHandshake& hsMsg);
 
 	virtual ~VoteAppServerSession() {}
 

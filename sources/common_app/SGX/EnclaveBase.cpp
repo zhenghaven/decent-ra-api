@@ -16,21 +16,25 @@
 #include "../Common.h"
 #include "../FileSystemUtil.h"
 
-#include "../../common/DataCoding.h"
-#include "../../common/Connection.h"
+#include "../../common/Tools/DataCoding.h"
+#include "../../common/Net/Connection.h"
 
 #include "EnclaveUtil.h"
 #include "EnclaveRuntimeException.h"
 
 #include <Enclave_u.h>
 
-constexpr char Sgx::EnclaveBase::sk_platformType[];
+using namespace Decent::Sgx;
+using namespace Decent::Net;
+using namespace Decent::Tools;
+
+constexpr char EnclaveBase::sk_platformType[];
 
 static void CheckFilePath(const fs::path& enclavePath, const fs::path& tokenPath)
 {
 	if (!fs::exists(enclavePath))
 	{
-		throw Sgx::EnclaveRuntimeException(SGX_ERROR_INVALID_PARAMETER, "Enclave program file doesn't exist!");
+		throw EnclaveRuntimeException(SGX_ERROR_INVALID_PARAMETER, "Enclave program file doesn't exist!");
 	}
 	if (!fs::exists(tokenPath.parent_path()))
 	{
@@ -38,7 +42,7 @@ static void CheckFilePath(const fs::path& enclavePath, const fs::path& tokenPath
 	}
 }
 
-sgx_enclave_id_t Sgx::EnclaveBase::LaunchEnclave(const fs::path& enclavePath, const fs::path& tokenPath)
+sgx_enclave_id_t EnclaveBase::LaunchEnclave(const fs::path& enclavePath, const fs::path& tokenPath)
 {
 #ifdef SIMULATING_ENCLAVE
 	LOGW("Enclave is running under simulation mode!!\n");
@@ -50,7 +54,7 @@ sgx_enclave_id_t Sgx::EnclaveBase::LaunchEnclave(const fs::path& enclavePath, co
 	
 	int needUpdateToken = 0;
 	std::vector<uint8_t> tokenBuf(sizeof(sgx_launch_token_t), 0);
-	if (!Sgx::EnclaveBase::LoadToken(tokenPath, tokenBuf))
+	if (!EnclaveBase::LoadToken(tokenPath, tokenBuf))
 	{
 		LOGW("Enclave App - %s, Read token from %s Failed!", enclavePath.string().c_str(), tokenPath.string().c_str());
 	}
@@ -59,13 +63,13 @@ sgx_enclave_id_t Sgx::EnclaveBase::LaunchEnclave(const fs::path& enclavePath, co
 	sgx_status_t enclaveRet = sgx_create_enclave(enclavePath.string().c_str(), SGX_DEBUG_FLAG, reinterpret_cast<sgx_launch_token_t*>(tokenBuf.data()), &needUpdateToken, &outEnclaveID, NULL);
 	if (enclaveRet != SGX_SUCCESS)
 	{
-		throw Sgx::EnclaveRuntimeException(enclaveRet, "sgx_create_enclave");
+		throw EnclaveRuntimeException(enclaveRet, "sgx_create_enclave");
 	}
 
 	if (needUpdateToken)
 	{
 		LOGI("SGX Enclave Token (Updated): \n%s\n\n", SerializeStruct(tokenBuf.data(), sizeof(sgx_launch_token_t)).c_str());
-		if (!Sgx::EnclaveBase::UpdateToken(tokenPath, tokenBuf))
+		if (!EnclaveBase::UpdateToken(tokenPath, tokenBuf))
 		{
 			LOGW("Enclave App - %s, Write token to %s Failed!", enclavePath.string().c_str(), tokenPath.string().c_str());
 		}
@@ -79,34 +83,34 @@ sgx_enclave_id_t Sgx::EnclaveBase::LaunchEnclave(const fs::path& enclavePath, co
 	return outEnclaveID;
 }
 
-Sgx::EnclaveBase::EnclaveBase(const std::string& enclavePath, const std::string& tokenPath) :
-	Sgx::EnclaveBase(fs::path(enclavePath), fs::path(tokenPath))
+EnclaveBase::EnclaveBase(const std::string& enclavePath, const std::string& tokenPath) :
+	EnclaveBase(fs::path(enclavePath), fs::path(tokenPath))
 {
 }
 
-Sgx::EnclaveBase::EnclaveBase(const fs::path& enclavePath, const fs::path& tokenPath) :
-	m_eid(Sgx::EnclaveBase::LaunchEnclave(enclavePath, tokenPath)),
+EnclaveBase::EnclaveBase(const fs::path& enclavePath, const fs::path& tokenPath) :
+	m_eid(EnclaveBase::LaunchEnclave(enclavePath, tokenPath)),
 	m_enclavePath(enclavePath.generic_string())
 {
 }
 
-Sgx::EnclaveBase::EnclaveBase(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
-	Sgx::EnclaveBase(fs::path(enclavePath), GetKnownFolderPath(tokenLocType).append(tokenFileName))
+EnclaveBase::EnclaveBase(const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
+	EnclaveBase(fs::path(enclavePath), GetKnownFolderPath(tokenLocType).append(tokenFileName))
 {
 }
 
-Sgx::EnclaveBase::~EnclaveBase()
+EnclaveBase::~EnclaveBase()
 {
 	ecall_enclave_terminate(m_eid);
 	sgx_destroy_enclave(m_eid);
 }
 
-const char * Sgx::EnclaveBase::GetPlatformType() const
+const char * EnclaveBase::GetPlatformType() const
 {
 	return sk_platformType;
 }
 
-uint32_t Sgx::EnclaveBase::GetExGroupID()
+uint32_t EnclaveBase::GetExGroupID()
 {
 	uint32_t res = 0;
 	sgx_status_t enclaveRet = sgx_get_extended_epid_group_id(&res);
@@ -115,17 +119,17 @@ uint32_t Sgx::EnclaveBase::GetExGroupID()
 	return res;
 }
 
-bool Sgx::EnclaveBase::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
+bool EnclaveBase::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	return false;
 }
 
-const sgx_enclave_id_t Sgx::EnclaveBase::GetEnclaveId() const
+const sgx_enclave_id_t EnclaveBase::GetEnclaveId() const
 {
 	return m_eid;
 }
 
-bool Sgx::EnclaveBase::LoadToken(const fs::path& tokenPath, std::vector<uint8_t>& outToken)
+bool EnclaveBase::LoadToken(const fs::path& tokenPath, std::vector<uint8_t>& outToken)
 {
 	FileHandler tokenFile(tokenPath, FileHandler::Mode::Read);
 	if (!tokenFile.Open())
@@ -140,7 +144,7 @@ bool Sgx::EnclaveBase::LoadToken(const fs::path& tokenPath, std::vector<uint8_t>
 	return readRes;
 }
 
-bool Sgx::EnclaveBase::UpdateToken(const fs::path& tokenPath, const std::vector<uint8_t>& inToken)
+bool EnclaveBase::UpdateToken(const fs::path& tokenPath, const std::vector<uint8_t>& inToken)
 {
 	FileHandler tokenFile(tokenPath, FileHandler::Mode::Write);
 	if (!tokenFile.Open())
@@ -209,7 +213,7 @@ extern "C" int ocall_sgx_ra_send_msg0s(void* const connection_ptr)
 			return false;
 		}
 
-		return StaticConnection::SendPack(connection_ptr, &msg0s, sizeof(msg0s));
+		return StatConnection::SendPack(connection_ptr, &msg0s, sizeof(msg0s));
 	}
 	catch (const std::exception&)
 	{

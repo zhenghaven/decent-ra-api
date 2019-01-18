@@ -1,9 +1,13 @@
 #pragma once
 
-/**
- * The well-known certificate of the IAS report signing public key.
- */
-constexpr char const IAS_REPORT_CERT[] = "\
+namespace Decent
+{
+	namespace Ias
+	{
+		/**
+		* The well-known certificate of the IAS report signing public key.
+		*/
+constexpr char const gsk_IasReportCert[] = "\
 -----BEGIN CERTIFICATE-----\n\
 MIIFSzCCA7OgAwIBAgIJANEHdl0yo7CUMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\n\
 BAYTAlVTMQswCQYDVQQIDAJDQTEUMBIGA1UEBwwLU2FudGEgQ2xhcmExGjAYBgNV\n\
@@ -36,3 +40,6 @@ DD+gT9sSpssq0ascmvH49MOgjt1yoysLtdCtJW/9FZpoOypaHx0R+mJTLwPXVMrv\n\
 DaVzWh5aiEx+idkSGMnX\n\
 -----END CERTIFICATE-----\
 ";
+
+	}
+}

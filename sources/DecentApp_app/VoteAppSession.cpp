@@ -5,11 +5,11 @@
 
 #include "../common_app/Logger/Logger.h"
 #include "../common_app/Logger/LoggerManager.h"
-#include "../common_app/Networking/Connection.h"
+#include "../common_app/Net/Connection.h"
 
-bool VoteAppServerSession::SmartMsgEntryPoint(Connection & connection, DecentVoteApp & hwEnclave, const Json::Value & jsonMsg)
+bool VoteAppServerSession::SmartMsgEntryPoint(Decent::Net::Connection & connection, DecentVoteApp & hwEnclave, const Json::Value & jsonMsg)
 {
-	const std::string inType = VoteAppMessage::ParseType(jsonMsg[SmartMessages::sk_LabelRoot]);
+	const std::string inType = VoteAppMessage::ParseType(jsonMsg[Decent::Net::SmartMessages::sk_LabelRoot]);
 	if (inType == VoteAppHandshake::sk_ValueType)
 	{
 		VoteAppHandshake hsMsg(jsonMsg);
@@ -25,7 +25,7 @@ bool VoteAppServerSession::SmartMsgEntryPoint(Connection & connection, DecentVot
 	return false;
 }
 
-VoteAppServerSession::VoteAppServerSession(Connection & connection, DecentVoteApp & hwEnclave, const VoteAppHandshake & hsMsg) :
+VoteAppServerSession::VoteAppServerSession(Decent::Net::Connection & connection, DecentVoteApp & hwEnclave, const VoteAppHandshake & hsMsg) :
 	CommSession(connection),
 	k_senderId(""),
 	k_remoteSideId(hsMsg.GetSenderID()),

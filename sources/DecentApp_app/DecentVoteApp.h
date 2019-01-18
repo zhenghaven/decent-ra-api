@@ -2,18 +2,16 @@
 
 #include "../common_app/DecentSgx/DecentApp.h"
 
-class Connection;
-
-class DecentVoteApp : public DecentSgx::DecentApp
+class DecentVoteApp : public Decent::DecentSgx::DecentApp
 {
 public:
-	using DecentSgx::DecentApp::DecentApp;
+	using Decent::DecentSgx::DecentApp::DecentApp;
 
 	virtual ~DecentVoteApp() {}
 
-	bool ProcessVoterMsg(Connection& connectionPtr);
+	bool ProcessVoterMsg(Decent::Net::Connection& connectionPtr);
 
-	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
+	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Decent::Net::Connection& connection) override;
 
 private:
 

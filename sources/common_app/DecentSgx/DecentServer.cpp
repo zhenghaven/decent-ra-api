@@ -13,51 +13,58 @@
 
 #include <Enclave_u.h>
 
-#include "../../common/DataCoding.h"
+#include "../../common/Tools/DataCoding.h"
 
-#include "../Decent/Messages.h"
+#include "../Ra/Messages.h"
 #include "../SGX/EnclaveRuntimeException.h"
 
-static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
+using namespace Decent::DecentSgx;
+using namespace Decent::Net;
+using namespace Decent::Ias;
+
+namespace
 {
-	sgx_status_t retval = SGX_SUCCESS;
-	sgx_status_t enclaveRet = ecall_decent_init(id, &retval, &spid);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
+	static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
+	{
+		sgx_status_t retval = SGX_SUCCESS;
+		sgx_status_t enclaveRet = ecall_decent_init(id, &retval, &spid);
+		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
+		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
+	}
 }
 
-DecentSgx::DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const std::string& tokenPath) :
+DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Connector>& ias, const std::string& enclavePath, const std::string& tokenPath) :
 	Sgx::EnclaveServiceProvider(ias, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 	m_selfRaReport = GenerateDecentSelfRAReport();
 }
 
-DecentSgx::DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const fs::path& enclavePath, const fs::path& tokenPath) :
+DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath) :
 	Sgx::EnclaveServiceProvider(ias, enclavePath, tokenPath)
 {
 	InitDecent(GetEnclaveId(), spid);
 	m_selfRaReport = GenerateDecentSelfRAReport();
 }
 
-DecentSgx::DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
+DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Connector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
 	Sgx::EnclaveServiceProvider(ias, enclavePath, tokenLocType, tokenFileName)
 {
 	InitDecent(GetEnclaveId(), spid);
 	m_selfRaReport = GenerateDecentSelfRAReport();
 }
 
-DecentSgx::DecentServer::~DecentServer()
+DecentServer::~DecentServer()
 {
 	ecall_decent_terminate(GetEnclaveId());
 }
 
-std::string DecentSgx::DecentServer::GetDecentSelfRAReport() const
+std::string DecentServer::GetDecentSelfRAReport() const
 {
 	return m_selfRaReport;
 }
 
-void DecentSgx::DecentServer::LoadConstWhiteList(const std::string & key, const std::string & whiteList)
+void DecentServer::LoadConstWhiteList(const std::string & key, const std::string & whiteList)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	int retval = 0;
@@ -66,7 +73,7 @@ void DecentSgx::DecentServer::LoadConstWhiteList(const std::string & key, const 
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_load_const_white_list);
 }
 
-void DecentSgx::DecentServer::ProcessAppCertReq(const std::string & wListKey, Connection& connection)
+void DecentServer::ProcessAppCertReq(const std::string & wListKey, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
@@ -75,9 +82,9 @@ void DecentSgx::DecentServer::ProcessAppCertReq(const std::string & wListKey, Co
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_proc_app_cert_req);
 }
 
-bool DecentSgx::DecentServer::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
+bool DecentServer::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
-	using namespace Decent::Message;
+	using namespace Decent::Ra::Message;
 
 	if (category == LoadWhiteList::sk_ValueCat)
 	{
@@ -97,7 +104,7 @@ bool DecentSgx::DecentServer::ProcessSmartMessage(const std::string & category, 
 	}
 }
 
-std::string DecentSgx::DecentServer::GenerateDecentSelfRAReport()
+std::string DecentServer::GenerateDecentSelfRAReport()
 {
 	sgx_status_t retval = SGX_SUCCESS;
 	sgx_status_t enclaveRet = ecall_decent_server_generate_x509(GetEnclaveId(), &retval, m_ias.get(), GetEnclaveId());

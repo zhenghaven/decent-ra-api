@@ -2,14 +2,15 @@
 
 #include <Enclave_t.h>
 
-#include "../../common/Connection.h"
+#include "../../common/Net/Connection.h"
 #include "../../common/SGX/sgx_structs.h"
 
 #include "RaProcessorClient.h"
 
-using namespace Sgx;
+using namespace Decent::Sgx;
+using namespace Decent::Net;
 
-static std::unique_ptr<Sgx::RaProcessorClient> DoHandShake(void* const connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor)
+static std::unique_ptr<RaProcessorClient> DoHandShake(void* const connectionPtr, std::unique_ptr<RaProcessorClient>& raProcessor)
 {
 	if (!connectionPtr || !raProcessor)
 	{
@@ -29,13 +30,13 @@ static std::unique_ptr<Sgx::RaProcessorClient> DoHandShake(void* const connectio
 	sgx_ra_msg1_t msg1;
 	std::vector<uint8_t> msg3;
 
-	if (!StaticConnection::ReceivePack(connectionPtr, buf1) ||
+	if (!StatConnection::ReceivePack(connectionPtr, buf1) ||
 		buf1.size() != sizeof(sgx_ra_msg0r_t) ||
 		!raProcessor->ProcessMsg0r(*reinterpret_cast<const sgx_ra_msg0r_t*>(buf1.data()), msg1) ||
-		!StaticConnection::SendAndReceivePack(connectionPtr, &msg1, sizeof(msg1), buf1) ||
+		!StatConnection::SendAndReceivePack(connectionPtr, &msg1, sizeof(msg1), buf1) ||
 		buf1.size() < sizeof(sgx_ra_msg2_t) || 
 		!raProcessor->ProcessMsg2(*reinterpret_cast<const sgx_ra_msg2_t*>(buf1.data()), buf1.size(), msg3) ||
-		!StaticConnection::SendAndReceivePack(connectionPtr, msg3.data(), msg3.size(), buf1) || 
+		!StatConnection::SendAndReceivePack(connectionPtr, msg3.data(), msg3.size(), buf1) ||
 		buf1.size() != sizeof(sgx_ra_msg4_t) ||
 		!raProcessor->ProcessMsg4(*reinterpret_cast<const sgx_ra_msg4_t*>(buf1.data())) )
 	{
@@ -45,13 +46,13 @@ static std::unique_ptr<Sgx::RaProcessorClient> DoHandShake(void* const connectio
 	return std::move(raProcessor);
 }
 
-RaClientCommLayer::RaClientCommLayer(void* const connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor) :
+RaClientCommLayer::RaClientCommLayer(void* const connectionPtr, std::unique_ptr<RaProcessorClient>& raProcessor) :
 	RaClientCommLayer(DoHandShake(connectionPtr, raProcessor))
 {
 }
 
 RaClientCommLayer::RaClientCommLayer(RaClientCommLayer && other) :
-	AESGCMCommLayer(std::forward<AESGCMCommLayer>(other)),
+	AesGcmCommLayer(std::forward<AesGcmCommLayer>(other)),
 	m_isHandShaked(other.m_isHandShaked),
 	m_iasReport(std::move(other.m_iasReport))
 {
@@ -69,11 +70,11 @@ RaClientCommLayer::~RaClientCommLayer()
 
 RaClientCommLayer::operator bool() const
 {
-	return AESGCMCommLayer::operator bool() && m_isHandShaked;
+	return AesGcmCommLayer::operator bool() && m_isHandShaked;
 }
 
-RaClientCommLayer::RaClientCommLayer(std::unique_ptr<Sgx::RaProcessorClient> raProcessor) :
-	AESGCMCommLayer(raProcessor && raProcessor->IsAttested() ? raProcessor->GetSK() : General128BitKey()),
+RaClientCommLayer::RaClientCommLayer(std::unique_ptr<RaProcessorClient> raProcessor) :
+	AesGcmCommLayer(raProcessor && raProcessor->IsAttested() ? raProcessor->GetSK() : General128BitKey()),
 	m_isHandShaked(raProcessor && raProcessor->IsAttested()),
 	m_iasReport(m_isHandShaked ? raProcessor->ReleaseIasReport() : new sgx_ias_report_t)
 {

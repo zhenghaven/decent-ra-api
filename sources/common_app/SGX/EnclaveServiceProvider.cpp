@@ -8,34 +8,36 @@
 #include "../../common/SGX/SgxCryptoConversions.h"
 #include "EnclaveRuntimeException.h"
 
-Sgx::EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string & enclavePath, const std::string & tokenPath) :
+using namespace Decent::Sgx;
+
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Decent::Ias::Connector>& ias, const std::string & enclavePath, const std::string & tokenPath) :
 	Sgx::EnclaveBase(enclavePath, tokenPath),
 	m_ias(ias)
 {
 }
 
-Sgx::EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const fs::path& enclavePath, const fs::path& tokenPath) :
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Decent::Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath) :
 	Sgx::EnclaveBase(enclavePath, tokenPath),
 	m_ias(ias)
 {
 }
 
-Sgx::EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Decent::Ias::Connector>& ias, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
 	Sgx::EnclaveBase(enclavePath, tokenLocType, tokenFileName),
 	m_ias(ias)
 {
 }
 
-Sgx::EnclaveServiceProvider::~EnclaveServiceProvider()
+EnclaveServiceProvider::~EnclaveServiceProvider()
 {
 }
 
-const char * Sgx::EnclaveServiceProvider::GetPlatformType() const
+const char * EnclaveServiceProvider::GetPlatformType() const
 {
-	return Sgx::EnclaveBase::GetPlatformType();
+	return EnclaveBase::GetPlatformType();
 }
 
-void Sgx::EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) const
+void EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) const
 {
 	int retval = 0;
 
@@ -44,9 +46,9 @@ void Sgx::EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t 
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION_INT(retval, ecall_enclave_get_pub_sign_key);
 }
 
-bool Sgx::EnclaveServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
+bool EnclaveServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Decent::Net::Connection& connection)
 {
-	return Sgx::EnclaveBase::ProcessSmartMessage(category, jsonMsg, connection);
+	return EnclaveBase::ProcessSmartMessage(category, jsonMsg, connection);
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && (USE_DECENTRALIZED_ENCLAVE_INTERNAL || USE_DECENT_ENCLAVE_SERVER_INTERNAL)

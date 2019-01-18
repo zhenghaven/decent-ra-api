@@ -3,24 +3,27 @@
 
 #include "ServiceProvider.h"
 
-#include "../../common/Decent/States.h"
-#include "../../common/Decent/KeyContainer.h"
+#include "../../common/Ra/States.h"
+#include "../../common/Ra/KeyContainer.h"
 
-Sgx::ServiceProvider::ServiceProvider(const std::shared_ptr<IASConnector>& ias) :
+using namespace Decent::Sgx;
+using namespace Decent::Ias;
+
+ServiceProvider::ServiceProvider(const std::shared_ptr<Connector>& ias) :
 	m_ias(ias)
 {
 }
 
-Sgx::ServiceProvider::~ServiceProvider()
+ServiceProvider::~ServiceProvider()
 {
 }
 
-void Sgx::ServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) const
+void ServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) const
 {
-	outKey = (*Decent::States::Get().GetKeyContainer().GetSignPubKey());
+	outKey = (*Decent::Ra::States::Get().GetKeyContainer().GetSignPubKey());
 }
 
-bool Sgx::ServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
+bool ServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Decent::Net::Connection& connection)
 {
 	return false;
 }

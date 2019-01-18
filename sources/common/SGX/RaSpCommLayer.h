@@ -2,33 +2,36 @@
 
 #include <memory>
 
-#include "../AESGCMCommLayer.h"
+#include "../Net/AesGcmCommLayer.h"
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
-namespace Sgx
+namespace Decent
 {
-	class RaProcessorSp;
-
-	class RaSpCommLayer : public AESGCMCommLayer
+	namespace Sgx
 	{
-	public:
-		RaSpCommLayer() = delete;
-		RaSpCommLayer(void* const connectionPtr, std::unique_ptr<RaProcessorSp>& raProcessor);
-		RaSpCommLayer(const RaSpCommLayer& other) = delete;
-		RaSpCommLayer(RaSpCommLayer&& other);
+		class RaProcessorSp;
 
-		const sgx_ias_report_t& GetIasReport() const;
+		class RaSpCommLayer : public Decent::Net::AesGcmCommLayer
+		{
+		public:
+			RaSpCommLayer() = delete;
+			RaSpCommLayer(void* const connectionPtr, std::unique_ptr<RaProcessorSp>& raProcessor);
+			RaSpCommLayer(const RaSpCommLayer& other) = delete;
+			RaSpCommLayer(RaSpCommLayer&& other);
 
-		virtual ~RaSpCommLayer();
+			const sgx_ias_report_t& GetIasReport() const;
 
-		virtual operator bool() const override;
+			virtual ~RaSpCommLayer();
 
-	private:
-		RaSpCommLayer(std::unique_ptr<RaProcessorSp> raProcessor);
+			virtual operator bool() const override;
 
-		bool m_isHandShaked;
-		std::unique_ptr<sgx_ias_report_t> m_iasReport;
+		private:
+			RaSpCommLayer(std::unique_ptr<RaProcessorSp> raProcessor);
 
-	};
+			bool m_isHandShaked;
+			std::unique_ptr<sgx_ias_report_t> m_iasReport;
+
+		};
+	}
 }

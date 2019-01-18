@@ -2,34 +2,37 @@
 
 #include <memory>
 
-#include "../../common/AESGCMCommLayer.h"
+#include "../../common/Net/AesGcmCommLayer.h"
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
-namespace Sgx
+namespace Decent
 {
-	class RaProcessorClient;
-
-	class RaClientCommLayer : public AESGCMCommLayer
+	namespace Sgx
 	{
-	public:
-		RaClientCommLayer() = delete;
-		RaClientCommLayer(void* const connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor);
-		RaClientCommLayer(const RaClientCommLayer& other) = delete;
-		RaClientCommLayer(RaClientCommLayer&& other);
+		class RaProcessorClient;
 
-		const sgx_ias_report_t& GetIasReport() const;
+		class RaClientCommLayer : public Decent::Net::AesGcmCommLayer
+		{
+		public:
+			RaClientCommLayer() = delete;
+			RaClientCommLayer(void* const connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor);
+			RaClientCommLayer(const RaClientCommLayer& other) = delete;
+			RaClientCommLayer(RaClientCommLayer&& other);
 
-		virtual ~RaClientCommLayer();
+			const sgx_ias_report_t& GetIasReport() const;
 
-		virtual operator bool() const override;
+			virtual ~RaClientCommLayer();
 
-	private:
-		RaClientCommLayer(std::unique_ptr<Sgx::RaProcessorClient> raProcessor);
+			virtual operator bool() const override;
 
-		bool m_isHandShaked;
-		//std::unique_ptr<SgxRaProcessorClient> m_raProcessor;
-		std::unique_ptr<sgx_ias_report_t> m_iasReport;
+		private:
+			RaClientCommLayer(std::unique_ptr<Sgx::RaProcessorClient> raProcessor);
 
-	};
+			bool m_isHandShaked;
+			//std::unique_ptr<SgxRaProcessorClient> m_raProcessor;
+			std::unique_ptr<sgx_ias_report_t> m_iasReport;
+
+		};
+	}
 }

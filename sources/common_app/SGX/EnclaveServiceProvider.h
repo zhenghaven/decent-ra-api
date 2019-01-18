@@ -5,34 +5,40 @@
 
 #include "EnclaveBase.h"
 #include "ServiceProviderBase.h"
-#include "../EnclaveServiceProviderBase.h"
+#include "../Enclave/EnclaveServiceProvider.h"
 
 #include <memory>
 
-class IASConnector;
-
-namespace Sgx
+namespace Decent
 {
-	class EnclaveServiceProvider : public Sgx::EnclaveBase, virtual public Sgx::ServiceProviderBase, virtual public EnclaveServiceProviderBase
+	namespace Ias
 	{
-	public:
-		EnclaveServiceProvider() = delete;
+		class Connector;
+	}
 
-		EnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const std::string& tokenPath);
-		EnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
-		EnclaveServiceProvider(const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	namespace Sgx
+	{
+		class EnclaveServiceProvider : public Sgx::EnclaveBase, virtual public Sgx::ServiceProviderBase, virtual public Base::EnclaveServiceProvider
+		{
+		public:
+			EnclaveServiceProvider() = delete;
 
-		virtual ~EnclaveServiceProvider();
+			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const std::string& tokenPath);
+			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
+			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
-		virtual const char* GetPlatformType() const override;
+			virtual ~EnclaveServiceProvider();
 
-		virtual void GetSpPublicSignKey(general_secp256r1_public_t& outKey) const override;
+			virtual const char* GetPlatformType() const override;
 
-		virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
+			virtual void GetSpPublicSignKey(general_secp256r1_public_t& outKey) const override;
 
-	protected:
-		std::shared_ptr<const IASConnector> m_ias;
-	};
+			virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Net::Connection& connection) override;
+
+		protected:
+			std::shared_ptr<const Ias::Connector> m_ias;
+		};
+	}
 }
 
 

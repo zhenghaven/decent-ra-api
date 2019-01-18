@@ -1,17 +1,18 @@
 #pragma once
 
-#include "../ServiceProviderBase.h"
+#include "../Enclave/ServiceProvider.h"
 
-namespace Sgx
+namespace Decent
 {
-	class ServiceProviderBase : virtual public ::ServiceProviderBase
+	namespace Sgx
 	{
-	public:
-		using ::ServiceProviderBase::ServiceProviderBase;
-		virtual ~ServiceProviderBase() {}
+		class ServiceProviderBase : virtual public Base::ServiceProvider
+		{
+		public:
+			using Base::ServiceProvider::ServiceProvider;
+			virtual ~ServiceProviderBase() {}
 
-		virtual const char* GetPlatformType() const override { return "SGX"; }
-	};
+			virtual const char* GetPlatformType() const override { return "SGX"; }
+		};
+	}
 }
-
-

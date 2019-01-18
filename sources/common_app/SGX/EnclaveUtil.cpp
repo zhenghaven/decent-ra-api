@@ -9,6 +9,8 @@
 
 #include "../Common.h"
 
+using namespace Decent;
+
 namespace
 {
 	static const std::map<sgx_status_t, std::pair<std::string, std::string> > g_sgxErrorMsg = 

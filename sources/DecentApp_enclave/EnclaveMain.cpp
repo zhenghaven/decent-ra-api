@@ -2,15 +2,17 @@
 
 #include <mbedtls/ssl.h>
 
-#include "../common/TLSCommLayer.h"
+#include "../common/Net/TlsCommLayer.h"
 #include "../common/MbedTls/MbedTlsObjects.h"
 #include "../common/MbedTls/MbedTlsHelpers.h"
-#include "../common/Decent/States.h"
-#include "../common/Decent/Crypto.h"
-#include "../common/Decent/KeyContainer.h"
-#include "../common/Decent/CertContainer.h"
+#include "../common/Ra/States.h"
+#include "../common/Ra/Crypto.h"
+#include "../common/Ra/KeyContainer.h"
+#include "../common/Ra/CertContainer.h"
 
 #include "../common/CommonTool.h"
+
+using namespace Decent::Ra;
 
 static constexpr char const voteAppCaStr[] = "-----BEGIN CERTIFICATE-----\n\
 MIIBdTCCARqgAwIBAgILAJLcv58ab0wEwA4wDAYIKoZIzj0EAwIFADAiMSAwHgYD\n\
@@ -25,7 +27,7 @@ tNv/Ivr6DgIgJQ5ZX3y8zE+dIf/Ox+lAGZrNnoqgOyZrmi0OD29ssCw=\n\
 
 static const MbedTlsObj::X509Cert voteAppCa(voteAppCaStr);
 
-static MbedTlsObj::TlsConfig ConstructTlsConfig(const MbedTlsObj::ECKeyPair& prvKey, const Decent::AppX509& appCert)
+static MbedTlsObj::TlsConfig ConstructTlsConfig(const MbedTlsObj::ECKeyPair& prvKey, const AppX509& appCert)
 {
 	MbedTlsObj::TlsConfig config(new mbedtls_ssl_config);
 	config.BasicInit();
@@ -52,11 +54,11 @@ static MbedTlsObj::TlsConfig ConstructTlsConfig(const MbedTlsObj::ECKeyPair& prv
 
 extern "C" int ecall_vote_app_proc_voter_msg(void* connection)
 {
-	std::shared_ptr<const MbedTlsObj::ECKeyPair> prvKey = Decent::States::Get().GetKeyContainer().GetSignKeyPair();
-	std::shared_ptr<const Decent::AppX509> appCert = std::dynamic_pointer_cast<const Decent::AppX509>(Decent::States::Get().GetCertContainer().GetCert());
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> prvKey = States::Get().GetKeyContainer().GetSignKeyPair();
+	std::shared_ptr<const AppX509> appCert = std::dynamic_pointer_cast<const AppX509>(States::Get().GetCertContainer().GetCert());
 
 	std::shared_ptr<const MbedTlsObj::TlsConfig> config(std::make_shared<MbedTlsObj::TlsConfig>(ConstructTlsConfig(*prvKey, *appCert)));
-	TLSCommLayer testTls(connection, config, true);
+	Decent::Net::TlsCommLayer testTls(connection, config, true);
 	//testTls.ReceiveMsg(connectionPtr, testMsg);
 	COMMON_PRINTF("Handshake was %s.\n", testTls ? "SUCCESS" : "FAILED");
 

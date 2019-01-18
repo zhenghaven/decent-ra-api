@@ -8,21 +8,22 @@
 #include "../../common/CommonTool.h"
 #include "../../common/MbedTls/MbedTlsObjects.h"
 #include "../../common/MbedTls/MbedTlsHelpers.h"
-#include "../../common/Decent/States.h"
-#include "../../common/Decent/RaReport.h"
-#include "../../common/Decent/KeyContainer.h"
+#include "../../common/Ra/States.h"
+#include "../../common/Ra/RaReport.h"
+#include "../../common/Ra/KeyContainer.h"
 
 #include "../../common/SGX/SgxCryptoConversions.h"
 
-#include "../Decent/Crypto.h"
+#include "../Ra/Crypto.h"
 
 #include "DecentReplace/decent_tkey_exchange.h"
 
-using namespace DecentSgx;
+using namespace Decent::DecentSgx;
+using namespace Decent::Ra;
 
-const Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaultConfig(
+const Decent::Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) {
-	const sgx_ra_config& cmp = Decent::RaReport::GetSgxDecentRaConfig();;
+	const sgx_ra_config& cmp = RaReport::GetSgxDecentRaConfig();;
 	return raConfig.enable_pse == cmp.enable_pse && 
 		raConfig.linkable_sign == cmp.linkable_sign && 
 		raConfig.ckdf_id == cmp.ckdf_id &&
@@ -32,7 +33,7 @@ const Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaul
 );
 
 RaProcessorClient::RaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerifier signKeyVerifier, RaConfigChecker configChecker) :
-	::Sgx::RaProcessorClient(enclaveId, signKeyVerifier, configChecker)
+	Decent::Sgx::RaProcessorClient(enclaveId, signKeyVerifier, configChecker)
 {
 }
 
@@ -41,7 +42,7 @@ RaProcessorClient::~RaProcessorClient()
 }
 
 RaProcessorClient::RaProcessorClient(RaProcessorClient && other) :
-	::Sgx::RaProcessorClient(std::forward<::Sgx::RaProcessorClient>(other))
+	Decent::Sgx::RaProcessorClient(std::forward<RaProcessorClient>(other))
 {
 }
 
@@ -76,7 +77,7 @@ bool RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_
 	ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, 
 		[](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
 		{
-			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = Decent::States::Get().GetKeyContainer().GetSignKeyPair();
+			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = States::Get().GetKeyContainer().GetSignKeyPair();
 
 			std::string pubKeyPem = signPub->ToPubPemString();
 			if (pubKeyPem.size() == 0)
@@ -124,7 +125,7 @@ bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 	return true;
 }
 
-const Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQuoteVerifier(
+const Decent::Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQuoteVerifier(
 	[](const sgx_quote_t& quote) -> bool
 {
 	const std::vector<uint8_t>& decentHash = Decent::Crypto::GetSelfHash();
@@ -133,12 +134,12 @@ const Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQuoteVeri
 }
 );
 
-std::unique_ptr<Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr, 
+std::unique_ptr<Decent::Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr,
 	const sgx_ec256_public_t & peerSignkey)
 {
 	sgx_ec256_public_t signKey(peerSignkey);
-	return Common::make_unique<Sgx::RaProcessorSp>(iasConnectorPtr, Decent::States::Get().GetKeyContainer().GetSignKeyPair(),
-		Decent::RaReport::GetSgxDecentRaConfig(),
+	return Common::make_unique<Sgx::RaProcessorSp>(iasConnectorPtr, States::Get().GetKeyContainer().GetSignKeyPair(),
+		RaReport::GetSgxDecentRaConfig(),
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
 		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(signKey));
@@ -147,7 +148,7 @@ std::unique_ptr<Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcessorSp(con
 		{
 			return false;
 		}
-		return Decent::RaReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
+		return RaReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
 			consttime_memequal(initData.d + (sizeof(initData) / 2), expected.d + (sizeof(expected) / 2), sizeof(expected) / 2) == 1;
 	},
 		defaultServerQuoteVerifier);

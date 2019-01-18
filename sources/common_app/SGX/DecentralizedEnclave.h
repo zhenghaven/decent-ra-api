@@ -3,23 +3,29 @@
 
 #pragma once
 
-#include "../DecentralizedEnclave.h"
-#include "SGXEnclaveServiceProvider.h"
+#include "EnclaveServiceProvider.h"
+#include "../Enclave/DecentralizedEnclave.h"
 
 #include <memory>
 
 typedef struct _spid_t sgx_spid_t;
 
-class SGXDecentralizedEnclave : public SGXEnclaveServiceProvider, virtual public DecentralizedEnclave
+namespace Decent
 {
-public:
-	SGXDecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& iasConnector, const std::string& enclavePath, const std::string& tokenPath);
-	SGXDecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& iasConnector, const fs::path& enclavePath, const fs::path& tokenPath);
-	SGXDecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& iasConnector, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+	namespace Sgx
+	{
+		class DecentralizedEnclave : public Sgx::EnclaveServiceProvider, virtual public Base::DecentralizedEnclave
+		{
+		public:
+			DecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& iasConnector, const std::string& enclavePath, const std::string& tokenPath);
+			DecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& iasConnector, const fs::path& enclavePath, const fs::path& tokenPath);
+			DecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& iasConnector, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
-	virtual ~SGXDecentralizedEnclave();
+			virtual ~DecentralizedEnclave();
 
-	virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
-};
+			virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Net::Connection& connection) override;
+		};
+	}
+}
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

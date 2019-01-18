@@ -1,6 +1,6 @@
-#include "../common/Decent/WhiteList/HardCoded.h"
+#include "../common/Ra/WhiteList/HardCoded.h"
 
-using namespace Decent::WhiteList;
+using namespace Decent::Ra::WhiteList;
 
 HardCoded::HardCoded() :
 	StaticTypeList(

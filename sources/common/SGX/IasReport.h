@@ -40,23 +40,29 @@ enum ias_pse_status_t : uint8_t{
 	IAS_PSE_REVOKED                  = 5,
 	IAS_PSE_RL_VERSION_MISMATCH      = 6,
 };
-	
-bool ParseIasReport(sgx_ias_report_t& outReport, std::string& outId, std::string& outNonce, const std::string& inStr);
 
-//This function only checks report & PSE status (and report nonce).
-bool ParseAndCheckIasReport(sgx_ias_report_t& outIasReport,
-	const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
-	const char* nonce);
-
-bool CheckIasReportStatus(const sgx_ias_report_t& iasReport, const sgx_ra_config& raConfig);
-
-//User provides verifier to verify the report.
-template<typename Vrfier>
-bool ParseAndVerifyIasReport(sgx_ias_report_t& outIasReport,
-	const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
-	const char* nonce, const sgx_ra_config& raConfig, Vrfier vrfier)
+namespace Decent
 {
-	const sgx_ias_report_t& iasReport = outIasReport;
-	return ParseAndCheckIasReport(outIasReport, iasReportStr, reportCert, reportSign, nonce) &&
-		vrfier(iasReport) && CheckIasReportStatus(iasReport, raConfig);
+	namespace Ias
+	{
+		bool ParseIasReport(sgx_ias_report_t& outReport, std::string& outId, std::string& outNonce, const std::string& inStr);
+
+		//This function only checks report & PSE status (and report nonce).
+		bool ParseAndCheckIasReport(sgx_ias_report_t& outIasReport,
+			const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
+			const char* nonce);
+
+		bool CheckIasReportStatus(const sgx_ias_report_t& iasReport, const sgx_ra_config& raConfig);
+
+		//User provides verifier to verify the report.
+		template<typename Vrfier>
+		bool ParseAndVerifyIasReport(sgx_ias_report_t& outIasReport,
+			const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
+			const char* nonce, const sgx_ra_config& raConfig, Vrfier vrfier)
+		{
+			const sgx_ias_report_t& iasReport = outIasReport;
+			return ParseAndCheckIasReport(outIasReport, iasReportStr, reportCert, reportSign, nonce) &&
+				vrfier(iasReport) && CheckIasReportStatus(iasReport, raConfig);
+		}
+	}
 }

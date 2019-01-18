@@ -1,15 +1,17 @@
-#include "../../common/Connection.h"
+#include "../../common/Net/Connection.h"
 
 #include <string.h>
 
 #include <Enclave_t.h>
 
-bool StaticConnection::SendPack(void* const connection, const std::string& inMsg)
+using namespace Decent::Net;
+
+bool StatConnection::SendPack(void* const connection, const std::string& inMsg)
 {
-	return StaticConnection::SendPack(connection, inMsg.data(), inMsg.size());
+	return StatConnection::SendPack(connection, inMsg.data(), inMsg.size());
 }
 
-bool StaticConnection::SendPack(void * const connection, const void * const data, const size_t dataLen)
+bool StatConnection::SendPack(void * const connection, const void * const data, const size_t dataLen)
 {
 	int sentRes = 0;
 	sgx_status_t enclaveRet = ocall_connection_send_pack(&sentRes, connection, reinterpret_cast<const char*>(data), dataLen);
@@ -17,7 +19,7 @@ bool StaticConnection::SendPack(void * const connection, const void * const data
 	return enclaveRet == SGX_SUCCESS && sentRes;
 }
 
-int StaticConnection::SendRaw(void * const connection, const void * const data, const size_t dataLen)
+int StatConnection::SendRaw(void * const connection, const void * const data, const size_t dataLen)
 {
 	size_t sentSize = 0;
 	sgx_status_t enclaveRet = ocall_connection_send_raw(&sentSize, connection, reinterpret_cast<const char*>(data), dataLen);
@@ -25,7 +27,7 @@ int StaticConnection::SendRaw(void * const connection, const void * const data, 
 	return enclaveRet == SGX_SUCCESS ? static_cast<int>(sentSize) : -1;
 }
 
-bool StaticConnection::ReceivePack(void* const connection, std::string& outMsg)
+bool StatConnection::ReceivePack(void* const connection, std::string& outMsg)
 {
 	size_t size = 0;
 	char* msgPtr = nullptr;
@@ -44,7 +46,7 @@ bool StaticConnection::ReceivePack(void* const connection, std::string& outMsg)
 	return true;
 }
 
-int StaticConnection::ReceiveRaw(void * const connection, void * const buf, const size_t bufLen)
+int StatConnection::ReceiveRaw(void * const connection, void * const buf, const size_t bufLen)
 {
 	size_t recvSize = 0;
 	sgx_status_t enclaveRet = ocall_connection_receive_raw(&recvSize, connection, reinterpret_cast<char*>(buf), bufLen);
@@ -52,7 +54,7 @@ int StaticConnection::ReceiveRaw(void * const connection, void * const buf, cons
 	return enclaveRet == SGX_SUCCESS ? static_cast<int>(recvSize) : -1;
 }
 
-bool StaticConnection::SendAndReceivePack(void* const connection, const void* const inData, const size_t inDataLen, std::string& outMsg)
+bool StatConnection::SendAndReceivePack(void* const connection, const void* const inData, const size_t inDataLen, std::string& outMsg)
 {
 	size_t size = 0;
 	char* msgPtr = nullptr;

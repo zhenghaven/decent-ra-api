@@ -15,8 +15,8 @@
 #include <mbedtls/md.h>
 
 #include "../CommonTool.h"
-#include "../DataCoding.h"
 #include "../consttime_memequal.h"
+#include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/MbedTlsHelpers.h"
 
@@ -25,7 +25,9 @@
 #include "IasConnector.h"
 #include "SgxCryptoConversions.h"
 
-using namespace Sgx;
+using namespace Decent::Sgx;
+using namespace Decent::Ias;
+using namespace Decent::Tools;
 
 namespace
 {
@@ -211,7 +213,7 @@ bool RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 	}
 
 	std::string revcList;
-	if (!StaticIasConnector::GetRevocationList(m_iasConnectorPtr, msg1.gid, revcList))
+	if (!StatConnector::GetRevocationList(m_iasConnectorPtr, msg1.gid, revcList))
 	{
 		return false;
 	}
@@ -270,7 +272,7 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 
 	do
 	{
-		if (!StaticIasConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse,
+		if (!StatConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse,
 			m_iasReportStr, m_reportSign, m_reportCert) ||
 			!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data) ||
 			!consttime_memequal(&quoteInMsg3, &m_iasReport->m_quote, sizeof(sgx_quote_t) - sizeof(uint32_t)))

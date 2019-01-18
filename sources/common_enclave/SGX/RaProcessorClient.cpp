@@ -6,9 +6,9 @@
 
 #include "../../common/SGX/sgx_structs.h"
 #include "../../common/CommonTool.h"
-#include "../../common/Decent/KeyContainer.h"
+#include "../../common/Ra/KeyContainer.h"
 
-using namespace Sgx;
+using namespace Decent::Sgx;
 
 const RaProcessorClient::SpSignPubKeyVerifier RaProcessorClient::sk_acceptAnyPubKey(
 	[](const sgx_ec256_public_t& pubKey) -> bool

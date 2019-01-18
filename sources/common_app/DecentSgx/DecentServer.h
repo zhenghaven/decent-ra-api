@@ -3,35 +3,38 @@
 
 #pragma once
 
-#include "../Decent/DecentServer.h"
+#include "../Ra/DecentServer.h"
 #include "../SGX/EnclaveServiceProvider.h"
 
 typedef struct _spid_t sgx_spid_t;
 
-namespace DecentSgx
+namespace Decent
 {
-	class DecentServer : public Sgx::EnclaveServiceProvider, virtual public Decent::DecentServer
+	namespace DecentSgx
 	{
-	public:
-		DecentServer(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const std::string& tokenPath);
-		DecentServer(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
-		DecentServer(const sgx_spid_t& spid, const std::shared_ptr<IASConnector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+		class DecentServer : public Sgx::EnclaveServiceProvider, virtual public Ra::DecentServer
+		{
+		public:
+			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const std::string& tokenPath);
+			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
+			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
 
-		virtual ~DecentServer();
+			virtual ~DecentServer();
 
-		//DecentEnclave methods:
-		virtual std::string GetDecentSelfRAReport() const override;
-		virtual void LoadConstWhiteList(const std::string& key, const std::string& whiteList) override;
-		virtual void ProcessAppCertReq(const std::string& wListKey, Connection& connection) override;
+			//DecentEnclave methods:
+			virtual std::string GetDecentSelfRAReport() const override;
+			virtual void LoadConstWhiteList(const std::string& key, const std::string& whiteList) override;
+			virtual void ProcessAppCertReq(const std::string& wListKey, Net::Connection& connection) override;
 
-		virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
+			virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Net::Connection& connection) override;
 
-	protected:
-		virtual std::string GenerateDecentSelfRAReport() override;
+		protected:
+			virtual std::string GenerateDecentSelfRAReport() override;
 
-	private:
-		std::string m_selfRaReport;
-	};
+		private:
+			std::string m_selfRaReport;
+		};
+	}
 }
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

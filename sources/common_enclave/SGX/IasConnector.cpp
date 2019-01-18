@@ -2,7 +2,9 @@
 
 #include <Enclave_t.h>
 
-bool StaticIasConnector::GetRevocationList(const void* const connectorPtr, const sgx_epid_group_id_t& gid, std::string& outRevcList)
+using namespace Decent::Ias;
+
+bool StatConnector::GetRevocationList(const void* const connectorPtr, const sgx_epid_group_id_t& gid, std::string& outRevcList)
 {
 	if (!connectorPtr)
 	{
@@ -27,7 +29,7 @@ bool StaticIasConnector::GetRevocationList(const void* const connectorPtr, const
 	return true;
 }
 
-bool StaticIasConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_msg3_t& msg3, const size_t msg3Size, 
+bool StatConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_msg3_t& msg3, const size_t msg3Size, 
 	const std::string& nonce, const bool pseEnabled, 
 	std::string& outReport, std::string& outSign, std::string& outCert)
 {

@@ -17,7 +17,7 @@
 #include <curl/curl.h>
 #include <cppcodec/hex_lower.hpp>
 
-#include "../../common/DataCoding.h"
+#include "../../common/Tools/DataCoding.h"
 #include "../../common/SGX/IasConnector.h"
 
 #include "../FileSystemUtil.h"
@@ -25,8 +25,10 @@
 #ifdef SIMULATING_ENCLAVE
 #include <json/json.h>
 #include <sgx_report.h>
-#include "../../common/DataCoding.h"
 #endif // SIMULATING_ENCLAVE
+
+using namespace Decent::Ias;
+using namespace Decent::Tools;
 
 namespace
 {
@@ -93,15 +95,15 @@ namespace
 	}
 }
 
-constexpr char const IASConnector::sk_iasUrl[];
-constexpr char const IASConnector::sk_iasSigRlPath[];
-constexpr char const IASConnector::sk_iasReportPath[];
-const std::string IASConnector::sk_iasUrlStr = sk_iasUrl;
-const std::string IASConnector::sk_defaultCertPath = fs::path(gsk_defaultIasPath).append("client.crt").string();
-const std::string IASConnector::sk_defaultKeyPath = fs::path(gsk_defaultIasPath).append("client.pem").string();
-const std::string IASConnector::sk_defaultRsaKeyPath = fs::path(gsk_defaultIasPath).append("client.key").string();
+constexpr char const Connector::sk_iasUrl[];
+constexpr char const Connector::sk_iasSigRlPath[];
+constexpr char const Connector::sk_iasReportPath[];
+const std::string Connector::sk_iasUrlStr = sk_iasUrl;
+const std::string Connector::sk_defaultCertPath = fs::path(gsk_defaultIasPath).append("client.crt").string();
+const std::string Connector::sk_defaultKeyPath = fs::path(gsk_defaultIasPath).append("client.pem").string();
+const std::string Connector::sk_defaultRsaKeyPath = fs::path(gsk_defaultIasPath).append("client.key").string();
 
-bool IASConnector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::string & certPath, const std::string & keyPath, 
+bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::string & certPath, const std::string & keyPath, 
 	std::string & outRevcList)
 {
 	const std::string iasURL = sk_iasUrlStr + sk_iasSigRlPath + GetGIDBigEndianStr(gid);
@@ -163,7 +165,7 @@ bool IASConnector::GetRevocationList(const sgx_epid_group_id_t & gid, const std:
 #endif // !SIMULATING_ENCLAVE
 }
 
-bool IASConnector::GetQuoteReport(const std::string & jsonReqBody, const std::string & certPath, const std::string & keyPath, 
+bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::string & certPath, const std::string & keyPath, 
 	std::string & outReport, std::string & outSign, std::string & outCert)
 {
 	const std::string iasURL = sk_iasUrlStr + sk_iasReportPath;
@@ -269,27 +271,27 @@ bool IASConnector::GetQuoteReport(const std::string & jsonReqBody, const std::st
 #endif // !SIMULATING_ENCLAVE
 }
 
-IASConnector::IASConnector() :
-	IASConnector(sk_defaultCertPath, sk_defaultKeyPath)
+Connector::Connector() :
+	Connector(sk_defaultCertPath, sk_defaultKeyPath)
 {
 }
 
-IASConnector::IASConnector(const std::string & certPath, const std::string & keyPath) :
+Connector::Connector(const std::string & certPath, const std::string & keyPath) :
 	m_certPath(certPath),
 	m_keyPath(keyPath)
 {
 }
 
-IASConnector::~IASConnector()
+Connector::~Connector()
 {
 }
 
-bool IASConnector::GetRevocationList(const sgx_epid_group_id_t & gid, std::string & outRevcList) const
+bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, std::string & outRevcList) const
 {
-	return IASConnector::GetRevocationList(gid, m_certPath, m_keyPath, outRevcList);
+	return Connector::GetRevocationList(gid, m_certPath, m_keyPath, outRevcList);
 }
 
-bool IASConnector::GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, 
+bool Connector::GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, 
 	std::string & outReport, std::string & outSign, std::string & outCert) const
 {
 	const sgx_quote_t& quote = reinterpret_cast<const sgx_quote_t&>(msg3.quote);
@@ -303,24 +305,24 @@ bool IASConnector::GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Si
 	return GetQuoteReport(iasReqRoot.toStyledString(), m_certPath, m_keyPath, outReport, outSign, outCert);
 }
 
-bool StaticIasConnector::GetRevocationList(const void* const connectorPtr, const sgx_epid_group_id_t& gid, std::string& outRevcList)
+bool StatConnector::GetRevocationList(const void* const connectorPtr, const sgx_epid_group_id_t& gid, std::string& outRevcList)
 {
 	if (!connectorPtr)
 	{
 		return false;
 	}
 
-	return reinterpret_cast<const IASConnector*>(connectorPtr)->GetRevocationList(gid, outRevcList);
+	return reinterpret_cast<const Connector*>(connectorPtr)->GetRevocationList(gid, outRevcList);
 }
 
-bool StaticIasConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, std::string& outReport, std::string& outSign, std::string& outCert)
+bool StatConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, std::string& outReport, std::string& outSign, std::string& outCert)
 {
 	if (!connectorPtr)
 	{
 		return false;
 	}
 
-	return reinterpret_cast<const IASConnector*>(connectorPtr)->GetQuoteReport(msg3, msg3Size, nonce, pseEnabled, outReport, outSign, outCert);
+	return reinterpret_cast<const Connector*>(connectorPtr)->GetQuoteReport(msg3, msg3Size, nonce, pseEnabled, outReport, outSign, outCert);
 }
 
 extern "C" int ocall_ias_get_revoc_list(const void* const connector_ptr, const sgx_epid_group_id_t* gid, char** outRevcList, size_t* outSize)
@@ -334,7 +336,7 @@ extern "C" int ocall_ias_get_revoc_list(const void* const connector_ptr, const s
 	*outRevcList = nullptr;
 
 	std::string revcList;
-	if (!StaticIasConnector::GetRevocationList(connector_ptr, *gid, revcList))
+	if (!StatConnector::GetRevocationList(connector_ptr, *gid, revcList))
 	{
 		return false;
 	}
@@ -364,7 +366,7 @@ extern "C" int ocall_ias_get_quote_report(const void* const connector_ptr, const
 	std::string report;
 	std::string sign;
 	std::string cert;
-	if (!StaticIasConnector::GetQuoteReport(connector_ptr, *msg3, msg3_size, nonce, pse_enabled == 1, report, sign, cert))
+	if (!StatConnector::GetQuoteReport(connector_ptr, *msg3, msg3_size, nonce, pse_enabled == 1, report, sign, cert))
 	{
 		return false;
 	}

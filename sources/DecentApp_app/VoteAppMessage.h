@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../common_app/SmartMessages.h"
+#include "../common_app/Net/SmartMessages.h"
 
 #include <json/json.h>
 
-#include "../common_app/MessageException.h"
+#include "../common_app/Net/MessageException.h"
 
-class VoteAppMessage : public SmartMessages
+class VoteAppMessage : public Decent::Net::SmartMessages
 {
 public:
 	static constexpr char const sk_LabelRoot[] = "VoteApp";
@@ -22,7 +22,7 @@ public:
 		{
 			return MsgRootContent[sk_LabelRoot][sk_LabelType].asString();
 		}
-		throw MessageParseException();
+		throw Decent::Net::MessageParseException();
 	}
 
 public:
@@ -36,7 +36,7 @@ public:
 	{
 		if (expectedType && ParseType(msg[SmartMessages::sk_LabelRoot]) != expectedType)
 		{
-			throw MessageParseException();
+			throw Decent::Net::MessageParseException();
 		}
 	}
 
@@ -98,7 +98,7 @@ public:
 		{
 			return DecentRoot[sk_LabelSelfReport].asString();
 		}
-		throw MessageParseException();
+		throw Decent::Net::MessageParseException();
 	}
 
 public:

@@ -1,6 +1,6 @@
 //#if ENCLAVE_PLATFORM_SGX
 
-#include "../Decent/Crypto.h"
+#include "../Ra/Crypto.h"
 
 #include <iterator>
 #include <exception>

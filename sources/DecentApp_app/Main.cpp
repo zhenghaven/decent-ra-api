@@ -13,14 +13,16 @@
 #include "../common_app/SGX/EnclaveUtil.h"
 #include "../common_app/Common.h"
 
-#include "../common_app/Networking/LocalConnection.h"
-#include "../common_app/Networking/TCPConnection.h"
-#include "../common_app/Networking/TCPServer.h"
-#include "../common_app/Networking/SmartServer.h"
+#include "../common_app/Net/LocalConnection.h"
+#include "../common_app/Net/TCPConnection.h"
+#include "../common_app/Net/TCPServer.h"
+#include "../common_app/Net/SmartServer.h"
 
-#include "../common_app/WhiteList/Requester.h"
+#include "../common_app/Ra/WhiteList/Requester.h"
 
 #include "DecentVoteApp.h"
+
+using namespace Decent;
 
 /**
  * \brief	Main entry-point for this application
@@ -54,12 +56,12 @@ int main(int argc, char ** argv)
 
 	std::cout << "================ This is App side ================" << std::endl;
 
-	std::unique_ptr<Connection> connection = std::make_unique<TCPConnection>(hostIP, hostPort);
+	std::unique_ptr<Net::Connection> connection = std::make_unique<Net::TCPConnection>(hostIP, hostPort);
 	//std::unique_ptr<Connection> connection(LocalConnection::Connect("TestLocalConnection"));
 
-	Decent::WhiteList::Requester::Get().SendRequest(*connection); //Send WhiteList request.
+	Ra::WhiteList::Requester::Get().SendRequest(*connection); //Send WhiteList request.
 
-	connection = std::make_unique<TCPConnection>(hostIP, hostPort);
+	connection = std::make_unique<Net::TCPConnection>(hostIP, hostPort);
 
 	std::shared_ptr<DecentVoteApp> enclave(
 		std::make_shared<DecentVoteApp>(

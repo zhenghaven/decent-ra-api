@@ -7,27 +7,35 @@
 
 #include <memory>
 
-class IASConnector;
-
-namespace Sgx
+namespace Decent
 {
-	class ServiceProvider : virtual public Sgx::ServiceProviderBase
+	namespace Ias
 	{
-	public:
-		ServiceProvider() = delete;
+		class Connector;
+	}
 
-		ServiceProvider(const std::shared_ptr<IASConnector>& ias);
+	namespace Sgx
+	{
+		class ServiceProvider : virtual public Sgx::ServiceProviderBase
+		{
+		public:
+			ServiceProvider() = delete;
 
-		virtual ~ServiceProvider();
+			ServiceProvider(const std::shared_ptr<Ias::Connector>& ias);
 
-		virtual void GetSpPublicSignKey(general_secp256r1_public_t& outKey) const override;
+			virtual ~ServiceProvider();
 
-		virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Connection& connection) override;
+			virtual void GetSpPublicSignKey(general_secp256r1_public_t& outKey) const override;
 
-	protected:
-		std::shared_ptr<const IASConnector> m_ias;
-	};
+			virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Net::Connection& connection) override;
+
+		protected:
+			std::shared_ptr<const Ias::Connector> m_ias;
+		};
+	}
 }
+
+
 
 
 #endif //USE_INTEL_SGX_ENCLAVE_INTERNAL

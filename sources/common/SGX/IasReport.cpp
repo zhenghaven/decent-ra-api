@@ -12,18 +12,21 @@
 #include <json/json.h>
 #endif // ENCLAVE_ENVIRONMENT
 
-#include "../JsonTools.h"
 #include "../CommonTool.h"
-#include "../DataCoding.h"
+#include "../Tools/JsonTools.h"
+#include "../Tools/DataCoding.h"
 #include "../consttime_memequal.h"
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/MbedTlsHelpers.h"
 #include "IasReportCert.h"
 #include "sgx_structs.h"
 
+using namespace Decent;
+using namespace Decent::Tools;
+
 namespace
 {
-	std::map<std::string, ias_quote_status_t> quoteStatusMap =
+	static const std::map<std::string, ias_quote_status_t> gsk_quoteStatusMap =
 	{
 		std::pair<std::string, ias_quote_status_t>("OK", ias_quote_status_t::IAS_QUOTE_OK),
 		std::pair<std::string, ias_quote_status_t>("SIGNATURE_INVALID", ias_quote_status_t::IAS_QUOTE_SIGNATURE_INVALID),
@@ -34,7 +37,7 @@ namespace
 		std::pair<std::string, ias_quote_status_t>("GROUP_OUT_OF_DATE", ias_quote_status_t::IAS_QUOTE_GROUP_OUT_OF_DATE),
 	};
 
-	std::map<std::string, ias_pse_status_t> quotePSEStatusMap =
+	static const std::map<std::string, ias_pse_status_t> gsk_quotePSEStatusMap =
 	{
 		std::pair<std::string, ias_pse_status_t>("OK", ias_pse_status_t::IAS_PSE_OK),
 		std::pair<std::string, ias_pse_status_t>("UNKNOWN", ias_pse_status_t::IAS_PSE_UNKNOWN),
@@ -43,127 +46,127 @@ namespace
 		std::pair<std::string, ias_pse_status_t>("REVOKED", ias_pse_status_t::IAS_PSE_REVOKED),
 		std::pair<std::string, ias_pse_status_t>("RL_VERSION_MISMATCH", ias_pse_status_t::IAS_PSE_RL_VERSION_MISMATCH),
 	};
-}
 
-static inline ias_quote_status_t ParseIASQuoteStatus(const std::string& statusStr)
-{
-	return quoteStatusMap[statusStr];
-}
-
-static inline ias_pse_status_t ParseIASQuotePSEStatus(const std::string& statusStr)
-{
-	return quotePSEStatusMap[statusStr];
-}
-
-static inline ias_revoc_reason_t parse_revoc_reason(const int in_num)
-{
-	switch (in_num)
+	static inline ias_revoc_reason_t parse_revoc_reason(const int in_num)
 	{
-	case 1:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_KEY_COMPROMISE;
-	case 2:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_CA_COMPROMISED;
-	case 3:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_AFFILIATION_CHANGED;
-	case 4:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_SUPERCEDED;
-	case 5:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_CESSATION_OF_OPERATION;
-	case 6:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_CERTIFICATE_HOLD;
-	case 8:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_REMOVE_FROM_CRL;
-	case 9:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_PRIVILEGE_WITHDRAWN;
-	case 10:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_AA_COMPROMISE;
-	default:
-		return ias_revoc_reason_t::IAS_REVOC_REASON_UNSPECIFIED;
+		switch (in_num)
+		{
+		case 1:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_KEY_COMPROMISE;
+		case 2:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_CA_COMPROMISED;
+		case 3:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_AFFILIATION_CHANGED;
+		case 4:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_SUPERCEDED;
+		case 5:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_CESSATION_OF_OPERATION;
+		case 6:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_CERTIFICATE_HOLD;
+		case 8:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_REMOVE_FROM_CRL;
+		case 9:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_PRIVILEGE_WITHDRAWN;
+		case 10:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_AA_COMPROMISE;
+		default:
+			return ias_revoc_reason_t::IAS_REVOC_REASON_UNSPECIFIED;
+		}
 	}
-}
 
-/*
- * There is no much date time libs we can use in sgx SDK. And, since the timestamp format 
- * used by IAS API is very straight forward to parse, we can just use our simple functions to parse.
- */
-static bool ParseTimestampDate(const std::string& dateStr, sgx_timestamp_t& outTime)
-{
-	size_t nextPos = 0;
-	size_t nextPosAbs = 0;
-
-	int tmpOut[3];
-	bool isValid = true;
-	for (size_t i = 0; i < 3; ++i)
+	/*
+	* There is no much date time libs we can use in sgx SDK. And, since the timestamp format
+	* used by IAS API is very straight forward to parse, we can just use our simple functions to parse.
+	*/
+	static bool ParseTimestampDate(const std::string& dateStr, sgx_timestamp_t& outTime)
 	{
+		size_t nextPos = 0;
+		size_t nextPosAbs = 0;
+
+		int tmpOut[3];
+		bool isValid = true;
+		for (size_t i = 0; i < 3; ++i)
+		{
+			try
+			{
+				tmpOut[i] = std::stoi(dateStr.substr(nextPosAbs), &nextPos);
+				isValid = true & isValid;
+			}
+			catch (const std::exception&)
+			{
+				isValid = false;
+			}
+			nextPosAbs += nextPos + 1;
+		}
+		outTime.m_year = static_cast<uint16_t>(tmpOut[0]); //Year
+		outTime.m_month = static_cast<uint8_t>(tmpOut[1]); //Month
+		outTime.m_day = static_cast<uint8_t>(tmpOut[2]); //Day
+
+		return isValid;
+	}
+
+	static bool ParseTimestampTime(const std::string& timeStr, sgx_timestamp_t& outTime)
+	{
+		size_t nextPos = 0;
+		size_t nextPosAbs = 0;
+
+		int tmpOut[2];
+		bool isValid = true;
+		for (size_t i = 0; i < 2; ++i)
+		{
+			try
+			{
+				tmpOut[i] = std::stoi(timeStr.substr(nextPosAbs), &nextPos);
+				isValid = true & isValid;
+			}
+			catch (const std::exception&)
+			{
+				isValid = false;
+			}
+			nextPosAbs += nextPos + 1;
+		}
+		outTime.m_hour = static_cast<uint8_t>(tmpOut[0]); //Year
+		outTime.m_min = static_cast<uint8_t>(tmpOut[1]); //Month
+
 		try
 		{
-			tmpOut[i] = std::stoi(dateStr.substr(nextPosAbs), &nextPos);
+			outTime.m_sec = std::stof(timeStr.substr(nextPosAbs), &nextPos);
 			isValid = true & isValid;
 		}
 		catch (const std::exception&)
 		{
 			isValid = false;
 		}
-		nextPosAbs += nextPos + 1;
+
+		return isValid;
 	}
-	outTime.m_year = static_cast<uint16_t>(tmpOut[0]); //Year
-	outTime.m_month = static_cast<uint8_t>(tmpOut[1]); //Month
-	outTime.m_day = static_cast<uint8_t>(tmpOut[2]); //Day
 
-	return isValid;
-}
-
-static bool ParseTimestampTime(const std::string& timeStr, sgx_timestamp_t& outTime)
-{
-	size_t nextPos = 0;
-	size_t nextPosAbs = 0;
-
-	int tmpOut[2];
-	bool isValid = true;
-	for (size_t i = 0; i < 2; ++i)
+	static bool ParseTimestamp(const std::string& timeStr, sgx_timestamp_t& outTime)
 	{
-		try
+		size_t middlePos = timeStr.find('T');
+		if (middlePos == std::string::npos || middlePos + 1 == timeStr.size())
 		{
-			tmpOut[i] = std::stoi(timeStr.substr(nextPosAbs), &nextPos);
-			isValid = true & isValid;
+			return false;
 		}
-		catch (const std::exception&)
-		{
-			isValid = false;
-		}
-		nextPosAbs += nextPos + 1;
-	}
-	outTime.m_hour = static_cast<uint8_t>(tmpOut[0]); //Year
-	outTime.m_min = static_cast<uint8_t>(tmpOut[1]); //Month
 
-	try
-	{
-		outTime.m_sec = std::stof(timeStr.substr(nextPosAbs), &nextPos);
-		isValid = true & isValid;
-	}
-	catch (const std::exception&)
-	{
-		isValid = false;
+		bool isValid = ParseTimestampDate(timeStr.substr(0, middlePos), outTime);
+		isValid = isValid & ParseTimestampTime(timeStr.substr(middlePos + 1), outTime);
+
+		return isValid;
 	}
 
-	return isValid;
+	static inline ias_quote_status_t ParseIASQuoteStatus(const std::string& statusStr)
+	{//As long as we keep updated with IAS's API, here should not throw exception.
+		return gsk_quoteStatusMap.at(statusStr);
+	}
+
+	static inline ias_pse_status_t ParseIASQuotePSEStatus(const std::string& statusStr)
+	{//As long as we keep updated with IAS's API, here should not throw exception.
+		return gsk_quotePSEStatusMap.at(statusStr);
+	}
 }
 
-static bool ParseTimestamp(const std::string& timeStr, sgx_timestamp_t& outTime)
-{
-	size_t middlePos = timeStr.find('T');
-	if (middlePos == std::string::npos || middlePos + 1 == timeStr.size())
-	{
-		return false;
-	}
-
-	bool isValid = ParseTimestampDate(timeStr.substr(0, middlePos), outTime);
-	isValid = isValid & ParseTimestampTime(timeStr.substr(middlePos + 1), outTime);
-	
-	return isValid;
-}
-
-bool ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
+bool Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
 {
 	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
 	if (!ParseStr2Json(jsonDoc, inStr))
@@ -242,10 +245,10 @@ bool ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::strin
 	return true;
 }
 
-bool ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
+bool Ias::ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
 {
 #ifndef SIMULATING_ENCLAVE
-	MbedTlsObj::X509Cert trustedIasCert(IAS_REPORT_CERT);
+	MbedTlsObj::X509Cert trustedIasCert(Ias::gsk_IasReportCert);
 	MbedTlsObj::X509Cert reportCertChain(reportCert);
 
 	bool certVerRes = trustedIasCert && reportCertChain &&
@@ -311,7 +314,7 @@ bool ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::string &
 #define REP_STAT_EQ_QOT(status, value) (status == static_cast<uint8_t>(ias_quote_status_t::value))
 #define REP_STAT_EQ_PSE(status, value) (status == static_cast<uint8_t>(ias_pse_status_t::value))
 
-bool CheckIasReportStatus(const sgx_ias_report_t & iasReport, const sgx_ra_config & raConfig)
+bool Ias::CheckIasReportStatus(const sgx_ias_report_t & iasReport, const sgx_ra_config & raConfig)
 {
 	return (
 		REP_STAT_EQ_QOT(iasReport.m_status, IAS_QUOTE_OK) ||
