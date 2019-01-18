@@ -6,15 +6,16 @@
 
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
 
-namespace MbedTlsObj
-{
-	class TlsConfig;
-	class PKey;
-	class X509Cert;
-}
 
 namespace Decent
 {
+	namespace MbedTlsObj
+	{
+		class TlsConfig;
+		class PKey;
+		class X509Cert;
+	}
+
 	namespace Net
 	{
 		class TlsCommLayer : public SecureCommLayer

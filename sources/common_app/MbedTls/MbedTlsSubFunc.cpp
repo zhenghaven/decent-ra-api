@@ -2,6 +2,8 @@
 
 #include <mutex>
 
+using namespace Decent;
+
 struct MyMutexStruct
 {
 	std::mutex m_mutex;

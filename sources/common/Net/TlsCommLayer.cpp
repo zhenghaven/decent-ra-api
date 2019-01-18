@@ -11,6 +11,7 @@
 #include "Connection.h"
 
 using namespace Decent::Net;
+using namespace Decent;
 
 namespace
 {

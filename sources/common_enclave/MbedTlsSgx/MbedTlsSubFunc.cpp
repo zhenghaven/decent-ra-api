@@ -8,6 +8,8 @@
 #include <sgx_trts.h>
 #include <sgx_thread.h>
 
+using namespace Decent;
+
 void MbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex || 

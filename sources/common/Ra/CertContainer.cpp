@@ -7,6 +7,8 @@
 #include "Crypto.h"
 #include "../CommonTool.h"
 
+using namespace Decent;
+
 Decent::Ra::CertContainer::CertContainer()
 {
 }

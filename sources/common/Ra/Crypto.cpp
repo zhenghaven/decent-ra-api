@@ -20,6 +20,7 @@
 #include "WhiteList/HardCoded.h"
 #include "WhiteList/Loaded.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Tools;
 

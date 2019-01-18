@@ -11,7 +11,7 @@
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-using namespace MbedTlsObj;
+using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
 
 namespace

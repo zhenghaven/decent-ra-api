@@ -28,7 +28,8 @@
 #include "MbedTlsHelpers.h"
 #include "../CommonTool.h"
 
-using namespace MbedTlsObj;
+using namespace Decent::MbedTlsObj;
+using namespace Decent;
 
 #ifdef ENCLAVE_ENVIRONMENT
 

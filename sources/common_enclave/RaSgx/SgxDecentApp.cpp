@@ -14,6 +14,7 @@
 #include "../../common/Ra/KeyContainer.h"
 #include "../../common/Ra/CertContainer.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 
 extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)

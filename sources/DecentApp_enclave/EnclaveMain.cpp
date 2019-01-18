@@ -12,6 +12,7 @@
 
 #include "../common/CommonTool.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 
 static constexpr char const voteAppCaStr[] = "-----BEGIN CERTIFICATE-----\n\

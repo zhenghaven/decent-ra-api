@@ -24,6 +24,7 @@
 #include "../RaSgx/SelfRaReportGenerator.h"
 #include "../RaSgx/RaProcessor.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Tools;
 using namespace Decent::RaSgx;

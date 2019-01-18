@@ -9,6 +9,8 @@
 
 #include "../consttime_memequal.h"
 
+using namespace Decent;
+
 namespace
 {
 	static constexpr int MBEDTLS_SUCCESS_RET = 0;

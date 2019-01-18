@@ -7,6 +7,8 @@
 #error "Implementation does not support non-multi-threading."
 #endif // MBEDTLS_THREADING_C
 
+using namespace Decent;
+
 struct EntropyInstance
 {
 	mbedtls_entropy_context m_ctx;

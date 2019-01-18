@@ -2,13 +2,13 @@
 
 #include <memory>
 
-namespace MbedTlsObj
-{
-	class X509Cert;
-}
-
 namespace Decent
 {
+	namespace MbedTlsObj
+	{
+		class X509Cert;
+	}
+
 	namespace Ra
 	{
 		class CertContainer

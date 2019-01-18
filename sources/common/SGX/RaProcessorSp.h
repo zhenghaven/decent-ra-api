@@ -18,13 +18,14 @@ typedef struct _sgx_report_data_t sgx_report_data_t;
 typedef struct _quote_t sgx_quote_t;
 typedef struct _spid_t sgx_spid_t;
 
-namespace MbedTlsObj
-{
-	class ECKeyPair;
-}
 
 namespace Decent
 {
+	namespace MbedTlsObj
+	{
+		class ECKeyPair;
+	}
+
 	namespace Sgx
 	{
 		class RaProcessorSp

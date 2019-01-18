@@ -4,6 +4,8 @@
 
 #include <sgx_trts.h>
 
+using namespace Decent;
+
 void MbedTlsHelper::DrbgInit(void *& ctx)
 {
 }

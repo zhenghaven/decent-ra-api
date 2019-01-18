@@ -6,6 +6,7 @@
 #include "../common/CommonTool.h"
 #include "../common/MbedTls/MbedTlsObjects.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 
 namespace

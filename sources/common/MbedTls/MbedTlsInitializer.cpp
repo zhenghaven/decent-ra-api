@@ -5,6 +5,8 @@
 #include "../CommonTool.h"
 #include "MbedTlsSubFunc.h"
 
+using namespace Decent::MbedTlsObj;
+
 namespace
 {
 	//Init mbed TLS at the very begining.

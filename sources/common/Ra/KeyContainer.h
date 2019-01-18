@@ -5,13 +5,13 @@
 
 #include "../GeneralKeyTypes.h"
 
-namespace MbedTlsObj
-{
-	class ECKeyPair;
-}
-
 namespace Decent
 {
+	namespace MbedTlsObj
+	{
+		class ECKeyPair;
+	}
+
 	namespace Ra
 	{
 		class KeyContainer

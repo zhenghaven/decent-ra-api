@@ -1,12 +1,18 @@
 #pragma once
 
-class MbedTlsInitializer
+namespace Decent
 {
-public:
-	static MbedTlsInitializer& GetInst();
-	~MbedTlsInitializer();
+	namespace MbedTlsObj
+	{
+		class MbedTlsInitializer
+		{
+		public:
+			static MbedTlsInitializer& GetInst();
+			~MbedTlsInitializer();
 
-private:
-	MbedTlsInitializer();
+		private:
+			MbedTlsInitializer();
 
-};
+		};
+	}
+}

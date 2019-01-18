@@ -25,6 +25,7 @@
 #include "IasConnector.h"
 #include "SgxCryptoConversions.h"
 
+using namespace Decent;
 using namespace Decent::Sgx;
 using namespace Decent::Ias;
 using namespace Decent::Tools;
