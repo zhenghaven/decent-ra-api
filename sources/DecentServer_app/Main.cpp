@@ -8,9 +8,10 @@
 #include <tclap/CmdLine.h>
 #include <boost/asio/ip/address_v4.hpp>
 #include <json/json.h>
+#include <sgx_quote.h>
 
-#include "../common_app/SGX/SGXEnclaveUtil.h"
-#include "../common_app/SGX/SGXDecentEnclave.h"
+#include "../common_app/SGX/EnclaveUtil.h"
+#include "../common_app/DecentSgx/DecentServer.h"
 #include "../common_app/Common.h"
 #include "../common_app/SmartMessages.h"
 
@@ -18,7 +19,7 @@
 #include "../common_app/Networking/TCPServer.h"
 #include "../common_app/Networking/LocalConnection.h"
 #include "../common_app/Networking/LocalServer.h"
-#include "../common_app/Networking/DecentSmartServer.h"
+#include "../common_app/Networking/SmartServer.h"
 
 #include "../common_app/SGX/IasConnector.h"
 
@@ -79,16 +80,16 @@ int main(int argc, char ** argv)
 
 
 	sgx_device_status_t deviceStatusRes;
-	sgx_status_t deviceStatusResErr = GetSGXDeviceStatus(deviceStatusRes);
-	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", GetSGXErrorMessage(deviceStatusResErr).c_str());
+	sgx_status_t deviceStatusResErr = Sgx::GetDeviceStatus(deviceStatusRes);
+	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", Sgx::GetErrorMessage(deviceStatusResErr).c_str());
 
 	std::shared_ptr<IASConnector> iasConnector = std::make_shared<IASConnector>();
-	DecentSmartServer smartServer;
+	SmartServer smartServer;
 
 	std::cout << "================ Decent Server ================" << std::endl;
 
-	std::shared_ptr<SGXDecentEnclave> enclave(
-		std::make_shared<SGXDecentEnclave>(
+	std::shared_ptr<DecentSgx::DecentServer> enclave(
+		std::make_shared<DecentSgx::DecentServer>(
 			g_sgxSPID, iasConnector, ENCLAVE_FILENAME, KnownFolderType::LocalAppDataEnclave, TOKEN_FILENAME));
 
 	//if (!isRootServer)

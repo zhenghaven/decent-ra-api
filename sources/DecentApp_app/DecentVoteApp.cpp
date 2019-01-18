@@ -22,6 +22,6 @@ bool DecentVoteApp::ProcessSmartMessage(const std::string & category, const Json
 	}
 	else
 	{
-		return SGXDecentAppEnclave::ProcessSmartMessage(category, jsonMsg, connection);
+		return DecentSgx::DecentApp::ProcessSmartMessage(category, jsonMsg, connection);
 	}
 }

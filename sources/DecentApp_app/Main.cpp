@@ -10,13 +10,13 @@
 
 #include <sgx_tcrypto.h>
 
-#include "../common_app/SGX/SGXEnclaveUtil.h"
+#include "../common_app/SGX/EnclaveUtil.h"
 #include "../common_app/Common.h"
 
 #include "../common_app/Networking/LocalConnection.h"
 #include "../common_app/Networking/TCPConnection.h"
 #include "../common_app/Networking/TCPServer.h"
-#include "../common_app/Networking/DecentSmartServer.h"
+#include "../common_app/Networking/SmartServer.h"
 
 #include "../common_app/WhiteList/Requester.h"
 
@@ -46,8 +46,8 @@ int main(int argc, char ** argv)
 	cmd.parse(argc, argv);
 
 	sgx_device_status_t deviceStatusRes;
-	sgx_status_t deviceStatusResErr = GetSGXDeviceStatus(deviceStatusRes);
-	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", GetSGXErrorMessage(deviceStatusResErr).c_str());
+	sgx_status_t deviceStatusResErr = Sgx::GetDeviceStatus(deviceStatusRes);
+	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", Sgx::GetErrorMessage(deviceStatusResErr).c_str());
 
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "../common_app/SGX/SGXDecentAppEnclave.h"
+#include "../common_app/DecentSgx/DecentApp.h"
 
 class Connection;
 
-class DecentVoteApp : public SGXDecentAppEnclave
+class DecentVoteApp : public DecentSgx::DecentApp
 {
 public:
-	using SGXDecentAppEnclave::SGXDecentAppEnclave;
+	using DecentSgx::DecentApp::DecentApp;
 
 	virtual ~DecentVoteApp() {}
 

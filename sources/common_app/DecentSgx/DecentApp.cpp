@@ -1,43 +1,42 @@
 #include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL
 
-#include "SGXDecentAppEnclave.h"
+#include "DecentApp.h"
 
 #include <sgx_tcrypto.h>
 #include <sgx_report.h>
-
-#include "SGXEnclaveRuntimeException.h"
 
 #include "../../common/DataCoding.h"
 #include "../Decent/Messages.h"
 #include "../WhiteList/Requester.h"
 #include "../Networking/Connection.h"
+#include "../SGX/EnclaveRuntimeException.h"
 
 #include <Enclave_u.h>
 
-SGXDecentAppEnclave::SGXDecentAppEnclave(const std::string & enclavePath, const std::string & tokenPath, const std::string & wListKey, Connection & serverConn) :
-	SGXEnclave(enclavePath, tokenPath)
+DecentSgx::DecentApp::DecentApp(const std::string & enclavePath, const std::string & tokenPath, const std::string & wListKey, Connection & serverConn) :
+	Sgx::EnclaveBase(enclavePath, tokenPath)
 {
 	InitEnclave(wListKey, serverConn);
 }
 
-SGXDecentAppEnclave::SGXDecentAppEnclave(const fs::path & enclavePath, const fs::path & tokenPath, const std::string & wListKey, Connection & serverConn) :
-	SGXEnclave(enclavePath, tokenPath)
+DecentSgx::DecentApp::DecentApp(const fs::path & enclavePath, const fs::path & tokenPath, const std::string & wListKey, Connection & serverConn) :
+	Sgx::EnclaveBase(enclavePath, tokenPath)
 {
 	InitEnclave(wListKey, serverConn);
 }
 
-SGXDecentAppEnclave::SGXDecentAppEnclave(const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName, const std::string & wListKey, Connection & serverConn) :
-	SGXEnclave(enclavePath, tokenLocType, tokenFileName)
+DecentSgx::DecentApp::DecentApp(const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName, const std::string & wListKey, Connection & serverConn) :
+	Sgx::EnclaveBase(enclavePath, tokenLocType, tokenFileName)
 {
 	InitEnclave(wListKey, serverConn);
 }
 
-SGXDecentAppEnclave::~SGXDecentAppEnclave()
+DecentSgx::DecentApp::~DecentApp()
 {
 }
 
-bool SGXDecentAppEnclave::GetX509FromServer(const std::string & decentId, Connection& connection)
+bool DecentSgx::DecentApp::GetX509FromServer(const std::string & decentId, Connection& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
@@ -61,17 +60,17 @@ bool SGXDecentAppEnclave::GetX509FromServer(const std::string & decentId, Connec
 	return retval == SGX_SUCCESS;
 }
 
-const std::string & SGXDecentAppEnclave::GetAppCert() const
+const std::string & DecentSgx::DecentApp::GetAppCert() const
 {
 	return m_appCert;
 }
 
-bool SGXDecentAppEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
+bool DecentSgx::DecentApp::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
 {
 	return false;
 }
 
-bool SGXDecentAppEnclave::InitEnclave(const std::string & wListKey, Connection & serverConn)
+bool DecentSgx::DecentApp::InitEnclave(const std::string & wListKey, Connection & serverConn)
 {
 	using namespace Decent::Message;
 

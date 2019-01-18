@@ -1,4 +1,4 @@
-#include "DecentSmartServer.h"
+#include "SmartServer.h"
 
 #include <thread>
 
@@ -13,7 +13,7 @@
 #include "Connection.h"
 #include "ConnectionHandler.h"
 
-DecentSmartServer::DecentSmartServer() :
+SmartServer::SmartServer() :
 	m_isTerminated(0)
 {
 	m_cleanningThread = new std::thread([this]() 
@@ -53,7 +53,7 @@ DecentSmartServer::DecentSmartServer() :
 	});
 }
 
-DecentSmartServer::~DecentSmartServer()
+SmartServer::~SmartServer()
 {
 	Terminate();
 	CleanAll();
@@ -62,7 +62,7 @@ DecentSmartServer::~DecentSmartServer()
 	delete m_cleanningThread;
 }
 
-DecentSmartServer::ServerHandle DecentSmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler)
+SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler)
 {
 	if (m_isTerminated)
 	{
@@ -100,7 +100,7 @@ DecentSmartServer::ServerHandle DecentSmartServer::AddServer(std::unique_ptr<Ser
 	return hdl;
 }
 
-void DecentSmartServer::ShutdownServer(ServerHandle handle) noexcept
+void SmartServer::ShutdownServer(ServerHandle handle) noexcept
 {
 	if (m_isTerminated)
 	{
@@ -112,7 +112,7 @@ void DecentSmartServer::ShutdownServer(ServerHandle handle) noexcept
 		return;
 	}
 
-	DecentSmartServer::ServerMapType::iterator it;
+	SmartServer::ServerMapType::iterator it;
 	try
 	{
 		it = m_serverMap.find(handle); //Usually will not throw here, since we are using standard compare func.
@@ -131,7 +131,7 @@ void DecentSmartServer::ShutdownServer(ServerHandle handle) noexcept
 	}
 }
 
-void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler, JobAtCompletedType sameThrJob, JobAtCompletedType mainThrJob)
+void SmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler, JobAtCompletedType sameThrJob, JobAtCompletedType mainThrJob)
 {
 	if (m_isTerminated)
 	{
@@ -195,12 +195,12 @@ void DecentSmartServer::AddConnection(std::unique_ptr<Connection>& connection, s
 	m_connectionMap.insert(std::make_pair(hdl, std::make_pair(std::move(connection), thr)));
 }
 
-bool DecentSmartServer::IsTerminated() const noexcept
+bool SmartServer::IsTerminated() const noexcept
 {
 	return m_isTerminated.load();
 }
 
-void DecentSmartServer::Terminate() noexcept
+void SmartServer::Terminate() noexcept
 {
 	if (m_isTerminated)
 	{
@@ -225,7 +225,7 @@ void DecentSmartServer::Terminate() noexcept
 	m_mainThrSignal.notify_all();
 }
 
-void DecentSmartServer::Update()
+void SmartServer::Update()
 {
 	if (m_isTerminated)
 	{
@@ -236,7 +236,7 @@ void DecentSmartServer::Update()
 	RunMainThrJobs();
 }
 
-void DecentSmartServer::RunUtilUserTerminate()
+void SmartServer::RunUtilUserTerminate()
 {
 	boost::asio::io_service io_service;
 
@@ -268,7 +268,7 @@ void DecentSmartServer::RunUtilUserTerminate()
 	delete intSignalThread;
 }
 
-void DecentSmartServer::CleanAll() noexcept
+void SmartServer::CleanAll() noexcept
 {
 	std::unique_lock<std::mutex> serverLock(m_serverMapMutex, std::defer_lock);
 	std::unique_lock<std::mutex> connectionLock(m_connectionMapMutex, std::defer_lock);
@@ -310,7 +310,7 @@ void DecentSmartServer::CleanAll() noexcept
 	}
 }
 
-void DecentSmartServer::AddToCleanQueue(std::pair<std::unique_ptr<Server>, std::thread*> server) noexcept
+void SmartServer::AddToCleanQueue(std::pair<std::unique_ptr<Server>, std::thread*> server) noexcept
 {
 	std::unique_lock<std::mutex> cleaningLock(m_cleanningMutex);
 
@@ -318,7 +318,7 @@ void DecentSmartServer::AddToCleanQueue(std::pair<std::unique_ptr<Server>, std::
 	m_cleaningSignal.notify_all();
 }
 
-void DecentSmartServer::AddToCleanQueue(ConnectionHandle connection) noexcept
+void SmartServer::AddToCleanQueue(ConnectionHandle connection) noexcept
 {
 	if (!connection)
 	{
@@ -331,7 +331,7 @@ void DecentSmartServer::AddToCleanQueue(ConnectionHandle connection) noexcept
 	m_cleaningSignal.notify_all();
 }
 
-void DecentSmartServer::AddMainThreadJob(JobAtCompletedType mainThrJob)
+void SmartServer::AddMainThreadJob(JobAtCompletedType mainThrJob)
 {
 	std::unique_lock<std::mutex> mainThrJobLock(m_mainThrJobMutex);
 
@@ -339,7 +339,7 @@ void DecentSmartServer::AddMainThreadJob(JobAtCompletedType mainThrJob)
 	m_mainThrSignal.notify_all();
 }
 
-void DecentSmartServer::RunMainThrJobs()
+void SmartServer::RunMainThrJobs()
 {
 	while (m_mainThreadJob.size() > 0)
 	{

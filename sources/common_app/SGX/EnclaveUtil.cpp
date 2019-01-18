@@ -1,7 +1,7 @@
 #include "../../common/ModuleConfigInternal.h"
 #if USE_INTEL_SGX_ENCLAVE_INTERNAL
 
-#include "SGXEnclaveUtil.h"
+#include "EnclaveUtil.h"
 
 #include <map>
 
@@ -11,7 +11,7 @@
 
 namespace
 {
-	const std::map<sgx_status_t, std::pair<std::string, std::string> > g_sgxErrorMsg = 
+	static const std::map<sgx_status_t, std::pair<std::string, std::string> > g_sgxErrorMsg = 
 	{
 		//0x0...
 		std::pair<sgx_status_t, std::pair<std::string, std::string> >(SGX_SUCCESS, std::pair<std::string, std::string>("Success.", "")),
@@ -112,7 +112,7 @@ namespace
 #endif
 	};
 
-	const std::map<sgx_device_status_t, std::string> g_sgxDeviceStatus = 
+	static const std::map<sgx_device_status_t, std::string> g_sgxDeviceStatus = 
 	{
 		std::pair<sgx_device_status_t, std::string>(SGX_ENABLED, "Enabled"),
 		std::pair<sgx_device_status_t, std::string>(SGX_DISABLED_REBOOT_REQUIRED, "A reboot is required to finish enabling SGX"),
@@ -125,7 +125,7 @@ namespace
 	};
 }
 
-std::string GetSGXErrorMessage(const sgx_status_t ret)
+std::string Sgx::GetErrorMessage(const sgx_status_t ret)
 {
 	auto it = g_sgxErrorMsg.find(ret);
 	if (it == g_sgxErrorMsg.cend())
@@ -136,7 +136,7 @@ std::string GetSGXErrorMessage(const sgx_status_t ret)
 	return it->second.first;
 }
 
-std::string GetSGXDeviceStatusStr(const sgx_device_status_t ret)
+std::string Sgx::GetDeviceStatusStr(const sgx_device_status_t ret)
 {
 	auto it = g_sgxDeviceStatus.find(ret);
 	if (it == g_sgxDeviceStatus.cend())
@@ -147,7 +147,7 @@ std::string GetSGXDeviceStatusStr(const sgx_device_status_t ret)
 	return it->second;
 }
 
-sgx_status_t GetSGXDeviceStatus(sgx_device_status_t & res)
+sgx_status_t Sgx::GetDeviceStatus(sgx_device_status_t & res)
 {
 #ifdef _WIN32
 	return sgx_enable_device(&res);

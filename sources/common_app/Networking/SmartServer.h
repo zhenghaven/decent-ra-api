@@ -18,16 +18,16 @@ namespace std
 
 typedef std::function<void(void)> JobAtCompletedType;
 
-class DecentSmartServer
+class SmartServer
 {
 public:
 	typedef Server* ServerHandle;
 	typedef Connection* ConnectionHandle;
 
 public:
-	DecentSmartServer();
+	SmartServer();
 
-	virtual ~DecentSmartServer();
+	virtual ~SmartServer();
 
 	//Thread safe
 	virtual ServerHandle AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler);
