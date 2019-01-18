@@ -8,8 +8,6 @@
 
 #include "Logger.h"
 
-//class DecentLogger;
-
 namespace std
 {
 	class thread;
@@ -22,26 +20,32 @@ namespace boost
 	}
 }
 
-//thread safe
-class DecentLoggerManager
+namespace Decent
 {
-public:
-	static DecentLoggerManager& GetInstance();
+	namespace Logger
+	{
+		//thread safe
+		class DecentLoggerManager
+		{
+		public:
+			static DecentLoggerManager& GetInstance();
 
-public:
-	DecentLoggerManager(bool isCritical = true);
-	~DecentLoggerManager();
+		public:
+			DecentLoggerManager(bool isCritical = true);
+			~DecentLoggerManager();
 
-	void AddLogger(std::unique_ptr<DecentLogger>& logger);
+			void AddLogger(std::unique_ptr<DecentLogger>& logger);
 
-private:
-	const bool m_isCritical;
-	const std::unique_ptr<const boost::filesystem::path> m_outFilePath;
-	std::mutex m_queueMutex;
-	std::condition_variable m_queueSignal;
-	std::queue<std::unique_ptr<DecentLogger> > m_loggerQueue;
+		private:
+			const bool m_isCritical;
+			const std::unique_ptr<const boost::filesystem::path> m_outFilePath;
+			std::mutex m_queueMutex;
+			std::condition_variable m_queueSignal;
+			std::queue<std::unique_ptr<DecentLogger> > m_loggerQueue;
 
-	std::unique_ptr<DecentLogger> m_logger;
-	std::thread* m_writerThread;
-	std::atomic<bool> m_isTerminated;
-};
+			std::unique_ptr<DecentLogger> m_logger;
+			std::thread* m_writerThread;
+			std::atomic<bool> m_isTerminated;
+		};
+	}
+}

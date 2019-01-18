@@ -7,6 +7,8 @@
 #include "../common_app/Logger/LoggerManager.h"
 #include "../common_app/Net/Connection.h"
 
+using namespace Decent::Logger;
+
 bool VoteAppServerSession::SmartMsgEntryPoint(Decent::Net::Connection & connection, DecentVoteApp & hwEnclave, const Json::Value & jsonMsg)
 {
 	const std::string inType = VoteAppMessage::ParseType(jsonMsg[Decent::Net::SmartMessages::sk_LabelRoot]);

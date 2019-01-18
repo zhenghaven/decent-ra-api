@@ -6,7 +6,14 @@
 
 class DecentVoteApp;
 class VoteAppHandshake;
-class DecentLogger;
+
+namespace Decent
+{
+	namespace Logger
+	{
+		class DecentLogger;
+	}
+}
 
 namespace Json
 {
@@ -24,7 +31,7 @@ public:
 
 	virtual ~VoteAppServerSession() {}
 
-	virtual bool ProcessServerSide(DecentLogger* logger = nullptr);
+	virtual bool ProcessServerSide(Decent::Logger::DecentLogger* logger = nullptr);
 
 	virtual const std::string GetSenderID() const override { return k_senderId; }
 

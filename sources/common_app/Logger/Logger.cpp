@@ -3,21 +3,29 @@
 #include <sstream>
 #include <chrono>
 
-struct LogMessagePiece
+namespace Decent
 {
-	const std::chrono::high_resolution_clock::time_point m_timestamp;
-	const char m_type;
-	const std::string m_msg;
-
-	LogMessagePiece() = delete;
-	LogMessagePiece(const char type, const std::string& msg) :
-		m_timestamp(std::chrono::high_resolution_clock::now()),
-		m_type(type),
-		m_msg(msg)
+	namespace Logger
 	{
-	}
+		struct LogMessagePiece
+		{
+			const std::chrono::high_resolution_clock::time_point m_timestamp;
+			const char m_type;
+			const std::string m_msg;
 
-};
+			LogMessagePiece() = delete;
+			LogMessagePiece(const char type, const std::string& msg) :
+				m_timestamp(std::chrono::high_resolution_clock::now()),
+				m_type(type),
+				m_msg(msg)
+			{
+			}
+
+		};
+	}
+}
+
+using namespace Decent::Logger;
 
 DecentLogger::DecentLogger(const std::string & id) :
 	m_id(id)

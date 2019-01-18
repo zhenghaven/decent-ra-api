@@ -12,6 +12,7 @@
 #include "../Common.h"
 
 using namespace Decent::Tools;
+using namespace Decent::Logger;
 
 DecentLoggerManager & DecentLoggerManager::GetInstance()
 {
