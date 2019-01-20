@@ -7,7 +7,8 @@
 
 #include <sgx_dh.h>
 
-#include "../../common/CommonTool.h"
+#include "../../common/Common.h"
+#include "../../common/make_unique.h"
 #include "../../common/Tools/DataCoding.h"
 #include "../../common/Ra/Crypto.h"
 #include "../../common/Ra/States.h"
@@ -40,7 +41,7 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 
 	std::string selfHash = Decent::Crypto::GetSelfHashBase64();
 
-	ocall_printf("Enclave Program Hash: %s\n", selfHash.c_str());
+	LOGI("Enclave Program Hash: %s\n", selfHash.c_str());
 
 	return SGX_SUCCESS;
 }
@@ -59,7 +60,7 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = keyContainer.GetSignKeyPair();
 
 	std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub));
-	std::unique_ptr<RaProcessorClient> clientProcessor = Common::make_unique<RaProcessorClient>(
+	std::unique_ptr<RaProcessorClient> clientProcessor = Tools::make_unique<RaProcessorClient>(
 		enclave_Id,
 		[](const sgx_ec256_public_t& pubKey) {
 			return true;

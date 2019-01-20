@@ -6,6 +6,7 @@
 
 #include "HardCoded.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Ra::WhiteList;
 

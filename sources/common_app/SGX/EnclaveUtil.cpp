@@ -7,7 +7,7 @@
 
 #include <sgx_uae_service.h>
 
-#include "../Common.h"
+#include "../../common/Common.h"
 
 using namespace Decent;
 
@@ -132,8 +132,8 @@ std::string Sgx::GetErrorMessage(const sgx_status_t ret)
 	auto it = g_sgxErrorMsg.find(ret);
 	if (it == g_sgxErrorMsg.cend())
 	{
-		LOGE("Error: Cannot find the error message specified!");
-		return "Error: Cannot find the error message specified!";
+		LOGW("Error: Cannot find the error message specified!");
+		throw std::exception("Error: Cannot find the error message specified!");
 	}
 	return it->second.first;
 }
@@ -143,8 +143,8 @@ std::string Sgx::GetDeviceStatusStr(const sgx_device_status_t ret)
 	auto it = g_sgxDeviceStatus.find(ret);
 	if (it == g_sgxDeviceStatus.cend())
 	{
-		LOGE("Error: Cannot find the status string specified!");
-		return "Error: Cannot find the status string specified!";
+		LOGW("Error: Cannot find the status string specified!");
+		throw std::exception("Error: Cannot find the status string specified!");
 	}
 	return it->second;
 }

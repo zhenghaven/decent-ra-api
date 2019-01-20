@@ -26,7 +26,8 @@
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include "MbedTlsHelpers.h"
-#include "../CommonTool.h"
+#include "../Common.h"
+#include "../make_unique.h"
 
 using namespace Decent::MbedTlsObj;
 using namespace Decent;
@@ -418,7 +419,7 @@ bool MbedTlsObj::ECKeyPublic::ToGeneralPubKey(general_secp256r1_public_t & outKe
 
 std::unique_ptr<general_secp256r1_public_t> MbedTlsObj::ECKeyPublic::ToGeneralPubKey() const
 {
-	std::unique_ptr<general_secp256r1_public_t> pubKey = Common::make_unique<general_secp256r1_public_t>();
+	std::unique_ptr<general_secp256r1_public_t> pubKey = Tools::make_unique<general_secp256r1_public_t>();
 	if (!pubKey || !ToGeneralPubKey(*pubKey))
 	{
 		return nullptr;
@@ -729,7 +730,7 @@ bool MbedTlsObj::ECKeyPair::ToGeneralPrvKey(PrivateKeyWrap & outKey) const
 
 std::unique_ptr<PrivateKeyWrap> MbedTlsObj::ECKeyPair::ToGeneralPrvKey() const
 {
-	std::unique_ptr<PrivateKeyWrap> prvKey = Common::make_unique<PrivateKeyWrap>();
+	std::unique_ptr<PrivateKeyWrap> prvKey = Tools::make_unique<PrivateKeyWrap>();
 	if (!prvKey || !ToGeneralPrvKey(*prvKey))
 	{
 		return nullptr;
@@ -1149,7 +1150,7 @@ static int myX509WriteCrtDer(mbedtls_x509write_cert *ctx, std::vector<uint8_t>& 
 static std::string GetFormatedTime(const time_t& timer)
 {
 	std::tm timeRes;
-	Common::GetSystemUtcTime(timer, timeRes);
+	Tools::GetSystemUtcTime(timer, timeRes);
 
 	std::string res(sizeof("YYYYMMDDHHMMSS0"), '\0');
 
@@ -1178,7 +1179,7 @@ static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvK
 	mbedtls_x509write_crt_set_subject_key(&cert, pubKey.GetInternalPtr());
 
 	time_t timerBegin;
-	Common::GetSystemTime(timerBegin);
+	Tools::GetSystemTime(timerBegin);
 	time_t timerEnd = timerBegin + validTime;
 
 	if (mbedtls_x509write_crt_set_validity(&cert, GetFormatedTime(timerBegin).c_str(), GetFormatedTime(timerEnd).c_str()) != MBEDTLS_SUCCESS_RET ||

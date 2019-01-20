@@ -8,7 +8,7 @@
 
 #include "../SGX/LocAttCommLayer.h"
 
-#include "../Common.h"
+#include "../../common/Common.h"
 #include "../../common/Ra/States.h"
 #include "../../common/Ra/Crypto.h"
 #include "../../common/Ra/KeyContainer.h"

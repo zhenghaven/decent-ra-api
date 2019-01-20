@@ -5,9 +5,10 @@
 #include <Enclave_t.h>
 
 #include "../../common/SGX/sgx_structs.h"
-#include "../../common/CommonTool.h"
+#include "../../common/Common.h"
 #include "../../common/Ra/KeyContainer.h"
 
+using namespace Decent;
 using namespace Decent::Sgx;
 
 const RaProcessorClient::SpSignPubKeyVerifier RaProcessorClient::sk_acceptAnyPubKey(
@@ -112,7 +113,7 @@ bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg
 	msg3.resize(retVal);
 	std::copy(tmpMsg3, tmpMsg3 + retVal, msg3.begin());
 
-	ocall_common_del_buf_uint8(tmpMsg3);
+	ocall_decent_tools_del_buf_uint8(tmpMsg3);
 
 	return true;
 }

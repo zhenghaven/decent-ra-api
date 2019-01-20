@@ -3,7 +3,8 @@
 #include <memory>
 #include <exception>
 
-#include "../common/CommonTool.h"
+#include "../common/Common.h"
+#include "../common/make_unique.h"
 #include "../common/MbedTls/MbedTlsObjects.h"
 
 using namespace Decent;
@@ -13,7 +14,7 @@ namespace
 {
 	static std::unique_ptr<MbedTlsObj::ECKeyPair> ConstructNewKey()
 	{
-		std::unique_ptr<MbedTlsObj::ECKeyPair> key = Common::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::gen);
+		std::unique_ptr<MbedTlsObj::ECKeyPair> key = Tools::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::gen);
 		if (!key || !*key)
 		{
 			LOGW("Failed to create new key pair!");

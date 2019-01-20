@@ -13,9 +13,9 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include "../Common.h"
 #include "../Tools/FileSystemUtil.h"
 
+#include "../../common/Common.h"
 #include "../../common/Tools/DataCoding.h"
 #include "../../common/Net/Connection.h"
 

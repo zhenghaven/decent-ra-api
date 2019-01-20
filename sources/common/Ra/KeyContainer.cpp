@@ -4,7 +4,8 @@
 
 #include <exception>
 
-#include "../CommonTool.h"
+#include "../Common.h"
+#include "../make_unique.h"
 #include "../MbedTls/MbedTlsObjects.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
@@ -13,6 +14,7 @@
 
 using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
+using namespace Decent;
 
 namespace
 {
@@ -21,7 +23,7 @@ namespace
 		std::unique_ptr<ECKeyPair> keyPair;
 		if (pub && prv)
 		{
-			keyPair = Common::make_unique<ECKeyPair>(prv->m_prvKey, *pub);
+			keyPair = Tools::make_unique<ECKeyPair>(prv->m_prvKey, *pub);
 		}
 
 		if (!keyPair || !*keyPair)

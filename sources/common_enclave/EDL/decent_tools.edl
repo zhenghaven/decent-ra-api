@@ -1,0 +1,21 @@
+enclave {
+	
+	include "time.h"
+	
+	untrusted {
+		void ocall_decent_tools_print_string([in, string] const char *str);
+
+		void ocall_decent_tools_print_string_i([in, string] const char *str);
+
+		void ocall_decent_tools_print_string_w([in, string] const char *str);
+		
+		void ocall_decent_tools_del_buf_char([user_check] char* ptr);
+
+		void ocall_decent_tools_del_buf_uint8([user_check] uint8_t* ptr);
+		
+		void ocall_decent_tools_get_sys_time([out] time_t* timer);
+		
+		void ocall_decent_tools_get_sys_utc_time([in] const time_t* timer, [out] struct tm* out_time);
+	};
+
+};

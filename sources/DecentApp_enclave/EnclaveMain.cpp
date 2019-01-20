@@ -10,7 +10,7 @@
 #include "../common/Ra/KeyContainer.h"
 #include "../common/Ra/CertContainer.h"
 
-#include "../common/CommonTool.h"
+#include "../common/Common.h"
 
 using namespace Decent;
 using namespace Decent::Ra;
@@ -61,11 +61,11 @@ extern "C" int ecall_vote_app_proc_voter_msg(void* connection)
 	std::shared_ptr<const MbedTlsObj::TlsConfig> config(std::make_shared<MbedTlsObj::TlsConfig>(ConstructTlsConfig(*prvKey, *appCert)));
 	Decent::Net::TlsCommLayer testTls(connection, config, true);
 	//testTls.ReceiveMsg(connectionPtr, testMsg);
-	COMMON_PRINTF("Handshake was %s.\n", testTls ? "SUCCESS" : "FAILED");
+	LOGI("Handshake was %s.\n", testTls ? "SUCCESS" : "FAILED");
 
 	std::string voteBuf;
 	testTls.ReceiveMsg(connection, voteBuf);
-	COMMON_PRINTF("Receive vote: %d.\n", voteBuf[0]);
+	LOGI("Receive vote: %d.\n", voteBuf[0]);
 
 	return true;
 }

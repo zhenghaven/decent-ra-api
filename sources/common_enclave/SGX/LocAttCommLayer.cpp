@@ -2,9 +2,11 @@
 
 #include <sgx_dh.h>
 
-#include "../../common/CommonTool.h"
+#include "../../common/Common.h"
+#include "../../common/make_unique.h"
 #include "../../common/Net/Connection.h"
 
+using namespace Decent;
 using namespace Decent::Sgx;
 using namespace Decent::Net;
 
@@ -50,8 +52,8 @@ LocAttCommLayer::LocAttCommLayer(std::unique_ptr<General128BitKey>& key, std::un
 std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > LocAttCommLayer::DoHandShake(void * const connectionPtr, bool isInitiator)
 {
 	std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > retValue;
-	std::unique_ptr<General128BitKey> keyPtr(Common::make_unique<General128BitKey>());
-	std::unique_ptr<sgx_dh_session_enclave_identity_t> idPtr(Common::make_unique<sgx_dh_session_enclave_identity_t>());
+	std::unique_ptr<General128BitKey> keyPtr(Tools::make_unique<General128BitKey>());
+	std::unique_ptr<sgx_dh_session_enclave_identity_t> idPtr(Tools::make_unique<sgx_dh_session_enclave_identity_t>());
 
 	sgx_dh_session_t session;
 	sgx_status_t enclaveRet = SGX_SUCCESS;

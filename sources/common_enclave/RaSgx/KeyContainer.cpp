@@ -4,17 +4,19 @@
 
 #include <sgx_tcrypto.h>
 
-#include "../../common/CommonTool.h"
+#include "../../common/Common.h"
+#include "../../common/make_unique.h"
 #include "../../common/SGX/SgxCryptoConversions.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 
 namespace
 {
 	static std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<PrivateKeyWrap> > ConstructKeyPair()
 	{
-		std::unique_ptr<general_secp256r1_public_t> pub = Common::make_unique<general_secp256r1_public_t>();
-		std::unique_ptr<PrivateKeyWrap> prv = Common::make_unique<PrivateKeyWrap>();
+		std::unique_ptr<general_secp256r1_public_t> pub = Tools::make_unique<general_secp256r1_public_t>();
+		std::unique_ptr<PrivateKeyWrap> prv = Tools::make_unique<PrivateKeyWrap>();
 
 		sgx_ecc_state_handle_t eccState = nullptr;
 		if (!pub || !prv ||

@@ -3,7 +3,7 @@
 #include <rapidjson/document.h>
 
 #include "../consttime_memequal.h"
-#include "../CommonTool.h"
+#include "../Common.h"
 
 #include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsHelpers.h"
@@ -12,6 +12,7 @@
 
 #include "Crypto.h"
 
+using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Tools;
 
@@ -113,10 +114,10 @@ bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::s
 	};
 
 	bool reportVerifyRes = Decent::Ias::ParseAndVerifyIasReport(outIasReport, iasReportStr, iasCertChain, iasSign, nullptr, GetSgxDecentRaConfig(), quoteVerifier);
-	//COMMON_PRINTF("IAS Report Is Verified:             %s \n", reportVerifyRes ? "Yes!" : "No!");
-	//COMMON_PRINTF("IAS Report Is Report Data Match:    %s \n", reportVerifyRes ? "Yes!" : "No!");
-	//COMMON_PRINTF("IAS Report Is Hash Match:           %s \n", reportVerifyRes ? "Yes!" : "No!");
-	//COMMON_PRINTF("IAS Report Is Quote Status Valid:   %s \n", reportVerifyRes ? "Yes!" : "No!");
+	//LOGI("IAS Report Is Verified:             %s \n", reportVerifyRes ? "Yes!" : "No!");
+	//LOGI("IAS Report Is Report Data Match:    %s \n", reportVerifyRes ? "Yes!" : "No!");
+	//LOGI("IAS Report Is Hash Match:           %s \n", reportVerifyRes ? "Yes!" : "No!");
+	//LOGI("IAS Report Is Quote Status Valid:   %s \n", reportVerifyRes ? "Yes!" : "No!");
 
 	return reportVerifyRes;
 }

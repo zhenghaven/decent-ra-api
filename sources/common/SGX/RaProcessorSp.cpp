@@ -14,7 +14,7 @@
 #include <cppcodec/base64_rfc4648.hpp>
 #include <mbedtls/md.h>
 
-#include "../CommonTool.h"
+#include "../Common.h"
 #include "../consttime_memequal.h"
 #include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsObjects.h"

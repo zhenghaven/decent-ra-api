@@ -7,7 +7,7 @@
 
 #include <sgx_utils.h>
 
-#include "../../common/CommonTool.h"
+#include "../../common/Common.h"
 
 using namespace Decent::Crypto;
 

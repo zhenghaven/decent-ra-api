@@ -4,7 +4,7 @@
 
 #include <mbedtls/ssl.h>
 
-#include "../CommonTool.h"
+#include "../Common.h"
 
 #include "../MbedTls/MbedTlsObjects.h"
 

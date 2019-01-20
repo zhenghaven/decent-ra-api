@@ -50,7 +50,7 @@ int main(int argc, char ** argv)
 
 	sgx_device_status_t deviceStatusRes;
 	sgx_status_t deviceStatusResErr = Sgx::GetDeviceStatus(deviceStatusRes);
-	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", Sgx::GetErrorMessage(deviceStatusResErr).c_str());
+	//ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", Sgx::GetErrorMessage(deviceStatusResErr).c_str());
 
 	uint32_t hostIP = boost::asio::ip::address_v4::from_string("127.0.0.1").to_uint();
 	uint16_t hostPort = 57755U;

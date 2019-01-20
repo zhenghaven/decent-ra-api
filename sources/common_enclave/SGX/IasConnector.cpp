@@ -24,7 +24,7 @@ bool StatConnector::GetRevocationList(const void* const connectorPtr, const sgx_
 	outRevcList.resize(listSize);
 	std::copy(revcList, revcList + listSize, outRevcList.begin());
 
-	ocall_common_del_buf_char(revcList);
+	ocall_decent_tools_del_buf_char(revcList);
 
 	return true;
 }
@@ -57,17 +57,17 @@ bool StatConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_
 	outReport.resize(reportSize);
 	std::copy(report, report + reportSize, outReport.begin());
 
-	ocall_common_del_buf_char(report);
+	ocall_decent_tools_del_buf_char(report);
 
 	outSign.resize(signSize);
 	std::copy(sign, sign + signSize, outSign.begin());
 
-	ocall_common_del_buf_char(sign);
+	ocall_decent_tools_del_buf_char(sign);
 
 	outCert.resize(certSize);
 	std::copy(cert, cert + certSize, outCert.begin());
 
-	ocall_common_del_buf_char(cert);
+	ocall_decent_tools_del_buf_char(cert);
 
 	return true;
 }

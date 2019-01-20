@@ -1,6 +1,6 @@
 #include "AesGcmCommLayer.h"
 
-#include "../CommonTool.h"
+#include "../Common.h"
 #include "../GeneralKeyTypes.h"
 
 #include "../Tools/DataCoding.h"

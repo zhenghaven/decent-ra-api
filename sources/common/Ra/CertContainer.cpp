@@ -5,7 +5,7 @@
 #endif // DECENT_THREAD_SAFETY_HIGH
 
 #include "Crypto.h"
-#include "../CommonTool.h"
+#include "../Common.h"
 
 using namespace Decent;
 
@@ -38,7 +38,7 @@ bool Decent::Ra::CertContainer::SetCert(std::shared_ptr<const MbedTlsObj::X509Ce
 	m_cert = cert;
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-	COMMON_PRINTF("Saved Cert: \n %s \n", cert->ToPemString().c_str());
+	LOGI("Saved Cert: \n %s \n", cert->ToPemString().c_str());
 
 	return true;
 }

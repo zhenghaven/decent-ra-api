@@ -84,7 +84,7 @@ int main(int argc, char ** argv)
 
 	sgx_device_status_t deviceStatusRes;
 	sgx_status_t deviceStatusResErr = Sgx::GetDeviceStatus(deviceStatusRes);
-	ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", Sgx::GetErrorMessage(deviceStatusResErr).c_str());
+	//ASSERT(deviceStatusResErr == SGX_SUCCESS, "%s\n", Sgx::GetErrorMessage(deviceStatusResErr).c_str());
 
 	std::shared_ptr<Ias::Connector> iasConnector = std::make_shared<Ias::Connector>();
 	Net::SmartServer smartServer;

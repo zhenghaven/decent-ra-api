@@ -12,7 +12,7 @@
 #include <json/json.h>
 #endif // ENCLAVE_ENVIRONMENT
 
-#include "../CommonTool.h"
+#include "../Common.h"
 #include "../Tools/JsonTools.h"
 #include "../Tools/DataCoding.h"
 #include "../consttime_memequal.h"
@@ -268,16 +268,16 @@ bool Ias::ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::str
 		signVerRes = reportCertChain.GetPublicKey().VerifySignatureSha256(hash, signBinBuf);
 	} while (!signVerRes && reportCertChain.NextCert());
 
-	//COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
-	//COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
+	//LOGI("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
+	//LOGI("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
 
 	if (!certVerRes || !signVerRes)
 	{
 		return false;
 	}
 #else
-	//COMMON_PRINTF("IAS Report Certs Verify Result:     %s \n", "Simulated!");
-	//COMMON_PRINTF("IAS Report Signature Verify Result: %s \n", "Simulated!");
+	//LOGI("IAS Report Certs Verify Result:     %s \n", "Simulated!");
+	//LOGI("IAS Report Signature Verify Result: %s \n", "Simulated!");
 #endif // !SIMULATING_ENCLAVE
 
 	std::string idStr;
@@ -289,8 +289,8 @@ bool Ias::ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::str
 
 	bool isQuoteStatusValid = (outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK) || outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_GROUP_OUT_OF_DATE));
 	bool isPseStatusValid = (outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_NA) || outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_OK) || outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_OUT_OF_DATE));
-	//COMMON_PRINTF("IAS Report Is Quote Status Valid:   %s \n", isQuoteStatusValid ? "Yes!" : "No!");
-	//COMMON_PRINTF("IAS Report Is PSE Status Valid:     %s \n", isQuoteStatusValid ? "Yes!" : "No!");
+	//LOGI("IAS Report Is Quote Status Valid:   %s \n", isQuoteStatusValid ? "Yes!" : "No!");
+	//LOGI("IAS Report Is PSE Status Valid:     %s \n", isQuoteStatusValid ? "Yes!" : "No!");
 	if (!isQuoteStatusValid || !isPseStatusValid)
 	{
 		return false;
@@ -301,7 +301,7 @@ bool Ias::ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::str
 	{
 		isNonceMatch = (std::strlen(nonce) == nonceInReport.size());
 		isNonceMatch = isNonceMatch && consttime_memequal(nonceInReport.c_str(), nonce, nonceInReport.size());
-		//COMMON_PRINTF("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
+		//LOGI("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
 		if (!isNonceMatch)
 		{
 			return false;

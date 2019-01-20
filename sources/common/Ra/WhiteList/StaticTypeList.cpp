@@ -2,19 +2,19 @@
 
 #include <algorithm>
 
-#include "../../CommonTool.h"
+#include "../../Common.h"
 
 using namespace Decent::Ra::WhiteList;
 
 StaticTypeList::StaticTypeList(const WhiteListType & whiteList) :
 	m_listMap(whiteList)
 {
-	COMMON_PRINTF("Constrcuted Static WhiteList (Size = %llu): \n", m_listMap.size());
+	LOGI("Constrcuted Static WhiteList (Size = %llu): \n", m_listMap.size());
 	for (auto it = m_listMap.cbegin(); it != m_listMap.cend(); ++it)
 	{
-		COMMON_PRINTF("\t - %s : %s \n", it->first.c_str(), it->second.c_str());
+		LOGI("\t - %s : %s \n", it->first.c_str(), it->second.c_str());
 	}
-	COMMON_PRINTF("Static WhiteList End. \n\n");
+	LOGI("Static WhiteList End. \n\n");
 }
 
 StaticTypeList::~StaticTypeList()

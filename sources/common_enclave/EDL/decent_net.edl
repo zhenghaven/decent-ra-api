@@ -1,0 +1,16 @@
+enclave {
+	
+	untrusted {
+		int ocall_decent_net_cnet_send_pack([user_check] void* ptr, [in, size = size] const char* msg, size_t size);
+		
+		size_t ocall_decent_net_cnet_recv_pack([user_check] void* ptr, [out] char** msg);
+
+		int ocall_decent_net_cnet_send_and_recv_pack([user_check] void* ptr, [in, size = in_size] const char* in_msg, size_t in_size, 
+		[out] char** out_msg, [out] size_t* out_size);
+		
+		size_t ocall_decent_net_cnet_send_raw([user_check] void* ptr, [in, size = size] const char* msg, size_t size);
+		
+		size_t ocall_decent_net_cnet_recv_raw([user_check] void* ptr, [out, size = buf_size] char* buf, size_t buf_size);
+	};
+
+};

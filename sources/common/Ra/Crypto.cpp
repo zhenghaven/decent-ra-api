@@ -8,7 +8,7 @@
 
 #include <sgx_dh.h>
 
-#include "../CommonTool.h"
+#include "../Common.h"
 #include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsHelpers.h"
 

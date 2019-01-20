@@ -10,7 +10,7 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
 
-#include "../Common.h"
+#include "../common/Common.h"
 
 namespace Decent
 {

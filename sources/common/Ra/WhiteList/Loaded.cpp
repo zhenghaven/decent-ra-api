@@ -7,7 +7,7 @@
 #endif // ENCLAVE_ENVIRONMENT
 
 #include "../../Tools/JsonTools.h"
-#include "../../CommonTool.h"
+#include "../../Common.h"
 
 #include "../Crypto.h"
 
@@ -17,7 +17,7 @@ using namespace Decent::Ra::WhiteList;
 
 WhiteListType Loaded::ParseWhiteListFromJson(const std::string & whiteListJson)
 {
-	//COMMON_PRINTF("Parsing Const WhiteList: \n%s \n", whiteListJson.c_str());
+	//LOGI("Parsing Const WhiteList: \n%s \n", whiteListJson.c_str());
 	WhiteListType res;
 	if (whiteListJson.size() == 0)
 	{
