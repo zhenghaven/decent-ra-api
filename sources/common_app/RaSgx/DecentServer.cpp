@@ -11,12 +11,12 @@
 #include <sgx_tcrypto.h>
 #include <sgx_uae_service.h>
 
-#include <Enclave_u.h>
-
 #include "../../common/Tools/DataCoding.h"
 
 #include "../Ra/Messages.h"
 #include "../SGX/EnclaveRuntimeException.h"
+
+#include "edl_decent_ra_server.h"
 
 using namespace Decent::RaSgx;
 using namespace Decent::Tools;
@@ -28,7 +28,7 @@ namespace
 	static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 	{
 		sgx_status_t retval = SGX_SUCCESS;
-		sgx_status_t enclaveRet = ecall_decent_init(id, &retval, &spid);
+		sgx_status_t enclaveRet = ecall_decent_ra_server_init(id, &retval, &spid);
 		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
 		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
 	}
@@ -57,7 +57,7 @@ DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Connect
 
 DecentServer::~DecentServer()
 {
-	ecall_decent_terminate(GetEnclaveId());
+	ecall_decent_ra_server_terminate(GetEnclaveId());
 }
 
 std::string DecentServer::GetDecentSelfRAReport() const
@@ -70,7 +70,7 @@ void DecentServer::LoadConstWhiteList(const std::string & key, const std::string
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	int retval = 0;
 
-	enclaveRet = ecall_decent_server_load_const_white_list(GetEnclaveId(), &retval, key.c_str(), whiteList.c_str());
+	enclaveRet = ecall_decent_ra_server_load_const_loaded_list(GetEnclaveId(), &retval, key.c_str(), whiteList.c_str());
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_load_const_white_list);
 }
 
@@ -79,7 +79,7 @@ void DecentServer::ProcessAppCertReq(const std::string & wListKey, Connection& c
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 
-	enclaveRet = ecall_decent_server_proc_app_cert_req(GetEnclaveId(), &retval, wListKey.c_str(), &connection);
+	enclaveRet = ecall_decent_ra_server_proc_app_cert_req(GetEnclaveId(), &retval, wListKey.c_str(), &connection);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_proc_app_cert_req);
 }
 
@@ -108,24 +108,24 @@ bool DecentServer::ProcessSmartMessage(const std::string & category, const Json:
 std::string DecentServer::GenerateDecentSelfRAReport()
 {
 	sgx_status_t retval = SGX_SUCCESS;
-	sgx_status_t enclaveRet = ecall_decent_server_generate_x509(GetEnclaveId(), &retval, m_ias.get(), GetEnclaveId());
+	sgx_status_t enclaveRet = ecall_decent_ra_server_gen_x509(GetEnclaveId(), &retval, m_ias.get(), GetEnclaveId());
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_generate_x509);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_server_generate_x509);
 
 	size_t certLen = 0;
 
-	enclaveRet = ecall_decent_server_get_x509_pem(GetEnclaveId(), &certLen, nullptr, 0);
+	enclaveRet = ecall_decent_ra_server_get_x509_pem(GetEnclaveId(), &certLen, nullptr, 0);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_get_x509_pem);
 
 	std::string retReport(certLen, '\0');
 	
-	enclaveRet = ecall_decent_server_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
+	enclaveRet = ecall_decent_ra_server_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_get_x509_pem);
 
 	return retReport;
 }
 
-extern "C" int ocall_decent_ra_get_msg1(const uint64_t enclave_id, const uint32_t ra_ctx, sgx_ra_msg1_t* msg1)
+extern "C" int ocall_decent_ra_server_ra_get_msg1(const uint64_t enclave_id, const uint32_t ra_ctx, sgx_ra_msg1_t* msg1)
 {
 	if (!msg1)
 	{
@@ -141,7 +141,7 @@ extern "C" int ocall_decent_ra_get_msg1(const uint64_t enclave_id, const uint32_
 	return (enclaveRet == SGX_SUCCESS);
 }
 
-extern "C" size_t ocall_decent_ra_proc_msg2(const uint64_t enclave_id, const uint32_t ra_ctx, const sgx_ra_msg2_t* msg2, const size_t msg2_size, uint8_t** out_msg3)
+extern "C" size_t ocall_decent_ra_server_ra_proc_msg2(const uint64_t enclave_id, const uint32_t ra_ctx, const sgx_ra_msg2_t* msg2, const size_t msg2_size, uint8_t** out_msg3)
 {
 	if (!msg2 || !out_msg3)
 	{

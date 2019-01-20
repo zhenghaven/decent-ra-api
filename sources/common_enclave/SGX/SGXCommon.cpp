@@ -3,9 +3,9 @@
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
 
-#include <Enclave_t.h>
-
 #include "../../common/make_unique.h"
+
+#include "edl_decent_tools.h"
 
 using namespace Decent;
 

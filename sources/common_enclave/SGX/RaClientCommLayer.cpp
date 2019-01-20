@@ -1,11 +1,10 @@
 #include "RaClientCommLayer.h"
 
-#include <Enclave_t.h>
-
 #include "../../common/Net/Connection.h"
 #include "../../common/SGX/sgx_structs.h"
 
 #include "RaProcessorClient.h"
+#include "edl_decent_sgx_client.h"
 
 using namespace Decent::Sgx;
 using namespace Decent::Net;
@@ -18,7 +17,7 @@ static std::unique_ptr<RaProcessorClient> DoHandShake(void* const connectionPtr,
 	}
 
 	int retVal = 0;
-	if (ocall_sgx_ra_send_msg0s(&retVal, connectionPtr) != SGX_SUCCESS ||
+	if (ocall_decent_sgx_ra_send_msg0s(&retVal, connectionPtr) != SGX_SUCCESS ||
 		!retVal)
 	{
 		return nullptr;

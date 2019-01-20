@@ -2,11 +2,12 @@
 
 #include <sgx_tkey_exchange.h>
 
-#include <Enclave_t.h>
-
 #include "../../common/SGX/sgx_structs.h"
 #include "../../common/Common.h"
 #include "../../common/Ra/KeyContainer.h"
+
+#include "edl_decent_sgx_client.h"
+#include "edl_decent_tools.h"
 
 using namespace Decent;
 using namespace Decent::Sgx;
@@ -104,7 +105,7 @@ bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg
 {
 	size_t retVal = 0;
 	uint8_t* tmpMsg3 = nullptr;
-	if (ocall_sgx_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
+	if (ocall_decent_sgx_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
 		!retVal)
 	{
 		return false;
@@ -232,7 +233,7 @@ bool RaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128BitKey
 bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 {
 	int retVal = 0;
-	if (ocall_sgx_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
+	if (ocall_decent_sgx_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
 		!retVal)
 	{
 		return false;
@@ -240,11 +241,11 @@ bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 	return true;
 }
 
-extern "C" sgx_status_t ecall_enclave_init()
+extern "C" sgx_status_t ecall_decent_sgx_client_enclave_init()
 {
 	return SGX_SUCCESS;
 }
 
-extern "C" void ecall_enclave_terminate()
+extern "C" void ecall_decent_sgx_client_enclave_terminate()
 {
 }

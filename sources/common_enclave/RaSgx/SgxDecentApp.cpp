@@ -4,7 +4,7 @@
 #include <string>
 #include <memory>
 
-#include <Enclave_t.h>
+#include <sgx_error.h>
 
 #include "../SGX/LocAttCommLayer.h"
 
@@ -17,7 +17,7 @@
 using namespace Decent;
 using namespace Decent::Ra;
 
-extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)
+extern "C" size_t ecall_decent_ra_app_get_x509_pem(char* buf, size_t buf_len)
 {
 	auto cert = States::Get().GetCertContainer().GetCert();
 	if (!cert || !(*cert))
@@ -31,7 +31,7 @@ extern "C" size_t ecall_decent_app_get_x509_pem(char* buf, size_t buf_len)
 	return x509Pem.size();
 }
 
-extern "C" sgx_status_t ecall_decent_app_init(void* connection)
+extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 {
 	if (!connection)
 	{

@@ -3,7 +3,7 @@
 
 #include "EnclaveServiceProvider.h"
 
-#include <Enclave_u.h>
+#include "edl_decent_sgx_sp.h"
 
 #include "../../common/SGX/SgxCryptoConversions.h"
 #include "EnclaveRuntimeException.h"
@@ -42,7 +42,7 @@ void EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & out
 {
 	int retval = 0;
 
-	sgx_status_t enclaveRet = ecall_enclave_get_pub_sign_key(GetEnclaveId(), &retval, GeneralEc256Type2Sgx(&outKey));
+	sgx_status_t enclaveRet = ecall_decent_sgx_sp_get_pub_sign_key(GetEnclaveId(), &retval, GeneralEc256Type2Sgx(&outKey));
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_enclave_get_pub_sign_key);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION_INT(retval, ecall_enclave_get_pub_sign_key);
 }

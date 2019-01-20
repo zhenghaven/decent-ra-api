@@ -1,7 +1,7 @@
 #include "Common.h"
 #include "../common/Common.h"
 
-#include <vector>
+#include <array>
 #include <ctime>
 
 #include <mbedtls/platform_util.h>
@@ -13,23 +13,23 @@ using namespace Decent;
 
 namespace
 {
-	static const std::vector<int> g_colorMap = 
+	static constexpr std::array<int, 8> gsk_colorMap = 
 	{
-		0x0008 | 0x0004, //Red = 0,
-		0x0008 | 0x0002, //Green = 1,
-		0x0008 | 0x0006, //Yellow = 2,
-		0x0008 | 0x0001, //Blue = 3,
+		0x0008 | 0x0004, //Red     = 0,
+		0x0008 | 0x0002, //Green   = 1,
+		0x0008 | 0x0006, //Yellow  = 2,
+		0x0008 | 0x0001, //Blue    = 3,
 		0x0008 | 0x0005, //Magenta = 4,
-		0x0008 | 0x0003, //Cyan = 5,
-		0x0000 | 0x0007, //White = 6,
-		0x0000 | 0x0000, //Black = 7,
+		0x0008 | 0x0003, //Cyan    = 5,
+		0x0000 | 0x0007, //White   = 6,
+		0x0000 | 0x0000, //Black   = 7,
 //		0x0000 | 0x0000, //Default = 8,
 	};
 
-	static bool gotDefaultColor = false;
+	static bool gsk_gotDefaultColor = false;
 
-	static int foregroundColor = 0x0000 | 0x0007; //White
-	static int backgroundColor = 0x0000 | 0x0000; //Black
+	static int gsk_foregroundColor = 0x0000 | 0x0007; //White
+	static int gsk_backgroundColor = 0x0000 | 0x0000; //Black
 
 	static void GetDefaultColor()
 	{
@@ -37,10 +37,10 @@ namespace
 		CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
 		GetConsoleScreenBufferInfo(hConsole, &bufferInfo);
 
-		foregroundColor = bufferInfo.wAttributes & 0xFF;
-		backgroundColor = (bufferInfo.wAttributes >> 4) & 0xFF;
+		gsk_foregroundColor = bufferInfo.wAttributes & 0xFF;
+		gsk_backgroundColor = (bufferInfo.wAttributes >> 4) & 0xFF;
 
-		gotDefaultColor = true;
+		gsk_gotDefaultColor = true;
 	}
 }
 
@@ -48,13 +48,13 @@ void Tools::SetConsoleColor(ConsoleColors foreground, ConsoleColors background)
 {
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	
-	if (!gotDefaultColor)
+	if (!gsk_gotDefaultColor)
 	{
 		GetDefaultColor();
 	}
 
-	int fColor = foreground == ConsoleColors::Default ? foregroundColor : g_colorMap[static_cast<int>(foreground)];
-	int bColor = background == ConsoleColors::Default ? backgroundColor : g_colorMap[static_cast<int>(background)];
+	int fColor = foreground == ConsoleColors::Default ? gsk_foregroundColor : gsk_colorMap[static_cast<int>(foreground)];
+	int bColor = background == ConsoleColors::Default ? gsk_backgroundColor : gsk_colorMap[static_cast<int>(background)];
 
 	SetConsoleTextAttribute(hConsole, static_cast<WORD>(fColor | (bColor << 4)));
 }
@@ -63,7 +63,7 @@ void Tools::SetConsoleColor(ConsoleColors foreground, ConsoleColors background)
 
 namespace
 {
-	static const std::vector<int> g_fColorMap =
+	static constexpr std::array<int, 9> g_fColorMap =
 	{
 		31, //Red     = 0,
 		32, //Green   = 1,
@@ -76,7 +76,7 @@ namespace
 		39, //Default = 8,
 	};
 
-	static const std::vector<int> g_bColorMap =
+	static constexpr std::array<int, 9> g_bColorMap =
 	{
 		41, //Red     = 0,
 		42, //Green   = 1,

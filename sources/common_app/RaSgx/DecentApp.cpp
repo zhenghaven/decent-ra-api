@@ -12,7 +12,7 @@
 #include "../Net/Connection.h"
 #include "../SGX/EnclaveRuntimeException.h"
 
-#include <Enclave_u.h>
+#include "edl_decent_ra_app.h"
 
 using namespace Decent::RaSgx;
 using namespace Decent::Tools;
@@ -48,14 +48,14 @@ bool DecentApp::GetX509FromServer(const std::string & decentId, Connection& conn
 	size_t certLen = 0;
 	std::string retReport(5000, '\0');
 
-	enclaveRet = ecall_decent_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
+	enclaveRet = ecall_decent_ra_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_get_x509_pem);
 
 	if (certLen > retReport.size())
 	{
 		retReport.resize(certLen);
 
-		enclaveRet = ecall_decent_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
+		enclaveRet = ecall_decent_ra_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
 		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_get_x509_pem);
 	}
 
@@ -82,7 +82,7 @@ bool DecentApp::InitEnclave(const std::string & wListKey, Connection & serverCon
 
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_decent_app_init(GetEnclaveId(), &retval, &serverConn); //Get X509 Cert.
+	enclaveRet = ecall_decent_ra_app_init(GetEnclaveId(), &retval, &serverConn); //Get X509 Cert.
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_init);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_app_init);
 	

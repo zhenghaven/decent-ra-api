@@ -3,8 +3,6 @@
 
 #include "RaProcessor.h"
 
-#include <Enclave_t.h>
-
 #include "../../common/Common.h"
 #include "../../common/make_unique.h"
 #include "../../common/MbedTls/MbedTlsObjects.h"
@@ -16,8 +14,10 @@
 #include "../../common/SGX/SgxCryptoConversions.h"
 
 #include "../Ra/Crypto.h"
+#include "../SGX/edl_decent_tools.h"
 
 #include "DecentReplace/decent_tkey_exchange.h"
+#include "edl_decent_ra_server.h"
 
 using namespace Decent;
 using namespace Decent::RaSgx;
@@ -52,7 +52,7 @@ bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg
 {
 	size_t retVal = 0;
 	uint8_t* tmpMsg3 = nullptr;
-	if (ocall_decent_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
+	if (ocall_decent_ra_server_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
 		!retVal)
 	{
 		return false;
@@ -119,7 +119,7 @@ void RaProcessorClient::CloseRaContext()
 bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 {
 	int retVal = 0;
-	if (ocall_decent_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
+	if (ocall_decent_ra_server_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
 		!retVal)
 	{
 		return false;

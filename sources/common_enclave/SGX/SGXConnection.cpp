@@ -2,7 +2,8 @@
 
 #include <string.h>
 
-#include <Enclave_t.h>
+#include "edl_decent_net.h"
+#include "edl_decent_tools.h"
 
 using namespace Decent::Net;
 

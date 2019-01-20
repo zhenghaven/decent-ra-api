@@ -5,7 +5,7 @@
 
 using namespace Decent::Ra;
 
-extern "C" int ecall_enclave_get_pub_sign_key(sgx_ec256_public_t* out_key)
+extern "C" int ecall_decent_sgx_sp_get_pub_sign_key(sgx_ec256_public_t* out_key)
 {
 	std::shared_ptr<const general_secp256r1_public_t> pubKey(States::Get().GetKeyContainer().GetSignPubKey());
 	if (!out_key || !pubKey)

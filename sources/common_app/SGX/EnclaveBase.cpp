@@ -18,11 +18,11 @@
 #include "../../common/Common.h"
 #include "../../common/Tools/DataCoding.h"
 #include "../../common/Net/Connection.h"
+#include "../../common/SGX/sgx_structs.h"
 
 #include "EnclaveUtil.h"
 #include "EnclaveRuntimeException.h"
-
-#include <Enclave_u.h>
+#include "edl_decent_sgx_client.h"
 
 using namespace Decent::Sgx;
 using namespace Decent::Net;
@@ -76,7 +76,7 @@ sgx_enclave_id_t EnclaveBase::LaunchEnclave(const fs::path& enclavePath, const f
 	}
 
 	sgx_status_t retval = SGX_SUCCESS;
-	enclaveRet = ecall_enclave_init(outEnclaveID, &retval);
+	enclaveRet = ecall_decent_sgx_client_enclave_init(outEnclaveID, &retval);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_enclave_init);
 	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_enclave_init);
 
@@ -101,7 +101,7 @@ EnclaveBase::EnclaveBase(const std::string& enclavePath, const KnownFolderType t
 
 EnclaveBase::~EnclaveBase()
 {
-	ecall_enclave_terminate(m_eid);
+	ecall_decent_sgx_client_enclave_terminate(m_eid);
 	sgx_destroy_enclave(m_eid);
 }
 
@@ -155,7 +155,7 @@ bool EnclaveBase::UpdateToken(const fs::path& tokenPath, const std::vector<uint8
 	return writeRes;
 }
 
-extern "C" int ocall_sgx_ra_get_msg1(const uint64_t enclave_id, const uint32_t ra_ctx, sgx_ra_msg1_t* msg1)
+extern "C" int ocall_decent_sgx_ra_get_msg1(const uint64_t enclave_id, const uint32_t ra_ctx, sgx_ra_msg1_t* msg1)
 {
 	if (!msg1)
 	{
@@ -171,7 +171,7 @@ extern "C" int ocall_sgx_ra_get_msg1(const uint64_t enclave_id, const uint32_t r
 	return (enclaveRet == SGX_SUCCESS);
 }
 
-extern "C" size_t ocall_sgx_ra_proc_msg2(const uint64_t enclave_id, const uint32_t ra_ctx, const sgx_ra_msg2_t* msg2, const size_t msg2_size, uint8_t** out_msg3)
+extern "C" size_t ocall_decent_sgx_ra_proc_msg2(const uint64_t enclave_id, const uint32_t ra_ctx, const sgx_ra_msg2_t* msg2, const size_t msg2_size, uint8_t** out_msg3)
 {
 	if (!msg2 || !out_msg3)
 	{
@@ -202,7 +202,7 @@ extern "C" size_t ocall_sgx_ra_proc_msg2(const uint64_t enclave_id, const uint32
 	return tmpMsg3Size;
 }
 
-extern "C" int ocall_sgx_ra_send_msg0s(void* const connection_ptr)
+extern "C" int ocall_decent_sgx_ra_send_msg0s(void* const connection_ptr)
 {
 	try
 	{

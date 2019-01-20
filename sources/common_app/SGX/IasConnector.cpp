@@ -325,7 +325,7 @@ bool StatConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_
 	return reinterpret_cast<const Connector*>(connectorPtr)->GetQuoteReport(msg3, msg3Size, nonce, pseEnabled, outReport, outSign, outCert);
 }
 
-extern "C" int ocall_ias_get_revoc_list(const void* const connector_ptr, const sgx_epid_group_id_t* gid, char** outRevcList, size_t* outSize)
+extern "C" int ocall_decent_ias_get_revoc_list(const void* const connector_ptr, const sgx_epid_group_id_t* gid, char** outRevcList, size_t* outSize)
 {
 	if (!connector_ptr || !gid ||
 		!outRevcList || !outSize)
@@ -347,7 +347,7 @@ extern "C" int ocall_ias_get_revoc_list(const void* const connector_ptr, const s
 	return true;
 }
 
-extern "C" int ocall_ias_get_quote_report(const void* const connector_ptr, const sgx_ra_msg3_t* msg3, const size_t msg3_size,
+extern "C" int ocall_decent_ias_get_quote_report(const void* const connector_ptr, const sgx_ra_msg3_t* msg3, const size_t msg3_size,
 	const char* nonce, const int pse_enabled,
 	char** out_report, size_t* report_size,
 	char** out_sign, size_t* sign_size,

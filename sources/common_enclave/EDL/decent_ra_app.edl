@@ -1,8 +1,8 @@
 enclave {
 	trusted 
 	{
-		public size_t ecall_decent_app_get_x509_pem([out, size = buf_len] char* buf, size_t buf_len);
+		public size_t ecall_decent_ra_app_get_x509_pem([out, size = buf_len] char* buf, size_t buf_len);
 		
-		public sgx_status_t ecall_decent_app_init([user_check] void* connection);
+		public sgx_status_t ecall_decent_ra_app_init([user_check] void* connection);
 	};
 };

@@ -4,10 +4,10 @@ enclave {
 	
 	untrusted 
 	{
-		int ocall_ias_get_revoc_list([user_check] const void* connector_ptr, [in] const sgx_epid_group_id_t* gid, 
+		int ocall_decent_ias_get_revoc_list([user_check] const void* connector_ptr, [in] const sgx_epid_group_id_t* gid, 
 		[out] char** outRevcList, [out] size_t* out_size);
 
-		int ocall_ias_get_quote_report([user_check] const void* connector_ptr, [in, size=msg3_size] const sgx_ra_msg3_t* msg3, size_t msg3_size, 
+		int ocall_decent_ias_get_quote_report([user_check] const void* connector_ptr, [in, size=msg3_size] const sgx_ra_msg3_t* msg3, size_t msg3_size, 
 		[in, string] const char* nonce, int pse_enabled, 
 		[out] char** out_report, [out] size_t* report_size, 
 		[out] char** out_sign,   [out] size_t* sign_size, 
@@ -16,7 +16,7 @@ enclave {
 
 	trusted 
 	{
-		public int ecall_enclave_get_pub_sign_key([out] sgx_ec256_public_t* out_key);
+		public int ecall_decent_sgx_sp_get_pub_sign_key([out] sgx_ec256_public_t* out_key);
 	};
 
 };

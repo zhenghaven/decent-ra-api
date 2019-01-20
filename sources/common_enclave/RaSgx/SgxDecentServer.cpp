@@ -31,7 +31,7 @@ using namespace Decent::Tools;
 using namespace Decent::RaSgx;
 
 //Initialize Decent enclave.
-extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
+extern "C" sgx_status_t ecall_decent_ra_server_init(const sgx_spid_t* inSpid)
 {
 	if (!inSpid)
 	{
@@ -47,13 +47,13 @@ extern "C" sgx_status_t ecall_decent_init(const sgx_spid_t* inSpid)
 }
 
 //Deinitialize Decent enclave.
-extern "C" void ecall_decent_terminate()
+extern "C" void ecall_decent_ra_server_terminate()
 {
 
 }
 
 //Self attestation.
-extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias_connector, const uint64_t enclave_Id)
+extern "C" sgx_status_t ecall_decent_ra_server_gen_x509(const void * const ias_connector, const uint64_t enclave_Id)
 {
 	const KeyContainer& keyContainer = States::Get().GetKeyContainer();
 	std::shared_ptr<const general_secp256r1_public_t> signPub = keyContainer.GetSignPubKey();
@@ -74,7 +74,7 @@ extern "C" sgx_status_t ecall_decent_server_generate_x509(const void * const ias
 }
 
 //Output cert to the untrusted side.
-extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
+extern "C" size_t ecall_decent_ra_server_get_x509_pem(char* buf, size_t buf_len)
 {
 	auto serverCert = States::Get().GetCertContainer().GetCert();
 	if (!serverCert || !(*serverCert))
@@ -90,12 +90,12 @@ extern "C" size_t ecall_decent_server_get_x509_pem(char* buf, size_t buf_len)
 }
 
 //Load const white list to the const white list manager.
-extern "C" int ecall_decent_server_load_const_white_list(const char* key, const char* listJson)
+extern "C" int ecall_decent_ra_server_load_const_loaded_list(const char* key, const char* listJson)
 {
 	return WhiteList::ConstManager::Get().AddWhiteList(key, listJson);
 }
 
-extern "C" sgx_status_t ecall_decent_server_proc_app_cert_req(const char* key, void* const connection)
+extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key, void* const connection)
 {
 	if (!key || !connection)
 	{

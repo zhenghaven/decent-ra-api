@@ -4,8 +4,7 @@
 #include "DecentralizedEnclave.h"
 
 #include "EnclaveRuntimeException.h"
-
-#include <Enclave_u.h>
+#include "edl_decent_sgx_decentralized.h"
 
 using namespace Decent::Sgx;
 
