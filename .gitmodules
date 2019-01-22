@@ -1,15 +1,9 @@
-[submodule "hunter"]
-	path = hunter
-	url = https://github.com/zhenghaven/hunter.git
 [submodule "libs/jsoncpp"]
 	path = libs/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
 [submodule "libs/cppcodec"]
 	path = libs/cppcodec
 	url = https://github.com/tplgy/cppcodec.git
-[submodule "libs/tclap"]
-	path = libs/tclap
-	url = https://git.code.sf.net/p/tclap/code
 [submodule "libs/curl"]
 	path = libs/curl
 	url = https://github.com/curl/curl.git
