@@ -1,6 +1,6 @@
 enclave {
 	
-	include "../common/SGX/sgx_structs.h"
+	include "DecentApi/Common/SGX/sgx_structs.h"
 	
 	from "sgx_tkey_exchange.edl" import *;
 	
