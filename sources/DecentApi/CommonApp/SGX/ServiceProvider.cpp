@@ -1,7 +1,7 @@
 #include "ServiceProvider.h"
 
-#include "../../common/Ra/States.h"
-#include "../../common/Ra/KeyContainer.h"
+#include "../../Common/Ra/States.h"
+#include "../../Common/Ra/KeyContainer.h"
 
 using namespace Decent::Sgx;
 using namespace Decent::Ias;

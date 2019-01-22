@@ -1,12 +1,12 @@
-#include "../../common/Ra/KeyContainer.h"
+#include "../../Common/Ra/KeyContainer.h"
 
 #include <memory>
 
 #include <sgx_tcrypto.h>
 
-#include "../../common/Common.h"
-#include "../../common/make_unique.h"
-#include "../../common/SGX/SgxCryptoConversions.h"
+#include "../../Common/Common.h"
+#include "../../Common/make_unique.h"
+#include "../../Common/SGX/SgxCryptoConversions.h"
 
 using namespace Decent;
 using namespace Decent::Ra;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../SGX/RaProcessorClient.h"
-#include "../../common/SGX/RaProcessorSp.h"
+#include "../CommonEnclave/SGX/RaProcessorClient.h"
+#include "../Common/SGX/RaProcessorSp.h"
 
 namespace Decent
 {

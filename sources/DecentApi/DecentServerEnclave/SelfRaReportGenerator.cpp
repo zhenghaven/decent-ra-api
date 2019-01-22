@@ -4,11 +4,11 @@
 
 #include <sgx_key_exchange.h>
 
-#include "../../common/Tools/JsonTools.h"
-#include "../../common/Tools/DataCoding.h"
-#include "../../common/Ra/RaReport.h"
-#include "../../common/SGX/sgx_structs.h"
-#include "../../common/SGX/RaProcessorSp.h"
+#include "../Common/Tools/JsonTools.h"
+#include "../Common/Tools/DataCoding.h"
+#include "../Common/Ra/RaReport.h"
+#include "../Common/SGX/sgx_structs.h"
+#include "../Common/SGX/RaProcessorSp.h"
 #include "RaProcessor.h"
 
 using namespace Decent::RaSgx;

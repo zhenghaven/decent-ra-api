@@ -2,7 +2,7 @@
 
 #include "edl_decent_sgx_sp.h"
 
-#include "../../common/SGX/SgxCryptoConversions.h"
+#include "../../Common/SGX/SgxCryptoConversions.h"
 #include "EnclaveRuntimeException.h"
 
 using namespace Decent::Sgx;

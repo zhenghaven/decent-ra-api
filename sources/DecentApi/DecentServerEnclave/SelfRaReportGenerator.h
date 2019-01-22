@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "../Ra/SelfRaReportGenerator.h"
+#include "../CommonEnclave/Ra/SelfRaReportGenerator.h"
 
 namespace Decent
 {

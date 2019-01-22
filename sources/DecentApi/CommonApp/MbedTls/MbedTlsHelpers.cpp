@@ -1,4 +1,4 @@
-#include "../../common/MbedTls/MbedTlsHelpers.h"
+#include "../../Common/MbedTls/MbedTlsHelpers.h"
 
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>

@@ -1,7 +1,7 @@
 #include <sgx_tcrypto.h>
 
-#include "../../common/Ra/States.h"
-#include "../../common/Ra/KeyContainer.h"
+#include "../../Common/Ra/States.h"
+#include "../../Common/Ra/KeyContainer.h"
 
 using namespace Decent::Ra;
 

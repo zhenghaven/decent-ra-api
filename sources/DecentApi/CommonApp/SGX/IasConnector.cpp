@@ -17,8 +17,8 @@
 #include <curl/curl.h>
 #include <cppcodec/hex_lower.hpp>
 
-#include "../../common/Tools/DataCoding.h"
-#include "../../common/SGX/IasConnector.h"
+#include "../../Common/Tools/DataCoding.h"
+#include "../../Common/SGX/IasConnector.h"
 
 #include "../Tools/FileSystemUtil.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Ra/DecentServer.h"
-#include "../SGX/EnclaveServiceProvider.h"
+#include "../CommonApp/Ra/DecentServer.h"
+#include "../CommonApp/SGX/EnclaveServiceProvider.h"
 
 typedef struct _spid_t sgx_spid_t;
 

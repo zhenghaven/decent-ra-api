@@ -1,6 +1,6 @@
 #include "ConstManager.h"
 
-#include "../../../common/Common.h"
+#include "../../../Common/Common.h"
 
 using namespace Decent::Ra::WhiteList;
 

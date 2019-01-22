@@ -1,6 +1,6 @@
 #include "Crypto.h"
 
-#include "../common/Tools/DataCoding.h"
+#include "../../Common/Tools/DataCoding.h"
 
 using namespace Decent::Tools;
 

@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>
 
-#include "../../common/GeneralKeyTypes.h"
+#include "../../Common/GeneralKeyTypes.h"
 
 typedef struct _sgx_ra_msg0r_t sgx_ra_msg0r_t;
 typedef struct _ra_msg1_t sgx_ra_msg1_t;

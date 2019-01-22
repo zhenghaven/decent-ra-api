@@ -1,4 +1,4 @@
-#include "../../common/Net/Connection.h"
+#include "../../Common/Net/Connection.h"
 
 #include <string.h>
 

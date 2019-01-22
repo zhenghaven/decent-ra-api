@@ -1,5 +1,5 @@
 #include "Common.h"
-#include "../common/Common.h"
+#include "../Common/Common.h"
 
 #include <array>
 #include <ctime>

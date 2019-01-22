@@ -3,7 +3,7 @@
 #include <utility>
 #include <memory>
 
-#include "../../common/Net/AesGcmCommLayer.h"
+#include "../../Common/Net/AesGcmCommLayer.h"
 
 typedef struct _sgx_dh_session_enclave_identity_t sgx_dh_session_enclave_identity_t;
 

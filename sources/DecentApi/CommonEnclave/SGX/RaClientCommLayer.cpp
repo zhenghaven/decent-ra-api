@@ -1,7 +1,7 @@
 #include "RaClientCommLayer.h"
 
-#include "../../common/Net/Connection.h"
-#include "../../common/SGX/sgx_structs.h"
+#include "../../Common/Net/Connection.h"
+#include "../../Common/SGX/sgx_structs.h"
 
 #include "RaProcessorClient.h"
 #include "edl_decent_sgx_client.h"

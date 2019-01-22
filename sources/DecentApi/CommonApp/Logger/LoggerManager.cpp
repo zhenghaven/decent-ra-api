@@ -9,7 +9,7 @@
 #include <boost/filesystem.hpp>
 
 #include "../Tools/FileSystemUtil.h"
-#include "../../common/Common.h"
+#include "../../Common/Common.h"
 
 using namespace Decent::Tools;
 using namespace Decent::Logger;

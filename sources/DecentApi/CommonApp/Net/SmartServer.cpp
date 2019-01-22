@@ -6,7 +6,7 @@
 #include <boost/asio/io_service.hpp>
 #include <json/json.h>
 
-#include "../../common/Common.h"
+#include "../../Common/Common.h"
 
 #include "Server.h"
 #include "Connection.h"

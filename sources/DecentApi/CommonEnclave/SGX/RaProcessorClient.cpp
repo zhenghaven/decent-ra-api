@@ -2,9 +2,9 @@
 
 #include <sgx_tkey_exchange.h>
 
-#include "../../common/SGX/sgx_structs.h"
-#include "../../common/Common.h"
-#include "../../common/Ra/KeyContainer.h"
+#include "../../Common/SGX/sgx_structs.h"
+#include "../../Common/Common.h"
+#include "../../Common/Ra/KeyContainer.h"
 
 #include "edl_decent_sgx_client.h"
 #include "edl_decent_tools.h"

@@ -1,4 +1,4 @@
-#include "../../common/SGX/IasConnector.h"
+#include "../../Common/SGX/IasConnector.h"
 
 #include "edl_decent_tools.h"
 #include "edl_decent_sgx_sp.h"

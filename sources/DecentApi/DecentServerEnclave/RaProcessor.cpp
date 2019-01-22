@@ -1,17 +1,16 @@
 #include "RaProcessor.h"
 
-#include "../../common/Common.h"
-#include "../../common/make_unique.h"
-#include "../../common/MbedTls/MbedTlsObjects.h"
-#include "../../common/MbedTls/MbedTlsHelpers.h"
-#include "../../common/Ra/States.h"
-#include "../../common/Ra/RaReport.h"
-#include "../../common/Ra/KeyContainer.h"
+#include "../Common/Common.h"
+#include "../Common/make_unique.h"
+#include "../Common/MbedTls/MbedTlsObjects.h"
+#include "../Common/MbedTls/MbedTlsHelpers.h"
+#include "../Common/Ra/States.h"
+#include "../Common/Ra/RaReport.h"
+#include "../Common/Ra/KeyContainer.h"
+#include "../Common/SGX/SgxCryptoConversions.h"
 
-#include "../../common/SGX/SgxCryptoConversions.h"
-
-#include "../Ra/Crypto.h"
-#include "../SGX/edl_decent_tools.h"
+#include "../CommonEnclave/Ra/Crypto.h"
+#include "../CommonEnclave/SGX/edl_decent_tools.h"
 
 #include "DecentReplace/decent_tkey_exchange.h"
 #include "edl_decent_ra_server.h"

@@ -1,9 +1,9 @@
 #include "SelfRaReportGenerator.h"
 
-#include "../common/Ra/States.h"
-#include "../common/Ra/Crypto.h"
-#include "../common/Ra/KeyContainer.h"
-#include "../common/Ra/CertContainer.h"
+#include "../../Common/Ra/States.h"
+#include "../../Common/Ra/Crypto.h"
+#include "../../Common/Ra/KeyContainer.h"
+#include "../../Common/Ra/CertContainer.h"
 
 #include "Crypto.h"
 

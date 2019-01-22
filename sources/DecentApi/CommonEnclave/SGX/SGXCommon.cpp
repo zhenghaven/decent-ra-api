@@ -1,9 +1,9 @@
-#include "../../common/Common.h"
+#include "../../Common/Common.h"
 
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
 
-#include "../../common/make_unique.h"
+#include "../../Common/make_unique.h"
 
 #include "edl_decent_tools.h"
 

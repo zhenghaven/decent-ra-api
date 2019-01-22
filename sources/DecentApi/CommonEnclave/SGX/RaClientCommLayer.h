@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "../../common/Net/AesGcmCommLayer.h"
+#include "../../Common/Net/AesGcmCommLayer.h"
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
 

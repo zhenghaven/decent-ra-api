@@ -1,6 +1,6 @@
 //#if ENCLAVE_PLATFORM_SGX
 
-#include "../../common/MbedTls/MbedTlsSubFunc.h"
+#include "../../Common/MbedTls/MbedTlsSubFunc.h"
 
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */

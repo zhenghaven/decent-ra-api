@@ -4,7 +4,7 @@
 #include <ctime>
 
 #include "../Common.h"
-#include "../../common/Common.h"
+#include "../../Common/Common.h"
 
 using namespace Decent::Tools;
 

@@ -1,6 +1,6 @@
 //#if ENCLAVE_PLATFORM_SGX
 
-#include "../common/MbedTls/MbedTlsHelpers.h"
+#include "../../Common/MbedTls/MbedTlsHelpers.h"
 
 #include <sgx_trts.h>
 

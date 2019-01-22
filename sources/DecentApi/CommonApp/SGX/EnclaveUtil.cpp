@@ -4,7 +4,7 @@
 
 #include <sgx_uae_service.h>
 
-#include "../../common/Common.h"
+#include "../../Common/Common.h"
 
 using namespace Decent;
 

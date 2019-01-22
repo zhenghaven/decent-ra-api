@@ -2,9 +2,9 @@
 
 #include <sgx_dh.h>
 
-#include "../../common/Common.h"
-#include "../../common/make_unique.h"
-#include "../../common/Net/Connection.h"
+#include "../../Common/Common.h"
+#include "../../Common/make_unique.h"
+#include "../../Common/Net/Connection.h"
 
 using namespace Decent;
 using namespace Decent::Sgx;

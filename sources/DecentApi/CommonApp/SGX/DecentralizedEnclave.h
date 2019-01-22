@@ -16,7 +16,7 @@ namespace Decent
 		public:
 			DecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& iasConnector, const std::string& enclavePath, const std::string& tokenPath);
 			DecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& iasConnector, const fs::path& enclavePath, const fs::path& tokenPath);
-			DecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& iasConnector, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName);
+			DecentralizedEnclave(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& iasConnector, const std::string& enclavePath, const Decent::Tools::KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 			virtual ~DecentralizedEnclave();
 

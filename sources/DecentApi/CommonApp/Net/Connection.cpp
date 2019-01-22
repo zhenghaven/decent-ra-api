@@ -3,8 +3,8 @@
 #include <json/json.h>
 
 #include "SmartMessages.h"
-#include "../../common/Net/Connection.h"
-#include "../../common/Tools/JsonTools.h"
+#include "../../Common/Net/Connection.h"
+#include "../../Common/Tools/JsonTools.h"
 
 using namespace Decent::Net;
 using namespace Decent::Tools;

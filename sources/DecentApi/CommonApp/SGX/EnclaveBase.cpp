@@ -12,10 +12,10 @@
 
 #include "../Tools/FileSystemUtil.h"
 
-#include "../../common/Common.h"
-#include "../../common/Tools/DataCoding.h"
-#include "../../common/Net/Connection.h"
-#include "../../common/SGX/sgx_structs.h"
+#include "../../Common/Common.h"
+#include "../../Common/Tools/DataCoding.h"
+#include "../../Common/Net/Connection.h"
+#include "../../Common/SGX/sgx_structs.h"
 
 #include "EnclaveUtil.h"
 #include "EnclaveRuntimeException.h"

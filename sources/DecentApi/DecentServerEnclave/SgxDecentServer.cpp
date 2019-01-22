@@ -4,23 +4,23 @@
 
 #include <sgx_dh.h>
 
-#include "../../common/Common.h"
-#include "../../common/make_unique.h"
-#include "../../common/Tools/DataCoding.h"
-#include "../../common/Ra/Crypto.h"
-#include "../../common/Ra/States.h"
-#include "../../common/Ra/RaReport.h"
-#include "../../common/Ra/KeyContainer.h"
-#include "../../common/Ra/CertContainer.h"
+#include "../Common/Common.h"
+#include "../Common/make_unique.h"
+#include "../Common/Tools/DataCoding.h"
+#include "../Common/Ra/Crypto.h"
+#include "../Common/Ra/States.h"
+#include "../Common/Ra/RaReport.h"
+#include "../Common/Ra/KeyContainer.h"
+#include "../Common/Ra/CertContainer.h"
 
-#include "../../common/SGX/SgxCryptoConversions.h"
+#include "../Common/SGX/SgxCryptoConversions.h"
 
-#include "../Ra/WhiteList/ConstManager.h"
-#include "../Ra/Crypto.h"
+#include "../CommonEnclave/Ra/WhiteList/ConstManager.h"
+#include "../CommonEnclave/Ra/Crypto.h"
+#include "../CommonEnclave/SGX/LocAttCommLayer.h"
 
-#include "../SGX/LocAttCommLayer.h"
-#include "../RaSgx/SelfRaReportGenerator.h"
-#include "../RaSgx/RaProcessor.h"
+#include "SelfRaReportGenerator.h"
+#include "RaProcessor.h"
 
 using namespace Decent;
 using namespace Decent::Ra;

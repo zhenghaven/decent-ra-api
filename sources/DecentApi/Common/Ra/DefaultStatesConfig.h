@@ -1,10 +1,10 @@
-#include "../common/Ra/States.h"
+#include "States.h"
 
-#include "../common/Ra/KeyContainer.h"
-#include "../common/Ra/CertContainer.h"
-#include "../common/Ra/WhiteList/Loaded.h"
-#include "../common/Ra/WhiteList/HardCoded.h"
-#include "../common/Ra/WhiteList/DecentServer.h"
+#include "KeyContainer.h"
+#include "CertContainer.h"
+#include "WhiteList/Loaded.h"
+#include "WhiteList/HardCoded.h"
+#include "WhiteList/DecentServer.h"
 
 using namespace Decent::Ra;
 

@@ -7,10 +7,10 @@
 #include <sgx_tcrypto.h>
 #include <sgx_uae_service.h>
 
-#include "../../common/Tools/DataCoding.h"
+#include "../Common/Tools/DataCoding.h"
 
-#include "../Ra/Messages.h"
-#include "../SGX/EnclaveRuntimeException.h"
+#include "../CommonApp/Ra/Messages.h"
+#include "../CommonApp/SGX/EnclaveRuntimeException.h"
 
 #include "edl_decent_ra_server.h"
 
