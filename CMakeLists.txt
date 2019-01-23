@@ -3,63 +3,18 @@ cmake_minimum_required(VERSION 3.11)
 #==========================================================
 #   Options for Decent Project
 #==========================================================
-set(HUNTER_BOOST_RUNTIME_STATIC ON CACHE BOOL "Switch for using boost runtime static linking." FORCE)
-#set(DECENT_CXX_STANDARD_VER c++11 CACHE STRING "C++ standard version used by decent." FORCE)
+option(DECENT_API_DECENT_SERVER "Add decent server module." OFF)
+option(DECENT_API_DECENT_APP "Add decent app module." OFF)
+option(DECENT_API_SGX_PLATFORM "Use SGX platform." ON)
 
 if(APPLE)
 	message(FATAL_ERROR "Mac OS is not supported for now.")
 endif()
-#==========================================================
-#   Setup Hunter
-#==========================================================
-
-set(gate_dir "${CMAKE_CURRENT_LIST_DIR}/hunter/gate")
-set(gate_module "${gate_dir}/cmake/HunterGate.cmake")
-set(HUNTER_KEEP_PACKAGE_SOURCES ON)
-
-get_filename_component(gate_module "${gate_module}" ABSOLUTE)
-
-if(NOT EXISTS "${gate_module}")
-	message(FATAL_ERROR "${gate_module} module not found!")
-endif()
-
-message("Including HunterGate: ${gate_module}")
-include("${gate_module}")
-
-get_filename_component(HUNTER_ROOT "${CMAKE_CURRENT_LIST_DIR}/hunter" ABSOLUTE)
-HunterGate(URL "x" SHA1 "xxxxxxxx" FILEPATH ${CMAKE_CURRENT_LIST_DIR}/HunterConfig.cmake)
 
 #==========================================================
 #   Start Decent Project
 #==========================================================
-project(decent)
-
-#==========================================================
-#   Add Hunter Libraries
-#==========================================================
-set(BUILD_SHARED_LIBS OFF)
-set(BUILD_STATIC_LIBS ON)
-set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF)
-
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
-set(Boost_NO_SYSTEM_PATHS ON)
-hunter_add_package(Boost COMPONENTS filesystem)
-find_package(Boost CONFIG REQUIRED system filesystem)
-
-message(STATUS "")
-message(STATUS "==================================================")
-message(STATUS "Looking for Boost library in ${BOOST_ROOT}...")
-message(STATUS "Boost found?: ${Boost_FOUND}")
-message(STATUS "Boost Include Dir: ${Boost_INCLUDE_DIRS}")
-message(STATUS "Boost Library Dir: ${Boost_LIBRARY_DIRS}")
-message(STATUS "Boost Libraries: ${Boost_LIBRARIES}")
-message(STATUS "==================================================")
-message(STATUS "")
-
-set(OPENSSL_USE_STATIC_LIBS ON)
-hunter_add_package(OpenSSL)
-find_package(OpenSSL REQUIRED)
+project(DecentRaApi)
 
 #==========================================================
 #   Setup options
@@ -162,27 +117,17 @@ set(CMAKE_STATIC_LINKER_FLAGS_DEBUGSIMULATION ${CMAKE_STATIC_LINKER_FLAGS_DEBUG}
 set(CMAKE_CONFIGURATION_TYPES Release Debug DebugSimulation)
 set_property(GLOBAL PROPERTY DEBUG_CONFIGURATIONS Debug DebugSimulation)
 
-#-------
-# Flag results:
-#-------
-message(STATUS "Final set of flags")
-message(STATUS "==================================================")
-message(STATUS "CMake Standard Libraries:")
-message(STATUS "${CMAKE_CXX_STANDARD_LIBRARIES_INIT}")
-message(STATUS "CMake CXX Flags:")
-message(STATUS "${CMAKE_CXX_FLAGS}")
-message(STATUS "CMake CXX Flags (Debug):")
-message(STATUS "${CMAKE_CXX_FLAGS_DEBUG}")
-message(STATUS "CMake CXX Flags (Release):")
-message(STATUS "${CMAKE_CXX_FLAGS_RELEASE}")
-message(STATUS "CMake CXX Link Flags:")
-message(STATUS "${CMAKE_EXE_LINKER_FLAGS}")
-message(STATUS "CMake CXX Link Flags (Debug):")
-message(STATUS "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
-message(STATUS "CMake CXX Link Flags (Release):")
-message(STATUS "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-message(STATUS "==================================================")
-message(STATUS "")
+#==========================================================
+#   Add Libraries
+#==========================================================
+set(BUILD_SHARED_LIBS OFF)
+set(BUILD_STATIC_LIBS ON)
+set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF)
+
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
+set(Boost_NO_SYSTEM_PATHS ON)
+find_package(Boost CONFIG REQUIRED system filesystem)
 
 #==========================================================
 #   Add submodules
@@ -192,7 +137,7 @@ message(STATUS "")
 set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
 set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbed TLS programs." FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls)
-set(MBEDTLS_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/mbedtls/include)
+set(MBEDTLS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls/include)
 set(MBEDTLS_INCLUDE_DIRS ${MBEDTLS_INCLUDE_DIR})
 set(MBEDCRYPTO_LIBRARY mbedcrypto)
 set(MBEDX509_LIBRARY mbedx509)
@@ -214,7 +159,7 @@ set(HTTP_ONLY ON CACHE BOOL "Set to ON to build libcurl with only http functiona
 set(ENABLE_MANUAL OFF CACHE BOOL "Set to ON to build libcurl manual." FORCE)
 set(ENABLE_UNIX_SOCKETS OFF CACHE BOOL "Define if you want Unix domain sockets support" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/curl)
-set(CURL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/curl/include)
+set(CURL_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/curl/include)
 
 ##JsonCPP
 set(JSONCPP_WITH_TESTS OFF CACHE BOOL "Set to ON to build JsonCpp with tests." FORCE)
@@ -223,7 +168,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 
 ##Intel SGX SDK
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/DownloadSgxSdk.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/cmake/FindSgxSdk.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/SetupSgxSdkLib.cmake)
 
 ##Header only libraries
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
@@ -231,217 +176,82 @@ set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/rapidjson/include)
 set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
 
 
-set(COMMON_APP_INCLUDE_DIRS ${JSONCPP_INCLUDE_DIRS} 
-							 ${TCLAP_INCLUDE_DIR} 
+set(COMMON_APP_INCLUDE_DIRS ${TCLAP_INCLUDE_DIR} 
 							 ${CURL_INCLUDE_DIR} 
 							 ${CPPCODEC_INCLUDE_DIR} 
 							 ${MBEDTLS_INCLUDE_DIR} 
 							 ${RAPIDJSON_INCLUDE_DIR} 
-#							 ${Boost_INCLUDE_DIRS} 
+							 ${INTEL_SGX_SDK_INCLUDE_DIR} 
 							 )
 
-set(COMMON_ENCLAVE_INCLUDE_DIRS ${CPPCODEC_INCLUDE_DIR}
-							 ${RAPIDJSON_INCLUDE_DIR}
-							 ${MBEDTLS_INCLUDE_DIR}
+set(COMMON_ENCLAVE_INCLUDE_DIRS ${CPPCODEC_INCLUDE_DIR} 
+							 ${RAPIDJSON_INCLUDE_DIR} 
+							 ${MBEDTLS_INCLUDE_DIR} 
+							 ${INTEL_SGX_SDK_INCLUDE_DIRS}
 							 )
 
 #==========================================================
 #   Add files
 #==========================================================
 
-file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/sources/*.[ch]* ${CMAKE_CURRENT_LIST_DIR}/sources/*.edl)
+set(SOURCES_DIR_PATH ${CMAKE_CURRENT_LIST_DIR}/sources)
+set(DECENT_API_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/sources)
+
+file(GLOB_RECURSE SOURCES ${SOURCES_DIR_PATH}/*.[ch]* ${SOURCES_DIR_PATH}/*.edl)
 
 # Common files:
-file(GLOB_RECURSE SOURCES_COMMON ${CMAKE_CURRENT_LIST_DIR}/sources/common/*.[ch]*)
-file(GLOB_RECURSE SOURCES_COMMON_APP ${CMAKE_CURRENT_LIST_DIR}/sources/common_app/*.[ch]*)
-file(GLOB_RECURSE SOURCES_COMMON_ENCLAVE ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.[ch]*)
-file(GLOB_RECURSE SOURCES_COMMON_EDL ${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/*.edl)
+file(GLOB_RECURSE SOURCES_COMMON ${SOURCES_DIR_PATH}/DecentApi/Common/*.[ch]*)
+file(GLOB_RECURSE SOURCES_COMMON_APP ${SOURCES_DIR_PATH}/DecentApi/CommonApp/*.[ch]*)
+file(GLOB_RECURSE SOURCES_COMMON_ENCLAVE ${SOURCES_DIR_PATH}/DecentApi/CommonEnclave/*.[ch]*)
+file(GLOB_RECURSE SOURCES_APP_APP ${SOURCES_DIR_PATH}/DecentApi/DecentAppApp/*.[ch]*)
+file(GLOB_RECURSE SOURCES_APP_ENCLAVE ${SOURCES_DIR_PATH}/DecentApi/DecentAppEnclave/*.[ch]*)
+file(GLOB_RECURSE SOURCES_SERVER_APP ${SOURCES_DIR_PATH}/DecentApi/DecentServerApp/*.[ch]*)
+file(GLOB_RECURSE SOURCES_SERVER_ENCLAVE ${SOURCES_DIR_PATH}/DecentApi/DecentServerEnclave/*.[ch]*)
+file(GLOB_RECURSE SOURCES_COMMON_EDL ${SOURCES_DIR_PATH}/DecentApi/EDL/*.edl)
 
-# LibTest_App Files:
-set(SOURCESDIR_LibTest_App ${CMAKE_CURRENT_LIST_DIR}/sources/testLib_app)
-file(GLOB_RECURSE SOURCES_LibTest_App ${SOURCESDIR_LibTest_App}/*.[ch]*)
-
-# DecentServer Files:
-set(SOURCEDIR_DecentServer_App ${CMAKE_CURRENT_LIST_DIR}/sources/DecentServer_app)
-set(SOURCEDIR_DecentServer_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/DecentServer_enclave)
-file(GLOB_RECURSE SOURCES_DecentServer_App ${SOURCEDIR_DecentServer_App}/*.[ch]*)
-file(GLOB_RECURSE SOURCES_DecentServer_Enclave ${SOURCEDIR_DecentServer_Enclave}/*.[ch]*)
-file(GLOB_RECURSE SOURCES_DecentServer_EDL ${SOURCEDIR_DecentServer_Enclave}/*.edl)
-
-# DecentApp Files:
-set(SOURCEDIR_DecentApp_App ${CMAKE_CURRENT_LIST_DIR}/sources/DecentApp_app)
-set(SOURCEDIR_DecentApp_Enclave ${CMAKE_CURRENT_LIST_DIR}/sources/DecentApp_enclave)
-file(GLOB_RECURSE SOURCES_DecentApp_App ${SOURCEDIR_DecentApp_App}/*.[ch]*)
-file(GLOB_RECURSE SOURCES_DecentApp_Enclave ${SOURCEDIR_DecentApp_Enclave}/*.[ch]*)
-file(GLOB_RECURSE SOURCES_DecentApp_EDL ${SOURCEDIR_DecentApp_Enclave}/*.edl)
+set(DECENT_API_EDL_DIR ${SOURCES_DIR_PATH}/DecentApi/EDL PARENT_SCOPE)
 
 #==========================================================
 #   Setup filters
 #==========================================================
 
-source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/sources FILES ${SOURCES})
-# Common Groups
-# source_group(Common FILES ${SOURCES_COMMON})
-# source_group(Common_Enclave FILES ${SOURCES_COMMON_ENCLAVE})
-# source_group(Common_App FILES ${SOURCES_COMMON_APP})
-# source_group(Common_App\\SGXRAMessages FILES ${SOURCES_COMMON_APP_SGXRAMESSAGES})
-# source_group(Common_EDLs FILES ${SOURCES_COMMON_EDL})
-# # LibTest_App Groups
-# source_group(LibTest_App FILES ${SOURCES_LibTest_App})
-# # DecentServer Groups
-# source_group(DecentServer_App FILES ${SOURCES_DecentServer_App})
-# source_group(DecentServer_Enclave FILES ${SOURCES_DecentServer_Enclave})
-# source_group(DecentServer_EDLs FILES ${SOURCES_DecentServer_EDL})
-
-#==========================================================
-#   G++ linking flags
-#==========================================================
-
-if(MSVC)
-	set(WHOLE_ARCHIVE_FLAG_BEGIN "")
-	set(WHOLE_ARCHIVE_FLAG_END "")
-	set(GROUP_FLAG_BEGIN "")
-	set(GROUP_FLAG_END "")
-else()
-	set(WHOLE_ARCHIVE_FLAG_BEGIN -Wl,--whole-archive)
-	set(WHOLE_ARCHIVE_FLAG_END -Wl,--no-whole-archive)
-	set(GROUP_FLAG_BEGIN -Wl,--start-group)
-	set(GROUP_FLAG_END -Wl,--end-group)
-endif()
-
-###########################################################
-### LibTest_App
-###########################################################
-add_executable(LibTest_App ${SOURCES_COMMON} ${SOURCES_COMMON_APP} ${SOURCES_LibTest_App})
-target_include_directories(LibTest_App PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
-							 ${INTEL_SGX_SDK_INCLUDE_DIR} 
-							 ${SOURCESDIR_LibTest_App})
-
-target_compile_definitions(LibTest_App PRIVATE ${COMMON_APP_DEFINES})
-
-target_link_libraries(LibTest_App  
-					${COMMON_STANDARD_LIBRARIES}
-					jsoncpp_lib_static
-					libcurl
-					${MBEDTLS_LIBRARY} 
-					Boost::filesystem
-					Boost::system
-					${Additional_Sys_Lib}
-					)
-
-
-if(MSVC)
-	set(Enclave_Prog_Prefix )
-	set(Enclave_Prog_Postfix dll)
-	set(Enclave_Bin_Path "${CMAKE_BINARY_DIR}/$<CONFIG>")
-else()
-	set(Enclave_Prog_Prefix ${CMAKE_SHARED_LIBRARY_PREFIX})
-	set(Enclave_Prog_Postfix so)
-	set(Enclave_Bin_Path "${CMAKE_BINARY_DIR}")
-endif()
+source_group(TREE ${SOURCES_DIR_PATH}/DecentApi FILES ${SOURCES})
 
 #==========================================================
 #   Enclave Projects
 #==========================================================
 
-set(Enclave_Project_List DecentServer DecentApp)
-
-foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
-	
-	###########################################################
-	### EDL
-	###########################################################
-	
-	set(EDL_T_SOURCE_OUTPUT ${SOURCEDIR_${Proj_Name}_Enclave}/Enclave_t.h ${SOURCEDIR_${Proj_Name}_Enclave}/Enclave_t.c)
-	set(EDL_U_SOURCE_OUTPUT ${SOURCEDIR_${Proj_Name}_App}/Enclave_u.h ${SOURCEDIR_${Proj_Name}_App}/Enclave_u.c)
-	
-	add_custom_command(OUTPUT ${EDL_T_SOURCE_OUTPUT}
-		COMMAND "${INTEL_SGX_EDGER_PATH}"  
-		--trusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
-		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
-		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/EDL" 
-		--search-path "${INTEL_SGX_SDK_INCLUDE_DIR}"
-		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_Enclave}"
-		DEPENDS "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl"
-		COMMENT "Processing EDL for enclave..."
-	)
-	
-	add_custom_command(OUTPUT ${EDL_U_SOURCE_OUTPUT}
-		COMMAND "${INTEL_SGX_EDGER_PATH}"  
-		--untrusted "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl" 
-		--search-path "${SOURCEDIR_${Proj_Name}_Enclave}" 
-		--search-path "${CMAKE_CURRENT_LIST_DIR}/sources/common_enclave/EDL" 
-		--search-path "${INTEL_SGX_SDK_INCLUDE_DIR}"
-		WORKING_DIRECTORY "${SOURCEDIR_${Proj_Name}_App}"
-		DEPENDS "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.edl"
-		COMMENT "Processing EDL for app..."
-	)
-	
-	add_custom_target(${Proj_Name}_EDL DEPENDS ${EDL_T_SOURCE_OUTPUT} ${EDL_U_SOURCE_OUTPUT})
-	
-	###########################################################
-	### Enclave
-	###########################################################
-
-	set(${Proj_Name}_Enclave_File "${Enclave_Prog_Prefix}${Proj_Name}_Enclave.signed.${Enclave_Prog_Postfix}")
-	set(${Proj_Name}_Enclave_Lib "${Enclave_Prog_Prefix}${Proj_Name}_Enclave$<$<CONFIG:Debug>:${CMAKE_DEBUG_POSTFIX}>.${Enclave_Prog_Postfix}")
-
-	add_library(${Proj_Name}_Enclave SHARED ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_${Proj_Name}_Enclave} ${SOURCES_${Proj_Name}_EDL})
-	#includes:
-	target_include_directories(${Proj_Name}_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS} 
-								 ${SOURCEDIR_${Proj_Name}_Enclave})
+if(DECENT_API_DECENT_APP)
+	add_library(DecentRa_App_Enclave STATIC ${SOURCES_APP_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
 	#defines:
-	target_compile_definitions(${Proj_Name}_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
+	target_include_directories(DecentRa_App_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS})
+	#defines:
+	target_compile_definitions(DecentRa_App_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 	#compiler flags:
-	target_compile_options(${Proj_Name}_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
+	target_compile_options(DecentRa_App_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
-	set_target_properties(${Proj_Name}_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
-
-	add_custom_command(TARGET ${Proj_Name}_Enclave
-		POST_BUILD
-		COMMAND "${INTEL_SGX_SIGNER_PATH}" sign 
-		-key "${CMAKE_CURRENT_LIST_DIR}/Enclave_private.pem" 
-		-enclave "${Enclave_Bin_Path}/${${Proj_Name}_Enclave_Lib}" 
-		-out "${CMAKE_BINARY_DIR}/${${Proj_Name}_Enclave_File}" 
-		-config "${SOURCEDIR_${Proj_Name}_Enclave}/Enclave.config.xml"
-	)
-
-	target_link_libraries(${Proj_Name}_Enclave 
-						${WHOLE_ARCHIVE_FLAG_BEGIN} 
-						IntelSGX::SDK_Trusted_Whole_lib 
-						${WHOLE_ARCHIVE_FLAG_END}
-						${GROUP_FLAG_BEGIN}
-						IntelSGX::SDK_Trusted_service 
-						IntelSGX::SDK_Trusted_stdc 
-						IntelSGX::SDK_Trusted_cxx 
-						IntelSGX::SDK_Trusted_key_exchange 
-						IntelSGX::SDK_Trusted_crypto 
+	set_target_properties(DecentRa_App_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
+	set_target_properties(DecentRa_App_Enclave PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
+	
+	target_link_libraries(DecentRa_App_Enclave 
 						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
 						${MBEDX509_ENCLAVE_LIBRARY} 
 						${MBEDTLS_ENCLAVE_LIBRARY} 
-						${GROUP_FLAG_END}
 						)
 	
-	add_dependencies(${Proj_Name}_Enclave ${Proj_Name}_EDL)
-
-	###########################################################
-	### App
-	###########################################################
-
-	add_executable(${Proj_Name}_App ${SOURCES_COMMON} ${SOURCES_COMMON_EDL} ${SOURCES_COMMON_APP} ${SOURCES_${Proj_Name}_App} ${SOURCES_${Proj_Name}_EDL})
+	add_library(DecentRa_App_App STATIC ${SOURCES_APP_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
 	#includes:
-	target_include_directories(${Proj_Name}_App PRIVATE ${COMMON_APP_INCLUDE_DIRS} 
-								 ${SOURCEDIR_${Proj_Name}_App})
+	target_include_directories(DecentRa_App_App PRIVATE ${COMMON_APP_INCLUDE_DIRS})
 	#defines:
-	target_compile_definitions(${Proj_Name}_App PRIVATE ${COMMON_APP_DEFINES} ENCLAVE_FILENAME="${${Proj_Name}_Enclave_File}" TOKEN_FILENAME="${Proj_Name}_Enclave.token")
+	target_compile_definitions(DecentRa:App_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
-	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_DEBUG "${APP_DEBUG_LINKER_OPTIONS}")
-	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
-	set_target_properties(${Proj_Name}_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
+	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_DEBUG "${APP_DEBUG_LINKER_OPTIONS}")
+	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
+	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
+	set_target_properties(DecentRa_App_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 
-	target_link_libraries(${Proj_Name}_App 
+	target_link_libraries(DecentRa_App_App 
 						${COMMON_STANDARD_LIBRARIES} 
-						IntelSGX::SDK_Untrusted
 						jsoncpp_lib_static 
 						libcurl 
 						${MBEDTLS_LIBRARY} 
@@ -449,8 +259,44 @@ foreach(Proj_Name IN ITEMS ${Enclave_Project_List})
 						Boost::system
 						${Additional_Sys_Lib}
 					)
-	
-	add_dependencies(${Proj_Name}_App ${Proj_Name}_EDL ${Proj_Name}_Enclave)
-	
-endforeach()
+endif()
 
+if(DECENT_API_DECENT_SERVER)
+	add_library(DecentRa_Server_Enclave STATIC ${SOURCES_SERVER_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
+	#defines:
+	target_include_directories(DecentRa_Server_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS})
+	#defines:
+	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
+	#compiler flags:
+	target_compile_options(DecentRa_Server_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
+	#linker flags:
+	set_target_properties(DecentRa_Server_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
+	set_target_properties(DecentRa_Server_Enclave PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
+	
+	target_link_libraries(DecentRa_Server_Enclave 
+						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
+						${MBEDX509_ENCLAVE_LIBRARY} 
+						${MBEDTLS_ENCLAVE_LIBRARY} 
+						)
+	
+	add_library(DecentRa_Server_App STATIC ${SOURCES_SERVER_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
+	#includes:
+	target_include_directories(DecentRa_Server_App PRIVATE ${COMMON_APP_INCLUDE_DIRS})
+	#defines:
+	target_compile_definitions(DecentRa_Server_App PRIVATE ${COMMON_APP_DEFINES})
+	#linker flags:
+	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_DEBUG "${APP_DEBUG_LINKER_OPTIONS}")
+	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
+	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
+	set_target_properties(DecentRa_Server_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
+
+	target_link_libraries(DecentRa_Server_App 
+						${COMMON_STANDARD_LIBRARIES} 
+						jsoncpp_lib_static 
+						libcurl 
+						${MBEDTLS_LIBRARY} 
+						Boost::filesystem
+						Boost::system
+						${Additional_Sys_Lib}
+					)
+endif()
