@@ -1,16 +1,13 @@
-#include "../../common/ModuleConfigInternal.h"
-#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL
-
 #include "DecentApp.h"
 
 #include <sgx_tcrypto.h>
 #include <sgx_report.h>
 
-#include "../../common/Tools/DataCoding.h"
-#include "../Ra/Messages.h"
-#include "../Ra/WhiteList/Requester.h"
-#include "../Net/Connection.h"
-#include "../SGX/EnclaveRuntimeException.h"
+#include "../Common/Tools/DataCoding.h"
+#include "../CommonApp/Ra/Messages.h"
+#include "../CommonApp/Ra/WhiteList/Requester.h"
+#include "../CommonApp/Net/Connection.h"
+#include "../CommonApp/SGX/EnclaveRuntimeException.h"
 
 #include "edl_decent_ra_app.h"
 
@@ -88,5 +85,3 @@ bool DecentApp::InitEnclave(const std::string & wListKey, Connection & serverCon
 	
 	return true;
 }
-
-#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

@@ -1,10 +1,7 @@
-#include "../../common/ModuleConfigInternal.h"
-#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL
-
 #pragma once
 
-#include "../Ra/DecentApp.h"
-#include "../SGX/EnclaveBase.h"
+#include "../CommonApp/Ra/DecentApp.h"
+#include "../CommonApp/SGX/EnclaveBase.h"
 
 #include <memory>
 
@@ -40,5 +37,3 @@ namespace Decent
 		};
 	}
 }
-
-#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_SERVER_INTERNAL

@@ -1,18 +1,15 @@
-#include "../../common/ModuleConfigInternal.h"
-#if USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL
-
 #include <string>
 #include <memory>
 
 #include <sgx_error.h>
 
-#include "../SGX/LocAttCommLayer.h"
+#include "../CommonEnclave/SGX/LocAttCommLayer.h"
 
-#include "../../common/Common.h"
-#include "../../common/Ra/States.h"
-#include "../../common/Ra/Crypto.h"
-#include "../../common/Ra/KeyContainer.h"
-#include "../../common/Ra/CertContainer.h"
+#include "../Common/Common.h"
+#include "../Common/Ra/States.h"
+#include "../Common/Ra/Crypto.h"
+#include "../Common/Ra/KeyContainer.h"
+#include "../Common/Ra/CertContainer.h"
 
 using namespace Decent;
 using namespace Decent::Ra;
@@ -75,5 +72,3 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 	return SGX_SUCCESS;
 }
-
-#endif //USE_INTEL_SGX_ENCLAVE_INTERNAL && USE_DECENT_ENCLAVE_APP_INTERNAL

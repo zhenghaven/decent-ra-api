@@ -297,7 +297,7 @@ int TlsConfig::CertVerifyCallBack(void * inst, mbedtls_x509_crt * cert, int dept
 	return reinterpret_cast<TlsConfig*>(inst)->CertVerifyCallBack(cert, depth, flag);
 }
 
-int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t * flag)
+int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t * flag) const
 {
 	switch (depth)
 	{
@@ -328,7 +328,7 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt * cert, int depth, uint32_t *
 	}
 }
 
-int TlsConfig::AppCertVerifyCallBack(const AppX509 & cert, int depth, uint32_t & flag)
+int TlsConfig::AppCertVerifyCallBack(const AppX509 & cert, int depth, uint32_t & flag) const
 {
 	using namespace Decent::Ra::WhiteList;
 
@@ -358,7 +358,7 @@ int TlsConfig::AppCertVerifyCallBack(const AppX509 & cert, int depth, uint32_t &
 	return MBEDTLS_SUCCESS_RET;
 }
 
-int TlsConfig::ServerCertVerifyCallBack(const ServerX509 & cert, int depth, uint32_t & flag)
+int TlsConfig::ServerCertVerifyCallBack(const ServerX509 & cert, int depth, uint32_t & flag) const
 {
 	const bool verifyRes = States::Get().GetServerWhiteList().AddTrustedNode(cert);
 	flag = verifyRes ? MBEDTLS_SUCCESS_RET : MBEDTLS_X509_BADCERT_NOT_TRUSTED;

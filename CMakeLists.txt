@@ -243,7 +243,7 @@ if(DECENT_API_DECENT_APP)
 	#includes:
 	target_include_directories(DecentRa_App_App PRIVATE ${COMMON_APP_INCLUDE_DIRS})
 	#defines:
-	target_compile_definitions(DecentRa:App_App PRIVATE ${COMMON_APP_DEFINES})
+	target_compile_definitions(DecentRa_App_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
 	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_DEBUG "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")

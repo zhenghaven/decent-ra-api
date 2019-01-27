@@ -118,9 +118,9 @@ namespace Decent
 
 		protected:
 			TlsConfig(mbedtls_ssl_config* ptr);
-			int CertVerifyCallBack(mbedtls_x509_crt* cert, int depth, uint32_t* flag);
-			int AppCertVerifyCallBack(const AppX509& cert, int depth, uint32_t& flag);
-			int ServerCertVerifyCallBack(const ServerX509& cert, int depth, uint32_t& flag);
+			virtual int CertVerifyCallBack(mbedtls_x509_crt* cert, int depth, uint32_t* flag) const;
+			virtual int AppCertVerifyCallBack(const AppX509& cert, int depth, uint32_t& flag) const;
+			virtual int ServerCertVerifyCallBack(const ServerX509& cert, int depth, uint32_t& flag) const;
 
 		private:
 			static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
