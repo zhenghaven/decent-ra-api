@@ -40,12 +40,12 @@ bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const ui
 	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;
 }
 
-bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, const std::string & inHashStr, TimeStamp& outTimestamp)
+bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, std::string & outHashStr, TimeStamp& outTimestamp)
 {
 	if (platformType == sk_ValueReportTypeSgx)
 	{
 		sgx_ias_report_t outIasReport;
-		bool verifyRes = ProcessSgxSelfRaReport(pubKeyPem, raReport, inHashStr, outIasReport);
+		bool verifyRes = ProcessSgxSelfRaReport(pubKeyPem, raReport, outIasReport);
 		outTimestamp.m_year = outIasReport.m_timestamp.m_year;
 		outTimestamp.m_month = outIasReport.m_timestamp.m_month;
 		outTimestamp.m_day = outIasReport.m_timestamp.m_day;
@@ -55,6 +55,8 @@ bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::
 		outTimestamp.m_sec = static_cast<uint8_t>(outIasReport.m_timestamp.m_sec);
 		//TODO: Fix time precision later.
 		outTimestamp.m_nanoSec = static_cast<uint32_t>((outIasReport.m_timestamp.m_sec - outTimestamp.m_sec) * sk_sec2MicroSec) * sk_microSec2NanoSec;
+
+		outHashStr = SerializeStruct(outIasReport.m_quote.report_body.mr_enclave);
 
 		return verifyRes;
 	}
@@ -78,7 +80,7 @@ const sgx_ra_config & RaReport::GetSgxDecentRaConfig()
 	return raCfg;
 }
 
-bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string & raReport, const std::string & inHashStr, sgx_ias_report_t & outIasReport)
+bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string & raReport, sgx_ias_report_t & outIasReport)
 {
 	if (raReport.size() == 0)
 	{
@@ -102,15 +104,10 @@ bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::s
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);
 
-	sgx_measurement_t targetHash;
-	DeserializeStruct(targetHash, inHashStr);
-
-	auto quoteVerifier = [&pubKeyPem, &oriReportData, &targetHash](const sgx_ias_report_t & iasReport) -> bool
+	auto quoteVerifier = [&pubKeyPem, &oriReportData](const sgx_ias_report_t & iasReport) -> bool
 	{
 		return DecentReportDataVerifier(pubKeyPem, oriReportData.d, iasReport.m_quote.report_body.report_data.d, 
-			sizeof(sgx_report_data_t) / 2) 
-			&&
-			consttime_memequal(&iasReport.m_quote.report_body.mr_enclave, &targetHash, sizeof(sgx_measurement_t));
+			sizeof(sgx_report_data_t) / 2);
 	};
 
 	bool reportVerifyRes = Decent::Ias::ParseAndVerifyIasReport(outIasReport, iasReportStr, iasCertChain, iasSign, nullptr, GetSgxDecentRaConfig(), quoteVerifier);

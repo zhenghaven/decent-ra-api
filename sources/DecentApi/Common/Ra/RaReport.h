@@ -27,11 +27,11 @@ namespace Decent
 
 			bool DecentReportDataVerifier(const std::string& pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size);
 
-			bool ProcessSelfRaReport(const std::string& platformType, const std::string& pubKeyPem, const std::string& raReport, const std::string& inHashStr, TimeStamp& outTimestamp);
+			bool ProcessSelfRaReport(const std::string& platformType, const std::string& pubKeyPem, const std::string& raReport, std::string& outHashStr, TimeStamp& outTimestamp);
 
 			const sgx_ra_config& GetSgxDecentRaConfig();
 
-			bool ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string& raReport, const std::string& inHashStr, sgx_ias_report_t& outIasReport);
+			bool ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string& raReport, sgx_ias_report_t& outIasReport);
 		}
 	}
 }

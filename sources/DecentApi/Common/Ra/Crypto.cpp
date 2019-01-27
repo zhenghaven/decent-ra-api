@@ -347,9 +347,9 @@ int TlsConfig::AppCertVerifyCallBack(const AppX509 & cert, int depth, uint32_t &
 
 	//Check peer's hash is in the white list.
 	std::string peerHash = Decent::Ra::GetHashFromAppId(cert.GetPlatformType(), cert.GetAppId());
-
-	if (!States::Get().GetLoadedWhiteList().CheckWhiteListWithHint(peerHash, m_expectedAppName) &&
-		!States::Get().GetHardCodedWhiteList().CheckWhiteListWithHint(peerHash, m_expectedAppName))
+	std::string appNameInW;
+	if (!(States::Get().GetHardCodedWhiteList().CheckWhiteList(peerHash, appNameInW) && m_expectedAppName == appNameInW) &&
+		!(States::Get().GetLoadedWhiteList().CheckWhiteList(peerHash, appNameInW) && m_expectedAppName == appNameInW))
 	{
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
 		return MBEDTLS_SUCCESS_RET;

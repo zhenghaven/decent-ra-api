@@ -27,18 +27,17 @@ bool DecentServer::AddTrustedNode(const ServerX509 & cert)
 		return true;
 	}
 
-	std::string serverHash;
-	if (!States::Get().GetHardCodedWhiteList().GetHash(HardCoded::sk_decentServerLabel, serverHash))
-	{
-		return false;
-	}
-
 	TimeStamp timestamp;
+	std::string serverHash;
 	bool verifyRes = RaReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
 		cert.GetSelfRaReport(), serverHash, timestamp);
 
 	//TODO: enable this once the DecentServer is released.
-	//if (!verifyRes && VerifyCertFirstTime(cert))
+	//std::string serverAppName;
+	//if (!verifyRes || 
+	//	!VerifyCertFirstTime(cert) ||
+	//	!States::Get().GetHardCodedWhiteList().CheckWhiteList(serverHash, serverAppName) ||
+	//	serverAppName != HardCoded::sk_decentServerLabel)
 	//{
 	//	return false;
 	//}

@@ -19,11 +19,7 @@ namespace Decent
 
 				virtual bool CheckWhiteList(const std::string& hashStr, std::string& outAppName) const;
 
-				virtual bool CheckWhiteListWithHint(const std::string& hashStr, const std::string& hintAppName) const;
-
 				virtual bool CheckListsAreMatch(const WhiteListType& otherMap) const;
-
-				virtual bool GetHash(const std::string& appName, std::string& outHash) const;
 
 				virtual bool operator==(const StaticTypeList& other) const;
 				virtual bool operator!=(const StaticTypeList& other) const;

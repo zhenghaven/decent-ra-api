@@ -28,39 +28,19 @@ const WhiteListType & StaticTypeList::GetMap() const
 
 bool StaticTypeList::CheckWhiteList(const std::string & hashStr, std::string & outAppName) const
 {
-	for (auto it = m_listMap.cbegin(); it != m_listMap.cend(); ++it)
+	auto it = m_listMap.find(hashStr);
+	if (it != m_listMap.cend())
 	{
-		if (it->second == hashStr)
-		{
-			outAppName = it->first;
-			return true;
-		}
+		outAppName = it->second;
+		return true;
 	}
 	return false;
-}
-
-bool StaticTypeList::CheckWhiteListWithHint(const std::string & hashStr, const std::string & hintAppName) const
-{
-	auto it = m_listMap.find(hintAppName);
-	
-	return (it != m_listMap.cend() && it->second == hashStr);
 }
 
 bool StaticTypeList::CheckListsAreMatch(const WhiteListType & otherMap) const
 {
 	return (m_listMap.size() == otherMap.size()) &&
 		std::equal(m_listMap.begin(), m_listMap.end(), otherMap.begin());
-}
-
-bool StaticTypeList::GetHash(const std::string & appName, std::string & outHash) const
-{
-	auto it = m_listMap.find(appName);
-	if (it != m_listMap.cend())
-	{
-		outHash = it->second;
-		return true;
-	}
-	return false;
 }
 
 bool StaticTypeList::operator==(const StaticTypeList & other) const
