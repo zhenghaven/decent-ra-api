@@ -26,7 +26,7 @@ const WhiteListType & StaticTypeList::GetMap() const
 	return m_listMap;
 }
 
-bool StaticTypeList::CheckWhiteList(const std::string & hashStr, std::string & outAppName) const
+bool StaticTypeList::CheckHash(const std::string & hashStr, std::string & outAppName) const
 {
 	auto it = m_listMap.find(hashStr);
 	if (it != m_listMap.cend())
@@ -37,10 +37,39 @@ bool StaticTypeList::CheckWhiteList(const std::string & hashStr, std::string & o
 	return false;
 }
 
+bool Decent::Ra::WhiteList::StaticTypeList::CheckHashAndName(const std::string & hashStr, const std::string & appName) const
+{
+	auto it = m_listMap.find(hashStr);
+	
+	return (it != m_listMap.cend()) && (it->second == appName);
+}
+
 bool StaticTypeList::CheckListsAreMatch(const WhiteListType & otherMap) const
 {
 	return (m_listMap.size() == otherMap.size()) &&
 		std::equal(m_listMap.begin(), m_listMap.end(), otherMap.begin());
+}
+
+bool Decent::Ra::WhiteList::StaticTypeList::CheckListsWithinRange(const WhiteListType & otherMap) const
+{
+	if (m_listMap.size() < otherMap.size())
+	{
+		return false;
+	}
+
+	for (auto ito = otherMap.begin(), ita = m_listMap.begin(); ito != otherMap.cend() && ita != m_listMap.cend(); ++ito)
+	{
+		while (ito->first != ita->first && (++ita) != m_listMap.cend())
+		{
+		}
+
+		if (ita == m_listMap.cend() ||
+			ito->second != ita->second)
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 bool StaticTypeList::operator==(const StaticTypeList & other) const
@@ -51,4 +80,9 @@ bool StaticTypeList::operator==(const StaticTypeList & other) const
 bool StaticTypeList::operator!=(const StaticTypeList & other) const
 {
 	return !(*this == other);
+}
+
+bool Decent::Ra::WhiteList::StaticTypeList::operator>=(const StaticTypeList & other) const
+{
+	return CheckListsWithinRange(other.m_listMap);
 }

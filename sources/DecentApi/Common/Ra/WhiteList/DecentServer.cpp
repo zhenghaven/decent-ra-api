@@ -33,11 +33,9 @@ bool DecentServer::AddTrustedNode(const ServerX509 & cert)
 		cert.GetSelfRaReport(), serverHash, timestamp);
 
 	//TODO: enable this once the DecentServer is released.
-	//std::string serverAppName;
 	//if (!verifyRes || 
 	//	!VerifyCertFirstTime(cert) ||
-	//	!States::Get().GetHardCodedWhiteList().CheckWhiteList(serverHash, serverAppName) ||
-	//	serverAppName != HardCoded::sk_decentServerLabel)
+	//	!States::Get().GetHardCodedWhiteList().CheckHashAndName(serverHash, HardCoded::sk_decentServerLabel))
 	//{
 	//	return false;
 	//}
