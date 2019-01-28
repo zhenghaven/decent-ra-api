@@ -121,7 +121,7 @@ struct EcGroupWarp
 
 BigNumber MbedTlsObj::BigNumber::GenRandomNumber(size_t size)
 {
-	std::unique_ptr<mbedtls_mpi> serialNum(new mbedtls_mpi);
+	std::unique_ptr<mbedtls_mpi> serialNum = Tools::make_unique<mbedtls_mpi>();
 	mbedtls_mpi_init(serialNum.get());
 
 	void* drbgCtx;
@@ -307,7 +307,7 @@ bool MbedTlsObj::Gcm::Decrypt(const uint8_t * inData, uint8_t * outData, const s
 
 static mbedtls_pk_context* ConstructEcPubFromPemDer(const uint8_t* ptr, size_t size)
 {
-	std::unique_ptr<mbedtls_pk_context> res(new mbedtls_pk_context);
+	std::unique_ptr<mbedtls_pk_context> res = Tools::make_unique<mbedtls_pk_context>();
 	mbedtls_pk_init(res.get());
 
 	if (mbedtls_pk_parse_public_key(res.get(), ptr, size)
@@ -343,7 +343,7 @@ static bool SetEcPubFromGeneral(const mbedtls_ecp_group& grp, mbedtls_ecp_point&
 
 static mbedtls_pk_context* ConstructEcPubFromGeneral(const general_secp256r1_public_t & pub)
 {
-	std::unique_ptr<mbedtls_pk_context> res(new mbedtls_pk_context);
+	std::unique_ptr<mbedtls_pk_context> res = Tools::make_unique<mbedtls_pk_context>();
 	mbedtls_pk_init(res.get());
 
 	mbedtls_ecp_keypair* ecPtr = nullptr;
@@ -434,39 +434,6 @@ general_secp256r1_public_t MbedTlsObj::ECKeyPublic::ToGeneralPubKeyChecked() con
 	return pubKey;
 }
 
-//bool ECKeyPublic::ToGeneralPublicKey(general_secp256r1_public_t & outKey) const
-//{
-//	if (!*this)
-//	{
-//		return false;
-//	}
-//
-//	const mbedtls_ecp_keypair* ecPtr = GetInternalECKey();
-//
-//	if (mbedtls_mpi_write_binary(&ecPtr->Q.X, outKey.x, sizeof(outKey.x)) != MBEDTLS_SUCCESS_RET ||
-//		mbedtls_mpi_write_binary(&ecPtr->Q.Y, outKey.y, sizeof(outKey.y)) != MBEDTLS_SUCCESS_RET)
-//	{
-//		return false;
-//	}
-//	
-//	std::reverse(std::begin(outKey.x), std::end(outKey.x));
-//	std::reverse(std::begin(outKey.y), std::end(outKey.y));
-//
-//	return true;
-//}
-//
-//general_secp256r1_public_t * MbedTlsObj::ECKeyPublic::ToGeneralPublicKey() const
-//{
-//	general_secp256r1_public_t* res = new general_secp256r1_public_t;
-//	if (res && ToGeneralPublicKey(*res))
-//	{
-//		return res;
-//	}
-//
-//	delete res;
-//	return nullptr;
-//}
-
 bool MbedTlsObj::ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const uint8_t * hash, const size_t hashLen) const
 {
 	if (!*this || !hash || hashLen <= 0)
@@ -533,7 +500,7 @@ mbedtls_ecp_keypair * ECKeyPublic::GetInternalECKey() const
 
 static mbedtls_pk_context* ConstructEcPrvFromPemDer(const uint8_t* ptr, size_t size)
 {
-	std::unique_ptr<mbedtls_pk_context> res(new mbedtls_pk_context);
+	std::unique_ptr<mbedtls_pk_context> res = Tools::make_unique<mbedtls_pk_context>();
 	mbedtls_pk_init(res.get());
 
 	if (mbedtls_pk_parse_key(res.get(), ptr, size, nullptr, 0)
@@ -580,7 +547,7 @@ static bool CheckPublicAndPrivatePair(const mbedtls_ecp_keypair* pair)
 
 static mbedtls_pk_context* ConstructEcPrvFromGeneral(const general_secp256r1_private_t & prv, const general_secp256r1_public_t* pubPtr)
 {
-	std::unique_ptr<mbedtls_pk_context> res(new mbedtls_pk_context);
+	std::unique_ptr<mbedtls_pk_context> res = Tools::make_unique<mbedtls_pk_context>();
 	mbedtls_pk_init(res.get());
 
 	mbedtls_ecp_keypair* ecPtr = nullptr;
@@ -624,7 +591,7 @@ static mbedtls_pk_context* ConstructEcPrvFromGeneral(const general_secp256r1_pri
 
 static mbedtls_pk_context* GenerateEcKeyPair()
 {
-	std::unique_ptr<mbedtls_pk_context> res(new mbedtls_pk_context);
+	std::unique_ptr<mbedtls_pk_context> res = Tools::make_unique<mbedtls_pk_context>();
 	mbedtls_pk_init(res.get());
 	mbedtls_ecp_keypair* ecPtr = nullptr;
 	void* drbgCtx;
@@ -674,42 +641,6 @@ MbedTlsObj::ECKeyPair::ECKeyPair(ECKeyPair && other) :
 	ECKeyPublic(std::forward<ECKeyPublic>(other))
 {
 }
-
-//bool ECKeyPair::ToGeneralPrivateKey(general_secp256r1_private_t & outKey) const
-//{
-//	if (!*this)
-//	{
-//		return false;
-//	}
-//
-//	const mbedtls_ecp_keypair* ecPtr = GetInternalECKey();
-//
-//	if (mbedtls_mpi_write_binary(&ecPtr->d, outKey.r, sizeof(outKey.r)) != MBEDTLS_SUCCESS_RET)
-//	{
-//		return false;
-//	}
-//
-//	std::reverse(std::begin(outKey.r), std::end(outKey.r));
-//
-//	return true;
-//}
-
-//bool ECKeyPair::ToGeneralPrivateKey(PrivateKeyWrap & outKey) const
-//{
-//	return ToGeneralPrivateKey(outKey.m_prvKey);
-//}
-//
-//PrivateKeyWrap * ECKeyPair::ToGeneralPrivateKeyWrap() const
-//{
-//	PrivateKeyWrap* res = new PrivateKeyWrap;
-//	if (res && ToGeneralPrivateKey(*res))
-//	{
-//		return res;
-//	}
-//
-//	delete res;
-//	return nullptr;
-//}
 
 bool MbedTlsObj::ECKeyPair::ToGeneralPrvKey(PrivateKeyWrap & outKey) const
 {
@@ -815,18 +746,6 @@ bool MbedTlsObj::ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, c
 	return mbedRet == MBEDTLS_SUCCESS_RET && r.ToLittleEndianBinary(outSign.x) && s.ToLittleEndianBinary(outSign.y);
 }
 
-//general_secp256r1_private_t * ECKeyPair::ToGeneralPrivateKey() const
-//{
-//	general_secp256r1_private_t* res = new general_secp256r1_private_t;
-//	if (res && ToGeneralPrivateKey(*res))
-//	{
-//		return res;
-//	}
-//
-//	delete res;
-//	return nullptr;
-//}
-
 std::string ECKeyPair::ToPrvPemString() const
 {
 	if (!*this)
@@ -865,7 +784,7 @@ bool ECKeyPair::ToPrvDerArray(std::vector<uint8_t>& outArray) const
 
 static mbedtls_x509_csr* ConstructX509ReqFromPemDer(const uint8_t* ptr, size_t size)
 {
-	std::unique_ptr<mbedtls_x509_csr> res(new mbedtls_x509_csr);
+	std::unique_ptr<mbedtls_x509_csr> res = Tools::make_unique<mbedtls_x509_csr>();
 	mbedtls_x509_csr_init(res.get());
 
 	if(mbedtls_x509_csr_parse(res.get(), ptr, size) != MBEDTLS_SUCCESS_RET)
@@ -994,7 +913,7 @@ std::string MbedTlsObj::X509Req::ToPemString() const
 
 static mbedtls_x509_crt* ConstructX509CertFromPemDer(const uint8_t* ptr, size_t size)
 {
-	std::unique_ptr<mbedtls_x509_crt> res(new mbedtls_x509_crt);
+	std::unique_ptr<mbedtls_x509_crt> res = Tools::make_unique<mbedtls_x509_crt>();
 	mbedtls_x509_crt_init(res.get());
 
 	if (mbedtls_x509_crt_parse(res.get(), ptr, size) != MBEDTLS_SUCCESS_RET)
@@ -1232,6 +1151,16 @@ static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvK
 	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) + (hasCa ? caCert->ToPemString() : std::string()) : std::string();
 }
 
+static std::string ConstructCommonName(mbedtls_x509_crt * ptr)
+{
+	if (!ptr || !(ptr->subject.val.p) || !(ptr->subject.val.len))
+	{
+		return std::string();
+	}
+
+	return std::string(reinterpret_cast<const char*>(ptr->subject.val.p), ptr->subject.val.len);
+}
+
 MbedTlsObj::X509Cert::X509Cert(const std::string & pemStr) :
 	X509Cert(ConstructX509CertFromPem(pemStr), pemStr)
 {
@@ -1241,15 +1170,13 @@ MbedTlsObj::X509Cert::X509Cert(mbedtls_x509_crt * ptr, const std::string & pemSt
 	ObjBase(ptr),
 	m_isOwner(true),
 	m_pemStr(pemStr),
-	m_pubKey(ptr ? &ptr->pk : nullptr, false)
+	m_pubKey(ptr ? &ptr->pk : nullptr, false),
+	m_commonName(ConstructCommonName(ptr))
 {
 }
 
 MbedTlsObj::X509Cert::X509Cert(mbedtls_x509_crt * ptr) :
-	ObjBase(ptr),
-	m_isOwner(false),
-	m_pemStr(),
-	m_pubKey(ptr ? &ptr->pk : nullptr, false)
+	X509Cert(ptr, std::string())
 {
 }
 
@@ -1305,7 +1232,7 @@ MbedTlsObj::X509Cert& MbedTlsObj::X509Cert::operator=(X509Cert&& other)
 
 MbedTlsObj::X509Cert::operator bool() const
 {
-	return ObjBase::operator bool() && m_pubKey;
+	return ObjBase::operator bool() && m_pubKey && m_commonName.size() > 0;
 }
 
 bool MbedTlsObj::X509Cert::GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const
@@ -1484,7 +1411,7 @@ void MbedTlsObj::X509Cert::SwitchToFirstCert()
 
 static mbedtls_x509_crl* ConstructX509CrlFromPemDer(const uint8_t* ptr, size_t size)
 {
-	std::unique_ptr<mbedtls_x509_crl> res(new mbedtls_x509_crl);
+	std::unique_ptr<mbedtls_x509_crl> res = Tools::make_unique<mbedtls_x509_crl>();
 	mbedtls_x509_crl_init(res.get());
 
 	if (mbedtls_x509_crl_parse(res.get(), ptr, size) != MBEDTLS_SUCCESS_RET)
@@ -1534,7 +1461,7 @@ std::string MbedTlsObj::X509Crl::ToPemString() const
 
 static mbedtls_gcm_context* ConstructGcmCtx(const uint8_t* key, const size_t size, mbedtls_cipher_id_t type)
 {
-	std::unique_ptr<mbedtls_gcm_context> res(new mbedtls_gcm_context);
+	std::unique_ptr<mbedtls_gcm_context> res = Tools::make_unique<mbedtls_gcm_context>();
 	mbedtls_gcm_init(res.get());
 
 	if (mbedtls_gcm_setkey(res.get(), type, key, static_cast<unsigned int>(size * GENERAL_BITS_PER_BYTE)) != MBEDTLS_SUCCESS_RET)

@@ -329,6 +329,8 @@ namespace Decent
 			const PKey& GetPublicKey() const;
 			const std::string& ToPemString() const;
 
+			const std::string& GetCommonName() const { return m_commonName; }
+
 			bool NextCert();
 			bool PreviousCert();
 			void SwitchToFirstCert();
@@ -337,6 +339,7 @@ namespace Decent
 			bool m_isOwner;
 			std::string m_pemStr;
 			PKey m_pubKey;
+			std::string m_commonName;
 			std::vector<mbedtls_x509_crt*> m_certStack;
 		};
 
