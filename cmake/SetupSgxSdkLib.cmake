@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 
+message(STATUS "")
+message(STATUS "Adding Intel SGX Targets...")
+
 include(${CMAKE_CURRENT_LIST_DIR}/FindSgxSdk.cmake)
 
 ############################
@@ -182,3 +185,6 @@ if(NOT TARGET IntelSGX::SDK_Untrusted)
 		#INTERFACE_LINK_OPTIONS ""
 	)
 endif()
+
+message(STATUS "Finished Adding Intel SGX Targets.")
+message(STATUS "")

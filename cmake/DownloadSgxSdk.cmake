@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
-message(STATUS "Check Intel SGX SDK...")
+message(STATUS "")
+message(STATUS "Checking Intel SGX SDK...")
 
 if(WIN32)
 
@@ -165,3 +166,5 @@ elseif(UNIX)
 
 endif()
 
+message(STATUS "Finished Checking Intel SGX SDK.")
+message(STATUS "")

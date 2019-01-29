@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 
+message(STATUS "")
+message(STATUS "Setting Intel SGX Variables...")
+
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
 	set(WIN_ARCHI_STR "win32")
 	set(LINUX_LIB_ARCHI_STR "lib") #for libs
@@ -118,3 +121,6 @@ set(INTEL_SGX_SIGNER_PATH ${INTEL_SGX_SIGNER_PATH})
 set(INTEL_SGX_SDK_C_FLAGS ${INTEL_SGX_SDK_C_FLAGS})
 set(INTEL_SGX_SDK_CXX_FLAGS ${INTEL_SGX_SDK_CXX_FLAGS})
 set(INTEL_SGX_SDK_LINKER_FLAGS_T ${INTEL_SGX_SDK_LINKER_FLAGS_T})
+
+message(STATUS "Finished setting Intel SGX Variables.")
+message(STATUS "")
