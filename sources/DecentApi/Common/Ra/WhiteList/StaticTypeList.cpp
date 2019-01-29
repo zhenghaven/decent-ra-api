@@ -28,6 +28,7 @@ const WhiteListType & StaticTypeList::GetMap() const
 
 bool StaticTypeList::CheckHash(const std::string & hashStr, std::string & outAppName) const
 {
+#ifndef DEBUG
 	auto it = m_listMap.find(hashStr);
 	if (it != m_listMap.cend())
 	{
@@ -35,13 +36,23 @@ bool StaticTypeList::CheckHash(const std::string & hashStr, std::string & outApp
 		return true;
 	}
 	return false;
+#else
+	LOGW("%s() passed app with hash, %s,  without checking!", __FUNCTION__, hashStr.c_str());
+	return true;
+#endif
 }
 
-bool Decent::Ra::WhiteList::StaticTypeList::CheckHashAndName(const std::string & hashStr, const std::string & appName) const
+bool StaticTypeList::CheckHashAndName(const std::string & hashStr, const std::string & appName) const
 {
+#ifndef DEBUG
 	auto it = m_listMap.find(hashStr);
-	
+
 	return (it != m_listMap.cend()) && (it->second == appName);
+#else
+	LOGW("%s() passed app, %s, with hash, %s,  without checking!", __FUNCTION__, appName.c_str(), hashStr.c_str());
+	return true;
+#endif // !DEBUG
+
 }
 
 bool StaticTypeList::CheckListsAreMatch(const WhiteListType & otherMap) const

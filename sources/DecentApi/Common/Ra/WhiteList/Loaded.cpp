@@ -17,7 +17,6 @@ using namespace Decent::Ra::WhiteList;
 
 WhiteListType Loaded::ParseWhiteListFromJson(const std::string & whiteListJson)
 {
-	//LOGI("Parsing Const WhiteList: \n%s \n", whiteListJson.c_str());
 	WhiteListType res;
 	if (whiteListJson.size() == 0)
 	{

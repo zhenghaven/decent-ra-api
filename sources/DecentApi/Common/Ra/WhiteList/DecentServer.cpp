@@ -1,5 +1,6 @@
 #include "DecentServer.h"
 
+#include "../../Common.h"
 #include "../Crypto.h"
 #include "../RaReport.h"
 #include "../States.h"
@@ -32,13 +33,16 @@ bool DecentServer::AddTrustedNode(const ServerX509 & cert)
 	bool verifyRes = RaReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
 		cert.GetSelfRaReport(), serverHash, timestamp);
 
-	//TODO: enable this once the DecentServer is released.
-	//if (!verifyRes || 
-	//	!VerifyCertFirstTime(cert) ||
-	//	!States::Get().GetHardCodedWhiteList().CheckHashAndName(serverHash, HardCoded::sk_decentServerLabel))
-	//{
-	//	return false;
-	//}
+#ifndef DEBUG
+	if (!verifyRes ||
+		!VerifyCertFirstTime(cert) ||
+		!States::Get().GetHardCodedWhiteList().CheckHashAndName(serverHash, HardCoded::sk_decentServerLabel))
+	{
+		return false;
+	}
+#else
+	LOGW("%s() passed DecentServer with hash, %s,  without checking!", __FUNCTION__, serverHash.c_str());
+#endif // !DEBUG
 
 	{
 		std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
