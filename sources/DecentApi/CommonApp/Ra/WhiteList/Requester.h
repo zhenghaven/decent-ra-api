@@ -24,6 +24,8 @@ namespace Decent
 
 				virtual bool SendRequest(Net::Connection& connection) const;
 
+				const std::string& GetKey() const { return m_key; }
+
 			protected:
 				std::string ConstructWhiteList() const;
 

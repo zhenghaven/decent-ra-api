@@ -69,10 +69,18 @@ namespace Decent
 
 		bool ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const char* inStr);
 
-		std::string Json2StyleString(const JSON_EDITION::Value& inJson);
+		std::string Json2StyledString(const JSON_EDITION::Value& inJson);
 
-		JSON_EDITION::Value& JsonCommonSetString(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, JSON_EDITION::Value& root, const std::string& index, const std::string& inStr);
+		JSON_EDITION::Value& JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, const std::string& val);
+		inline JSON_EDITION::Value& JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, const char* val)
+		{
+			return Decent::Tools::JsonSetVal(doc, index, std::string(val));
+		}
 
-		JSON_EDITION::Value& JsonCommonSetObject(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, JSON_EDITION::Value& root, const std::string& index, JSON_EDITION::Value& inObj);
+		JSON_EDITION::Value& JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, JSON_EDITION::Value& val);
+
+		JSON_EDITION::Value& JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, const int val);
+		JSON_EDITION::Value& JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, const double val);
+		JSON_EDITION::Value& JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, const bool val);
 	}
 }
