@@ -11,7 +11,6 @@ namespace Decent
 			class LoadWhiteList : public Net::SmartMessages
 			{
 			public:
-				static constexpr char const sk_LabelRoot[] = "DecentLoadWhiteList";
 				static constexpr char const sk_ValueCat[] = "DecentLoadWhiteList";
 
 				static constexpr char const sk_LabelKey[] = "Key";
@@ -23,7 +22,7 @@ namespace Decent
 			public:
 				LoadWhiteList() = delete;
 				LoadWhiteList(const std::string& key, const std::string& whiteList) :
-					SmartMessages(""),
+					SmartMessages(),
 					m_key(key),
 					m_whiteList(whiteList)
 				{}
@@ -48,7 +47,6 @@ namespace Decent
 			class RequestAppCert : public Net::SmartMessages
 			{
 			public:
-				static constexpr char const sk_LabelRoot[] = "DecentRequestAppCert";
 				static constexpr char const sk_ValueCat[] = "DecentRequestAppCert";
 
 				static constexpr char const sk_LabelKey[] = "Key";

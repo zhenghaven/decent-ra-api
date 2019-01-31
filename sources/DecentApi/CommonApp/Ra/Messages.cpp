@@ -7,7 +7,6 @@
 using namespace Decent::Ra::Message;
 using namespace Decent::Net;
 
-constexpr char LoadWhiteList::sk_LabelRoot[];
 constexpr char LoadWhiteList::sk_ValueCat[];
 constexpr char LoadWhiteList::sk_LabelKey[];
 constexpr char LoadWhiteList::sk_LabelWhiteList[];
@@ -32,22 +31,21 @@ std::string LoadWhiteList::ParseWhiteList(const Json::Value & DecentRoot)
 
 LoadWhiteList::LoadWhiteList(const Json::Value & msg) :
 	SmartMessages(msg, sk_ValueCat),
-	m_key(ParseKey(msg[SmartMessages::sk_LabelRoot])),
-	m_whiteList(ParseWhiteList(msg[SmartMessages::sk_LabelRoot]))
+	m_key(ParseKey(msg[SmartMessages::sk_LabelRoot][SmartMessages::sk_LabelChild])),
+	m_whiteList(ParseWhiteList(msg[SmartMessages::sk_LabelRoot][SmartMessages::sk_LabelChild]))
 {
 }
 
 Json::Value & LoadWhiteList::GetJsonMsg(Json::Value & outJson) const
 {
-	Json::Value& parent = SmartMessages::GetJsonMsg(outJson);
+	Json::Value& root = SmartMessages::GetJsonMsg(outJson);
 
-	parent[sk_LabelKey] = m_key;
-	parent[sk_LabelWhiteList] = m_whiteList;
+	root[sk_LabelKey] = m_key;
+	root[sk_LabelWhiteList] = m_whiteList;
 
-	return parent;
+	return root;
 }
 
-constexpr char RequestAppCert::sk_LabelRoot[];
 constexpr char RequestAppCert::sk_ValueCat[];
 constexpr char RequestAppCert::sk_LabelKey[];
 
@@ -62,15 +60,15 @@ std::string RequestAppCert::ParseKey(const Json::Value & DecentRoot)
 
 RequestAppCert::RequestAppCert(const Json::Value & msg) :
 	SmartMessages(msg, sk_ValueCat),
-	m_key(ParseKey(msg[SmartMessages::sk_LabelRoot]))
+	m_key(ParseKey(msg[SmartMessages::sk_LabelRoot][SmartMessages::sk_LabelChild]))
 {
 }
 
 Json::Value & RequestAppCert::GetJsonMsg(Json::Value & outJson) const
 {
-	Json::Value& parent = SmartMessages::GetJsonMsg(outJson);
+	Json::Value& root = SmartMessages::GetJsonMsg(outJson);
 
-	parent[sk_LabelKey] = m_key;
+	root[sk_LabelKey] = m_key;
 
-	return parent;
+	return root;
 }

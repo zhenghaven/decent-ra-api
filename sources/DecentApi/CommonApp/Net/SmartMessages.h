@@ -17,20 +17,21 @@ namespace Decent
 			static constexpr char const sk_LabelRoot[] = "SmartServerMsg";
 			static constexpr char const sk_LabelSender[] = "Sender";
 			static constexpr char const sk_LabelCategory[] = "Cat";
+			static constexpr char const sk_LabelChild[] = "Child";
 
 			static std::string ParseSenderID(const Json::Value& msg);
 			static std::string ParseCat(const Json::Value& msg);
 
 		public:
-			SmartMessages() = delete;
-			SmartMessages(const std::string& senderID);
+			SmartMessages();
+			SmartMessages(const std::string& senderId);
 			SmartMessages(const Json::Value& msg, const char* expectedCat);
 
 			virtual ~SmartMessages() {}
 
 			virtual std::string GetMessageCategoryStr() const = 0;
 
-			virtual const std::string& GetSenderID() const;
+			const std::string& GetSenderID() const { return m_senderID; }
 
 			virtual std::string ToJsonString() const;
 
@@ -39,7 +40,6 @@ namespace Decent
 
 		private:
 			const std::string m_senderID;
-			//const std::string m_cat;
 		};
 
 		class ErrorMessage
