@@ -224,14 +224,14 @@ source_group(TREE ${SOURCES_DIR_PATH}/DecentApi FILES ${SOURCES})
 if(DECENT_API_DECENT_APP)
 	add_library(DecentRa_App_Enclave STATIC ${SOURCES_APP_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
 	#defines:
-	target_include_directories(DecentRa_App_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS})
+	target_include_directories(DecentRa_App_Enclave BEFORE PUBLIC ${COMMON_ENCLAVE_INCLUDE_DIRS})
 	#defines:
 	target_compile_definitions(DecentRa_App_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 	#compiler flags:
 	target_compile_options(DecentRa_App_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
 	set_target_properties(DecentRa_App_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
-	set_target_properties(DecentRa_App_Enclave PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
+	set_property(TARGET DecentRa_App_Enclave APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 	
 	target_link_libraries(DecentRa_App_Enclave 
 						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
@@ -264,14 +264,14 @@ endif()
 if(DECENT_API_DECENT_SERVER)
 	add_library(DecentRa_Server_Enclave STATIC ${SOURCES_SERVER_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
 	#defines:
-	target_include_directories(DecentRa_Server_Enclave BEFORE PRIVATE ${COMMON_ENCLAVE_INCLUDE_DIRS})
+	target_include_directories(DecentRa_Server_Enclave BEFORE PUBLIC ${COMMON_ENCLAVE_INCLUDE_DIRS})
 	#defines:
 	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 	#compiler flags:
 	target_compile_options(DecentRa_Server_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
 	set_target_properties(DecentRa_Server_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
-	set_target_properties(DecentRa_Server_Enclave PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
+	set_property(TARGET DecentRa_Server_Enclave APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 	
 	target_link_libraries(DecentRa_Server_Enclave 
 						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
