@@ -53,17 +53,16 @@ bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std
 
 	platformType = RaReport::sk_ValueReportTypeSgx;
 
-	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
-	JSON_EDITION::Value report;
-	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelIasReport, m_raSp->GetIasReportStr());
-	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelIasSign, m_raSp->GetIasReportSign());
-	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelIasCertChain, m_raSp->GetIasReportCert());
-	JsonCommonSetString(jsonDoc, report, RaReport::sk_LabelOriRepData, SerializeStruct(reportData));
+	rapidjson::Document doc;
+	JsonSetVal(doc, RaReport::sk_LabelIasReport, m_raSp->GetIasReportStr());
+	JsonSetVal(doc, RaReport::sk_LabelIasSign, m_raSp->GetIasReportSign());
+	JsonSetVal(doc, RaReport::sk_LabelIasCertChain, m_raSp->GetIasReportCert());
+	JsonSetVal(doc, RaReport::sk_LabelOriRepData, SerializeStruct(reportData));
 
-	JSON_EDITION::Value root;
-	JsonCommonSetObject(jsonDoc, root, RaReport::sk_LabelRoot, report);
+	rapidjson::Value report = std::move(static_cast<rapidjson::Value&>(doc));
+	JsonSetVal(doc, RaReport::sk_LabelRoot, report);
 
-	selfRaReport = Json2StyleString(root);
+	selfRaReport = Json2StyledString(doc);
 
 	return true;
 }
