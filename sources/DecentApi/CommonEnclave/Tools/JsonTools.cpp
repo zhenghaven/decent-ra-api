@@ -8,8 +8,6 @@
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "../../Common/Common.h"
-
 using namespace Decent;
 
 namespace
@@ -59,6 +57,19 @@ std::string Tools::Json2StyledString(const rapidjson::Value & inJson)
 
 	std::string res(buffer.GetString());
 	return res;
+}
+
+JSON_EDITION::Value& Tools::JsonConstructArray(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, std::vector<JSON_EDITION::Value>& vals)
+{
+	doc.SetArray();
+	doc.Reserve(static_cast<rapidjson::SizeType>(vals.size()), doc.GetAllocator());
+	for (JSON_EDITION::Value& val : vals)
+	{
+		doc.PushBack(val, doc.GetAllocator());
+	}
+	vals.clear();
+
+	return doc;
 }
 
 JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const std::string & val)

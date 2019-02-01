@@ -62,6 +62,19 @@ std::string Tools::Json2StyledString(const Json::Value & inJson)
 	return inJson.toStyledString();
 }
 
+JSON_EDITION::Value& Tools::JsonConstructArray(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, std::vector<JSON_EDITION::Value>& vals)
+{
+	doc = Json::arrayValue;
+	doc.resize(static_cast<Json::ArrayIndex>(vals.size()));
+	for (Json::ArrayIndex i = 0; i < static_cast<Json::ArrayIndex>(vals.size()); ++i)
+	{
+		doc[i] = vals[i];
+	}
+	vals.clear();
+
+	return doc;
+}
+
 JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, const std::string& val)
 {
 	return (doc[index.c_str()] = val);
