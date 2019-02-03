@@ -249,8 +249,8 @@ endif()
 if(DECENT_API_DECENT_SERVER)
 	add_library(DecentRa_Server_Enclave STATIC ${SOURCES_SERVER_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
 	#includes:
-	target_include_directories(DecentRa_App_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIRS})
-	target_include_directories(DecentRa_App_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
+	target_include_directories(DecentRa_Server_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIRS})
+	target_include_directories(DecentRa_Server_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
 	                                                INTERFACE ${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
