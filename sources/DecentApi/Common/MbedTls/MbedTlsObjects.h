@@ -202,7 +202,7 @@ namespace Decent
 			bool VerifySign(const general_secp256r1_signature_t& inSign, const uint8_t* hash, const size_t hashLen) const;
 
 			template<size_t hashSize>
-			bool VerifySign(const general_secp256r1_signature_t& inSign, const std::array<uint8_t, hashSize>& hash, const size_t hashLen) const
+			bool VerifySign(const general_secp256r1_signature_t& inSign, const std::array<uint8_t, hashSize>& hash) const
 			{
 				return VerifySign(inSign, hash.data(), hash.size());
 			}

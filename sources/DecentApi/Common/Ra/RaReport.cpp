@@ -1,11 +1,16 @@
 #include "RaReport.h"
 
+#ifdef ENCLAVE_ENVIRONMENT
 #include <rapidjson/document.h>
+#else
+#include <json/json.h>
+#endif
 
 #include "../consttime_memequal.h"
 #include "../Common.h"
 
 #include "../Tools/DataCoding.h"
+#include "../Tools/JsonTools.h"
 #include "../MbedTls/MbedTlsHelpers.h"
 #include "../SGX/IasReport.h"
 #include "../SGX/sgx_structs.h"
@@ -87,19 +92,19 @@ bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::s
 		return false;
 	}
 
-	rapidjson::Document jsonDoc;
-	jsonDoc.Parse(raReport.c_str());
+	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
 
-	if (!jsonDoc.HasMember(RaReport::sk_LabelRoot))
+	if (!ParseStr2Json(jsonDoc, raReport) ||
+		!jsonDoc.JSON_HAS_MEMBER(RaReport::sk_LabelRoot))
 	{
 		return false;
 	}
-	rapidjson::Value& jsonRoot = jsonDoc[RaReport::sk_LabelRoot];
+	JSON_EDITION::Value& jsonRoot = jsonDoc[RaReport::sk_LabelRoot];
 
-	std::string iasReportStr = jsonRoot[RaReport::sk_LabelIasReport].GetString();
-	std::string iasSign = jsonRoot[RaReport::sk_LabelIasSign].GetString();
-	std::string iasCertChain = jsonRoot[RaReport::sk_LabelIasCertChain].GetString();
-	std::string oriRDB64 = jsonRoot[RaReport::sk_LabelOriRepData].GetString();
+	std::string iasReportStr = jsonRoot[RaReport::sk_LabelIasReport].JSON_AS_STRING();
+	std::string iasSign = jsonRoot[RaReport::sk_LabelIasSign].JSON_AS_STRING();
+	std::string iasCertChain = jsonRoot[RaReport::sk_LabelIasCertChain].JSON_AS_STRING();
+	std::string oriRDB64 = jsonRoot[RaReport::sk_LabelOriRepData].JSON_AS_STRING();
 
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);

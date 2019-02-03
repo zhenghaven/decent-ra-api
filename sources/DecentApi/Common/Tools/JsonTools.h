@@ -50,7 +50,7 @@
 #endif
 
 #ifdef ENCLAVE_ENVIRONMENT
-namespace JSON_EDITION
+namespace rapidjson
 {
 	class CrtAllocator;
 
@@ -70,7 +70,7 @@ namespace JSON_EDITION
 	typedef GenericDocument<UTF8<char>, MemoryPoolAllocator<CrtAllocator>, CrtAllocator> Document;
 }
 #else
-namespace JSON_EDITION
+namespace Json
 {
 	class Value;
 }
