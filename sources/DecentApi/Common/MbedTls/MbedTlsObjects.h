@@ -24,98 +24,263 @@ namespace Decent
 {
 	namespace MbedTlsObj
 	{
-		//Dummy struct to indicate the need for generating a new big number.
+		
+		/** \brief	Dummy struct to indicate the need for generating a new big number. Similar way can be found in std::unique_lock. */
 		struct Generate
 		{
 			explicit Generate() = default;
 		};
 		constexpr Generate gen;
 
+		/** \brief	An object base class for MbedTLS objects. */
 		template<typename T>
 		class ObjBase
 		{
 		public:
+			/** \brief	Defines an alias representing the type of free function for m_ptr. */
+			typedef void(*FreeFuncType)(T*);
+
+			/**
+			 * \brief	An empty function which don't free the m_ptr.
+			 * 			This is necessary when this instance is not the real owner of 
+			 * 			the MbedTLS object that this instance is holding.
+			 *
+			 * \param [in,out]	ptr	If non-null, the pointer.
+			 */
+			static void DoNotFree(T* ptr) noexcept { /*Do nothing.*/ }
 
 		public:
 			ObjBase() = delete;
 
-			ObjBase(T* ptr) :
-				m_ptr(ptr)
+			/**
+			 * \brief	Constructor
+			 * 			Usually this class is used internally, thus, it's the developer's responsibility to 
+			 * 			make sure the value passed in is correct (e.g. not null).
+			 *
+			 * \param [in,out]	ptr			If non-null, the pointer to the MbedTLS object.
+			 * \param 		  	freeFunc	The free function to free the MbedTLS object *AND delete the pointer*.
+			 */
+			ObjBase(T* ptr, FreeFuncType freeFunc) noexcept :
+				m_ptr(ptr),
+				m_freeFunc(freeFunc)
 			{}
 
 			ObjBase(const ObjBase& other) = delete;
-			ObjBase(ObjBase&& other) :
-				m_ptr(other.m_ptr)
+
+			/**
+			 * \brief	Move constructor
+			 *
+			 * \param [in,out]	other	The other instance.
+			 */
+			ObjBase(ObjBase&& other) noexcept :
+				m_ptr(other.m_ptr),
+				m_freeFunc(other.m_freeFunc)
 			{
 				other.m_ptr = nullptr;
+				other.m_freeFunc = &DoNotFree;
 			}
 
 			virtual ObjBase& operator=(const ObjBase& other) = delete;
-			virtual ObjBase& operator=(ObjBase&& other)
+
+			/**
+			 * \brief	Move assignment operator
+			 *
+			 * \param [in,out]	other	The other instance.
+			 *
+			 * \return	A reference to this object.
+			 */
+			virtual ObjBase& operator=(ObjBase&& other) noexcept
 			{
 				if (this != &other)
 				{
 					this->m_ptr = other.m_ptr;
+					this->m_freeFunc = other.m_freeFunc;
+
 					other.m_ptr = nullptr;
+					other.m_freeFunc = &DoNotFree;
 				}
 				return *this;
 			}
 
-			virtual ~ObjBase() {}
+			/** \brief	Destructor */
+			virtual ~ObjBase() 
+			{
+				(*m_freeFunc)(m_ptr);
+				m_ptr = nullptr;
+			}
 
-			virtual void Destroy() = 0;
-
-			virtual operator bool() const
+			/**
+			 * \brief	Cast that converts this instance to a bool
+			 * 			This function basically check whether or not the pointer m_ptr is null.
+			 *
+			 * \return	True if m_ptr is not null, otherwise, false.
+			 */
+			virtual operator bool() const noexcept
 			{
 				return m_ptr != nullptr;
 			}
 
-			T* GetInternalPtr() const
+			/**
+			 * \brief	Gets the pointer to the MbedTLS object.
+			 *
+			 * \return	The pointer to the MbedTLS object.
+			 */
+			T* Get() const noexcept
 			{
 				return m_ptr;
 			}
 
-			T* Release()
+			/**
+			 * \brief	Releases the ownership of the MbedTLS Object, and 
+			 * 			return the pointer to the MbedTLS object.
+			 *
+			 * \return	The pointer to the MbedTLS object.
+			 */
+			T* Release() noexcept
 			{
 				T* tmp = m_ptr;
+
 				m_ptr = nullptr;
+				m_freeFunc = &DoNotFree;
+
 				return tmp;
 			}
 
-		protected:
+			/**
+			 * \brief	Query if this is the actual owner of MbedTLS object.
+			 *
+			 * \return	True if it's, false if not.
+			 */
+			virtual bool IsOwner() const noexcept
+			{
+				return m_freeFunc == &DoNotFree;
+			}
+
+		private:
 			T * m_ptr;
+			FreeFuncType m_freeFunc;
 		};
 
 		class BigNumber : public ObjBase<mbedtls_mpi>
 		{
 		public:
+
+			/**
+			 * \brief	Function that frees MbedTLS object and delete the pointer.
+			 *
+			 * \param [in,out]	ptr	If non-null, the pointer.
+			 */
+			static void FreeObject(mbedtls_mpi* ptr);
+
+			/**
+			 * \brief	Generates a random number with specific size.
+			 *
+			 * \param	size	The size.
+			 *
+			 * \return	The random number.
+			 */
 			static BigNumber GenRandomNumber(size_t size);
-			static BigNumber FromLittleEndianBin(const uint8_t* in, const size_t size);
+
+			/**
+			 * \brief	Construct a big number from binary in little-endian.
+			 *
+			 * \param	in  	The pointer to the start address.
+			 * \param	size	The size.
+			 *
+			 * \return	The BigNumber.
+			 */
+			static BigNumber FromLittleEndian(const void* in, const size_t size);
+
+			/**
+			 * \brief	Construct a big number from binary in little-endian.
+			 *
+			 * \param	in	The object with size (e.g. an instance of a struct).
+			 *
+			 * \return	The BigNumber.
+			 */
 			template<typename T>
-			static BigNumber FromLittleEndianBin(const T& in)
+			static BigNumber FromLittleEndian(const T& in)
 			{
-				return FromLittleEndianBin(reinterpret_cast<const uint8_t*>(&in), sizeof(T));
+				return FromLittleEndian(&in, sizeof(T));
 			}
 
 		public:
 			BigNumber() = delete;
+
+			/**
+			 * \brief	Constructor that generate a big number. Nothing has been filled-in.
+			 *
+			 * \param	parameter1	The dummy variable that indicates the need for generating a big number object.
+			 */
 			BigNumber(const Generate&);
-			BigNumber(BigNumber&& other);
-			BigNumber(mbedtls_mpi* ptr);
-			BigNumber(const BigNumber& other) = delete;
-			virtual ~BigNumber();
 
-			virtual void Destroy() override;
-
-			bool ToLittleEndianBinary(uint8_t* out, const size_t size);
-
-			template<typename T>
-			bool ToLittleEndianBinary(T& out)
+			/**
+			 * \brief	Move constructor
+			 *
+			 * \param [in,out]	other	The other instance.
+			 */
+			BigNumber(BigNumber&& other) noexcept : 
+				ObjBase(std::forward<ObjBase>(other))
 			{
-				return ToLittleEndianBinary(reinterpret_cast<uint8_t*>(&out), sizeof(T));
+			}
+
+			/**
+			 * \brief	Constructor that accept a reference to mbedtls_mpi object, thus, this class doesn't
+			 * 			has the owner ship.
+			 *
+			 * \param [in,out]	ref to mbedtls_mpi object.
+			 */
+			BigNumber(mbedtls_mpi& ref) :
+				ObjBase(&ref, &ObjBase::DoNotFree)
+			{}
+
+			BigNumber(const BigNumber& other) = delete;
+
+			/** \brief	Destructor */
+			virtual ~BigNumber() noexcept {}
+
+			/**
+			 * \brief	Gets the size of this big number.
+			 *
+			 * \return	The size.
+			 */
+			size_t GetSize() const;
+
+			/**
+			 * \brief	Converts this big number to a little endian binary
+			 *
+			 * \param [in,out]	out 	If non-null, the output address.
+			 * \param 		  	size	The size of the output space. It must be exactly same as the size 
+			 * 							of this big number.
+			 *
+			 * \return	Whether or not the conversion is successful.
+			 */
+			bool ToLittleEndian(void* out, const size_t size);
+
+			/**
+			* \brief	Converts this big number to a little endian binary
+			*
+			* \param [in,out]	out 	The reference to the output space. The size must be exactly same as 
+			* 							the size of this big number.
+			*
+			* \return	Whether or not the conversion is successful.
+			*/
+			template<typename T>
+			bool ToLittleEndian(T& out)
+			{
+				return ToLittleEndian(&out, sizeof(T));
 			}
 
 		private:
+			/**
+			* \brief	Constructor that accept a pointer to mbedtls_mpi object, thus, this class doesn't has the owner ship.
+			*
+			* \param [in,out]	ptr	If non-null, the pointer.
+			*/
+			BigNumber(mbedtls_mpi* ptr) :
+				ObjBase(ptr, &ObjBase::DoNotFree)
+			{}
+
 		};
 
 		class PKey : public ObjBase<mbedtls_pk_context>

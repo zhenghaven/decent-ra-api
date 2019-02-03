@@ -119,82 +119,72 @@ struct EcGroupWarp
 	}
 };
 
-BigNumber MbedTlsObj::BigNumber::GenRandomNumber(size_t size)
+void BigNumber::FreeObject(mbedtls_mpi* ptr)
 {
-	std::unique_ptr<mbedtls_mpi> serialNum = Tools::make_unique<mbedtls_mpi>();
-	mbedtls_mpi_init(serialNum.get());
+	mbedtls_mpi_free(ptr);
+	delete ptr;
+}
+
+BigNumber BigNumber::GenRandomNumber(size_t size)
+{
+	BigNumber res(MbedTlsObj::gen);
 
 	void* drbgCtx;
 	MbedTlsHelper::DrbgInit(drbgCtx);
 
-	int mbedRet = mbedtls_mpi_fill_random(serialNum.get(), size,
+	int mbedRet = mbedtls_mpi_fill_random(res.Get(), size,
 		&MbedTlsHelper::DrbgRandom, drbgCtx);
 
 	MbedTlsHelper::DrbgFree(drbgCtx);
 
 	if (mbedRet != MBEDTLS_SUCCESS_RET)
 	{
-		mbedtls_mpi_free(serialNum.get());
 		return BigNumber(nullptr);
 	}
 
-	return BigNumber(serialNum.release());
-}
-
-BigNumber MbedTlsObj::BigNumber::FromLittleEndianBin(const uint8_t * in, const size_t size)
-{
-	std::vector<uint8_t> tmpBuf(std::reverse_iterator<const uint8_t*>(in + size), std::reverse_iterator<const uint8_t*>(in));
-
-	BigNumber res(MbedTlsObj::gen);
-	if (!res ||
-		mbedtls_mpi_read_binary(res.GetInternalPtr(), tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
-	{
-		res.Destroy();
-	}
 	return res;
 }
 
-MbedTlsObj::BigNumber::BigNumber(const Generate &) :
-	ObjBase(new mbedtls_mpi)
+BigNumber BigNumber::FromLittleEndian(const void * in, const size_t size)
 {
-	mbedtls_mpi_init(m_ptr);
-}
+	const uint8_t* inByte = static_cast<const uint8_t*>(in);
 
-MbedTlsObj::BigNumber::BigNumber(BigNumber && other) :
-	ObjBase(std::forward<ObjBase>(other))
-{
-}
+	std::vector<uint8_t> tmpBuf(std::reverse_iterator<const uint8_t*>(inByte + size), std::reverse_iterator<const uint8_t*>(inByte));
 
-MbedTlsObj::BigNumber::BigNumber(mbedtls_mpi * ptr) :
-	ObjBase(ptr)
-{
-}
+	BigNumber res(MbedTlsObj::gen);
 
-MbedTlsObj::BigNumber::~BigNumber()
-{
-	Destroy();
-}
-
-void MbedTlsObj::BigNumber::Destroy()
-{
-	if (m_ptr)
+	if (!res ||
+		mbedtls_mpi_read_binary(res.Get(), tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
 	{
-		mbedtls_mpi_free(m_ptr);
-		delete m_ptr;
+		return BigNumber(nullptr);
 	}
-	m_ptr = nullptr;
+
+	return res;
 }
 
-bool MbedTlsObj::BigNumber::ToLittleEndianBinary(uint8_t * out, const size_t size)
+BigNumber::BigNumber(const Generate &) :
+	ObjBase(new mbedtls_mpi, &FreeObject)
 {
+	mbedtls_mpi_init(Get());
+}
+
+size_t BigNumber::GetSize() const
+{
+	return *this ? mbedtls_mpi_size(Get()) : 0;
+}
+
+bool BigNumber::ToLittleEndian(void * out, const size_t size)
+{
+	uint8_t* outByte = static_cast<uint8_t*>(out);
+
 	if (!*this || 
-		mbedtls_mpi_size(m_ptr) != size ||
-		mbedtls_mpi_write_binary(m_ptr, out, size) != MBEDTLS_SUCCESS_RET)
+		mbedtls_mpi_size(Get()) != size ||
+		mbedtls_mpi_write_binary(Get(), outByte, size) != MBEDTLS_SUCCESS_RET)
 	{
 		return false;
 	}
 
-	std::reverse(out, out + size);
+	std::reverse(outByte, outByte + size);
 	return true;
 }
 
