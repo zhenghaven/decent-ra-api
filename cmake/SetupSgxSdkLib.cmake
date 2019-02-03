@@ -42,8 +42,8 @@ if(WIN32)
 	if(NOT TARGET IntelSGX::SDK_Trusted_stdc)
 		add_library(IntelSGX::SDK_Trusted_stdc STATIC IMPORTED GLOBAL)
 		set_target_properties(IntelSGX::SDK_Trusted_stdc PROPERTIES 
-			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation
-			INTERFACE_INCLUDE_DIRECTORIES "${INTEL_SGX_SDK_INCLUDE_DIR}/tlibc")
+			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		target_include_directories(IntelSGX::SDK_Trusted_stdc BEFORE INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR}/tlibc)
 		set_target_properties(IntelSGX::SDK_Trusted_stdc PROPERTIES 
 			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tstdc.lib"
 			IMPORTED_LOCATION_DEBUG           "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tstdc.lib"
@@ -54,8 +54,8 @@ if(WIN32)
 	if(NOT TARGET IntelSGX::SDK_Trusted_cxx)
 		add_library(IntelSGX::SDK_Trusted_cxx STATIC IMPORTED GLOBAL)
 		set_target_properties(IntelSGX::SDK_Trusted_cxx PROPERTIES 
-			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation
-			INTERFACE_INCLUDE_DIRECTORIES "${INTEL_SGX_SDK_INCLUDE_DIR}/libc++")
+			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		target_include_directories(IntelSGX::SDK_Trusted_cxx BEFORE INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR}/libc++)
 		set_target_properties(IntelSGX::SDK_Trusted_cxx PROPERTIES 
 			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tcxx.lib"
 			IMPORTED_LOCATION_DEBUG           "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tcxx.lib"
@@ -129,8 +129,8 @@ elseif(UNIX)
 	if(NOT TARGET IntelSGX::SDK_Trusted_stdc)
 		add_library(IntelSGX::SDK_Trusted_stdc STATIC IMPORTED GLOBAL)
 		set_target_properties(IntelSGX::SDK_Trusted_stdc PROPERTIES 
-			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation
-			INTERFACE_INCLUDE_DIRECTORIES "${INTEL_SGX_SDK_INCLUDE_DIR}/tlibc")
+			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		target_include_directories(IntelSGX::SDK_Trusted_stdc BEFORE INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR}/tlibc)
 		set_target_properties(IntelSGX::SDK_Trusted_stdc PROPERTIES 
 			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tstdc.a"
 		)
@@ -138,8 +138,8 @@ elseif(UNIX)
 	if(NOT TARGET IntelSGX::SDK_Trusted_cxx)
 		add_library(IntelSGX::SDK_Trusted_cxx STATIC IMPORTED GLOBAL)
 		set_target_properties(IntelSGX::SDK_Trusted_cxx PROPERTIES 
-			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation
-			INTERFACE_INCLUDE_DIRECTORIES "${INTEL_SGX_SDK_INCLUDE_DIR}/libcxx")
+			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		target_include_directories(IntelSGX::SDK_Trusted_cxx BEFORE INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR}/libcxx)
 		set_target_properties(IntelSGX::SDK_Trusted_cxx PROPERTIES 
 			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tcxx.a"
 		)
@@ -166,9 +166,8 @@ endif()
 if(NOT TARGET IntelSGX::SDK_Trusted_Whole_lib)
 	add_library(IntelSGX::SDK_Trusted_Whole_lib STATIC IMPORTED GLOBAL)
 	set_target_properties(IntelSGX::SDK_Trusted_Whole_lib PROPERTIES IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
-	set_target_properties(IntelSGX::SDK_Trusted_Whole_lib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${INTEL_SGX_SDK_INCLUDE_DIR}")
+	set_target_properties(IntelSGX::SDK_Trusted_Whole_lib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${INTEL_SGX_SDK_INCLUDE_DIR})
 	set_target_properties(IntelSGX::SDK_Trusted_Whole_lib PROPERTIES 
-		#IMPORTED_LOCATION ${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}
 		IMPORTED_LOCATION_DEBUG ${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUG}
 		IMPORTED_LOCATION_RELEASE ${INTEL_SGX_SDK_LIB_WHOLE_ARC_RELEASE}
 		IMPORTED_LOCATION_DEBUGSIMULATION ${INTEL_SGX_SDK_LIB_WHOLE_ARC_DEBUGSIM})
@@ -176,13 +175,9 @@ endif()
 
 if(NOT TARGET IntelSGX::SDK_Untrusted)
 	add_library(IntelSGX::SDK_Untrusted INTERFACE IMPORTED GLOBAL)
-	set_target_properties(IntelSGX::SDK_Untrusted PROPERTIES 
-		INTERFACE_INCLUDE_DIRECTORIES "${INTEL_SGX_SDK_INCLUDE_DIR}"
-	)
-	set_target_properties(IntelSGX::SDK_Untrusted PROPERTIES 
-		INTERFACE_LINK_LIBRARIES 
+	set_target_properties(IntelSGX::SDK_Untrusted PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${INTEL_SGX_SDK_INCLUDE_DIR})
+	set_target_properties(IntelSGX::SDK_Untrusted PROPERTIES INTERFACE_LINK_LIBRARIES #We don't use IMPORTED_LOCATION here since there are multiple lib to link.
 		"$<$<CONFIG:DebugSimulation>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUGSIM}>$<$<AND:$<CONFIG:Debug>,$<NOT:$<CONFIG:DebugSimulation>>>:${INTEL_SGX_SDK_LIB_UNTRUSTED_DEBUG}>$<$<CONFIG:Release>:${INTEL_SGX_SDK_LIB_UNTRUSTED_RELEASE}>" 
-		#INTERFACE_LINK_OPTIONS ""
 	)
 endif()
 

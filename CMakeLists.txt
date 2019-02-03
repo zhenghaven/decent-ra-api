@@ -137,8 +137,6 @@ find_package(Boost CONFIG REQUIRED system filesystem)
 set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
 set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbed TLS programs." FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls)
-set(MBEDTLS_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls/include)
-set(MBEDTLS_INCLUDE_DIRS ${MBEDTLS_INCLUDE_DIR})
 set(MBEDCRYPTO_LIBRARY mbedcrypto)
 set(MBEDX509_LIBRARY mbedx509)
 set(MBEDTLS_LIBRARY mbedtls)
@@ -160,6 +158,7 @@ set(ENABLE_MANUAL OFF CACHE BOOL "Set to ON to build libcurl manual." FORCE)
 set(ENABLE_UNIX_SOCKETS OFF CACHE BOOL "Define if you want Unix domain sockets support" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/curl)
 set(CURL_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/curl/include)
+target_include_directories(libcurl INTERFACE $<BUILD_INTERFACE:${CURL_INCLUDE_DIR}>)
 
 ##JsonCPP
 set(JSONCPP_WITH_TESTS OFF CACHE BOOL "Set to ON to build JsonCpp with tests." FORCE)
@@ -173,22 +172,6 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/SetupSgxSdkLib.cmake)
 ##Header only libraries
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/rapidjson/include)
-set(TCLAP_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/tclap/include)
-
-
-set(COMMON_APP_INCLUDE_DIRS ${TCLAP_INCLUDE_DIR} 
-							 ${CURL_INCLUDE_DIR} 
-							 ${CPPCODEC_INCLUDE_DIR} 
-							 ${MBEDTLS_INCLUDE_DIR} 
-							 ${RAPIDJSON_INCLUDE_DIR} 
-							 ${INTEL_SGX_SDK_INCLUDE_DIR} 
-							 )
-
-set(COMMON_ENCLAVE_INCLUDE_DIRS ${CPPCODEC_INCLUDE_DIR} 
-							 ${RAPIDJSON_INCLUDE_DIR} 
-							 ${MBEDTLS_INCLUDE_DIR} 
-							 ${INTEL_SGX_SDK_INCLUDE_DIRS}
-							 )
 
 #==========================================================
 #   Add files
@@ -223,25 +206,27 @@ source_group(TREE ${SOURCES_DIR_PATH}/DecentApi FILES ${SOURCES})
 
 if(DECENT_API_DECENT_APP)
 	add_library(DecentRa_App_Enclave STATIC ${SOURCES_APP_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
-	#defines:
-	target_include_directories(DecentRa_App_Enclave BEFORE PUBLIC ${COMMON_ENCLAVE_INCLUDE_DIRS})
+	#includes:
+	target_include_directories(DecentRa_App_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIRS})
+	target_include_directories(DecentRa_App_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
+	                                                INTERFACE ${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_App_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 	#compiler flags:
 	target_compile_options(DecentRa_App_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
 	set_target_properties(DecentRa_App_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
-	set_property(TARGET DecentRa_App_Enclave APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 	
 	target_link_libraries(DecentRa_App_Enclave 
-						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
-						${MBEDX509_ENCLAVE_LIBRARY} 
-						${MBEDTLS_ENCLAVE_LIBRARY} 
-						)
+		mbedcrypto_enclave 
+		mbedx509_enclave 
+		mbedtls_enclave 
+	)
 	
 	add_library(DecentRa_App_App STATIC ${SOURCES_APP_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
 	#includes:
-	target_include_directories(DecentRa_App_App PRIVATE ${COMMON_APP_INCLUDE_DIRS})
+	target_include_directories(DecentRa_App_App PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIR}
+	                                            PUBLIC ${CPPCODEC_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_App_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
@@ -251,20 +236,22 @@ if(DECENT_API_DECENT_APP)
 	set_target_properties(DecentRa_App_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 
 	target_link_libraries(DecentRa_App_App 
-						${COMMON_STANDARD_LIBRARIES} 
-						jsoncpp_lib_static 
-						libcurl 
-						${MBEDTLS_LIBRARY} 
-						Boost::filesystem
-						Boost::system
-						${Additional_Sys_Lib}
-					)
+		${COMMON_STANDARD_LIBRARIES} 
+		jsoncpp_lib_static 
+		libcurl 
+		mbedtls 
+		Boost::filesystem
+		Boost::system
+		${Additional_Sys_Lib}
+	)
 endif()
 
 if(DECENT_API_DECENT_SERVER)
 	add_library(DecentRa_Server_Enclave STATIC ${SOURCES_SERVER_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
-	#defines:
-	target_include_directories(DecentRa_Server_Enclave BEFORE PUBLIC ${COMMON_ENCLAVE_INCLUDE_DIRS})
+	#includes:
+	target_include_directories(DecentRa_App_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIRS})
+	target_include_directories(DecentRa_App_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
+	                                                INTERFACE ${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
 	#compiler flags:
@@ -274,14 +261,15 @@ if(DECENT_API_DECENT_SERVER)
 	set_property(TARGET DecentRa_Server_Enclave APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 	
 	target_link_libraries(DecentRa_Server_Enclave 
-						${MBEDCRYPTO_ENCLAVE_LIBRARY} 
-						${MBEDX509_ENCLAVE_LIBRARY} 
-						${MBEDTLS_ENCLAVE_LIBRARY} 
-						)
+		mbedcrypto_enclave 
+		mbedx509_enclave 
+		mbedtls_enclave 
+	)
 	
 	add_library(DecentRa_Server_App STATIC ${SOURCES_SERVER_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
 	#includes:
-	target_include_directories(DecentRa_Server_App PRIVATE ${COMMON_APP_INCLUDE_DIRS})
+	target_include_directories(DecentRa_Server_App PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIR}
+	                                               PUBLIC ${CPPCODEC_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_Server_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
@@ -291,12 +279,12 @@ if(DECENT_API_DECENT_SERVER)
 	set_target_properties(DecentRa_Server_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 
 	target_link_libraries(DecentRa_Server_App 
-						${COMMON_STANDARD_LIBRARIES} 
-						jsoncpp_lib_static 
-						libcurl 
-						${MBEDTLS_LIBRARY} 
-						Boost::filesystem
-						Boost::system
-						${Additional_Sys_Lib}
-					)
+		${COMMON_STANDARD_LIBRARIES} 
+		jsoncpp_lib_static 
+		libcurl 
+		mbedtls 
+		Boost::filesystem
+		Boost::system
+		${Additional_Sys_Lib}
+	)
 endif()
