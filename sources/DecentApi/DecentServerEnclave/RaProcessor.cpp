@@ -140,7 +140,7 @@ std::unique_ptr<Decent::Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcess
 		RaReport::GetSgxDecentRaConfig(),
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
-		MbedTlsObj::ECKeyPublic pubKey(SgxEc256Type2General(signKey));
+		MbedTlsObj::ECKeyPublic pubKey = MbedTlsObj::ECKeyPublic::FromGeneral(SgxEc256Type2General(signKey));
 		std::string pubKeyPem = pubKey.ToPubPemString();
 		if (pubKeyPem.size() == 0)
 		{
