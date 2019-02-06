@@ -22,6 +22,7 @@
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/x509_crl.h>
 #include <mbedtls/ssl.h>
+#include <mbedtls/base64.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
 
@@ -69,6 +70,8 @@ namespace
 	static constexpr char const PEM_END_CSR[] = "-----END CERTIFICATE REQUEST-----\n";
 	static constexpr char const PEM_BEGIN_CRT[] = "-----BEGIN CERTIFICATE-----\n";
 	static constexpr char const PEM_END_CRT[] = "-----END CERTIFICATE-----\n";
+	static constexpr char const PEM_BEGIN_CRL[] = "-----BEGIN X509 CRL-----\n";
+	static constexpr char const PEM_END_CRL[] = "-----END X509 CRL-----\n";
 
 	static constexpr size_t ECP_PUB_DER_MAX_BYTES = (30 + 2 * MBEDTLS_ECP_MAX_BYTES);
 	static constexpr size_t ECP_PRV_DER_MAX_BYTES = (29 + 3 * MBEDTLS_ECP_MAX_BYTES);
@@ -78,23 +81,23 @@ namespace
 	static constexpr size_t CalcPemMaxBytes(size_t derMaxSize, size_t headerSize, size_t footerSize)
 	{
 		return headerSize + 
-			cppcodec::base64_rfc4648::encoded_size(derMaxSize) + 
+			cppcodec::base64_rfc4648::encoded_size(derMaxSize) + 1 + 
 			(cppcodec::base64_rfc4648::encoded_size(derMaxSize) / 64) +  //'\n' for each line.
 			footerSize + 
 			1;                   //null terminator
 	}
 
 	static constexpr size_t ECP_PUB_PEM_MAX_BYTES = 
-		CalcPemMaxBytes(ECP_PUB_DER_MAX_BYTES, sizeof(PEM_BEGIN_PUBLIC_KEY), sizeof(PEM_END_PUBLIC_KEY));
+		CalcPemMaxBytes(ECP_PUB_DER_MAX_BYTES, sizeof(PEM_BEGIN_PUBLIC_KEY) - 1, sizeof(PEM_END_PUBLIC_KEY) - 1);
 
 	static constexpr size_t ECP_PRV_PEM_MAX_BYTES =
-		CalcPemMaxBytes(ECP_PRV_DER_MAX_BYTES, sizeof(PEM_BEGIN_PRIVATE_KEY_EC), sizeof(PEM_END_PRIVATE_KEY_EC));
+		CalcPemMaxBytes(ECP_PRV_DER_MAX_BYTES, sizeof(PEM_BEGIN_PRIVATE_KEY_EC) - 1, sizeof(PEM_END_PRIVATE_KEY_EC) - 1);
 
 	static constexpr size_t X509_REQ_PEM_MAX_BYTES =
-		CalcPemMaxBytes(X509_REQ_DER_MAX_BYTES, sizeof(PEM_BEGIN_CSR), sizeof(PEM_END_CSR));
+		CalcPemMaxBytes(X509_REQ_DER_MAX_BYTES, sizeof(PEM_BEGIN_CSR) - 1, sizeof(PEM_END_CSR) - 1);
 
 	static constexpr size_t X509_CRT_PEM_MAX_BYTES =
-		CalcPemMaxBytes(X509_CRT_DER_MAX_BYTES, sizeof(PEM_BEGIN_CRT), sizeof(PEM_END_CRT));
+		CalcPemMaxBytes(X509_CRT_DER_MAX_BYTES, sizeof(PEM_BEGIN_CRT) - 1, sizeof(PEM_END_CRT) - 1);
 
 
 }
@@ -127,7 +130,7 @@ void BigNumber::FreeObject(mbedtls_mpi* ptr)
 
 BigNumber BigNumber::GenRandomNumber(size_t size)
 {
-	BigNumber res(MbedTlsObj::gen);
+	BigNumber res(gen);
 
 	void* drbgCtx;
 	MbedTlsHelper::DrbgInit(drbgCtx);
@@ -151,7 +154,7 @@ BigNumber BigNumber::FromLittleEndian(const void * in, const size_t size)
 
 	std::vector<uint8_t> tmpBuf(std::reverse_iterator<const uint8_t*>(inByte + size), std::reverse_iterator<const uint8_t*>(inByte));
 
-	BigNumber res(MbedTlsObj::gen);
+	BigNumber res(gen);
 
 	if (!res ||
 		mbedtls_mpi_read_binary(res.Get(), tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
@@ -194,7 +197,7 @@ void PKey::FreeObject(mbedtls_pk_context * ptr)
 	delete ptr;
 }
 
-bool MbedTlsObj::PKey::VerifySignSha256(const General256Hash& hash, const void* sign, const size_t signLen) const
+bool PKey::VerifySignSha256(const General256Hash& hash, const void* sign, const size_t signLen) const
 {
 	if (!*this || !sign)
 	{
@@ -402,7 +405,7 @@ mbedtls_ecp_keypair * ECKeyPublic::GetEcKeyPtr()
 	return *this ? mbedtls_pk_ec(*Get()) : nullptr;
 }
 
-const mbedtls_ecp_keypair * Decent::MbedTlsObj::ECKeyPublic::GetEcKeyPtr() const
+const mbedtls_ecp_keypair * ECKeyPublic::GetEcKeyPtr() const
 {
 	return *this ? mbedtls_pk_ec(*Get()) : nullptr;
 }
@@ -515,7 +518,7 @@ ECKeyPair ECKeyPair::GenerateNewKey()
 	return res;
 }
 
-bool MbedTlsObj::ECKeyPair::ToGeneralPrvKey(PrivateKeyWrap & outKey) const
+bool ECKeyPair::ToGeneralPrvKey(PrivateKeyWrap & outKey) const
 {
 	if (!*this)
 	{
@@ -532,7 +535,7 @@ bool MbedTlsObj::ECKeyPair::ToGeneralPrvKey(PrivateKeyWrap & outKey) const
 	return true;
 }
 
-std::unique_ptr<PrivateKeyWrap> MbedTlsObj::ECKeyPair::ToGeneralPrvKey() const
+std::unique_ptr<PrivateKeyWrap> ECKeyPair::ToGeneralPrvKey() const
 {
 	std::unique_ptr<PrivateKeyWrap> prvKey = Tools::make_unique<PrivateKeyWrap>();
 	if (!prvKey || !ToGeneralPrvKey(*prvKey))
@@ -542,7 +545,7 @@ std::unique_ptr<PrivateKeyWrap> MbedTlsObj::ECKeyPair::ToGeneralPrvKey() const
 	return std::move(prvKey);
 }
 
-PrivateKeyWrap MbedTlsObj::ECKeyPair::ToGeneralPrvKeyChecked() const
+PrivateKeyWrap ECKeyPair::ToGeneralPrvKeyChecked() const
 {
 	PrivateKeyWrap prvKey;
 	if (ToGeneralPrvKey(prvKey))
@@ -553,7 +556,7 @@ PrivateKeyWrap MbedTlsObj::ECKeyPair::ToGeneralPrvKeyChecked() const
 	return PrivateKeyWrap();
 }
 
-bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic & peerPubKey)
+bool ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic & peerPubKey)
 {
 	if (!*this || !peerPubKey)
 	{
@@ -561,7 +564,7 @@ bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const E
 	}
 
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-	BigNumber sharedKey(MbedTlsObj::gen);
+	BigNumber sharedKey(gen);
 	EcGroupWarp grp;
 	if (!sharedKey || !grp.Copy(ecPtr.grp))
 	{
@@ -589,7 +592,7 @@ bool MbedTlsObj::ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const E
 	return true;
 }
 
-bool MbedTlsObj::ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t * hash, const size_t hashLen, const mbedtls_md_info_t* mdInfo) const
+bool ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t * hash, const size_t hashLen, const mbedtls_md_info_t* mdInfo) const
 {
 	if (!*this || !hash || !mdInfo || hashLen != mdInfo->size)
 	{
@@ -597,8 +600,8 @@ bool MbedTlsObj::ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, c
 	}
 
 	int mbedRet = 0;
-	BigNumber r(MbedTlsObj::gen);
-	BigNumber s(MbedTlsObj::gen);
+	BigNumber r(gen);
+	BigNumber s(gen);
 	EcGroupWarp grp;
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
 
@@ -708,7 +711,7 @@ static const std::string CreateX509Pem(const PKey & keyPair, const std::string& 
 }
 
 X509Req::X509Req(const std::string & pemStr) :
-	X509Req(FromPem(pemStr), pemStr)
+	X509Req(FromPem(pemStr))
 {
 }
 
@@ -723,12 +726,12 @@ X509Req::X509Req(const PKey & keyPair, const std::string& commonName) :
 {
 }
 
-MbedTlsObj::X509Req::operator bool() const noexcept
+X509Req::operator bool() const noexcept
 {
 	return ObjBase::operator bool() && m_pubKey;
 }
 
-bool MbedTlsObj::X509Req::VerifySignature() const
+bool X509Req::VerifySignature() const
 {
 	if (!*this)
 	{
@@ -747,14 +750,24 @@ bool MbedTlsObj::X509Req::VerifySignature() const
 	return verifyRes;
 }
 
-const PKey & MbedTlsObj::X509Req::GetPublicKey() const
+const PKey & X509Req::GetPublicKey() const
 {
 	return m_pubKey;
 }
 
-std::string MbedTlsObj::X509Req::ToPemString() const
+std::string X509Req::ToPemString() const
 {
-	return m_pemStr;
+	size_t useLen = CalcPemMaxBytes(Get()->raw.len, sizeof(PEM_BEGIN_CSR) - 1, sizeof(PEM_END_CSR) - 1);
+	
+	std::string res(useLen, 0);
+	if (mbedtls_pem_write_buffer(PEM_BEGIN_CSR, PEM_END_CSR, Get()->raw.p, Get()->raw.len, 
+		reinterpret_cast<uint8_t*>(&res[0]), res.size(), &useLen) != MBEDTLS_SUCCESS_RET)
+	{
+		return std::string();
+	}
+
+	res.pop_back();
+	return res;
 }
 
 X509Req::X509Req() :
@@ -770,23 +783,19 @@ X509Req::X509Req(mbedtls_x509_csr * ptr, FreeFuncType freeFunc) :
 {
 }
 
-X509Cert X509Cert::FromPemDer(const void* ptr, size_t size)
+std::string X509Cert::GeneratePemStr(const mbedtls_x509_crt & ref)
 {
-	X509Cert res;
+	size_t useLen = CalcPemMaxBytes(ref.raw.len, sizeof(PEM_BEGIN_CRT) - 1, sizeof(PEM_END_CRT) - 1);
 
-	const uint8_t* ptrByte = static_cast<const uint8_t*>(ptr);
-	if (mbedtls_x509_crt_parse(res.Get(), ptrByte, size) != MBEDTLS_SUCCESS_RET)
+	std::string res(useLen, 0);
+	if (mbedtls_pem_write_buffer(PEM_BEGIN_CRT, PEM_END_CRT, ref.raw.p, ref.raw.len,
+		reinterpret_cast<uint8_t*>(&res[0]), res.size(), &useLen) != MBEDTLS_SUCCESS_RET)
 	{
-		mbedtls_x509_crt_free(res.Get());
-		return nullptr;
+		return std::string();
 	}
 
+	res.pop_back();
 	return res;
-}
-
-X509Cert X509Cert::FromPem(const std::string & pemStr)
-{
-	return FromPemDer(pemStr.c_str(), pemStr.size() + 1);
 }
 
 static int x509_write_time(unsigned char **p, unsigned char *start,
@@ -1010,14 +1019,22 @@ static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvK
 	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) + (hasCa ? caCert->ToPemString() : std::string()) : std::string();
 }
 
-static std::string ConstructCommonName(mbedtls_x509_crt * ptr)
+X509Cert X509Cert::FromPemDer(const void* ptr, size_t size)
 {
-	if (!ptr || !(ptr->subject.val.p) || !(ptr->subject.val.len))
+	X509Cert res;
+
+	const uint8_t* ptrByte = static_cast<const uint8_t*>(ptr);
+	if (mbedtls_x509_crt_parse(res.Get(), ptrByte, size) != MBEDTLS_SUCCESS_RET)
 	{
-		return std::string();
+		return X509Cert(nullptr, &ObjBase::DoNotFree);
 	}
 
-	return std::string(reinterpret_cast<const char*>(ptr->subject.val.p), ptr->subject.val.len);
+	return res;
+}
+
+X509Cert X509Cert::FromPem(const std::string & pemStr)
+{
+	return FromPemDer(pemStr.c_str(), pemStr.size() + 1);
 }
 
 void X509Cert::FreeObject(mbedtls_x509_crt * ptr)
@@ -1027,14 +1044,13 @@ void X509Cert::FreeObject(mbedtls_x509_crt * ptr)
 }
 
 X509Cert::X509Cert(const std::string & pemStr) :
-	X509Cert(FromPem(pemStr), pemStr)
+	X509Cert(FromPem(pemStr))
 {
 }
 
 X509Cert::X509Cert(mbedtls_x509_crt & ref) :
 	ObjBase(&ref, &ObjBase::DoNotFree),
-	m_pubKey(ref.pk),
-	m_commonName(ConstructCommonName(Get()))
+	m_pubKey(ref.pk)
 {
 }
 
@@ -1045,15 +1061,13 @@ X509Cert::X509Cert() :
 	mbedtls_x509_crt_init(Get());
 }
 
-X509Cert::X509Cert(X509Cert && other, const std::string & pemStr) :
-	ObjBase(std::forward<ObjBase>(other)),
-	m_pemStr(pemStr),
-	m_pubKey(std::move(other.m_pubKey)),
-	m_commonName(ConstructCommonName(Get()))
+X509Cert::X509Cert(mbedtls_x509_crt * ptr, FreeFuncType freeFunc) :
+	ObjBase(ptr, freeFunc),
+	m_pubKey(ptr ? ptr->pk : PKey::Empty())
 {
 }
 
-MbedTlsObj::X509Cert::X509Cert(const X509Cert & caCert, const PKey & prvKey, const PKey & pubKey,
+X509Cert::X509Cert(const X509Cert & caCert, const PKey & prvKey, const PKey & pubKey,
 	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
 	X509Cert(ConstructNewX509Cert(&caCert, prvKey, pubKey, 
@@ -1062,7 +1076,7 @@ MbedTlsObj::X509Cert::X509Cert(const X509Cert & caCert, const PKey & prvKey, con
 {
 }
 
-MbedTlsObj::X509Cert::X509Cert(const PKey & prvKey,
+X509Cert::X509Cert(const PKey & prvKey,
 	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
 	X509Cert(ConstructNewX509Cert(nullptr, prvKey, prvKey, 
@@ -1073,7 +1087,7 @@ MbedTlsObj::X509Cert::X509Cert(const PKey & prvKey,
 
 X509Cert::operator bool() const noexcept
 {
-	return ObjBase::operator bool() && m_pubKey && m_commonName.size() > 0;
+	return ObjBase::operator bool() && m_pubKey;
 }
 
 bool X509Cert::GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const
@@ -1211,9 +1225,27 @@ const PKey & X509Cert::GetPublicKey() const
 	return m_pubKey;
 }
 
-const std::string & X509Cert::ToPemString() const
+std::string X509Cert::ToPemString() const
 {
-	return m_pemStr;
+	std::string res;
+	const mbedtls_x509_crt* crt = Get();
+	while (crt)
+	{
+		res += GeneratePemStr(*crt);
+		crt = crt->next;
+	}
+
+	return res;
+}
+
+std::string Decent::MbedTlsObj::X509Cert::GetCommonName() const
+{
+	if (!Get() || !(Get()->subject.val.p) || !(Get()->subject.val.len))
+	{
+		return std::string();
+	}
+
+	return std::string(reinterpret_cast<const char*>(Get()->subject.val.p), Get()->subject.val.len);
 }
 
 bool X509Cert::NextCert()
@@ -1274,9 +1306,19 @@ void X509Crl::FreeObject(mbedtls_x509_crl * ptr)
 	delete ptr;
 }
 
-std::string MbedTlsObj::X509Crl::ToPemString() const
+std::string X509Crl::ToPemString() const
 {
-	return m_pemStr;
+	size_t useLen = CalcPemMaxBytes(Get()->raw.len, sizeof(PEM_BEGIN_CRL) - 1, sizeof(PEM_END_CRL) - 1);
+
+	std::string res(useLen, 0);
+	if (mbedtls_pem_write_buffer(PEM_BEGIN_CRL, PEM_END_CRL, Get()->raw.p, Get()->raw.len,
+		reinterpret_cast<uint8_t*>(&res[0]), res.size(), &useLen) != MBEDTLS_SUCCESS_RET)
+	{
+		return std::string();
+	}
+
+	res.pop_back();
+	return res;
 }
 
 X509Crl::X509Crl() :
@@ -1321,7 +1363,7 @@ void TlsConfig::FreeObject(mbedtls_ssl_config * ptr)
 	delete ptr;
 }
 
-MbedTlsObj::TlsConfig::~TlsConfig()
+TlsConfig::~TlsConfig()
 {
 	if (m_rng)
 	{
