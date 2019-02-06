@@ -48,63 +48,35 @@ std::string Decent::Ra::GetHashFromAppId(const std::string & platformType, const
 
 X509Req::X509Req(const std::string & pemStr) :
 	MbedTlsObj::X509Req(pemStr),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
-{
-}
-
-X509Req::X509Req(mbedtls_x509_csr * ptr, const std::string & pemStr) :
-	MbedTlsObj::X509Req(ptr, pemStr),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 }
 
 X509Req::X509Req(const MbedTlsObj::ECKeyPublic & keyPair, const std::string & commonName) :
 	MbedTlsObj::X509Req(keyPair, commonName),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 }
 
-void X509Req::Destroy()
-{
-	MbedTlsObj::X509Req::Destroy();
-	m_ecPubKey.Destroy();
-}
-
-X509Req& X509Req::operator=(X509Req&& other)
-{
-	if (this != &other)
-	{
-		MbedTlsObj::X509Req::operator=(std::forward<MbedTlsObj::X509Req>(other));
-		m_ecPubKey = std::move(other.m_ecPubKey);
-	}
-	return *this;
-}
-
-X509Req::operator bool() const
+X509Req::operator bool() const noexcept
 {
 	return MbedTlsObj::X509Req::operator bool() && m_ecPubKey;
 }
 
-const MbedTlsObj::ECKeyPublic & X509Req::GetEcPublicKey() const
-{
-	return m_ecPubKey;
-}
-
 ServerX509::ServerX509(const std::string & pemStr) :
 	MbedTlsObj::X509Cert(pemStr),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 	ParseExtensions();
 }
 
-ServerX509::ServerX509(mbedtls_x509_crt * cert) :
+ServerX509::ServerX509(mbedtls_x509_crt & cert) :
 	MbedTlsObj::X509Cert(cert),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 	ParseExtensions();
 }
@@ -121,8 +93,8 @@ ServerX509::ServerX509(const MbedTlsObj::ECKeyPair & prvKey, const std::string &
 	),
 	m_platformType(platformType),
 	m_selfRaReport(selfRaReport),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 }
 
@@ -141,59 +113,23 @@ void ServerX509::ParseExtensions()
 	}
 }
 
-void ServerX509::Destroy()
-{
-	MbedTlsObj::X509Cert::Destroy();
-	m_ecPubKey.Destroy();
-	m_platformType.clear();
-	m_selfRaReport.clear();
-}
-
-ServerX509& ServerX509::operator=(ServerX509&& other)
-{
-	if (this != &other)
-	{
-		MbedTlsObj::X509Cert::operator=(std::forward<MbedTlsObj::X509Cert>(other));
-		m_platformType = std::move(other.m_platformType);
-		m_selfRaReport = std::move(other.m_selfRaReport);
-		m_ecPubKey = std::move(other.m_ecPubKey);
-	}
-	return *this;
-}
-
-ServerX509::operator bool() const
+ServerX509::operator bool() const noexcept
 {
 	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_selfRaReport.size() > 0;
 }
 
-const std::string & ServerX509::GetPlatformType() const
-{
-	return m_platformType;
-}
-
-const std::string & ServerX509::GetSelfRaReport() const
-{
-	
-	return m_selfRaReport;
-}
-
-const MbedTlsObj::ECKeyPublic & ServerX509::GetEcPublicKey() const
-{
-	return m_ecPubKey;
-}
-
 AppX509::AppX509(const std::string & pemStr) :
 	MbedTlsObj::X509Cert(pemStr),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 	ParseExtensions();
 }
 
-AppX509::AppX509(mbedtls_x509_crt * cert) :
+AppX509::AppX509(mbedtls_x509_crt & cert) :
 	MbedTlsObj::X509Cert(cert),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 	ParseExtensions();
 }
@@ -221,54 +157,14 @@ AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey,
 	m_platformType(platformType),
 	m_appId(appId),
 	m_whiteList(whiteList),
-	m_ecPubKey(m_ptr && mbedtls_pk_get_type(&m_ptr->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? &m_ptr->pk : nullptr, false)
+	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
+		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
 {
 }
 
-void AppX509::Destroy()
-{
-	MbedTlsObj::X509Cert::Destroy();
-	m_ecPubKey.Destroy();
-	m_platformType.clear();
-	m_appId.clear();
-}
-
-AppX509& AppX509::operator=(AppX509&& other)
-{
-	if (this != &other)
-	{
-		MbedTlsObj::X509Cert::operator=(std::forward<MbedTlsObj::X509Cert>(other));
-		m_platformType = std::move(other.m_platformType);
-		m_appId = std::move(other.m_appId);
-		m_ecPubKey = std::move(other.m_ecPubKey);
-	}
-	return *this;
-}
-
-AppX509::operator bool() const
+AppX509::operator bool() const noexcept
 {
 	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0 && m_whiteList.size() > 0;
-}
-
-const std::string & AppX509::GetPlatformType() const
-{
-	return m_platformType;
-}
-
-const std::string & AppX509::GetAppId() const
-{
-	return m_appId;
-}
-
-const std::string & AppX509::GetWhiteList() const
-{
-	return m_whiteList;
-}
-
-const MbedTlsObj::ECKeyPublic & AppX509::GetEcPublicKey() const
-{
-	return m_ecPubKey;
 }
 
 void AppX509::ParseExtensions()

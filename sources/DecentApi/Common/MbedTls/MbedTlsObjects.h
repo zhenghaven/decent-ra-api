@@ -156,6 +156,12 @@ namespace Decent
 				return m_freeFunc == &DoNotFree;
 			}
 
+		protected:
+			void SetPtr(T* ptr) noexcept
+			{
+				m_ptr = ptr;
+			}
+
 		private:
 			T * m_ptr;
 			FreeFuncType m_freeFunc;
@@ -221,12 +227,11 @@ namespace Decent
 			 */
 			BigNumber(BigNumber&& other) noexcept : 
 				ObjBase(std::forward<ObjBase>(other))
-			{
-			}
+			{}
 
 			/**
-			 * \brief	Constructor that accept a reference to mbedtls_mpi object, thus, this class doesn't
-			 * 			has the owner ship.
+			 * \brief	Constructor that accept a reference to mbedtls_mpi object, thus, this instance doesn't
+			 * 			has the ownership.
 			 *
 			 * \param [in,out]	ref to mbedtls_mpi object.
 			 */
@@ -273,12 +278,14 @@ namespace Decent
 
 		private:
 			/**
-			* \brief	Constructor that accept a pointer to mbedtls_mpi object, thus, this class doesn't has the owner ship.
-			*
-			* \param [in,out]	ptr	If non-null, the pointer.
-			*/
-			BigNumber(mbedtls_mpi* ptr) :
-				ObjBase(ptr, &ObjBase::DoNotFree)
+			 * \brief	Constructor that accept a pointer to mbedtls_mpi object, thus, this class doesn't has
+			 * 			the owner ship.
+			 *
+			 * \param [in,out]	ptr			If non-null, the pointer.
+			 * \param 		  	freeFunc	The free function.
+			 */
+			BigNumber(mbedtls_mpi* ptr, FreeFuncType freeFunc) :
+				ObjBase(ptr, freeFunc)
 			{}
 
 		};
@@ -286,31 +293,141 @@ namespace Decent
 		class PKey : public ObjBase<mbedtls_pk_context>
 		{
 		public:
-			PKey(mbedtls_pk_context* ptr, bool isOwner);
-			PKey(PKey&& other);
-			virtual ~PKey();
+			/**
+			 * \brief	Function that frees MbedTLS object and delete the pointer.
+			 *
+			 * \param [in,out]	ptr	If non-null, the pointer.
+			 */
+			static void FreeObject(mbedtls_pk_context* ptr);
 
-			virtual void Destroy() override;
-			virtual PKey& operator=(const PKey& other) = delete;
-			virtual PKey& operator=(PKey&& other);
+			static PKey Empty() { return PKey(nullptr, &ObjBase::DoNotFree); }
 
-			virtual bool VerifySignatureSha256(const General256Hash& hash, const std::vector<uint8_t>& signature) const;
+		public:
+			/**
+			 * \brief	Constructor that accept a reference to mbedtls_pk_context object, thus, this instance doesn't
+			 * 			has the ownership.
+			 *
+			 * \param [in,out]	ref	The reference.
+			 */
+			PKey(mbedtls_pk_context& ref) noexcept :
+				ObjBase(&ref, &ObjBase::DoNotFree)
+			{}
 
-		private:
-			bool m_isOwner;
+			/**
+			 * \brief	Move constructor
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			PKey(PKey&& other) noexcept :
+				ObjBase(std::forward<ObjBase>(other))
+			{}
+
+			/** \brief	Destructor */
+			virtual ~PKey() {}
+
+			/**
+			 * \brief	Move assignment operator
+			 *
+			 * \param [in,out]	other	The other.
+			 *
+			 * \return	A reference to this object.
+			 */
+			virtual PKey& operator=(PKey&& other) noexcept
+			{
+				ObjBase::operator=(std::forward<ObjBase>(other));
+				return  *this;
+			}
+
+			/**
+			 * \brief	Verify signature with SHA-256 hash by using this key.
+			 *
+			 * \param	hash   	The hash.
+			 * \param	sign   	The signature.
+			 * \param	signLen	Length of the sign.
+			 *
+			 * \return	True if it succeeds, false if it fails.
+			 */
+			virtual bool VerifySignSha256(const General256Hash& hash, const void* sign, const size_t signLen) const;
+
+			/**
+			 * \brief	Verify signature with SHA-256 hash by using this key.
+			 *
+			 * \tparam	Container	Type of the container.
+			 * \param	hash	The hash.
+			 * \param	sign	The signature.
+			 *
+			 * \return	True if it succeeds, false if it fails.
+			 */
+			template<typename Container>
+			bool VerifySignSha256(const General256Hash& hash, const Container& sign) const
+			{
+				return VerifySignSha256(hash, sign.data(), sign.size());
+			}
+
+		protected:
+			PKey();
+
+			PKey(mbedtls_pk_context* ptr, FreeFuncType freeFunc) noexcept :
+				ObjBase(ptr, freeFunc)
+			{}
 		};
 
 		class Gcm : public ObjBase<mbedtls_gcm_context>
 		{
 		public:
-			Gcm(mbedtls_gcm_context* ptr);
-			Gcm(Gcm&& other);
-			virtual ~Gcm();
+			/**
+			* \brief	Function that frees MbedTLS object and delete the pointer.
+			*
+			* \param [in,out]	ptr	If non-null, the pointer.
+			*/
+			static void FreeObject(mbedtls_gcm_context* ptr);
 
-			virtual void Destroy() override;
-			virtual Gcm& operator=(const Gcm& other) = delete;
-			virtual Gcm& operator=(Gcm&& other);
+			static Gcm Empty() { return Gcm(nullptr, &ObjBase::DoNotFree); }
 
+		public:
+			/**
+			* \brief	Constructor that accept a reference to mbedtls_gcm_context object, thus, this instance doesn't
+			* 			has the ownership.
+			*
+			* \param [in,out]	ref	The reference.
+			*/
+			Gcm(mbedtls_gcm_context& ref) noexcept :
+				ObjBase(&ref, &ObjBase::DoNotFree)
+			{}
+
+			/**
+			 * \brief	Move constructor
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			Gcm(Gcm&& other) noexcept :
+				ObjBase(std::forward<ObjBase>(other))
+			{}
+
+			/** \brief	Destructor */
+			virtual ~Gcm() {}
+
+			virtual Gcm& operator=(Gcm&& other) noexcept
+			{
+				ObjBase::operator=(std::forward<ObjBase>(other));
+				return *this;
+			}
+
+			/**
+			 * \brief	Encrypts data with AES-GCM.
+			 *
+			 * \param 		  	inData 	Input data to be encrypted.
+			 * \param [out]		outData	Output encrypted data.
+			 * \param 		  	dataLen	Length of the data.
+			 * \param 		  	iv	   	The iv.
+			 * \param 		  	ivLen  	Length of the iv.
+			 * \param 		  	add	   	The additional authentication info.
+			 * \param 		  	addLen 	Length of the add.
+			 * \param [out]		tag	   	Output tag.
+			 * \param 		  	tagLen 	Length of the tag.
+			 *
+			 * \return	True if it succeeds, false if it fails.
+			 */
 			virtual bool Encrypt(const uint8_t* inData, uint8_t* outData, const size_t dataLen,
 				const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen,
 				uint8_t* tag, const size_t tagLen);
@@ -344,21 +461,46 @@ namespace Decent
 			//		Encrypt(reinterpret_cast<const uint8_t*>(inData.data()), 
 			//			reinterpret_cast<const uint8_t*>(&outData[0]), inLen, iv, ivLen, add, addLen, outTag);
 			//}
+		
+		protected:
+			Gcm();
+
+			Gcm(mbedtls_gcm_context* ptr, FreeFuncType freeFunc) noexcept :
+				ObjBase(ptr, freeFunc)
+			{}
 		};
 
 		class ECKeyPublic : public PKey
 		{
 		public:
-			ECKeyPublic() = delete;
-			ECKeyPublic(mbedtls_pk_context * ptr, bool isOwner);
-			ECKeyPublic(const general_secp256r1_public_t& pub);
-			ECKeyPublic(const std::string& pemStr);
-			ECKeyPublic(ECKeyPublic&& other);
+			static ECKeyPublic Empty() { return ECKeyPublic(nullptr, &ObjBase::DoNotFree); }
+			static ECKeyPublic FromPemString(const std::string & pemStr);
+			static ECKeyPublic FromGeneral(const general_secp256r1_public_t & pub);
+
+		public:
+			/**
+			* \brief	Constructor that accept a reference to mbedtls_pk_context object, thus, this instance doesn't
+			* 			has the ownership.
+			*
+			* \param [in,out]	ref	The reference.
+			*/
+			ECKeyPublic(mbedtls_pk_context& ref) noexcept :
+				PKey(ref)
+			{}
+
+			ECKeyPublic(ECKeyPublic&& other) noexcept :
+				PKey(std::forward<PKey>(other))
+			{}
+
 			virtual ~ECKeyPublic() {}
 
-			virtual ECKeyPublic& operator=(const ECKeyPublic& other) = delete;
-			virtual ECKeyPublic& operator=(ECKeyPublic&& other);
-			virtual operator bool() const override;
+			virtual ECKeyPublic& operator=(ECKeyPublic&& other) noexcept
+			{
+				ObjBase::operator=(std::forward<ObjBase>(other));
+				return *this;
+			}
+
+			virtual operator bool() const noexcept override;
 
 			bool ToGeneralPubKey(general_secp256r1_public_t& outKey) const;
 			std::unique_ptr<general_secp256r1_public_t> ToGeneralPubKey() const;
@@ -375,25 +517,51 @@ namespace Decent
 			std::string ToPubPemString() const;
 			bool ToPubDerArray(std::vector<uint8_t>& outArray) const;
 
-			mbedtls_ecp_keypair* GetInternalECKey() const;
+			mbedtls_ecp_keypair* GetEcKeyPtr();
+
+			const mbedtls_ecp_keypair* GetEcKeyPtr() const;
+
+		protected:
+			static ECKeyPublic FromPemDer(const void* ptr, size_t size);
+
+			ECKeyPublic() :
+				PKey()
+			{}
+
+			ECKeyPublic(mbedtls_pk_context* ptr, FreeFuncType freeFunc) noexcept :
+				PKey(ptr, freeFunc)
+			{}
+
 		};
 
 		class ECKeyPair : public ECKeyPublic
 		{
 		public:
+			static ECKeyPair FromPemString(const std::string & pemStr);
+			static ECKeyPair FromGeneral(const general_secp256r1_private_t & prv)
+			{
+				return FromGeneral(prv, nullptr);
+			}
+
+			static ECKeyPair FromGeneral(const general_secp256r1_private_t & prv, const general_secp256r1_public_t& pub)
+			{
+				return FromGeneral(prv, &pub);
+			}
+
+			static ECKeyPair GenerateNewKey();
 
 		public:
-			ECKeyPair() = delete;
-			ECKeyPair(mbedtls_pk_context* ptr, bool isOwner);
-			ECKeyPair(const Generate&);
-			ECKeyPair(const general_secp256r1_private_t& prv);
-			ECKeyPair(const general_secp256r1_private_t& prv, const general_secp256r1_public_t& pub);
-			ECKeyPair(const std::string& pemStr);
-			ECKeyPair(ECKeyPair&& other);
+			ECKeyPair(ECKeyPair&& other) noexcept :
+				ECKeyPublic(std::forward<ECKeyPublic>(other))
+			{}
+
 			virtual ~ECKeyPair() {}
 
-			//bool ToGeneralPrivateKey(PrivateKeyWrap& outKey) const;
-			//PrivateKeyWrap* ToGeneralPrivateKeyWrap() const;
+			virtual ECKeyPair& operator=(ECKeyPair&& other) noexcept
+			{
+				ObjBase::operator=(std::forward<ObjBase>(other));
+				return *this;
+			}
 
 			bool ToGeneralPrvKey(PrivateKeyWrap& outKey) const;
 			std::unique_ptr<PrivateKeyWrap> ToGeneralPrvKey() const;
@@ -411,31 +579,77 @@ namespace Decent
 			std::string ToPrvPemString() const;
 			bool ToPrvDerArray(std::vector<uint8_t>& outArray) const;
 
-			//private:
-			//	bool ToGeneralPrivateKey(general_secp256r1_private_t& outKey) const;
-			//	general_secp256r1_private_t* ToGeneralPrivateKey() const;
+		protected:
+			static ECKeyPair FromGeneral(const general_secp256r1_private_t & prv, const general_secp256r1_public_t* pubPtr);
+			static ECKeyPair FromPemDer(const void* ptr, size_t size);
+
+			ECKeyPair() :
+				ECKeyPublic()
+			{}
+
+			ECKeyPair(mbedtls_pk_context* ptr, FreeFuncType freeFunc) noexcept :
+				ECKeyPublic(ptr, freeFunc)
+			{}
 		};
 
 		class X509Req : public ObjBase<mbedtls_x509_csr>
 		{
 		public:
-			X509Req() = delete;
+			/**
+			* \brief	Function that frees MbedTLS object and delete the pointer.
+			*
+			* \param [in,out]	ptr	If non-null, the pointer.
+			*/
+			static void FreeObject(mbedtls_x509_csr* ptr);
+			static X509Req FromPem(const std::string & pemStr);
+
+		public:
 			X509Req(const std::string& pemStr);
-			X509Req(mbedtls_x509_csr* ptr, const std::string& pemStr);
 			X509Req(const PKey& keyPair, const std::string& commonName);
+
+			X509Req(X509Req&& other) : 
+				ObjBase(std::forward<ObjBase>(other)),
+				m_pemStr(std::move(other.m_pemStr)),
+				m_pubKey(std::move(other.m_pubKey))
+			{}
+
 			X509Req(const X509Req& other) = delete;
-			virtual ~X509Req();
+
+			virtual ~X509Req() {}
 
 			virtual X509Req& operator=(const X509Req& other) = delete;
-			virtual X509Req& operator=(X509Req&& other);
-			virtual void Destroy() override;
-			virtual operator bool() const override;
+
+			virtual X509Req& operator=(X509Req&& other) noexcept
+			{
+				ObjBase::operator=(std::forward<ObjBase>(other));
+				if (this != &other)
+				{
+					m_pemStr = std::move(other.m_pemStr);
+					m_pubKey = std::move(other.m_pubKey);
+				}
+				return *this;
+			}
+
+			virtual operator bool() const noexcept override;
 
 			bool VerifySignature() const;
 			const PKey& GetPublicKey() const;
 
 			std::string ToPemString() const;
 			//bool ToDerArray(std::vector<uint8_t>& outArray) const;
+
+		protected:
+			static X509Req FromPemDer(const void* ptr, size_t size);
+
+			X509Req();
+
+			X509Req(X509Req&& other, const std::string& pemStr) :
+				ObjBase(std::forward<ObjBase>(other)),
+				m_pemStr(pemStr),
+				m_pubKey(std::move(other.m_pubKey))
+			{}
+
+			X509Req(mbedtls_x509_csr* ptr, FreeFuncType freeFunc);
 
 		private:
 			std::string m_pemStr;
@@ -445,16 +659,46 @@ namespace Decent
 		class X509Crl : public ObjBase<mbedtls_x509_crl>
 		{
 		public:
-			X509Crl() = delete;
-			X509Crl(const std::string& pemStr);
-			X509Crl(mbedtls_x509_crl* ptr, const std::string& pemStr);
-			X509Crl(const X509Crl& other) = delete;
-			virtual ~X509Crl();
+			/**
+			* \brief	Function that frees MbedTLS object and delete the pointer.
+			*
+			* \param [in,out]	ptr	If non-null, the pointer.
+			*/
+			static void FreeObject(mbedtls_x509_crl* ptr);
 
-			virtual void Destroy() override;
+			static X509Crl FromPem(const std::string & pemStr);
+
+		public:
+			X509Crl(const std::string& pemStr) :
+				X509Crl(FromPem(pemStr), pemStr)
+			{}
+
+			X509Crl(X509Crl&& other) noexcept :
+				ObjBase(std::forward<ObjBase>(other)),
+				m_pemStr(std::move(other.m_pemStr))
+			{}
+
+			X509Crl(const X509Crl& other) = delete;
+
+			virtual ~X509Crl() {}
+
 
 			std::string ToPemString() const;
 			//bool ToDerArray(std::vector<uint8_t>& outArray) const;
+		
+		protected:
+			static X509Crl FromPemDer(const void* ptr, size_t size);
+
+			X509Crl();
+
+			X509Crl(X509Crl&& other, const std::string& pemStr) :
+				ObjBase(std::forward<ObjBase>(other)),
+				m_pemStr(other.m_pemStr)
+			{}
+
+			X509Crl(mbedtls_x509_crl* ptr, FreeFuncType freeFunc) :
+				ObjBase(ptr, freeFunc)
+			{}
 
 		private:
 			std::string m_pemStr;
@@ -463,10 +707,20 @@ namespace Decent
 		class X509Cert : public ObjBase<mbedtls_x509_crt>
 		{
 		public:
-			X509Cert() = delete;
+			/**
+			* \brief	Function that frees MbedTLS object and delete the pointer.
+			*
+			* \param [in,out]	ptr	If non-null, the pointer.
+			*/
+			static void FreeObject(mbedtls_x509_crt* ptr);
+
+			static X509Cert FromPem(const std::string & pemStr);
+
+		public:
 			X509Cert(const std::string& pemStr);
-			X509Cert(mbedtls_x509_crt* ptr, const std::string& pemStr);
-			X509Cert(mbedtls_x509_crt* ptr);
+
+			X509Cert(mbedtls_x509_crt& ref);
+
 			X509Cert(const X509Cert& caCert, const PKey& prvKey, const PKey& pubKey,
 				const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 				const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap);
@@ -474,13 +728,36 @@ namespace Decent
 			X509Cert(const PKey& prvKey,
 				const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 				const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap);
+
+			X509Cert(X509Cert&& other) : 
+				ObjBase(std::forward<ObjBase>(other)),
+				m_pemStr(std::move(other.m_pemStr)),
+				m_pubKey(std::move(other.m_pubKey)),
+				m_commonName(std::move(other.m_commonName)),
+				m_certStack(std::move(other.m_certStack))
+			{}
+
 			X509Cert(const X509Cert& other) = delete;
-			virtual ~X509Cert();
+
+			/** \brief	Destructor */
+			virtual ~X509Cert() { SwitchToFirstCert(); }
 
 			virtual X509Cert& operator=(const X509Cert& other) = delete;
-			virtual X509Cert& operator=(X509Cert&& other);
-			virtual void Destroy() override;
-			virtual operator bool() const override;
+
+			virtual X509Cert& operator=(X509Cert&& other) noexcept
+			{
+				ObjBase::operator=(std::forward<ObjBase>(other));
+
+				if (this != &other)
+				{
+					m_pemStr = std::move(other.m_pemStr);
+					m_pubKey = std::move(other.m_pubKey);
+					m_certStack = std::move(other.m_certStack);
+				}
+				return *this;
+			}
+
+			virtual operator bool() const noexcept override;
 
 			bool GetExtensions(std::map<std::string, std::pair<bool, std::string> >& extMap) const;
 			bool VerifySignature() const;
@@ -500,8 +777,14 @@ namespace Decent
 			bool PreviousCert();
 			void SwitchToFirstCert();
 
+		protected:
+			static X509Cert FromPemDer(const void* ptr, size_t size);
+
+			X509Cert();
+
+			X509Cert(X509Cert&& other, const std::string& pemStr);
+
 		private:
-			bool m_isOwner;
 			std::string m_pemStr;
 			PKey m_pubKey;
 			std::string m_commonName;
@@ -511,30 +794,72 @@ namespace Decent
 		class Aes128Gcm : public Gcm
 		{
 		public:
-			Aes128Gcm() = delete;
 			Aes128Gcm(const General128BitKey& key);
 			Aes128Gcm(const uint8_t(&key)[GENERAL_128BIT_16BYTE_SIZE]);
 			Aes128Gcm(Aes128Gcm&& other);
 			virtual ~Aes128Gcm() {}
 
 			virtual Aes128Gcm& operator=(const Aes128Gcm& other) = delete;
-			virtual Aes128Gcm& operator=(Aes128Gcm&& other);
+			virtual Aes128Gcm& operator=(Aes128Gcm&& other)
+			{
+				Gcm::operator=(std::forward<Gcm>(other));
+				return *this;
+			}
 
+		protected:
+			static Aes128Gcm ConstructGcmCtx(const void* key, const size_t size);
+
+			Aes128Gcm() :
+				Gcm()
+			{}
 		};
 
 		class TlsConfig : public ObjBase<mbedtls_ssl_config>
 		{
 		public:
-			TlsConfig(mbedtls_ssl_config* ptr);
-			TlsConfig(TlsConfig&& other);
+			/**
+			* \brief	Function that frees MbedTLS object and delete the pointer.
+			*
+			* \param [in,out]	ptr	If non-null, the pointer.
+			*/
+			static void FreeObject(mbedtls_ssl_config* ptr);
+
+		public:
+			TlsConfig(TlsConfig&& other) :
+				ObjBase(std::forward<ObjBase>(other)),
+				m_rng(other.m_rng)
+			{
+				other.m_rng = nullptr;
+			}
+
 			TlsConfig(const TlsConfig& other) = delete;
+
 			virtual ~TlsConfig();
 
-			virtual void Destroy() override;
 			virtual TlsConfig& operator=(const TlsConfig& other) = delete;
-			virtual TlsConfig& operator=(TlsConfig&& other);
 
-			virtual void BasicInit();
+			virtual TlsConfig& operator=(TlsConfig&& other)
+			{
+				ObjBase::operator=(std::forward<ObjBase>(other));
+				if (this != &other)
+				{
+					m_rng = other.m_rng;
+					other.m_rng = nullptr;
+				}
+				return *this;
+			}
+
+			virtual operator bool() const noexcept override
+			{
+				return ObjBase::operator bool();
+			}
+
+		protected:
+			TlsConfig();
+
+			TlsConfig(mbedtls_ssl_config* ptr, FreeFuncType freeFunc) : 
+				ObjBase(ptr, freeFunc)
+			{}
 
 		private:
 			void* m_rng;

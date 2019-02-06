@@ -23,7 +23,7 @@ namespace
 		std::unique_ptr<ECKeyPair> keyPair;
 		if (pub && prv)
 		{
-			keyPair = Tools::make_unique<ECKeyPair>(prv->m_prvKey, *pub);
+			keyPair = Tools::make_unique<ECKeyPair>(ECKeyPair::FromGeneral(prv->m_prvKey, *pub));
 		}
 
 		if (!keyPair || !*keyPair)

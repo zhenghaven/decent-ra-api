@@ -14,7 +14,7 @@ namespace
 {
 	static std::unique_ptr<MbedTlsObj::ECKeyPair> ConstructNewKey()
 	{
-		std::unique_ptr<MbedTlsObj::ECKeyPair> key = Tools::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::gen);
+		std::unique_ptr<MbedTlsObj::ECKeyPair> key = Tools::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::ECKeyPair::GenerateNewKey());
 		if (!key || !*key)
 		{
 			LOGW("Failed to create new key pair!");

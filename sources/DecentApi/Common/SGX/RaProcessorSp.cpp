@@ -94,7 +94,7 @@ RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, const std::share
 #endif // DECENT_THREAD_SAFETY_HIGH
 	m_iasConnectorPtr(iasConnectorPtr),
 	m_mySignKey(mySignKey),
-	m_encrKeyPair(new MbedTlsObj::ECKeyPair(MbedTlsObj::gen)),
+	m_encrKeyPair(new MbedTlsObj::ECKeyPair(MbedTlsObj::ECKeyPair::GenerateNewKey())),
 	m_myEncrKey(),
 	m_peerEncrKey(),
 	m_nonce(ConstructNonce(IAS_REQUEST_NONCE_SIZE)),
@@ -375,7 +375,7 @@ bool RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrP
 {
 	m_peerEncrKey = inEncrPubKey;
 
-	MbedTlsObj::ECKeyPublic peerEncrKey(inEncrPubKey);
+	MbedTlsObj::ECKeyPublic peerEncrKey = MbedTlsObj::ECKeyPublic::FromGeneral(inEncrPubKey);
 	if (!peerEncrKey)
 	{
 		return false;

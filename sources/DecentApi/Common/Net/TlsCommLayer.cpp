@@ -83,7 +83,7 @@ namespace
 
 		std::unique_ptr<mbedtls_ssl_context> tlsCtx(new mbedtls_ssl_context);
 		mbedtls_ssl_init(tlsCtx.get());
-		if (mbedtls_ssl_setup(tlsCtx.get(), tlsConfig->GetInternalPtr()) != MBEDTLS_SUCCESS_RET)
+		if (mbedtls_ssl_setup(tlsCtx.get(), tlsConfig->Get()) != MBEDTLS_SUCCESS_RET)
 		{
 			mbedtls_ssl_free(tlsCtx.get());
 			return nullptr;
