@@ -47,12 +47,6 @@ namespace Decent
 			virtual operator bool() const noexcept override;
 
 			const MbedTlsObj::ECKeyPublic& GetEcPublicKey() const { return m_ecPubKey; }
-		
-		protected:
-			X509Req(X509Req&& other, const std::string& pemStr) :
-				MbedTlsObj::X509Req(std::forward<MbedTlsObj::X509Req>(other), pemStr),
-				m_ecPubKey(std::move(other.m_ecPubKey))
-			{}
 
 		private:
 			MbedTlsObj::ECKeyPublic m_ecPubKey;

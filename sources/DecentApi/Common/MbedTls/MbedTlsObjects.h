@@ -609,7 +609,6 @@ namespace Decent
 
 			X509Req(X509Req&& other) : 
 				ObjBase(std::forward<ObjBase>(other)),
-				m_pemStr(std::move(other.m_pemStr)),
 				m_pubKey(std::move(other.m_pubKey))
 			{}
 
@@ -624,7 +623,6 @@ namespace Decent
 				ObjBase::operator=(std::forward<ObjBase>(other));
 				if (this != &other)
 				{
-					m_pemStr = std::move(other.m_pemStr);
 					m_pubKey = std::move(other.m_pubKey);
 				}
 				return *this;
@@ -636,23 +634,15 @@ namespace Decent
 			const PKey& GetPublicKey() const;
 
 			std::string ToPemString() const;
-			//bool ToDerArray(std::vector<uint8_t>& outArray) const;
 
 		protected:
 			static X509Req FromPemDer(const void* ptr, size_t size);
 
 			X509Req();
 
-			X509Req(X509Req&& other, const std::string& pemStr) :
-				ObjBase(std::forward<ObjBase>(other)),
-				m_pemStr(pemStr),
-				m_pubKey(std::move(other.m_pubKey))
-			{}
-
 			X509Req(mbedtls_x509_csr* ptr, FreeFuncType freeFunc);
 
 		private:
-			std::string m_pemStr;
 			PKey m_pubKey;
 		};
 
@@ -670,12 +660,11 @@ namespace Decent
 
 		public:
 			X509Crl(const std::string& pemStr) :
-				X509Crl(FromPem(pemStr), pemStr)
+				X509Crl(FromPem(pemStr))
 			{}
 
 			X509Crl(X509Crl&& other) noexcept :
-				ObjBase(std::forward<ObjBase>(other)),
-				m_pemStr(std::move(other.m_pemStr))
+				ObjBase(std::forward<ObjBase>(other))
 			{}
 
 			X509Crl(const X509Crl& other) = delete;
@@ -684,24 +673,16 @@ namespace Decent
 
 
 			std::string ToPemString() const;
-			//bool ToDerArray(std::vector<uint8_t>& outArray) const;
 		
 		protected:
 			static X509Crl FromPemDer(const void* ptr, size_t size);
 
 			X509Crl();
 
-			X509Crl(X509Crl&& other, const std::string& pemStr) :
-				ObjBase(std::forward<ObjBase>(other)),
-				m_pemStr(other.m_pemStr)
-			{}
-
 			X509Crl(mbedtls_x509_crl* ptr, FreeFuncType freeFunc) :
 				ObjBase(ptr, freeFunc)
 			{}
 
-		private:
-			std::string m_pemStr;
 		};
 
 		class X509Cert : public ObjBase<mbedtls_x509_crt>
@@ -715,6 +696,8 @@ namespace Decent
 			static void FreeObject(mbedtls_x509_crt* ptr);
 
 			static X509Cert FromPem(const std::string & pemStr);
+
+			static std::string GeneratePemStr(const mbedtls_x509_crt& ref);
 
 		public:
 			X509Cert(const std::string& pemStr);
@@ -731,9 +714,7 @@ namespace Decent
 
 			X509Cert(X509Cert&& other) : 
 				ObjBase(std::forward<ObjBase>(other)),
-				m_pemStr(std::move(other.m_pemStr)),
 				m_pubKey(std::move(other.m_pubKey)),
-				m_commonName(std::move(other.m_commonName)),
 				m_certStack(std::move(other.m_certStack))
 			{}
 
@@ -750,7 +731,6 @@ namespace Decent
 
 				if (this != &other)
 				{
-					m_pemStr = std::move(other.m_pemStr);
 					m_pubKey = std::move(other.m_pubKey);
 					m_certStack = std::move(other.m_certStack);
 				}
@@ -769,9 +749,9 @@ namespace Decent
 				int(*vrfyFunc)(void *, mbedtls_x509_crt *, int, uint32_t *), void* vrfyParam) const;
 
 			const PKey& GetPublicKey() const;
-			const std::string& ToPemString() const;
+			std::string ToPemString() const;
 
-			const std::string& GetCommonName() const { return m_commonName; }
+			std::string GetCommonName() const;
 
 			bool NextCert();
 			bool PreviousCert();
@@ -782,12 +762,10 @@ namespace Decent
 
 			X509Cert();
 
-			X509Cert(X509Cert&& other, const std::string& pemStr);
+			X509Cert(mbedtls_x509_crt* ptr, FreeFuncType freeFunc);
 
 		private:
-			std::string m_pemStr;
 			PKey m_pubKey;
-			std::string m_commonName;
 			std::vector<mbedtls_x509_crt*> m_certStack;
 		};
 
