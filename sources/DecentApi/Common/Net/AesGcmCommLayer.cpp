@@ -79,16 +79,12 @@ bool AesGcmCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg
 	size_t messageSize = inMsg.size() - sizeof(EncryptedStruct);
 	outMsg.resize(messageSize);
 
-	bool res = m_gcm.Decrypt(
-		reinterpret_cast<const uint8_t*>(&encryptedStruct.m_msg),
-		reinterpret_cast<uint8_t*>(&outMsg[0]),
+	bool res = m_gcm.DecryptStruct(
+		&encryptedStruct.m_msg,
+		outMsg,
 		messageSize,
 		encryptedStruct.m_iv,
-		SUGGESTED_AESGCM_IV_SIZE,
-		nullptr,
-		0,
-		encryptedStruct.m_mac,
-		sizeof(encryptedStruct.m_mac));
+		encryptedStruct.m_mac);
 
 	return res;
 }
@@ -108,16 +104,12 @@ bool AesGcmCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg
 		return false;
 	}
 
-	bool res = m_gcm.Encrypt(
-		reinterpret_cast<const uint8_t*>(inMsg.data()),
-		reinterpret_cast<uint8_t*>(&encryptedStruct.m_msg),
+	bool res = m_gcm.EncryptStruct(
+		inMsg,
+		&encryptedStruct.m_msg,
 		inMsg.size(),
 		encryptedStruct.m_iv,
-		SUGGESTED_AESGCM_IV_SIZE,
-		nullptr,
-		0,
-		encryptedStruct.m_mac,
-		sizeof(encryptedStruct.m_mac));
+		encryptedStruct.m_mac);
 
 	return res;
 }

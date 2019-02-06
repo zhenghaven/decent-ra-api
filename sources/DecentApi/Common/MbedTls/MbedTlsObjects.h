@@ -413,54 +413,41 @@ namespace Decent
 				return *this;
 			}
 
-			/**
-			 * \brief	Encrypts data with AES-GCM.
-			 *
-			 * \param 		  	inData 	Input data to be encrypted.
-			 * \param [out]		outData	Output encrypted data.
-			 * \param 		  	dataLen	Length of the data.
-			 * \param 		  	iv	   	The iv.
-			 * \param 		  	ivLen  	Length of the iv.
-			 * \param 		  	add	   	The additional authentication info.
-			 * \param 		  	addLen 	Length of the add.
-			 * \param [out]		tag	   	Output tag.
-			 * \param 		  	tagLen 	Length of the tag.
-			 *
-			 * \return	True if it succeeds, false if it fails.
-			 */
-			virtual bool Encrypt(const uint8_t* inData, uint8_t* outData, const size_t dataLen,
-				const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen,
-				uint8_t* tag, const size_t tagLen);
+			template<typename DataCtar, typename AddCtar, typename IvStru, typename TagStru>
+			bool EncryptStruct(const DataCtar& inData, void* outData, const size_t outLen,
+				const IvStru& iv, const AddCtar& add, TagStru& outTag)
+			{
+				return inData.size() <= outLen && Encrypt(inData.data(), outData, inData.size(), 
+					&iv, sizeof(iv), add.data(), add.size(), 
+					&outTag, sizeof(outTag));
+			}
 
-			virtual bool Decrypt(const uint8_t* inData, uint8_t* outData, const size_t dataLen,
-				const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen,
-				const uint8_t* tag, const size_t tagLen);
+			template<typename DataCtar, typename IvStru, typename TagStru>
+			bool EncryptStruct(const DataCtar& inData, void* outData, const size_t outLen,
+				const IvStru& iv, TagStru& outTag)
+			{
+				return inData.size() <= outLen && Encrypt(inData.data(), outData, inData.size(),
+					&iv, sizeof(iv), nullptr, 0, 
+					&outTag, sizeof(outTag));
+			}
 
-			//Not very useful now.
-			//template<typename Container>
-			//bool Encrypt(const Container& inData, uint8_t* outData, const size_t outLen,
-			//	const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen, General128Tag& outTag)
-			//{
-			//	return inData.size() > 0 && (inData.size() * sizeof(inData[0])) == outLen &&
-			//		Encrypt(reinterpret_cast<const uint8_t*>(inData.data()), outData, outLen, iv, ivLen, add, addLen, outTag);
-			//}
-			//template<typename Container>
-			//bool Encrypt(const uint8_t* inData, Container& outData, const size_t inLen,
-			//	const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen, General128Tag& outTag)
-			//{
-			//	return outData.size() > 0 && (outData.size() * sizeof(outData[0])) == inLen &&
-			//		Encrypt(inData, reinterpret_cast<const uint8_t*>(&outData[0]), inLen, iv, ivLen, add, addLen, outTag);
-			//}
-			//template<typename inDataContainer, typename outDataContainer>
-			//bool Encrypt(const inDataContainer& inData, outDataContainer& outData,
-			//	const uint8_t* iv, const size_t ivLen, const uint8_t* add, const size_t addLen, General128Tag& outTag)
-			//{
-			//	const size_t inLen = 0;
-			//	return inData.size() > 0 && outData.size() > 0 && 
-			//		(inLen = inData.size() * sizeof(inData[0])) == (outData.size() * sizeof(outData[0])) &&
-			//		Encrypt(reinterpret_cast<const uint8_t*>(inData.data()), 
-			//			reinterpret_cast<const uint8_t*>(&outData[0]), inLen, iv, ivLen, add, addLen, outTag);
-			//}
+			template<typename DataCtar, typename AddCtar, typename IvStru, typename TagStru>
+			bool DecryptStruct(const void* inData, DataCtar& outData, const size_t inLen,
+				const IvStru& iv, const AddCtar& add, const TagStru& outTag)
+			{
+				return outData && outData.size() >= inLen && Decrypt(inData, &outData[0], inLen,
+					&iv, sizeof(iv), add.data(), add.size(),
+					&outTag, sizeof(outTag));
+			}
+
+			template<typename DataCtar, typename IvStru, typename TagStru>
+			bool DecryptStruct(const void* inData, DataCtar& outData, const size_t inLen,
+				const IvStru& iv, const TagStru& outTag)
+			{
+				return inData && outData.size() >= inLen && Decrypt(inData, &outData[0], inLen,
+					&iv, sizeof(iv), nullptr, 0,
+					&outTag, sizeof(outTag));
+			}
 		
 		protected:
 			Gcm();
@@ -468,6 +455,29 @@ namespace Decent
 			Gcm(mbedtls_gcm_context* ptr, FreeFuncType freeFunc) noexcept :
 				ObjBase(ptr, freeFunc)
 			{}
+
+			/**
+			* \brief	Encrypts data with AES-GCM.
+			*
+			* \param 		  	inData 	Input data to be encrypted.
+			* \param [out]		outData	Output encrypted data.
+			* \param 		  	dataLen	Length of the data.
+			* \param 		  	iv	   	The iv.
+			* \param 		  	ivLen  	Length of the iv.
+			* \param 		  	add	   	The additional authentication info.
+			* \param 		  	addLen 	Length of the add.
+			* \param [out]		tag	   	Output tag.
+			* \param 		  	tagLen 	Length of the tag.
+			*
+			* \return	True if it succeeds, false if it fails.
+			*/
+			virtual bool Encrypt(const void* inData, void* outData, const size_t dataLen,
+				const void* iv, const size_t ivLen, const void* add, const size_t addLen,
+				void* tag, const size_t tagLen);
+
+			virtual bool Decrypt(const void* inData, void* outData, const size_t dataLen,
+				const void* iv, const size_t ivLen, const void* add, const size_t addLen,
+				const void* tag, const size_t tagLen);
 		};
 
 		class ECKeyPublic : public PKey

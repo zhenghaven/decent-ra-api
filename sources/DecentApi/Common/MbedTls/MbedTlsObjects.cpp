@@ -219,28 +219,36 @@ void Gcm::FreeObject(mbedtls_gcm_context * ptr)
 	delete ptr;
 }
 
-bool Gcm::Encrypt(const uint8_t * inData, uint8_t * outData, const size_t dataLen, 
-	const uint8_t* iv, const size_t ivLen, const uint8_t * add, const size_t addLen,
-	uint8_t* tag, const size_t tagLen)
+bool Gcm::Encrypt(const void * inData, void * outData, const size_t dataLen,
+	const void* iv, const size_t ivLen, const void * add, const size_t addLen,
+	void* tag, const size_t tagLen)
 {
 	if (!*this)
 	{
 		return false;
 	}
 	return mbedtls_gcm_crypt_and_tag(Get(), MBEDTLS_GCM_ENCRYPT, dataLen, 
-		iv, ivLen, add, addLen, inData, outData, tagLen, tag) == MBEDTLS_SUCCESS_RET;
+		static_cast<const uint8_t*>(iv), ivLen, 
+		static_cast<const uint8_t*>(add), addLen, 
+		static_cast<const uint8_t*>(inData), 
+		static_cast<uint8_t*>(outData), 
+		tagLen, static_cast<uint8_t*>(tag)) == MBEDTLS_SUCCESS_RET;
 }
 
-bool Gcm::Decrypt(const uint8_t * inData, uint8_t * outData, const size_t dataLen, 
-	const uint8_t * iv, const size_t ivLen, const uint8_t * add, const size_t addLen,
-	const uint8_t* tag, const size_t tagLen)
+bool Gcm::Decrypt(const void * inData, void * outData, const size_t dataLen,
+	const void * iv, const size_t ivLen, const void * add, const size_t addLen,
+	const void* tag, const size_t tagLen)
 {
 	if (!*this)
 	{
 		return false;
 	}
 	return mbedtls_gcm_auth_decrypt(Get(), dataLen,
-		iv, ivLen, add, addLen, tag, tagLen, inData, outData) == MBEDTLS_SUCCESS_RET;
+		static_cast<const uint8_t*>(iv), ivLen, 
+		static_cast<const uint8_t*>(add), addLen, 
+		static_cast<const uint8_t*>(tag), tagLen, 
+		static_cast<const uint8_t*>(inData), 
+		static_cast<uint8_t*>(outData)) == MBEDTLS_SUCCESS_RET;
 }
 
 Gcm::Gcm() :
