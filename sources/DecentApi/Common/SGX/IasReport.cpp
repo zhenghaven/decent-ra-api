@@ -265,7 +265,7 @@ bool Ias::ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::str
 	bool signVerRes = false;
 	do
 	{
-		signVerRes = reportCertChain.GetPublicKey().VerifySignatureSha256(hash, signBinBuf);
+		signVerRes = reportCertChain.GetPublicKey().VerifySignSha256(hash, signBinBuf);
 	} while (!signVerRes && reportCertChain.NextCert());
 
 	//LOGI("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
