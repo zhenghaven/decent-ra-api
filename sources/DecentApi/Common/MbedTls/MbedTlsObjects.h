@@ -22,6 +22,11 @@ typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 
 namespace Decent
 {
+	namespace MbedTlsHelper
+	{
+		class Drbg;
+	}
+
 	namespace MbedTlsObj
 	{
 		
@@ -813,12 +818,7 @@ namespace Decent
 			static void FreeObject(mbedtls_ssl_config* ptr);
 
 		public:
-			TlsConfig(TlsConfig&& other) :
-				ObjBase(std::forward<ObjBase>(other)),
-				m_rng(other.m_rng)
-			{
-				other.m_rng = nullptr;
-			}
+			TlsConfig(TlsConfig&& other);
 
 			TlsConfig(const TlsConfig& other) = delete;
 
@@ -826,31 +826,17 @@ namespace Decent
 
 			virtual TlsConfig& operator=(const TlsConfig& other) = delete;
 
-			virtual TlsConfig& operator=(TlsConfig&& other)
-			{
-				ObjBase::operator=(std::forward<ObjBase>(other));
-				if (this != &other)
-				{
-					m_rng = other.m_rng;
-					other.m_rng = nullptr;
-				}
-				return *this;
-			}
+			virtual TlsConfig& operator=(TlsConfig&& other) noexcept;
 
-			virtual operator bool() const noexcept override
-			{
-				return ObjBase::operator bool();
-			}
+			virtual operator bool() const noexcept override;
 
 		protected:
 			TlsConfig();
 
-			TlsConfig(mbedtls_ssl_config* ptr, FreeFuncType freeFunc) : 
-				ObjBase(ptr, freeFunc)
-			{}
+			TlsConfig(mbedtls_ssl_config* ptr, FreeFuncType freeFunc);
 
 		private:
-			void* m_rng;
+			std::unique_ptr<Decent::MbedTlsHelper::Drbg> m_rng;
 		};
 
 	}

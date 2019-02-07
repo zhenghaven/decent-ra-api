@@ -95,11 +95,8 @@ bool AesGcmCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg
 
 	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(outMsg[0]);
 
-	void* drbgCtx;
-	MbedTlsHelper::DrbgInit(drbgCtx);
-	int mbedRet = MbedTlsHelper::DrbgRandom(drbgCtx, encryptedStruct.m_iv, SUGGESTED_AESGCM_IV_SIZE);
-	MbedTlsHelper::DrbgFree(drbgCtx);
-	if (mbedRet != 0)
+	MbedTlsHelper::Drbg drbg;
+	if (!drbg.RandStruct(encryptedStruct.m_iv))
 	{
 		return false;
 	}

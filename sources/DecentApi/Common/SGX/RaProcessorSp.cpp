@@ -41,16 +41,9 @@ namespace
 		size_t dataSize = (size / 4) * 3;
 		std::vector<uint8_t> randData(dataSize);
 
-		void* drbgCtx;
-		MbedTlsHelper::DrbgInit(drbgCtx);
-		int mbedRet = MbedTlsHelper::DrbgRandom(drbgCtx, randData.data(), randData.size());
-		MbedTlsHelper::DrbgFree(drbgCtx);
-		if (mbedRet != 0)
-		{
-			return std::string();
-		}
+		MbedTlsHelper::Drbg drbg;
 
-		return cppcodec::base64_rfc4648::encode(randData);
+		return drbg.RandContainer(randData) ? cppcodec::base64_rfc4648::encode(randData) : std::string();
 	}
 
 }

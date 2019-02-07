@@ -4,25 +4,25 @@
 
 #include <sgx_trts.h>
 
-using namespace Decent;
+using namespace Decent::MbedTlsHelper;
 
-void MbedTlsHelper::DrbgInit(void *& ctx)
+Drbg::Drbg() :
+	m_state(nullptr)
 {
 }
 
-int MbedTlsHelper::DrbgRandom(void * ctx, unsigned char * output, size_t output_len)
+Drbg::~Drbg()
 {
-	if (!output ||
-		sgx_read_rand(output, output_len) != SGX_SUCCESS)
-	{
-		return -1;
-	}
-
-	return 0;
 }
 
-void MbedTlsHelper::DrbgFree(void *& ctx)
+bool Drbg::Rand(void* buf, const size_t size)
 {
+	return CallBack(nullptr, static_cast<unsigned char *>(buf), size) == 0;
+}
+
+int Drbg::CallBack(void * ctx, unsigned char * buf, size_t len)
+{
+	return sgx_read_rand(buf, len) == SGX_SUCCESS ? 0 : -1;
 }
 
 //#endif //ENCLAVE_PLATFORM_SGX
