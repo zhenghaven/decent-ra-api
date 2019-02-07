@@ -14,18 +14,19 @@ namespace
 	static KeyContainer keyContainer;
 	static WhiteList::DecentServer serverWhiteList;
 	static WhiteList::HardCoded hardCodedWhiteList;
+
+	static const WhiteList::Loaded& GetLoadedWhiteListImpl(AppX509* certPtr)
+	{
+		static WhiteList::Loaded inst(certPtr);
+		return inst;
+	}
 }
 
 States::States() :
 	m_certContainer(certContainer),
 	m_serverWhiteList(serverWhiteList),
 	m_hardCodedWhiteList(hardCodedWhiteList),
-	m_keyContainer(keyContainer)
+	m_keyContainer(keyContainer),
+	m_getLoadedFunc(&GetLoadedWhiteListImpl)
 {
-}
-
-const WhiteList::Loaded& States::GetLoadedWhiteList(AppX509* certPtr) const
-{
-	static WhiteList::Loaded inst(certPtr);
-	return inst;
 }

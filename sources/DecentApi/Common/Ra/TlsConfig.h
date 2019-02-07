@@ -31,14 +31,14 @@ namespace Decent
 
 			States& GetState() const { return m_state; }
 
+			static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
+
 		protected:
 			virtual int CertVerifyCallBack(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const;
 			virtual int AppCertVerifyCallBack(const AppX509& cert, int depth, uint32_t& flag) const;
 			virtual int ServerCertVerifyCallBack(const ServerX509& cert, int depth, uint32_t& flag) const;
 
 		private:
-			static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
-
 			States& m_state;
 			std::shared_ptr<const MbedTlsObj::ECKeyPair> m_prvKey;
 			std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
