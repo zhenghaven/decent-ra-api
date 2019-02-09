@@ -21,7 +21,7 @@ namespace
 		{
 			memset_s(&res, sizeof(res), 0, sizeof(res));
 			LOGW("Failed to create self report!");
-			throw std::exception("Failed to create self report!"); //This should be thrown at the program startup.
+			throw std::runtime_error("Failed to create self report!"); //If error happened, this should be thrown at the program startup.
 		}
 
 		return res;

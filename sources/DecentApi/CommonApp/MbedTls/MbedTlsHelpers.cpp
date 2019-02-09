@@ -3,6 +3,8 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 
+#include "../../Common/MbedTls/MbedTlsInitializer.h"
+
 #ifndef MBEDTLS_THREADING_C
 #error "Implementation does not support non-multi-threading."
 #endif // MBEDTLS_THREADING_C
@@ -14,8 +16,10 @@ namespace
 	struct EntropyInstance
 	{
 		mbedtls_entropy_context m_ctx;
+		const MbedTlsInitializer& m_mbedTlsInit;
 
-		EntropyInstance()
+		EntropyInstance() :
+			m_mbedTlsInit(MbedTlsInitializer::GetInst()) //Make sure MbedTls is init at this point.
 		{
 			mbedtls_entropy_init(&m_ctx);
 		}

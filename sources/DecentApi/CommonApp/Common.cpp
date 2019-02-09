@@ -3,6 +3,7 @@
 
 #include <array>
 #include <ctime>
+#include <cstdarg>
 
 #include <mbedtls/platform_util.h>
 

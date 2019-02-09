@@ -30,7 +30,7 @@ elseif(UNIX)
 		
 		set(INTEL_SGX_INSTALL_DIR "/opt/intel/")
 		set(INTEL_SGX_SDK_INSTALL_DIR "${INTEL_SGX_INSTALL_DIR}/sgxsdk/")
-		set(INTEL_SGX_PSW_INSTALL_DIR "${INTEL_SGX_INSTALL_DIR}")
+		set(INTEL_SGX_PSW_INSTALL_DIR "${INTEL_SGX_INSTALL_DIR}/libsgx-enclave-common/")
 		
 		execute_process(COMMAND uname -r
 		OUTPUT_VARIABLE INTEL_SGX_DRI_INSTALL_DIR
@@ -154,14 +154,53 @@ elseif(UNIX)
 		# Install PSW
 		######
 		set(READ_INSTALLED_SHA256 "N/A")
-		if(EXISTS "${INTEL_SGX_INSTALL_DIR}/PSW_SHA256")
-		 file(READ ${INTEL_SGX_INSTALL_DIR}/PSW_SHA256 READ_INSTALLED_SHA256)
+		if(EXISTS "${INTEL_SGX_PSW_INSTALL_DIR}/SHA256")
+		 file(READ ${INTEL_SGX_PSW_INSTALL_DIR}/SHA256 READ_INSTALLED_SHA256)
 		endif()
 		
-		message(STATUS "Driver Ver installed: ${READ_INSTALLED_SHA256}")
+		message(STATUS "PSW Ver installed: ${READ_INSTALLED_SHA256}")
 		message(STATUS "The version we need: ${INTEL_SGX_PSW_BIN_SHA256}")
-		#More code later.
 		
+		if(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
+		
+			message(STATUS "Couldn't find the PSW we need, try to install one...")
+			
+			file(DOWNLOAD 
+			${INTEL_SGX_PSW_BIN_URL}  
+			${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb 
+			SHOW_PROGRESS
+			)
+			
+			file(SHA256 ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb DOWNLOADED_SHA256)
+			
+			if(NOT ${DOWNLOADED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
+				message(FATAL_ERROR "The checksum of downloaded file is invalid!")
+			endif()
+			
+			if(EXISTS "${INTEL_SGX_PSW_INSTALL_DIR}/uninstall.sh")
+				execute_process(
+					COMMAND sudo ./uninstall.sh
+					COMMAND sudo apt remove libsgx-enclave-common
+					WORKING_DIRECTORY "${INTEL_SGX_PSW_INSTALL_DIR}"
+					)
+			endif()
+			
+			execute_process(
+				COMMAND chmod +x ./sgx_linux_x64_psw.deb
+				COMMAND sudo apt install ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb
+				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
+				)
+			
+			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/PSW/SHA256 "${INTEL_SGX_PSW_BIN_SHA256}")
+			
+			execute_process(
+				COMMAND sudo mv "./PSW/SHA256" "${INTEL_SGX_PSW_INSTALL_DIR}/SHA256"
+				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
+				)
+			
+			message(STATUS "Successfully installed Intel SGX PSW!")
+			
+		endif(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
 	endif(LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu")
 
 endif()

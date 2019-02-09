@@ -18,7 +18,7 @@ namespace
 		if (!key || !*key)
 		{
 			LOGW("Failed to create new key pair!");
-			throw std::exception("Failed to create new key pair!"); //This should be thrown at the program startup.
+			throw std::runtime_error("Failed to create new key pair!"); //If error happened, this should be thrown at the program startup.
 		}
 
 		return std::move(key);

@@ -952,7 +952,7 @@ static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvK
 
 	time_t timerBegin;
 	Tools::GetSystemTime(timerBegin);
-	time_t timerEnd = timerBegin + validTime;
+	time_t timerEnd = validTime > (LONG_MAX - timerBegin) ? LONG_MAX : (timerBegin + validTime);
 
 	if (mbedtls_x509write_crt_set_validity(&cert, GetFormatedTime(timerBegin).c_str(), GetFormatedTime(timerEnd).c_str()) != MBEDTLS_SUCCESS_RET ||
 		mbedtls_x509write_crt_set_serial(&cert, serialNum.Get()) != MBEDTLS_SUCCESS_RET ||

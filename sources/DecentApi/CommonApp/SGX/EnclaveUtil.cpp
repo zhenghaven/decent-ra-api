@@ -1,6 +1,7 @@
 #include "EnclaveUtil.h"
 
 #include <map>
+#include <exception>
 
 #include <sgx_uae_service.h>
 
@@ -130,7 +131,7 @@ std::string Sgx::GetErrorMessage(const sgx_status_t ret)
 	if (it == g_sgxErrorMsg.cend())
 	{
 		LOGW("Error: Cannot find the error message specified!");
-		throw std::exception("Error: Cannot find the error message specified!");
+		throw std::runtime_error("Error: Cannot find the error message specified!");
 	}
 	return it->second.first;
 }
@@ -141,7 +142,7 @@ std::string Sgx::GetDeviceStatusStr(const sgx_device_status_t ret)
 	if (it == g_sgxDeviceStatus.cend())
 	{
 		LOGW("Error: Cannot find the status string specified!");
-		throw std::exception("Error: Cannot find the status string specified!");
+		throw std::runtime_error("Error: Cannot find the status string specified!");
 	}
 	return it->second;
 }

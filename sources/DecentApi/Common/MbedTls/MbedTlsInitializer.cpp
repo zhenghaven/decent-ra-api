@@ -5,7 +5,7 @@
 #include "../Common.h"
 #include "MbedTlsSubFunc.h"
 
-using namespace Decent::MbedTlsObj;
+using namespace Decent::MbedTlsHelper;
 
 namespace
 {

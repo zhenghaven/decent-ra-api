@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <ctime>
 #include <sstream>
+#include <exception>
 
 #include <boost/filesystem.hpp>
 
@@ -61,7 +62,7 @@ DecentLoggerManager::DecentLoggerManager(bool isCritical) :
 				if (!file.Open() && m_isCritical)
 				{
 					LOGW("Cannot open log file: %s !\n", m_outFilePath->string().c_str());
-					throw std::exception("Cannot open log file!");
+					throw std::runtime_error("Cannot open log file!");
 				}
 				LOGI("Writing log to file: %s\n", m_outFilePath->string().c_str());
 				file.WriteString(loggerQueue.front()->ToCsvLines());

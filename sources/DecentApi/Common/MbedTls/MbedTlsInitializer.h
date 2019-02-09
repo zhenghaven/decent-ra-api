@@ -2,17 +2,14 @@
 
 namespace Decent
 {
-	namespace MbedTlsObj
+	namespace MbedTlsHelper
 	{
 		class MbedTlsInitializer
 		{
 		public:
 			static MbedTlsInitializer& GetInst();
-			~MbedTlsInitializer();
-
-		private:
 			MbedTlsInitializer();
-
+			~MbedTlsInitializer();
 		};
 	}
 }

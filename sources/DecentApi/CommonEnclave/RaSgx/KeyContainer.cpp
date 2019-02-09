@@ -1,6 +1,7 @@
 #include "../../Common/Ra/KeyContainer.h"
 
 #include <memory>
+#include <exception>
 
 #include <sgx_tcrypto.h>
 
@@ -25,7 +26,7 @@ namespace
 		{
 			sgx_ecc256_close_context(eccState);
 			LOGW("Failed to create new key pair!");
-			throw std::exception("Failed to create new key pair!"); //This should be thrown at the program startup.
+			throw std::runtime_error("Failed to create new key pair!"); //If error happened, this should be thrown at the program startup.
 		}
 		sgx_ecc256_close_context(eccState);
 

@@ -22,7 +22,6 @@ bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator
 	}
 
 	const KeyContainer& keyContainer = States::Get().GetKeyContainer();
-	std::shared_ptr<const general_secp256r1_public_t> signPub = keyContainer.GetSignPubKey();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = keyContainer.GetSignKeyPair();
 
 	std::shared_ptr<const ServerX509> serverCert(new ServerX509(*signkeyPair,
