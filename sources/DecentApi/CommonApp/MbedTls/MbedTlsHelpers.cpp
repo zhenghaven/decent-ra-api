@@ -1,9 +1,10 @@
 #include "../../Common/MbedTls/MbedTlsHelpers.h"
 
-#include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
 
 #include "../../Common/MbedTls/MbedTlsInitializer.h"
+#include "../../Common/MbedTls/MbedTlsObjects.h"
 
 #ifndef MBEDTLS_THREADING_C
 #error "Implementation does not support non-multi-threading."
@@ -13,24 +14,11 @@ using namespace Decent::MbedTlsHelper;
 
 namespace
 {
-	struct EntropyInstance
+	Decent::MbedTlsObj::EntropyCtx& GetEntropy()
 	{
-		mbedtls_entropy_context m_ctx;
-		const MbedTlsInitializer& m_mbedTlsInit;
-
-		EntropyInstance() :
-			m_mbedTlsInit(MbedTlsInitializer::GetInst()) //Make sure MbedTls is init at this point.
-		{
-			mbedtls_entropy_init(&m_ctx);
-		}
-
-		~EntropyInstance()
-		{
-			mbedtls_entropy_free(&m_ctx);
-		}
-	};
-
-	static EntropyInstance gs_entropy;
+		static Decent::MbedTlsObj::EntropyCtx entropy;
+		return entropy;
+	}
 
 	static inline mbedtls_ctr_drbg_context* CastCtx(void* state)
 	{
@@ -46,8 +34,10 @@ namespace
 Drbg::Drbg() :
 	m_state(new mbedtls_ctr_drbg_context)
 {
+	Decent::MbedTlsObj::EntropyCtx& entropy = GetEntropy();
+
 	mbedtls_ctr_drbg_init(CastCtx(m_state));
-	mbedtls_ctr_drbg_seed(CastCtx(m_state), &mbedtls_entropy_func, &gs_entropy.m_ctx, nullptr, 0);
+	mbedtls_ctr_drbg_seed(CastCtx(m_state), &mbedtls_entropy_func, entropy.Get(), nullptr, 0);
 }
 
 Drbg::~Drbg()

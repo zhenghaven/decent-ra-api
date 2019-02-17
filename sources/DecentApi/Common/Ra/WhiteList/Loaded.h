@@ -24,6 +24,7 @@ namespace Decent
 				Loaded() = delete;
 				Loaded(Decent::Ra::AppX509* certPtr);
 				Loaded(const std::string& whiteListJson);
+				Loaded(const WhiteListType& whiteList);
 
 				~Loaded() {}
 			};

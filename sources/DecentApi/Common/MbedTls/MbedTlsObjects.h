@@ -10,6 +10,7 @@
 #include "../GeneralKeyTypes.h"
 
 typedef struct mbedtls_mpi mbedtls_mpi;
+typedef struct mbedtls_entropy_context mbedtls_entropy_context;
 typedef struct mbedtls_pk_context mbedtls_pk_context;
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
 typedef struct mbedtls_gcm_context mbedtls_gcm_context;
@@ -25,6 +26,7 @@ namespace Decent
 	namespace MbedTlsHelper
 	{
 		class Drbg;
+		class MbedTlsInitializer;
 	}
 
 	namespace MbedTlsObj
@@ -839,5 +841,23 @@ namespace Decent
 			std::unique_ptr<Decent::MbedTlsHelper::Drbg> m_rng;
 		};
 
+		class EntropyCtx : public Decent::MbedTlsObj::ObjBase<mbedtls_entropy_context>
+		{
+		public:
+			/**
+			* \brief	Function that frees MbedTLS object and delete the pointer.
+			*
+			* \param [in,out]	ptr	If non-null, the pointer.
+			*/
+			static void FreeObject(mbedtls_entropy_context* ptr);
+
+		public:
+			EntropyCtx();
+			virtual ~EntropyCtx() {}
+
+		private:
+			const MbedTlsHelper::MbedTlsInitializer& m_mbedTlsInit;
+
+		};
 	}
 }

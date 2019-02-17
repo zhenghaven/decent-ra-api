@@ -165,7 +165,7 @@ AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey,
 
 AppX509::operator bool() const noexcept
 {
-	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0 && m_whiteList.size() > 0;
+	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0;
 }
 
 void AppX509::ParseExtensions()

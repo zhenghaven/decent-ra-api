@@ -18,8 +18,7 @@ struct MyMutexStruct
 
 void MbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 {
-	if (!mutex ||
-		mutex->m_ptr)
+	if (!mutex)
 	{
 		return;
 	}

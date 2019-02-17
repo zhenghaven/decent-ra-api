@@ -9,6 +9,7 @@
 #include "WhiteList/DecentServer.h"
 #include "WhiteList/HardCoded.h"
 #include "WhiteList/Loaded.h"
+#include "../Common.h"
 
 using namespace Decent::Ra;
 
@@ -33,6 +34,7 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt& cert, int depth, uint32_t& f
 	case 0: //App Cert
 	{
 		AppX509 appCert(cert);
+		LOGI("Verifing App Cert: %s.", appCert.GetCommonName().c_str());
 		if (!appCert)
 		{
 			flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
@@ -44,6 +46,7 @@ int TlsConfig::CertVerifyCallBack(mbedtls_x509_crt& cert, int depth, uint32_t& f
 	case 1: //Decent Cert
 	{
 		const ServerX509 serverCert(cert);
+		LOGI("Verifing Server Cert: %s.", serverCert.GetCommonName().c_str());
 		if (!serverCert)
 		{
 			flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
@@ -93,31 +96,69 @@ int TlsConfig::ServerCertVerifyCallBack(const ServerX509 & cert, int depth, uint
 	return MBEDTLS_SUCCESS_RET;
 }
 
+static bool ConstructTlsConfig(Decent::MbedTlsObj::TlsConfig& tlsConfig, 
+	const std::shared_ptr<const Decent::MbedTlsObj::ECKeyPair>& keyPair, 
+	const std::shared_ptr<const Decent::MbedTlsObj::X509Cert>& cert, 
+	bool isServer)
+{
+	int endpoint = isServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT;
+
+	if (!keyPair || !*keyPair || //Make sure private exists.
+		!cert || !*cert || //Make sure cert exists.
+		mbedtls_ssl_config_defaults(tlsConfig.Get(), endpoint, MBEDTLS_SSL_TRANSPORT_STREAM,
+			MBEDTLS_SSL_PRESET_SUITEB) != MBEDTLS_SUCCESS_RET || //Setup config default.
+		mbedtls_ssl_conf_own_cert(tlsConfig.Get(), cert->Get(),
+			keyPair->Get()) != MBEDTLS_SUCCESS_RET //Setup own certificate.
+		)
+	{
+		return false;
+	}
+
+	mbedtls_ssl_conf_ca_chain(tlsConfig.Get(), cert->Get(), nullptr);
+	mbedtls_ssl_conf_authmode(tlsConfig.Get(), MBEDTLS_SSL_VERIFY_REQUIRED);
+	mbedtls_ssl_conf_verify(tlsConfig.Get(), &TlsConfig::CertVerifyCallBack, &tlsConfig);
+	return true;
+}
+
+static bool ConstructTlsConfig(Decent::MbedTlsObj::TlsConfig& tlsConfig,
+	const std::shared_ptr<const Decent::MbedTlsObj::X509Cert>& cert)
+{
+	int endpoint = MBEDTLS_SSL_IS_CLIENT;
+
+	if (!cert || !*cert || //Make sure cert exists.
+		mbedtls_ssl_config_defaults(tlsConfig.Get(), endpoint, MBEDTLS_SSL_TRANSPORT_STREAM,
+			MBEDTLS_SSL_PRESET_SUITEB) != MBEDTLS_SUCCESS_RET //Setup config default.
+		)
+	{
+		return false;
+	}
+
+	mbedtls_ssl_conf_ca_chain(tlsConfig.Get(), cert->Get(), nullptr);
+	mbedtls_ssl_conf_authmode(tlsConfig.Get(), MBEDTLS_SSL_VERIFY_REQUIRED);
+	mbedtls_ssl_conf_verify(tlsConfig.Get(), &TlsConfig::CertVerifyCallBack, &tlsConfig);
+	return true;
+}
+
 TlsConfig::TlsConfig(const std::string& expectedAppName, States& state, bool isServer) :
 	MbedTlsObj::TlsConfig(),
 	m_state(state),
 	m_prvKey(m_state.GetKeyContainer().GetSignKeyPair()),
 	m_cert(m_state.GetCertContainer().GetCert()),
-	m_expectedAppName(expectedAppName)
+	m_expectedAppName(expectedAppName),
+	m_isValid(MbedTlsObj::TlsConfig::operator bool() && 
+		ConstructTlsConfig(*this, m_prvKey, m_cert, isServer))
 {
-	int endpoint = isServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT;
+}
 
-	if (!MbedTlsObj::TlsConfig::operator bool() || //Make sure basic init is successful.
-		!m_prvKey || !*m_prvKey || //Make sure private exists.
-		!m_cert || !*m_cert || //Make sure cert exists.
-		mbedtls_ssl_config_defaults(Get(), endpoint, MBEDTLS_SSL_TRANSPORT_STREAM,
-			MBEDTLS_SSL_PRESET_SUITEB) != MBEDTLS_SUCCESS_RET || //Setup config default.
-		mbedtls_ssl_conf_own_cert(Get(), m_cert->Get(),
-			m_prvKey->Get()) != MBEDTLS_SUCCESS_RET //Setup own certificate.
-		)
-	{
-		m_prvKey.reset();
-		m_cert.reset();
-		return;
-	}
-
-	mbedtls_ssl_conf_ca_chain(Get(), m_cert->Get(), nullptr);
-	mbedtls_ssl_conf_authmode(Get(), MBEDTLS_SSL_VERIFY_REQUIRED);
+TlsConfig::TlsConfig(const std::string& expectedAppName, States& state) :
+	MbedTlsObj::TlsConfig(),
+	m_state(state),
+	m_prvKey(),
+	m_cert(m_state.GetCertContainer().GetCert()),
+	m_expectedAppName(expectedAppName),
+	m_isValid(MbedTlsObj::TlsConfig::operator bool() &&
+		ConstructTlsConfig(*this, m_cert))
+{
 }
 
 TlsConfig::TlsConfig(TlsConfig && other) :
@@ -125,12 +166,14 @@ TlsConfig::TlsConfig(TlsConfig && other) :
 	m_state(other.m_state),
 	m_prvKey(std::move(other.m_prvKey)),
 	m_cert(std::move(other.m_cert)),
-	m_expectedAppName(std::move(other.m_expectedAppName))
+	m_expectedAppName(std::move(other.m_expectedAppName)),
+	m_isValid(other.m_isValid)
 {
 	if (*this)
 	{
 		mbedtls_ssl_conf_verify(Get(), &TlsConfig::CertVerifyCallBack, this);
 	}
+	other.m_isValid = false;
 }
 
 TlsConfig & TlsConfig::operator=(TlsConfig && other)
@@ -141,6 +184,8 @@ TlsConfig & TlsConfig::operator=(TlsConfig && other)
 		m_prvKey = std::move(other.m_prvKey);
 		m_cert = std::move(other.m_cert);
 		m_expectedAppName = std::move(other.m_expectedAppName);
+		m_isValid = other.m_isValid;
+		other.m_isValid = false;
 
 		if (*this)
 		{

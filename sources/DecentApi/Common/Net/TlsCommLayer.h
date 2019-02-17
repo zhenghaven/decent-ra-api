@@ -29,8 +29,6 @@ namespace Decent
 
 			virtual ~TlsCommLayer();
 
-			void Destory();
-
 			TlsCommLayer& operator=(const TlsCommLayer& other) = delete;
 			TlsCommLayer& operator=(TlsCommLayer&& other);
 

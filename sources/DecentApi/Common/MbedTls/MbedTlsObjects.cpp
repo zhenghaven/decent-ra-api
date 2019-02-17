@@ -23,10 +23,12 @@
 #include <mbedtls/x509_crl.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/base64.h>
+#include <mbedtls/entropy.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
 
 #include "MbedTlsHelpers.h"
+#include "MbedTlsInitializer.h"
 #include "../Common.h"
 #include "../make_unique.h"
 
@@ -768,21 +770,6 @@ X509Req::X509Req(mbedtls_x509_csr * ptr, FreeFuncType freeFunc) :
 {
 }
 
-std::string X509Cert::GeneratePemStr(const mbedtls_x509_crt & ref)
-{
-	size_t useLen = CalcPemMaxBytes(ref.raw.len, sizeof(PEM_BEGIN_CRT) - 1, sizeof(PEM_END_CRT) - 1);
-
-	std::string res(useLen, 0);
-	if (mbedtls_pem_write_buffer(PEM_BEGIN_CRT, PEM_END_CRT, ref.raw.p, ref.raw.len,
-		reinterpret_cast<uint8_t*>(&res[0]), res.size(), &useLen) != MBEDTLS_SUCCESS_RET)
-	{
-		return std::string();
-	}
-
-	res.pop_back();
-	return res;
-}
-
 static int x509_write_time(unsigned char **p, unsigned char *start,
 	const char *t, size_t size)
 {
@@ -967,7 +954,7 @@ static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvK
 
 	size_t extTotalSize = 0;
 
-	int mbedRet = hasCa ? MbedTlsHelper::MbedTlsAsn1DeepCopy(cert.issuer, caCert->Get()->issuer) :
+	int mbedRet = hasCa ? MbedTlsHelper::MbedTlsAsn1DeepCopy(cert.issuer, caCert->Get()->subject) :
 		(mbedtls_x509write_crt_set_issuer_name(&cert, x509NameList.c_str()) == MBEDTLS_SUCCESS_RET);
 	for (auto it = extMap.begin(); it != extMap.end() && mbedRet; ++it)
 	{
@@ -1009,6 +996,11 @@ X509Cert X509Cert::FromPemDer(const void* ptr, size_t size)
 	if (mbedtls_x509_crt_parse(res.Get(), ptrByte, size) != MBEDTLS_SUCCESS_RET)
 	{
 		return X509Cert(nullptr, &ObjBase::DoNotFree);
+	}
+	{
+		int chainLen = 0;
+		for (auto it = res.Get(); it != nullptr; ++chainLen, it = it->next);
+		LOGI("Parsed X509 Chain with length %d.", chainLen);
 	}
 
 	return res;
@@ -1207,15 +1199,30 @@ const PKey & X509Cert::GetPublicKey() const
 	return m_pubKey;
 }
 
+std::string X509Cert::GeneratePemStr(const mbedtls_x509_crt & ref)
+{
+	size_t useLen = CalcPemMaxBytes(ref.raw.len, sizeof(PEM_BEGIN_CRT) - 1, sizeof(PEM_END_CRT) - 1);
+
+	std::string res(useLen, 0);
+	if (mbedtls_pem_write_buffer(PEM_BEGIN_CRT, PEM_END_CRT, ref.raw.p, ref.raw.len,
+		reinterpret_cast<uint8_t*>(&res[0]), res.size(), &useLen) != MBEDTLS_SUCCESS_RET)
+	{
+		return std::string();
+	}
+
+	for (; res.back() == '\0'; res.pop_back());
+	return res;
+}
+
 std::string X509Cert::ToPemString() const
 {
 	std::string res;
-	const mbedtls_x509_crt* crt = Get();
-	while (crt)
+	int chainLen = 0;
+	for (const mbedtls_x509_crt* it = Get(); it != nullptr; ++chainLen, it = it->next)
 	{
-		res += GeneratePemStr(*crt);
-		crt = crt->next;
+		res += GeneratePemStr(*it);
 	}
+	LOGI("Generated X509 PEM Chain with length %d.", chainLen);
 
 	return res;
 }
@@ -1382,4 +1389,17 @@ TlsConfig& TlsConfig::operator=(TlsConfig&& other) noexcept
 TlsConfig::operator bool() const noexcept
 {
 	return ObjBase::operator bool() && m_rng;
+}
+
+void EntropyCtx::FreeObject(mbedtls_entropy_context * ptr)
+{
+	mbedtls_entropy_free(ptr);
+	delete ptr;
+}
+
+EntropyCtx::EntropyCtx() :
+	ObjBase(new mbedtls_entropy_context, &FreeObject),
+	m_mbedTlsInit(MbedTlsHelper::MbedTlsInitializer::GetInst())
+{
+	mbedtls_entropy_init(Get());
 }

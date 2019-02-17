@@ -96,6 +96,7 @@ namespace
 		int ret = 0;
 		if ((ret = mbedtls_ssl_handshake(tlsCtx.get())) != MBEDTLS_SUCCESS_RET)
 		{
+			LOGW("TLS Handshake Failed! code: %d_10/%#x_16.", ret, (-1 * ret));
 			mbedtls_ssl_free(tlsCtx.get());
 			return nullptr;
 		}
@@ -123,11 +124,6 @@ TlsCommLayer::TlsCommLayer(TlsCommLayer && other) :
 }
 
 TlsCommLayer::~TlsCommLayer()
-{
-	Destory();
-}
-
-void TlsCommLayer::Destory()
 {
 	if (m_sslCtx)
 	{

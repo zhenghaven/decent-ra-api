@@ -14,6 +14,7 @@ namespace Decent
 		{
 		public:
 			TlsConfig(const std::string& expectedAppName, States& state, bool isServer);
+			TlsConfig(const std::string& expectedAppName, States& state);
 
 			TlsConfig(TlsConfig&& other);
 			TlsConfig(const TlsConfig& other) = delete;
@@ -24,7 +25,7 @@ namespace Decent
 
 			virtual operator bool() const noexcept override
 			{
-				return MbedTlsObj::TlsConfig::operator bool() && m_prvKey && m_cert;
+				return MbedTlsObj::TlsConfig::operator bool() && m_isValid;
 			}
 
 			const std::string& GetExpectedAppName() const { return m_expectedAppName; }
@@ -43,6 +44,8 @@ namespace Decent
 			std::shared_ptr<const MbedTlsObj::ECKeyPair> m_prvKey;
 			std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
 			std::string m_expectedAppName;
+
+			bool m_isValid;
 		};
 	}
 }

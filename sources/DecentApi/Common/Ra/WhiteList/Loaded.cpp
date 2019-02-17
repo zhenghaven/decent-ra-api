@@ -43,6 +43,11 @@ Loaded::Loaded(AppX509 * certPtr) :
 }
 
 Loaded::Loaded(const std::string & whiteListJson) :
-	StaticTypeList(ParseWhiteListFromJson(whiteListJson))
+	Loaded(ParseWhiteListFromJson(whiteListJson))
+{
+}
+
+Loaded::Loaded(const WhiteListType & whiteList) :
+	StaticTypeList(whiteList)
 {
 }
