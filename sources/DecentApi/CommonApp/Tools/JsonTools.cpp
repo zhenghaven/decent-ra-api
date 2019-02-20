@@ -8,8 +8,9 @@
 #include "../../Common/Common.h"
 
 using namespace Decent;
+using namespace Decent::Tools;
 
-bool Tools::ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outJson, const std::string& inStr)
+bool Tools::ParseStr2Json(JsonDoc& outJson, const std::string& inStr)
 {
 	Json::CharReaderBuilder rbuilder;
 	rbuilder["collectComments"] = false;
@@ -33,7 +34,7 @@ bool Tools::ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outJson, const std::
 	return isValid;
 }
 
-bool Tools::ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outJson, const char* inStr)
+bool Tools::ParseStr2Json(JsonDoc& outJson, const char* inStr)
 {
 	Json::CharReaderBuilder rbuilder;
 	rbuilder["collectComments"] = false;
@@ -62,7 +63,17 @@ std::string Tools::Json2StyledString(const Json::Value & inJson)
 	return inJson.toStyledString();
 }
 
-JSON_EDITION::Value& Tools::JsonConstructArray(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, std::vector<JSON_EDITION::Value>& vals)
+std::string Tools::Json2String(const Json::Value & inJson)
+{
+	Json::StreamWriterBuilder builder;
+
+	builder["commentStyle"] = "All";
+	builder["indentation"] = "";
+
+	return Json::writeString(builder, inJson);
+}
+
+JsonValue& Tools::JsonConstructArray(JsonDoc& doc, std::vector<JsonValue>& vals)
 {
 	doc = Json::arrayValue;
 	doc.resize(static_cast<Json::ArrayIndex>(vals.size()));
@@ -75,27 +86,27 @@ JSON_EDITION::Value& Tools::JsonConstructArray(JSON_EDITION::JSON_DOCUMENT_TYPE&
 	return doc;
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string& index, const std::string& val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string& index, const std::string& val)
 {
 	return (doc[index.c_str()] = val);
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, JSON_EDITION::Value & val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, JsonValue & val)
 {
 	return (doc[index.c_str()] = val);
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const int val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const int val)
 {
 	return (doc[index.c_str()] = val);
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const double val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const double val)
 {
 	return (doc[index.c_str()] = val);
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const bool val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const bool val)
 {
 	return (doc[index.c_str()] = val);
 }

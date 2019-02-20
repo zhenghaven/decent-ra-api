@@ -9,11 +9,12 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../Tools/FileSystemUtil.h"
+#include "../Tools/DiskFile.h"
 #include "../../Common/Common.h"
 
 using namespace Decent::Tools;
 using namespace Decent::Logger;
+namespace fs = boost::filesystem;
 
 DecentLoggerManager & DecentLoggerManager::GetInstance()
 {
@@ -58,15 +59,21 @@ DecentLoggerManager::DecentLoggerManager(bool isCritical) :
 
 			while (loggerQueue.size() > 0)
 			{
-				FileHandler file(*m_outFilePath, FileHandler::Mode::Append);
-				if (!file.Open() && m_isCritical)
+				try
+				{
+					DiskFile file(*m_outFilePath, FileBase::Mode::Append);
+					LOGI("Writing log to file: %s\n", m_outFilePath->string().c_str());
+					file.WriteBlock(loggerQueue.front()->ToCsvLines());
+					loggerQueue.pop();
+				}
+				catch (const FileException& e)
 				{
 					LOGW("Cannot open log file: %s !\n", m_outFilePath->string().c_str());
-					throw std::runtime_error("Cannot open log file!");
+					if (m_isCritical)
+					{
+						throw e;
+					}
 				}
-				LOGI("Writing log to file: %s\n", m_outFilePath->string().c_str());
-				file.WriteString(loggerQueue.front()->ToCsvLines());
-				loggerQueue.pop();
 			}
 
 			if (!m_isTerminated) 

@@ -168,7 +168,7 @@ namespace
 
 bool Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
 {
-	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
+	JsonDoc jsonDoc;
 	if (!ParseStr2Json(jsonDoc, inStr))
 	{
 		return false;

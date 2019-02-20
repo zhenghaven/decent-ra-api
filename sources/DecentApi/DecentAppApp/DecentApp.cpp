@@ -5,7 +5,6 @@
 
 #include "../Common/Tools/DataCoding.h"
 #include "../CommonApp/Ra/Messages.h"
-#include "../CommonApp/Ra/WhiteList/Requester.h"
 #include "../CommonApp/Net/Connection.h"
 #include "../CommonApp/SGX/EnclaveRuntimeException.h"
 

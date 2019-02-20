@@ -92,14 +92,14 @@ bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::s
 		return false;
 	}
 
-	JSON_EDITION::JSON_DOCUMENT_TYPE jsonDoc;
+	JsonDoc jsonDoc;
 
 	if (!ParseStr2Json(jsonDoc, raReport) ||
 		!jsonDoc.JSON_HAS_MEMBER(RaReport::sk_LabelRoot))
 	{
 		return false;
 	}
-	JSON_EDITION::Value& jsonRoot = jsonDoc[RaReport::sk_LabelRoot];
+	JsonValue& jsonRoot = jsonDoc[RaReport::sk_LabelRoot];
 
 	std::string iasReportStr = jsonRoot[RaReport::sk_LabelIasReport].JSON_AS_STRING();
 	std::string iasSign = jsonRoot[RaReport::sk_LabelIasSign].JSON_AS_STRING();

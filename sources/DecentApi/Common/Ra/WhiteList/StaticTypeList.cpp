@@ -2,19 +2,27 @@
 
 #include <algorithm>
 
+#ifdef ENCLAVE_ENVIRONMENT
+#include <rapidjson/document.h>
+#else
+#include <json/json.h>
+#endif
+
 #include "../../Common.h"
+#include "../../Tools/JsonTools.h"
 
 using namespace Decent::Ra::WhiteList;
+using namespace Decent::Tools;
 
 StaticTypeList::StaticTypeList(const WhiteListType & whiteList) :
 	m_listMap(whiteList)
 {
-	LOGI("Constrcuted Static WhiteList (Size = %llu): \n", m_listMap.size());
+	LOGI("Constrcuted Static WhiteList (Size = %llu):", m_listMap.size());
 	for (auto it = m_listMap.cbegin(); it != m_listMap.cend(); ++it)
 	{
-		LOGI("\t - %s : %s \n", it->first.c_str(), it->second.c_str());
+		LOGI("\t%s\t:\t%s", it->first.c_str(), it->second.c_str());
 	}
-	LOGI("Static WhiteList End. \n\n");
+	LOGI("Static WhiteList End. \n");
 }
 
 StaticTypeList::~StaticTypeList()
@@ -93,7 +101,16 @@ bool StaticTypeList::operator!=(const StaticTypeList & other) const
 	return !(*this == other);
 }
 
-bool Decent::Ra::WhiteList::StaticTypeList::operator>=(const StaticTypeList & other) const
+bool StaticTypeList::operator>=(const StaticTypeList & other) const
 {
 	return CheckListsWithinRange(other.m_listMap);
+}
+
+JsonValue & StaticTypeList::ToJson(JsonDoc & jsonDoc) const
+{
+	for (auto it = m_listMap.begin(); it != m_listMap.end(); ++it)
+	{
+		JsonSetVal(jsonDoc, it->first, it->second);
+	}
+	return jsonDoc;
 }

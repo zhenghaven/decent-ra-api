@@ -23,7 +23,7 @@ WhiteListType Loaded::ParseWhiteListFromJson(const std::string & whiteListJson)
 		return res;
 	}
 
-	JSON_EDITION::JSON_DOCUMENT_TYPE doc;
+	JsonDoc doc;
 	if (!ParseStr2Json(doc, whiteListJson) ||
 		!doc.JSON_IS_OBJECT())
 	{

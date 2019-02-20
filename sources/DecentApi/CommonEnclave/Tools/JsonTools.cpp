@@ -9,10 +9,11 @@
 #include <rapidjson/stringbuffer.h>
 
 using namespace Decent;
+using namespace Decent::Tools;
 
 namespace
 {
-	static JSON_EDITION::Value& ConstructIndex(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, rapidjson::Value& val)
+	static JsonValue& ConstructIndex(JsonDoc& doc, const std::string & index, rapidjson::Value& val)
 	{
 		if (!doc.IsObject())
 		{
@@ -32,7 +33,7 @@ namespace
 	}
 }
 
-bool Tools::ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const std::string& inStr)
+bool Tools::ParseStr2Json(JsonDoc& outDoc, const std::string& inStr)
 {
 	outDoc.Parse(inStr.c_str());
 	rapidjson::ParseErrorCode errcode = outDoc.GetParseError();
@@ -40,7 +41,7 @@ bool Tools::ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const std::s
 	return errcode == rapidjson::ParseErrorCode::kParseErrorNone;
 }
 
-bool Tools::ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const char* inStr)
+bool Tools::ParseStr2Json(JsonDoc& outDoc, const char* inStr)
 {
 	outDoc.Parse(inStr);
 	rapidjson::ParseErrorCode errcode = outDoc.GetParseError();
@@ -51,7 +52,6 @@ bool Tools::ParseStr2Json(JSON_EDITION::JSON_DOCUMENT_TYPE& outDoc, const char* 
 std::string Tools::Json2StyledString(const rapidjson::Value & inJson)
 {
 	rapidjson::StringBuffer buffer;
-	//rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
 	inJson.Accept(writer);
 
@@ -59,11 +59,21 @@ std::string Tools::Json2StyledString(const rapidjson::Value & inJson)
 	return res;
 }
 
-JSON_EDITION::Value& Tools::JsonConstructArray(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, std::vector<JSON_EDITION::Value>& vals)
+std::string Tools::Json2String(const rapidjson::Value & inJson)
+{
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	inJson.Accept(writer);
+
+	std::string res(buffer.GetString());
+	return res;
+}
+
+JsonValue& Tools::JsonConstructArray(JsonDoc& doc, std::vector<JsonValue>& vals)
 {
 	doc.SetArray();
 	doc.Reserve(static_cast<rapidjson::SizeType>(vals.size()), doc.GetAllocator());
-	for (JSON_EDITION::Value& val : vals)
+	for (JsonValue& val : vals)
 	{
 		doc.PushBack(val, doc.GetAllocator());
 	}
@@ -72,28 +82,28 @@ JSON_EDITION::Value& Tools::JsonConstructArray(JSON_EDITION::JSON_DOCUMENT_TYPE&
 	return doc;
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const std::string & val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const std::string & val)
 {
 	return ConstructIndex(doc, index, 
 		rapidjson::Value().SetString(rapidjson::StringRef(val.c_str(), val.size()), doc.GetAllocator()));
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, JSON_EDITION::Value & val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, JsonValue & val)
 {
 	return ConstructIndex(doc, index, val);
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const int val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const int val)
 {
 	return ConstructIndex(doc, index, rapidjson::Value().SetInt(val));
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const double val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const double val)
 {
 	return ConstructIndex(doc, index, rapidjson::Value().SetDouble(val));
 }
 
-JSON_EDITION::Value& Tools::JsonSetVal(JSON_EDITION::JSON_DOCUMENT_TYPE& doc, const std::string & index, const bool val)
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const bool val)
 {
 	return ConstructIndex(doc, index, rapidjson::Value().SetBool(val));
 }

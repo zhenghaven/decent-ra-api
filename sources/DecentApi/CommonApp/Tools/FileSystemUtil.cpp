@@ -1,7 +1,5 @@
 #include "FileSystemUtil.h"
 
-#include <cstdio>
-
 #ifdef _WIN32
 #include <ShlObj.h>
 #include <wchar.h>
@@ -9,7 +7,10 @@
 
 #endif // _WIN32
 
+#include <boost/filesystem.hpp>
+
 using namespace Decent::Tools;
+namespace fs = boost::filesystem;
 
 fs::path Decent::Tools::GetKnownFolderPath(KnownFolderType type)
 {
@@ -116,161 +117,4 @@ fs::path Decent::Tools::GetKnownFolderPath(KnownFolderType type)
 	}
 #endif // _WIN32
 	return fs::path(".");
-}
-
-const char* FileHandler::InterpretMode(const Mode mode)
-{
-	switch (mode)
-	{
-	case FileHandler::Mode::Read:
-		m_isWriteAllowed = false;
-		return "rb";
-	case FileHandler::Mode::Write:
-		m_isWriteAllowed = true;
-		return "wb";
-	case FileHandler::Mode::Append:
-		m_isWriteAllowed = true;
-		return "ab";
-	case FileHandler::Mode::ReadUpdate:
-		m_isWriteAllowed = false;
-		return "r+b";
-	case FileHandler::Mode::WriteUpdate:
-		m_isWriteAllowed = true;
-		return "w+b";
-	case FileHandler::Mode::AppendUpdate:
-		m_isWriteAllowed = true;
-		return "a+b";
-	default:
-		return "rb";
-	}
-}
-
-const wchar_t * FileHandler::InterpretModeW(const Mode mode)
-{
-	switch (mode)
-	{
-	case FileHandler::Mode::Read:
-		m_isWriteAllowed = false;
-		return L"rb";
-	case FileHandler::Mode::Write:
-		m_isWriteAllowed = true;
-		return L"wb";
-	case FileHandler::Mode::Append:
-		m_isWriteAllowed = true;
-		return L"ab";
-	case FileHandler::Mode::ReadUpdate:
-		m_isWriteAllowed = false;
-		return L"r+b";
-	case FileHandler::Mode::WriteUpdate:
-		m_isWriteAllowed = true;
-		return L"w+b";
-	case FileHandler::Mode::AppendUpdate:
-		m_isWriteAllowed = true;
-		return L"a+b";
-	default:
-		return L"rb";
-	}
-}
-
-FileHandler::FileHandler(const fs::path filePath, const Mode mode) : 
-	m_filePath(filePath),
-	m_mode(mode),
-	m_file(nullptr)
-{
-}
-
-bool FileHandler::Open()
-{
-#ifdef _WIN32
-	m_file = _wfopen(m_filePath.c_str(), InterpretModeW(m_mode));
-#else
-	m_file = std::fopen(m_filePath.c_str(), InterpretMode(m_mode));
-#endif
-	return (m_file != nullptr);
-}
-
-bool FileHandler::IsOpen() const
-{
-	return (m_file != nullptr);
-}
-
-const FileHandler::Mode FileHandler::GetMode() const
-{
-	return m_mode;
-}
-
-bool FileHandler::ReadBlock(std::vector<uint8_t>& binary, size_t size)
-{
-	binary.resize(size);
-	size_t resSize = std::fread(&binary[0], sizeof(uint8_t), size, m_file);
-	binary.resize(resSize);
-
-	return resSize == size;
-}
-
-bool FileHandler::WriteBlock(const std::vector<uint8_t>& binary)
-{
-	size_t resSize = std::fwrite(binary.data(), 1, binary.size(), m_file);
-	return resSize == binary.size();
-}
-
-bool FileHandler::WriteString(const std::string & str)
-{
-	size_t resSize = std::fwrite(str.data(), 1, str.size(), m_file);
-	return resSize == str.size();
-}
-
-int FileHandler::FSeek(size_t pos)
-{
-	return FSeek(pos, SEEK_SET);
-}
-
-int FileHandler::FSeek(size_t pos, int origin)
-{
-#ifdef __CYGWIN__
-	return std::fseek(m_file, pos, origin);
-#elif defined (_WIN32)
-	return _fseeki64(m_file, pos, origin);
-#else
-	return fseeko64(m_file, pos, origin);
-#endif
-}
-
-size_t FileHandler::FTell() const
-{
-#ifdef __CYGWIN__
-	return std::ftell(m_file);
-#elif defined (_WIN32)
-	return _ftelli64(m_file);
-#else
-	return ftello64(m_file);
-#endif
-}
-
-void FileHandler::FFlush()
-{
-	std::fflush(m_file);
-}
-
-size_t FileHandler::GetFileSize()
-{
-	size_t tmp = FTell();
-	FSeek(0, SEEK_END);
-	size_t res = FTell();
-	FSeek(tmp);
-	return res;
-}
-
-fs::path FileHandler::GetFilePath() const
-{
-	return m_filePath;
-}
-
-FileHandler::~FileHandler()
-{
-	if (IsOpen())
-	{
-		std::fclose(m_file);
-		m_file = nullptr;
-	}
 }

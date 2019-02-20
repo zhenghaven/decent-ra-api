@@ -29,6 +29,7 @@
 
 using namespace Decent::Ias;
 using namespace Decent::Tools;
+namespace fs = boost::filesystem;
 
 namespace
 {

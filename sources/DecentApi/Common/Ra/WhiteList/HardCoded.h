@@ -8,10 +8,11 @@ namespace Decent
 	{
 		namespace WhiteList
 		{
+			constexpr char const sk_nameDecentServer[] = "DecentServer";
+
 			class HardCoded : public StaticTypeList
 			{
 			public:
-				static constexpr char const sk_decentServerLabel[] = "DecentServer";
 
 				HardCoded();
 

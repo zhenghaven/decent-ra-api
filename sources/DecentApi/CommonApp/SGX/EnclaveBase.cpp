@@ -11,6 +11,7 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "../Tools/FileSystemUtil.h"
+#include "../Tools/DiskFile.h"
 
 #include "../../Common/Common.h"
 #include "../../Common/Tools/DataCoding.h"
@@ -128,28 +129,32 @@ const sgx_enclave_id_t EnclaveBase::GetEnclaveId() const
 
 bool EnclaveBase::LoadToken(const fs::path& tokenPath, std::vector<uint8_t>& outToken)
 {
-	FileHandler tokenFile(tokenPath, FileHandler::Mode::Read);
-	if (!tokenFile.Open())
+	outToken.resize(sizeof(sgx_launch_token_t), 0);
+	try
 	{
-		return false;
+		DiskFile tokenFile(tokenPath, FileBase::Mode::Read);
+		tokenFile.ReadBlockExactSize(outToken);
+		return true;
 	}
-	bool readRes = tokenFile.ReadBlock(outToken, sizeof(sgx_launch_token_t));
-	if (!readRes)
+	catch (const FileException&)
 	{
 		outToken.resize(sizeof(sgx_launch_token_t), 0);
+		return false;
 	}
-	return readRes;
 }
 
 bool EnclaveBase::UpdateToken(const fs::path& tokenPath, const std::vector<uint8_t>& inToken)
 {
-	FileHandler tokenFile(tokenPath, FileHandler::Mode::Write);
-	if (!tokenFile.Open())
+	try
+	{
+		DiskFile tokenFile(tokenPath, FileBase::Mode::Write);
+		tokenFile.WriteBlockExactSize(inToken);
+		return true;
+	}
+	catch (const FileException&)
 	{
 		return false;
 	}
-	bool writeRes = tokenFile.WriteBlock(inToken);
-	return writeRes;
 }
 
 extern "C" int ocall_decent_sgx_ra_get_msg1(const uint64_t enclave_id, const uint32_t ra_ctx, sgx_ra_msg1_t* msg1)

@@ -2,6 +2,8 @@
 
 #include "WhiteList.h"
 
+#include "../../Tools/JsonForwardDeclare.h"
+
 namespace Decent
 {
 	namespace Ra
@@ -94,6 +96,15 @@ namespace Decent
 				 * \return	True if the first parameter is greater than or equal to the second.
 				 */
 				virtual bool operator>=(const StaticTypeList& other) const;
+
+				/**
+				 * \brief	Converts this white list to a JSON format.
+				 *
+				 * \param [in,out]	jsonDoc	The JSON document.
+				 *
+				 * \return	JsonDoc as a Tools::JsonValue&amp;
+				 */
+				virtual Tools::JsonValue& ToJson(Tools::JsonDoc& jsonDoc) const;
 
 			private:
 				const WhiteListType m_listMap;
