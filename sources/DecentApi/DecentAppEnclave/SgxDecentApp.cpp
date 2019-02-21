@@ -10,6 +10,7 @@
 #include "../Common/Ra/Crypto.h"
 #include "../Common/Ra/KeyContainer.h"
 #include "../Common/Ra/CertContainer.h"
+#include "../Common/Ra/WhiteList/Loaded.h"
 
 using namespace Decent;
 using namespace Decent::Ra;
@@ -68,7 +69,10 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 	}
 
 	States::Get().GetCertContainer().SetCert(cert);
-	States::Get().GetLoadedWhiteList(cert.get());
+
+	//Set loaded whitelist.
+	WhiteList::Loaded loadedList(*cert);
+	States::Get().GetLoadedWhiteList(&loadedList);
 
 	return SGX_SUCCESS;
 }

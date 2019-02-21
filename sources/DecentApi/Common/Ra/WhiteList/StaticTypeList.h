@@ -14,7 +14,21 @@ namespace Decent
 			{
 			public:
 				StaticTypeList() = delete;
+
 				StaticTypeList(const WhiteListType& whiteList);
+
+				StaticTypeList(WhiteListType&& whiteList) :
+					m_listMap(std::forward<WhiteListType>(whiteList))
+				{}
+
+				StaticTypeList(const StaticTypeList& rhs) :
+					m_listMap(rhs.m_listMap)
+				{}
+
+				StaticTypeList(StaticTypeList&& rhs) :
+					m_listMap(std::forward<WhiteListType>(rhs.m_listMap))
+				{}
+
 				~StaticTypeList();
 
 				/**
@@ -107,7 +121,7 @@ namespace Decent
 				virtual Tools::JsonValue& ToJson(Tools::JsonDoc& jsonDoc) const;
 
 			private:
-				const WhiteListType m_listMap;
+				WhiteListType m_listMap;
 			};
 		}
 	}

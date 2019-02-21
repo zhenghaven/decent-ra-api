@@ -37,17 +37,12 @@ WhiteListType Loaded::ParseWhiteListFromJson(const std::string & whiteListJson)
 	return res;
 }
 
-Loaded::Loaded(AppX509 * certPtr) :
-	Loaded((certPtr && *certPtr) ? certPtr->GetWhiteList() : std::string())
+Loaded::Loaded(const AppX509& certPtr) :
+	Loaded(certPtr ? certPtr.GetWhiteList() : std::string())
 {
 }
 
 Loaded::Loaded(const std::string & whiteListJson) :
 	Loaded(ParseWhiteListFromJson(whiteListJson))
-{
-}
-
-Loaded::Loaded(const WhiteListType & whiteList) :
-	StaticTypeList(whiteList)
 {
 }

@@ -12,6 +12,14 @@ namespace Json
 
 namespace Decent
 {
+	namespace Ra
+	{
+		namespace WhiteList
+		{
+			class StaticTypeList;
+		}
+	}
+
 	namespace Tools
 	{
 		class ConfigParseException : public std::runtime_error
@@ -82,14 +90,15 @@ namespace Decent
 			const ConfigItem* GetItemPtr(const std::string name) const;
 			const ConfigItem& GetItem(const std::string name) const;
 
-			const std::string& GetLoadedWhiteListStr() const { return m_loadedWhiteListStr; }
+			const Ra::WhiteList::StaticTypeList& GetLoadedWhiteList() const { return *m_loadedWhiteList; }
+			std::string GetLoadedWhiteListStr() const;
 
 		protected:
 			ConfigManager(std::map<std::string, std::unique_ptr<ConfigItem> >&& configMap);
 
 		private:
 			std::map<std::string, std::unique_ptr<ConfigItem> > m_configMap;
-			std::string m_loadedWhiteListStr;
+			std::unique_ptr<const Ra::WhiteList::StaticTypeList> m_loadedWhiteList;
 		};
 	}
 }

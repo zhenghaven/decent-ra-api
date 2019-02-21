@@ -18,7 +18,7 @@ namespace Decent
 		class States
 		{
 		public:
-			typedef const WhiteList::Loaded& (*GetLoadedWlFunc)(Decent::Ra::AppX509*);
+			typedef const WhiteList::Loaded& (*GetLoadedWlFunc)(WhiteList::Loaded*);
 
 		public:
 			static States& Get()
@@ -63,26 +63,21 @@ namespace Decent
 				return m_serverWhiteList;
 			}
 
-			WhiteList::HardCoded& GetHardCodedWhiteList()
-			{
-				return m_hardCodedWhiteList;
-			}
-
 			const WhiteList::HardCoded& GetHardCodedWhiteList() const
 			{
 				return m_hardCodedWhiteList;
 			}
 
-			const WhiteList::Loaded& GetLoadedWhiteList(Decent::Ra::AppX509* certPtr = nullptr) const
+			const WhiteList::Loaded& GetLoadedWhiteList(WhiteList::Loaded* loadedPtr = nullptr) const
 			{
-				return (*m_getLoadedFunc)(certPtr);
+				return (*m_getLoadedFunc)(loadedPtr);
 			}
 
 		private:
 			CertContainer & m_certContainer;
 			KeyContainer & m_keyContainer;
 			WhiteList::DecentServer & m_serverWhiteList;
-			WhiteList::HardCoded & m_hardCodedWhiteList;
+			const WhiteList::HardCoded & m_hardCodedWhiteList;
 			GetLoadedWlFunc m_getLoadedFunc;
 		};
 	}

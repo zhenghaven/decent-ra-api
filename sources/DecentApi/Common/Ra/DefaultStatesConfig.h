@@ -13,11 +13,11 @@ namespace
 	static CertContainer certContainer;
 	static KeyContainer keyContainer;
 	static WhiteList::DecentServer serverWhiteList;
-	static WhiteList::HardCoded hardCodedWhiteList;
+	static const WhiteList::HardCoded hardCodedWhiteList;
 
-	static const WhiteList::Loaded& GetLoadedWhiteListImpl(AppX509* certPtr)
+	static const WhiteList::Loaded& GetLoadedWhiteListImpl(WhiteList::Loaded* instPtr)
 	{
-		static WhiteList::Loaded inst(certPtr);
+		static const WhiteList::Loaded inst(instPtr);
 		return inst;
 	}
 }

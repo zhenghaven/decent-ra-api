@@ -21,10 +21,33 @@ namespace Decent
 			public:
 				static WhiteListType ParseWhiteListFromJson(const std::string & whiteListJson);
 
-				Loaded() = delete;
-				Loaded(Decent::Ra::AppX509* certPtr);
+				Loaded() :
+					StaticTypeList(WhiteListType())
+				{}
+
+				Loaded(const Decent::Ra::AppX509& certPtr);
+
 				Loaded(const std::string& whiteListJson);
-				Loaded(const WhiteListType& whiteList);
+
+				Loaded(Loaded* instPtr) :
+					Loaded(instPtr ? std::move(*instPtr) : Loaded())
+				{}
+
+				Loaded(const WhiteListType& whiteList) :
+					StaticTypeList(whiteList)
+				{}
+
+				Loaded(WhiteListType&& whiteList) :
+					StaticTypeList(std::forward<WhiteListType>(whiteList))
+				{}
+
+				Loaded(const Loaded& rhs) :
+					StaticTypeList(rhs)
+				{}
+
+				Loaded(Loaded&& rhs) :
+					StaticTypeList(std::forward<StaticTypeList>(rhs))
+				{}
 
 				~Loaded() {}
 			};

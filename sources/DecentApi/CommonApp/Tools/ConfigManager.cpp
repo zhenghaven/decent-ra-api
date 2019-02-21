@@ -100,12 +100,10 @@ namespace
 		return std::move(res);
 	}
 
-	static std::string ConstructLoadedWhiteListStr(const WhiteListType& whiteList)
+	static std::string ConstructLoadedWhiteListStr(const StaticTypeList& whiteList)
 	{
-		StaticTypeList statWhiteList(whiteList);
-
 		JsonDoc jsonDoc;
-		statWhiteList.ToJson(jsonDoc);
+		whiteList.ToJson(jsonDoc);
 		return Json2String(jsonDoc);
 	}
 }
@@ -156,6 +154,11 @@ const ConfigItem & Decent::Tools::ConfigManager::GetItem(const std::string name)
 
 ConfigManager::ConfigManager(std::map<std::string, std::unique_ptr<ConfigItem> >&& configMap) :
 	m_configMap(std::forward<std::map<std::string, std::unique_ptr<ConfigItem> > >(configMap)),
-	m_loadedWhiteListStr(ConstructLoadedWhiteListStr(ConstructLoadedWhiteList(m_configMap)))
+	m_loadedWhiteList(std::make_unique<StaticTypeList>(ConstructLoadedWhiteList(m_configMap)))
 {
+}
+
+std::string Decent::Tools::ConfigManager::GetLoadedWhiteListStr() const
+{
+	return ConstructLoadedWhiteListStr(*m_loadedWhiteList);
 }

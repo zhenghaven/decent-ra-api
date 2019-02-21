@@ -17,12 +17,14 @@ using namespace Decent::Tools;
 StaticTypeList::StaticTypeList(const WhiteListType & whiteList) :
 	m_listMap(whiteList)
 {
+#ifdef DEBUG
 	LOGI("Constrcuted Static WhiteList (Size = %llu):", m_listMap.size());
 	for (auto it = m_listMap.cbegin(); it != m_listMap.cend(); ++it)
 	{
 		LOGI("\t%s\t:\t%s", it->first.c_str(), it->second.c_str());
 	}
 	LOGI("Static WhiteList End. \n");
+#endif // DEBUG
 }
 
 StaticTypeList::~StaticTypeList()
