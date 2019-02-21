@@ -127,7 +127,13 @@ TlsCommLayer::~TlsCommLayer()
 {
 	if (m_sslCtx)
 	{
-		mbedtls_ssl_close_notify(m_sslCtx);
+		try
+		{
+			mbedtls_ssl_close_notify(m_sslCtx);
+		}
+		catch (const std::exception&)
+		{
+		}
 		mbedtls_ssl_free(m_sslCtx);
 	}
 	m_sslCtx = nullptr;
@@ -179,4 +185,16 @@ bool TlsCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg
 
 	uint64_t msgSize = static_cast<uint64_t>(inMsg.size());
 	return MbedTlsSslWriteWrap(m_sslCtx, &msgSize, sizeof(uint64_t)) && MbedTlsSslWriteWrap(m_sslCtx, inMsg.data(), inMsg.size());
+}
+
+Decent::MbedTlsObj::X509Cert Decent::Net::TlsCommLayer::GetPeerCert() const
+{
+	const mbedtls_x509_crt* crtPtr = mbedtls_ssl_get_peer_cert(m_sslCtx);
+
+	if (*this && crtPtr)
+	{
+		return Decent::MbedTlsObj::X509Cert(
+			Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).ToPemString()); //We just need the non-const pointer, and then we will return the duplicated object.
+	}
+	return Decent::MbedTlsObj::X509Cert();
 }

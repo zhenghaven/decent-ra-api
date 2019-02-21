@@ -717,6 +717,10 @@ namespace Decent
 			static std::string GeneratePemStr(const mbedtls_x509_crt& ref);
 
 		public:
+
+			/** \brief	Default constructor. Construct a empty and invalid instance. */
+			X509Cert();
+
 			X509Cert(const std::string& pemStr);
 
 			X509Cert(mbedtls_x509_crt& ref);
@@ -776,8 +780,6 @@ namespace Decent
 
 		protected:
 			static X509Cert FromPemDer(const void* ptr, size_t size);
-
-			X509Cert();
 
 			X509Cert(mbedtls_x509_crt* ptr, FreeFuncType freeFunc);
 
