@@ -371,12 +371,20 @@ namespace Decent
 				return VerifySignSha256(hash, sign.data(), sign.size());
 			}
 
+			virtual std::string ToPubPemString() const;
+
+			virtual bool ToPubDerArray(std::vector<uint8_t>& outArray) const;
+
 		protected:
 			PKey();
 
 			PKey(mbedtls_pk_context* ptr, FreeFuncType freeFunc) noexcept :
 				ObjBase(ptr, freeFunc)
 			{}
+
+			virtual std::string ToPubPemString(const size_t maxBufSize) const;
+
+			virtual bool ToPubDerArray(std::vector<uint8_t>& outArray, const size_t maxBufSize) const;
 		};
 
 		class Gcm : public ObjBase<mbedtls_gcm_context>
@@ -531,8 +539,8 @@ namespace Decent
 				return VerifySign(inSign, hash.data(), hash.size());
 			}
 
-			std::string ToPubPemString() const;
-			bool ToPubDerArray(std::vector<uint8_t>& outArray) const;
+			virtual std::string ToPubPemString() const override;
+			virtual bool ToPubDerArray(std::vector<uint8_t>& outArray) const override;
 
 			mbedtls_ecp_keypair* GetEcKeyPtr();
 

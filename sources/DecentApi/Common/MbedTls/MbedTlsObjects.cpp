@@ -77,8 +77,11 @@ namespace
 
 	static constexpr size_t ECP_PUB_DER_MAX_BYTES = (30 + 2 * MBEDTLS_ECP_MAX_BYTES);
 	static constexpr size_t ECP_PRV_DER_MAX_BYTES = (29 + 3 * MBEDTLS_ECP_MAX_BYTES);
+	static constexpr size_t RSA_PUB_DER_MAX_BYTES = (38 + 2 * MBEDTLS_MPI_MAX_SIZE);
 	static constexpr size_t X509_REQ_DER_MAX_BYTES = 4096; //From x509write_csr.c
 	static constexpr size_t X509_CRT_DER_MAX_BYTES = 4096; //From x509write_crt.c
+
+	static constexpr size_t PUB_DER_MAX_BYTES = ECP_PUB_DER_MAX_BYTES > RSA_PUB_DER_MAX_BYTES ? ECP_PUB_DER_MAX_BYTES : RSA_PUB_DER_MAX_BYTES;
 
 	static constexpr size_t CalcPemMaxBytes(size_t derMaxSize, size_t headerSize, size_t footerSize)
 	{
@@ -91,6 +94,11 @@ namespace
 
 	static constexpr size_t ECP_PUB_PEM_MAX_BYTES = 
 		CalcPemMaxBytes(ECP_PUB_DER_MAX_BYTES, sizeof(PEM_BEGIN_PUBLIC_KEY) - 1, sizeof(PEM_END_PUBLIC_KEY) - 1);
+
+	static constexpr size_t RSA_PUB_PEM_MAX_BYTES = 
+		CalcPemMaxBytes(RSA_PUB_DER_MAX_BYTES, sizeof(PEM_BEGIN_PUBLIC_KEY) - 1, sizeof(PEM_END_PUBLIC_KEY) - 1);
+
+	static constexpr size_t PUB_PEM_MAX_BYTES = ECP_PUB_PEM_MAX_BYTES > RSA_PUB_PEM_MAX_BYTES ? ECP_PUB_PEM_MAX_BYTES : RSA_PUB_PEM_MAX_BYTES;
 
 	static constexpr size_t ECP_PRV_PEM_MAX_BYTES =
 		CalcPemMaxBytes(ECP_PRV_DER_MAX_BYTES, sizeof(PEM_BEGIN_PRIVATE_KEY_EC) - 1, sizeof(PEM_END_PRIVATE_KEY_EC) - 1);
@@ -205,6 +213,52 @@ PKey::PKey() :
 	ObjBase(new mbedtls_pk_context, &FreeObject)
 {
 	mbedtls_pk_init(Get());
+}
+
+std::string PKey::ToPubPemString(const size_t maxBufSize) const
+{
+	if (!*this)
+	{
+		return std::string();
+	}
+
+	std::unique_ptr<char[]> buf = Tools::make_unique<char[]>(maxBufSize);
+	if (mbedtls_pk_write_pubkey_pem(Get(), reinterpret_cast<unsigned char*>(buf.get()), maxBufSize)
+		!= MBEDTLS_SUCCESS_RET)
+	{
+		return std::string();
+	}
+
+	return std::string(buf.get());
+}
+
+bool PKey::ToPubDerArray(std::vector<uint8_t>& outArray, const size_t maxBufSize) const
+{
+	if (!*this)
+	{
+		return false;
+	}
+
+	outArray.resize(maxBufSize);
+	int len = mbedtls_pk_write_pubkey_der(Get(), outArray.data(), outArray.size());
+	if (len <= 0)
+	{
+		outArray.resize(0);
+		return false;
+	}
+
+	outArray.resize(len);
+	return true;
+}
+
+std::string PKey::ToPubPemString() const
+{
+	return PKey::ToPubPemString(PUB_PEM_MAX_BYTES);
+}
+
+bool PKey::ToPubDerArray(std::vector<uint8_t>& outArray) const
+{
+	return PKey::ToPubDerArray(outArray, PUB_DER_MAX_BYTES);
 }
 
 void Gcm::FreeObject(mbedtls_gcm_context * ptr)
@@ -368,38 +422,12 @@ bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const
 
 std::string ECKeyPublic::ToPubPemString() const
 {
-	if (!*this)
-	{
-		return std::string();
-	}
-	
-	std::vector<char> tmpRes(ECP_PUB_PEM_MAX_BYTES);
-	if (mbedtls_pk_write_pubkey_pem(Get(), reinterpret_cast<unsigned char*>(tmpRes.data()), tmpRes.size())
-		!= MBEDTLS_SUCCESS_RET)
-	{
-		return std::string();
-	}
-
-	return std::string(tmpRes.data());
+	return PKey::ToPubPemString(ECP_PUB_PEM_MAX_BYTES);
 }
 
 bool ECKeyPublic::ToPubDerArray(std::vector<uint8_t>& outArray) const
 {
-	if (!*this)
-	{
-		return false;
-	}
-
-	outArray.resize(ECP_PUB_DER_MAX_BYTES);
-	int len = mbedtls_pk_write_pubkey_der(Get(), outArray.data(), outArray.size());
-	if (len <= 0)
-	{
-		return false;
-	}
-
-	outArray.resize(len);
-
-	return true;
+	return PKey::ToPubDerArray(outArray, ECP_PUB_DER_MAX_BYTES);
 }
 
 mbedtls_ecp_keypair * ECKeyPublic::GetEcKeyPtr()
