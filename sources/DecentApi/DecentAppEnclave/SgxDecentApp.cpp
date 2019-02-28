@@ -2,18 +2,22 @@
 #include <memory>
 
 #include <sgx_error.h>
+#include <sgx_dh.h>
 
 #include "../CommonEnclave/SGX/LocAttCommLayer.h"
 
 #include "../Common/Common.h"
+#include "../Common/Tools/DataCoding.h"
 #include "../Common/Ra/States.h"
 #include "../Common/Ra/Crypto.h"
 #include "../Common/Ra/KeyContainer.h"
 #include "../Common/Ra/CertContainer.h"
 #include "../Common/Ra/WhiteList/Loaded.h"
+#include "../Common/Ra/WhiteList/HardCoded.h"
 
 using namespace Decent;
 using namespace Decent::Ra;
+using namespace Decent::Ra::WhiteList;
 
 extern "C" size_t ecall_decent_ra_app_get_x509_pem(char* buf, size_t buf_len)
 {
@@ -36,16 +40,18 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 
+	Ra::States& state = Ra::States::Get();
+	const HardCoded& hardcoded = state.GetHardCodedWhiteList();
+
 	Decent::Sgx::LocAttCommLayer commLayer(connection, false);
 	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
-	if (!identity)
+	if (!identity ||
+		!hardcoded.CheckHashAndName(Tools::SerializeStruct(identity->mr_enclave), WhiteList::sk_nameDecentServer) )
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	//TODO: check Decent server Hash here instead.
-
-	KeyContainer& keyContainer = States::Get().GetKeyContainer();
+	const KeyContainer& keyContainer = state.GetKeyContainer();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
 	X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 	if (!certReq)
@@ -68,11 +74,11 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	States::Get().GetCertContainer().SetCert(cert);
+	state.GetCertContainer().SetCert(cert);
 
 	//Set loaded whitelist.
 	WhiteList::Loaded loadedList(*cert);
-	States::Get().GetLoadedWhiteList(&loadedList);
+	state.GetLoadedWhiteList(&loadedList);
 
 	return SGX_SUCCESS;
 }

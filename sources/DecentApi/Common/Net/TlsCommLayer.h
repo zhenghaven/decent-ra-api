@@ -37,7 +37,8 @@ namespace Decent
 			virtual bool ReceiveMsg(void* const connectionPtr, std::string& outMsg) override;
 			virtual bool SendMsg(void* const connectionPtr, const std::string& inMsg) override;
 
-			Decent::MbedTlsObj::X509Cert GetPeerCert() const;
+			std::string GetPeerCertPem() const;
+			std::string GetPublicKeyPem() const;
 
 		private:
 			mbedtls_ssl_context * m_sslCtx;

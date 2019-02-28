@@ -187,14 +187,26 @@ bool TlsCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg
 	return MbedTlsSslWriteWrap(m_sslCtx, &msgSize, sizeof(uint64_t)) && MbedTlsSslWriteWrap(m_sslCtx, inMsg.data(), inMsg.size());
 }
 
-Decent::MbedTlsObj::X509Cert Decent::Net::TlsCommLayer::GetPeerCert() const
+std::string TlsCommLayer::GetPeerCertPem() const
 {
 	const mbedtls_x509_crt* crtPtr = mbedtls_ssl_get_peer_cert(m_sslCtx);
 
 	if (*this && crtPtr)
 	{
-		return Decent::MbedTlsObj::X509Cert(
-			Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).ToPemString()); //We just need the non-const pointer, and then we will return the duplicated object.
+		return Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).ToPemString(); 
+		//We just need the non-const pointer, and then we will return the PEM string.
 	}
-	return Decent::MbedTlsObj::X509Cert();
+	return std::string();
+}
+
+std::string TlsCommLayer::GetPublicKeyPem() const
+{
+	const mbedtls_x509_crt* crtPtr = mbedtls_ssl_get_peer_cert(m_sslCtx);
+
+	if (*this && crtPtr)
+	{
+		return Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).GetPublicKey().ToPubPemString();
+		//We just need the non-const pointer, and then we will return the PEM string.
+	}
+	return std::string();
 }

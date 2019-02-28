@@ -167,14 +167,14 @@ void SmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::sh
 			}
 			catch (const std::exception&)
 			{
-				LOGI("Exception Caught when process connection.\n");
-				LOGI("Connection will be closed.\n");
+				LOGI("SmartServer: Exception Caught when process connection.");
+				LOGI("Connection will be closed.");
 				isEnded = true;
 			}
 			catch (...)
 			{
-				LOGI("Unknown Exception Caught when process connection.\n");
-				LOGI("Connection will be closed.\n");
+				LOGI("SmartServer: Unknown Exception Caught when process connection.");
+				LOGI("Connection will be closed.");
 				isEnded = true;
 			}
 			

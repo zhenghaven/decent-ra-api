@@ -36,7 +36,7 @@ bool DecentServer::AddTrustedNode(const ServerX509 & cert)
 #ifndef DEBUG
 	if (!verifyRes ||
 		!VerifyCertFirstTime(cert) ||
-		!States::Get().GetHardCodedWhiteList().CheckHashAndName(serverHash, HardCoded::sk_decentServerLabel))
+		!States::Get().GetHardCodedWhiteList().CheckHashAndName(serverHash, sk_nameDecentServer))
 	{
 		return false;
 	}
