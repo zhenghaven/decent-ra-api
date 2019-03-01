@@ -27,32 +27,23 @@ namespace Decent
 
 		struct LocalAcceptedResult
 		{
+			LocalAcceptedResult() noexcept;
+
+			~LocalAcceptedResult();
+
+			LocalAcceptedResult(std::unique_ptr<SharedObject<LocalSessionStruct> >& sharedObj_a,
+				std::unique_ptr<LocalMessageQueue>& msgQ_a,
+				std::unique_ptr<SharedObject<LocalSessionStruct> >& sharedObj_b,
+				std::unique_ptr<LocalMessageQueue>& msgQ_b) noexcept;
+
+			LocalAcceptedResult(const LocalAcceptedResult&) = delete;
+			LocalAcceptedResult(LocalAcceptedResult&& rhs) noexcept;
+
 			std::unique_ptr<SharedObject<LocalSessionStruct> > m_sharedObj_a;
 			std::unique_ptr<LocalMessageQueue> m_msgQ_a;
 
 			std::unique_ptr<SharedObject<LocalSessionStruct> > m_sharedObj_b;
 			std::unique_ptr<LocalMessageQueue> m_msgQ_b;
-
-			LocalAcceptedResult() noexcept
-			{}
-
-			LocalAcceptedResult(std::unique_ptr<SharedObject<LocalSessionStruct> >& sharedObj_a, 
-				std::unique_ptr<LocalMessageQueue>& msgQ_a, 
-				std::unique_ptr<SharedObject<LocalSessionStruct> >& sharedObj_b, 
-				std::unique_ptr<LocalMessageQueue>& msgQ_b) noexcept:
-			m_sharedObj_a(std::move(sharedObj_a)),
-				m_msgQ_a(std::move(msgQ_a)),
-				m_sharedObj_b(std::move(sharedObj_b)),
-				m_msgQ_b(std::move(msgQ_b))
-			{}
-
-			LocalAcceptedResult(const LocalAcceptedResult&) = delete;
-			LocalAcceptedResult(LocalAcceptedResult&& rhs) noexcept :
-				m_sharedObj_a(std::move(rhs.m_sharedObj_a)),
-				m_msgQ_a(std::move(rhs.m_msgQ_a)),
-				m_sharedObj_b(std::move(rhs.m_sharedObj_b)),
-				m_msgQ_b(std::move(rhs.m_msgQ_b))
-			{}
 		};
 
 		/** \brief	Acceptor for local connection. */

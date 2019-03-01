@@ -25,16 +25,44 @@ using namespace Decent::Net;
 								 throw ConnectionClosedException();\
 								 }
 
-static std::string GenerateSessionId()
+namespace
 {
-	boost::uuids::random_generator randGen;
-	boost::uuids::uuid uuid(randGen());
+	static std::string GenerateSessionId()
+	{
+		boost::uuids::random_generator randGen;
+		boost::uuids::uuid uuid(randGen());
 
-	static_assert(cppcodec::detail::hex<cppcodec::detail::hex_lower>::encoded_size(sizeof(uuid.data)) + 1 == LocalConnectStruct::UUID_STR_LEN,
-		"The encoded size must be eqaul to the string length!");
+		static_assert(cppcodec::detail::hex<cppcodec::detail::hex_lower>::encoded_size(sizeof(uuid.data)) + 1 == LocalConnectStruct::UUID_STR_LEN,
+			"The encoded size must be eqaul to the string length!");
 
-	return cppcodec::hex_lower::encode(uuid.data, sizeof(uuid.data));
+		return cppcodec::hex_lower::encode(uuid.data, sizeof(uuid.data));
+	}
 }
+
+LocalAcceptedResult::LocalAcceptedResult() noexcept
+{
+}
+
+LocalAcceptedResult::~LocalAcceptedResult()
+{
+}
+
+LocalAcceptedResult::LocalAcceptedResult(std::unique_ptr<SharedObject<LocalSessionStruct>>& sharedObj_a, 
+	std::unique_ptr<LocalMessageQueue>& msgQ_a, 
+	std::unique_ptr<SharedObject<LocalSessionStruct>>& sharedObj_b, 
+	std::unique_ptr<LocalMessageQueue>& msgQ_b) noexcept:
+m_sharedObj_a(std::move(sharedObj_a)),
+m_msgQ_a(std::move(msgQ_a)),
+m_sharedObj_b(std::move(sharedObj_b)),
+m_msgQ_b(std::move(msgQ_b))
+{}
+
+LocalAcceptedResult::LocalAcceptedResult(LocalAcceptedResult && rhs) noexcept :
+m_sharedObj_a(std::move(rhs.m_sharedObj_a)),
+m_msgQ_a(std::move(rhs.m_msgQ_a)),
+m_sharedObj_b(std::move(rhs.m_sharedObj_b)),
+m_msgQ_b(std::move(rhs.m_msgQ_b))
+{}
 
 LocalAcceptor::LocalAcceptor(const std::string & serverName) noexcept :
 	m_sharedObj(std::make_shared<SharedObject<LocalConnectStruct> >(serverName, true)),
