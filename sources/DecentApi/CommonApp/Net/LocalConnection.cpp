@@ -9,7 +9,7 @@
 
 #include "LocalServer.h"
 #include "LocalConnectionStructs.h"
-#include "NetworkException.h"
+#include "../../Common/Net/NetworkException.h"
 
 using namespace boost::interprocess;
 using namespace Decent::Net;
@@ -32,7 +32,7 @@ static void TimedWait(interprocess_condition& cond, scoped_lock<interprocess_mut
 	CONNECTION_CLOSED_CHECK(prThrow());
 }
 
-Connection* LocalConnection::Connect(const std::string & serverName)
+LocalConnection LocalConnection::Connect(const std::string & serverName)
 {
 	std::unique_ptr<SharedObject<LocalConnectStruct> > sharedAcc(new SharedObject<LocalConnectStruct>(serverName, false));
 
@@ -52,7 +52,7 @@ Connection* LocalConnection::Connect(const std::string & serverName)
 	std::string sessionId(sharedAcc->GetObject().m_msg);
 	objRef.m_isMsgReady = false;
 
-	return new LocalConnection(sessionId);
+	return sessionId;
 }
 
 LocalConnection::LocalConnection(const std::string & sessionId) :
@@ -68,13 +68,11 @@ LocalConnection::LocalConnection(LocalAcceptor & acceptor) :
 {
 }
 
-LocalConnection::LocalConnection(const std::pair<
-	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
-	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> >& sharedObjs) noexcept :
-	m_inSharedObj(sharedObjs.first.first),
-	m_outSharedObj(sharedObjs.second.first),
-	m_inMsgQ(sharedObjs.first.second),
-	m_outMsgQ(sharedObjs.second.second)
+LocalConnection::LocalConnection(LocalAcceptedResult&& sharedObjs) noexcept :
+	m_inSharedObj(std::move(sharedObjs.m_sharedObj_a)),
+	m_outSharedObj(std::move(sharedObjs.m_sharedObj_b)),
+	m_inMsgQ(std::move(sharedObjs.m_msgQ_a)),
+	m_outMsgQ(std::move(sharedObjs.m_msgQ_b))
 {
 }
 

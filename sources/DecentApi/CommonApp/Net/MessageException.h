@@ -1,72 +1,43 @@
 #pragma once
 
-#include <exception>
+#include "../../Common/RuntimeException.h"
 
 namespace Decent
 {
 	namespace Net
 	{
-		class MessageException : public std::exception
+		class MessageException : public Decent::RuntimeException
 		{
 		public:
-			MessageException()
-			{}
-			virtual ~MessageException()
+			explicit MessageException(const std::string& what_arg) :
+				RuntimeException(what_arg.c_str())
 			{}
 
-			virtual const char* what() const throw()
-			{
-				return "General Smart Server Message Exception.";
-			}
-		private:
+			explicit MessageException(const char* what_arg) :
+				RuntimeException(what_arg)
+			{}
 
 		};
 
-		class ReceivedErrorMessageException : public MessageException
+		class ReceivedErrorMessage : public MessageException
 		{
 		public:
-			ReceivedErrorMessageException()
-			{}
-			~ReceivedErrorMessageException()
+			explicit ReceivedErrorMessage(const std::string& msgContent) :
+				MessageException("Peer's Error Message: " + msgContent + ". ")
 			{}
 
-			virtual const char* what() const throw()
-			{
-				return "Received a error message from the remote side.";
-			}
-		private:
+			explicit ReceivedErrorMessage(const char* msgContent) :
+				MessageException(std::string(msgContent))
+			{}
 
 		};
 
-		class MessageInvalidException : public MessageException
+		class MessageParseException : public MessageException
 		{
 		public:
-			MessageInvalidException()
+			MessageParseException() :
+				MessageException("Smart Message Parse Error. Invalid Format!")
 			{}
-			virtual ~MessageInvalidException()
-			{}
-
-			virtual const char* what() const throw()
-			{
-				return "Message contains invalid contents that may cause process error!";
-			}
-		private:
-
-		};
-
-		class MessageParseException : public MessageInvalidException
-		{
-		public:
-			MessageParseException()
-			{}
-			virtual ~MessageParseException()
-			{}
-
-			virtual const char* what() const throw()
-			{
-				return "Smart Server Message Parse Error. Invalid message format!";
-			}
-		private:
 
 		};
 	}

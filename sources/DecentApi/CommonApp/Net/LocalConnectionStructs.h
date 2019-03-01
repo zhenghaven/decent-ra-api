@@ -27,7 +27,7 @@ namespace Decent
 					boost::interprocess::shared_memory_object::remove(objName.c_str());
 					boost::interprocess::shared_memory_object retObj(boost::interprocess::create_only, objName.c_str(), boost::interprocess::read_write);
 					retObj.truncate(sizeof(T));
-					LOGI("Created shared object, %s.\n", objName.c_str());
+					LOGI("Created shared object, %s.", objName.c_str());
 					return std::move(retObj);
 				}
 				else
@@ -84,7 +84,7 @@ namespace Decent
 				if (m_isOwner)
 				{
 					bool isClosed = boost::interprocess::shared_memory_object::remove(objName.c_str());
-					LOGI("Attempted to close shared object, %s - %s!\n", objName.c_str(), isClosed ? "Successful!" : "Failed!");
+					LOGI("Attempted to close shared object, %s - %s!", objName.c_str(), isClosed ? "Successful!" : "Failed!");
 				}
 			}
 
@@ -162,7 +162,7 @@ namespace Decent
 				if (isOwner)
 				{
 					boost::interprocess::message_queue::remove(name.c_str());
-					LOGI("Created msg queue, %s.\n", name.c_str());
+					LOGI("Created msg queue, %s.", name.c_str());
 					return new boost::interprocess::message_queue(boost::interprocess::create_only, name.c_str(),
 						MSG_SIZE, sizeof(uint8_t));
 				}
@@ -205,7 +205,7 @@ namespace Decent
 				if (m_isOwner)
 				{
 					bool isClosed = boost::interprocess::message_queue::remove(m_name.c_str());
-					LOGI("Attempted to close msg queue, %s - %s!\n", m_name.c_str(), isClosed ? "Successful!" : "Failed!");
+					LOGI("Attempted to close msg queue, %s - %s!", m_name.c_str(), isClosed ? "Successful!" : "Failed!");
 				}
 			}
 

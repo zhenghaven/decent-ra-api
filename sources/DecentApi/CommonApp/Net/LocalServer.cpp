@@ -15,7 +15,7 @@
 
 #include "LocalConnectionStructs.h"
 #include "LocalConnection.h"
-#include "NetworkException.h"
+#include "../../Common/Net/NetworkException.h"
 
 using namespace boost::interprocess;
 using namespace Decent::Net;
@@ -36,13 +36,13 @@ static std::string GenerateSessionId()
 	return cppcodec::hex_lower::encode(uuid.data, sizeof(uuid.data));
 }
 
-LocalAcceptor::LocalAcceptor(const std::string & serverName) :
+LocalAcceptor::LocalAcceptor(const std::string & serverName) noexcept :
 	m_sharedObj(std::make_shared<SharedObject<LocalConnectStruct> >(serverName, true)),
 	m_isTerminated(0)
 {
 }
 
-LocalAcceptor::LocalAcceptor(LocalAcceptor && other) :
+LocalAcceptor::LocalAcceptor(LocalAcceptor && other) noexcept :
 	m_sharedObj(std::move(other.m_sharedObj)),
 	m_isTerminated(static_cast<uint8_t>(other.m_isTerminated))
 {
@@ -52,7 +52,7 @@ LocalAcceptor::~LocalAcceptor()
 {
 }
 
-LocalAcceptor & LocalAcceptor::operator=(LocalAcceptor && other)
+LocalAcceptor & LocalAcceptor::operator=(LocalAcceptor && other) noexcept
 {
 	if (this != &other)
 	{
@@ -84,16 +84,11 @@ void LocalAcceptor::Terminate() noexcept
 	}
 }
 
-std::pair<
-	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
-	std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> > LocalAcceptor::Accept()
+LocalAcceptedResult LocalAcceptor::Accept()
 {
-	std::pair<
-		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
-		std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> > emptyRet(std::make_pair(nullptr, nullptr), std::make_pair(nullptr, nullptr));
 	if (m_isTerminated)
 	{
-		return emptyRet;
+		return LocalAcceptedResult();
 	}
 
 	std::shared_ptr<SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
@@ -109,10 +104,10 @@ std::pair<
 
 		std::string uuid = GenerateSessionId();
 
-		sharedObj_s2c.reset(new SharedObject<LocalSessionStruct>((uuid + SESSION_NAME_S2C_POSTFIX), true));
-		sharedObj_c2s.reset(new SharedObject<LocalSessionStruct>((uuid + SESSION_NAME_C2S_POSTFIX), true));
-		msgQ_s2c.reset(new LocalMessageQueue((uuid + QUEUE_NAME_S2C_POSTFIX), true));
-		msgQ_c2s.reset(new LocalMessageQueue((uuid + QUEUE_NAME_C2S_POSTFIX), true));
+		sharedObj_s2c = std::make_unique<SharedObject<LocalSessionStruct> >((uuid + SESSION_NAME_S2C_POSTFIX), true);
+		sharedObj_c2s = std::make_unique<SharedObject<LocalSessionStruct> >((uuid + SESSION_NAME_C2S_POSTFIX), true);
+		msgQ_s2c = std::make_unique<LocalMessageQueue>((uuid + QUEUE_NAME_S2C_POSTFIX), true);
+		msgQ_c2s = std::make_unique<LocalMessageQueue>((uuid + QUEUE_NAME_C2S_POSTFIX), true);
 
 		std::memcpy(obj->GetObject().m_msg, uuid.c_str(), sizeof(obj->GetObject().m_msg));
 		obj->GetObject().m_isMsgReady = true;
@@ -120,9 +115,7 @@ std::pair<
 
 	obj->GetObject().m_idReadySignal.notify_one();
 
-	return std::make_pair(
-		std::make_pair(sharedObj_c2s.release(), msgQ_c2s.release()),
-		std::make_pair(sharedObj_s2c.release(), msgQ_s2c.release()));
+	return LocalAcceptedResult(sharedObj_c2s, msgQ_c2s, sharedObj_s2c, msgQ_s2c);
 }
 
 LocalServer::LocalServer(const std::string & serverName) :
@@ -151,25 +144,14 @@ LocalServer & LocalServer::operator=(LocalServer && other)
 	return *this;
 }
 
-std::unique_ptr<Connection> LocalServer::AcceptConnection() noexcept
+std::unique_ptr<Connection> LocalServer::AcceptConnection()
 {
 	if (m_isTerminated)
 	{
 		return nullptr;
 	}
-	try
-	{
-		std::unique_ptr<Connection> ptr = std::make_unique<LocalConnection>(m_acceptor);
-		if (m_isTerminated)
-		{
-			return nullptr;
-		}
-		return std::move(ptr);
-	}
-	catch (const std::exception&)
-	{
-		return nullptr;
-	}
+
+	return std::make_unique<LocalConnection>(m_acceptor);
 }
 
 bool LocalServer::IsTerminated() noexcept

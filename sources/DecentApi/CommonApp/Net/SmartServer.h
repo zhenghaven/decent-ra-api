@@ -30,7 +30,7 @@ namespace Decent
 			typedef Connection* ConnectionHandle;
 
 		public:
-			SmartServer();
+			SmartServer(const size_t acceptRetry = 10);
 
 			virtual ~SmartServer();
 
@@ -73,6 +73,8 @@ namespace Decent
 			std::thread* m_cleanningThread;
 
 			std::atomic<uint8_t> m_isTerminated;
+
+			size_t m_acceptRetry;
 
 			void CleanAll() noexcept;
 			void AddToCleanQueue(std::pair<std::unique_ptr<Server>, std::thread*> server) noexcept;

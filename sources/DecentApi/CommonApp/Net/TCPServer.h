@@ -27,17 +27,41 @@ namespace Decent
 	{
 		class Connection;
 
+		/** \brief	A TCP server. */
 		class TCPServer : virtual public Server
 		{
 		public:
 			TCPServer() = delete;
-			TCPServer(uint32_t ipAddr, uint16_t portNum);
+
+			/**
+			 * \brief	Construct a TCP server. 
+			 * 			Known exceptions: Decent::Net::Exception
+			 *
+			 * \param	ipAddr 	The IP address.
+			 * \param	portNum	The port number.
+			 */
+			TCPServer(const uint32_t ipAddr, const uint16_t portNum);
+
+			/** \brief	Destructor */
 			virtual ~TCPServer() noexcept;
 
-			///Warning: Blocking method! This method will be blocked until a connection is accepted.
-			virtual std::unique_ptr<Connection> AcceptConnection() noexcept override;
+			/**
+			 * \brief	Accept an incoming connection.
+			 * 			Known exceptions: Decent::Net::Exception
+			 * 			Warning: Blocking method! This method will be blocked until a connection is accepted.
+			 *
+			 * \return	A std::unique_ptr&lt;Connection&gt;
+			 */			
+			virtual std::unique_ptr<Connection> AcceptConnection() override;
 
+			/**
+			 * \brief	Query if this TCP Server is terminated
+			 *
+			 * \return	True if terminated, false if not.
+			 */
 			virtual bool IsTerminated() noexcept override;
+
+			/** \brief	Terminates this TCP Server */
 			virtual void Terminate() noexcept override;
 
 		protected:

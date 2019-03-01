@@ -25,30 +25,65 @@ namespace Decent
 		struct LocalSessionStruct;
 		struct LocalMessageQueue;
 
+		struct LocalAcceptedResult
+		{
+			std::unique_ptr<SharedObject<LocalSessionStruct> > m_sharedObj_a;
+			std::unique_ptr<LocalMessageQueue> m_msgQ_a;
+
+			std::unique_ptr<SharedObject<LocalSessionStruct> > m_sharedObj_b;
+			std::unique_ptr<LocalMessageQueue> m_msgQ_b;
+
+			LocalAcceptedResult() noexcept
+			{}
+
+			LocalAcceptedResult(std::unique_ptr<SharedObject<LocalSessionStruct> >& sharedObj_a, 
+				std::unique_ptr<LocalMessageQueue>& msgQ_a, 
+				std::unique_ptr<SharedObject<LocalSessionStruct> >& sharedObj_b, 
+				std::unique_ptr<LocalMessageQueue>& msgQ_b) noexcept:
+			m_sharedObj_a(std::move(sharedObj_a)),
+				m_msgQ_a(std::move(msgQ_a)),
+				m_sharedObj_b(std::move(sharedObj_b)),
+				m_msgQ_b(std::move(msgQ_b))
+			{}
+
+			LocalAcceptedResult(const LocalAcceptedResult&) = delete;
+			LocalAcceptedResult(LocalAcceptedResult&& rhs) noexcept :
+				m_sharedObj_a(std::move(rhs.m_sharedObj_a)),
+				m_msgQ_a(std::move(rhs.m_msgQ_a)),
+				m_sharedObj_b(std::move(rhs.m_sharedObj_b)),
+				m_msgQ_b(std::move(rhs.m_msgQ_b))
+			{}
+		};
+
+		/** \brief	Acceptor for local connection. */
 		class LocalAcceptor
 		{
 		public:
 			LocalAcceptor() = delete;
-			LocalAcceptor(const std::string& serverName);
+
+			/**
+			 * \brief	Constructor
+			 *
+			 * \param	serverName	Name of the server.
+			 */
+			LocalAcceptor(const std::string& serverName) noexcept;
 			LocalAcceptor(const LocalAcceptor& other) = delete; //Copy is not allowed.
-			LocalAcceptor(LocalAcceptor&& other);
+			LocalAcceptor(LocalAcceptor&& other) noexcept;
 			virtual ~LocalAcceptor() noexcept;
 
 			LocalAcceptor& operator=(const LocalAcceptor& other) = delete;
-			LocalAcceptor& operator=(LocalAcceptor&& other);
+			LocalAcceptor& operator=(LocalAcceptor&& other) noexcept;
 
 			bool IsTerminate() const noexcept;
 
-			std::pair<
-				std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
-				std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> > Accept();
+			LocalAcceptedResult Accept();
 
 			void Terminate() noexcept;
 
 		private:
 			std::shared_ptr<SharedObject<LocalConnectStruct> > m_sharedObj;
 
-			std::atomic<uint8_t> m_isTerminated;
+			std::atomic_uint8_t m_isTerminated;
 		};
 
 		class LocalServer : virtual public Server
@@ -63,7 +98,7 @@ namespace Decent
 			LocalServer& operator=(const LocalServer& other) = delete;
 			LocalServer& operator=(LocalServer&& other);
 
-			virtual std::unique_ptr<Connection> AcceptConnection() noexcept override;
+			virtual std::unique_ptr<Connection> AcceptConnection() override;
 
 			virtual bool IsTerminated() noexcept override;
 			virtual void Terminate() noexcept override;

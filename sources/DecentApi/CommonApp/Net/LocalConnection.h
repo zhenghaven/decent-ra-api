@@ -23,10 +23,12 @@ namespace Decent
 		struct LocalSessionStruct;
 		struct LocalMessageQueue;
 
+		struct LocalAcceptedResult;
+
 		class LocalConnection : public Connection
 		{
 		public:
-			static Connection* Connect(const std::string& serverName);
+			static LocalConnection Connect(const std::string& serverName);
 
 		public:
 			LocalConnection() = delete;
@@ -48,9 +50,7 @@ namespace Decent
 
 		private:
 			LocalConnection(const std::string& sessionId);
-			LocalConnection(const std::pair<
-				std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*>,
-				std::pair<SharedObject<LocalSessionStruct>*, LocalMessageQueue*> >& sharedObjs) noexcept;
+			LocalConnection(LocalAcceptedResult&& sharedObjs) noexcept;
 
 		private:
 			std::unique_ptr<SharedObject<LocalSessionStruct> > m_inSharedObj;

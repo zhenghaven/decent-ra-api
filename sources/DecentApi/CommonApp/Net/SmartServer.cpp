@@ -7,6 +7,7 @@
 #include <json/json.h>
 
 #include "../../Common/Common.h"
+#include "../../Common/Net/NetworkException.h"
 
 #include "Server.h"
 #include "Connection.h"
@@ -15,8 +16,9 @@
 
 using namespace Decent::Net;
 
-SmartServer::SmartServer() :
-	m_isTerminated(0)
+SmartServer::SmartServer(const size_t acceptRetry) :
+	m_isTerminated(0),
+	m_acceptRetry(acceptRetry)
 {
 	m_cleanningThread = new std::thread([this]() 
 	{
@@ -87,12 +89,21 @@ SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server
 
 	std::thread* thr = new std::thread([this, serverPtr, handler]()
 	{
-		while (!serverPtr->IsTerminated())
+		size_t retried = 0;
+		while (!serverPtr->IsTerminated() && retried < m_acceptRetry)
 		{
-			std::unique_ptr<Connection> connection = serverPtr->AcceptConnection();
-			if (connection)
+			try
 			{
+				std::unique_ptr<Connection> connection = serverPtr->AcceptConnection();
 				this->AddConnection(connection, handler, JobAtCompletedType(), JobAtCompletedType());
+				retried = 0;
+			}
+			catch (const Decent::Net::Exception& e)
+			{
+				const char* msg = e.what();
+				LOGI("SmartServer: Network Exception Caught:");
+				LOGI("%s", msg);
+				++retried;
 			}
 		}
 	});
@@ -165,9 +176,19 @@ void SmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::sh
 				connectionPtr->ReceivePack(jsonRoot);
 				isEnded = !(handler->ProcessSmartMessage(SmartMessages::ParseCat(jsonRoot), jsonRoot, *connectionPtr));
 			}
-			catch (const std::exception&)
+			catch (const Decent::Net::Exception& e)
 			{
-				LOGI("SmartServer: Exception Caught when process connection.");
+				const char* msg = e.what();
+				LOGI("SmartServer: Network Exception Caught:");
+				LOGI("%s", msg);
+				LOGI("Connection will be closed.");
+				isEnded = true;
+			}
+			catch (const std::exception& e)
+			{
+				const char* msg = e.what();
+				LOGI("SmartServer: Exception Caught:");
+				LOGI("%s", msg);
 				LOGI("Connection will be closed.");
 				isEnded = true;
 			}
@@ -286,8 +307,7 @@ void SmartServer::CleanAll() noexcept
 			its->second.second->join();
 		}
 		catch (...)
-		{
-		}
+		{}
 
 		delete its->second.second;
 
@@ -303,8 +323,7 @@ void SmartServer::CleanAll() noexcept
 			itc->second.second->join();
 		}
 		catch (...)
-		{
-		}
+		{}
 
 		delete itc->second.second;
 
