@@ -4,6 +4,7 @@
 #include <sgx_error.h>
 #include <sgx_dh.h>
 
+#include "../CommonEnclave/Ra/Crypto.h"
 #include "../CommonEnclave/SGX/LocAttCommLayer.h"
 
 #include "../Common/Common.h"
@@ -39,6 +40,8 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
+
+	PRINT_I("Initializing Decent App with hash: %s\n", Decent::Crypto::GetSelfHashBase64().c_str());
 
 	Ra::States& state = Ra::States::Get();
 	const HardCoded& hardcoded = state.GetHardCodedWhiteList();

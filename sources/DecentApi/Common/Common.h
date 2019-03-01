@@ -4,18 +4,6 @@
 #include <memory>
 #include <string>
 
-#ifndef NDEBUG
-
-#define LOGI(...) Decent::Tools::LogInfo(__VA_ARGS__);
-#define LOGW(...) Decent::Tools::LogWarning(__FILE__, __LINE__, __VA_ARGS__);
-
-#else
-
-#define LOGI(...) 
-#define LOGW(...) 
-
-#endif // !NDEBUG
-
 namespace Decent
 {
 	namespace Tools
@@ -28,3 +16,18 @@ namespace Decent
 		void LogWarning(const char* file, const int line, const char* fmt, ...);
 	}
 }
+
+#define PRINT_I(...) Decent::Tools::LogInfo(__VA_ARGS__);
+#define PRINT_W(...) Decent::Tools::LogWarning(__FILE__, __LINE__, __VA_ARGS__);
+
+#ifndef NDEBUG
+
+#define LOGI(...) PRINT_I(__VA_ARGS__)
+#define LOGW(...) PRINT_W(__VA_ARGS__)
+
+#else
+
+#define LOGI(...) 
+#define LOGW(...) 
+
+#endif // !NDEBUG

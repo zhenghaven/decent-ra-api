@@ -35,10 +35,8 @@ extern "C" sgx_status_t ecall_decent_ra_server_init(const sgx_spid_t* inSpid)
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	Decent::Sgx::RaProcessorSp::SetSpid(*inSpid);
-
-	std::string selfHash = Decent::Crypto::GetSelfHashBase64();
-
-	LOGI("Enclave Program Hash: %s\n", selfHash.c_str());
+	
+	PRINT_I("Initializing Decent Server with hash: %s\n", Decent::Crypto::GetSelfHashBase64().c_str());
 
 	return SGX_SUCCESS;
 }

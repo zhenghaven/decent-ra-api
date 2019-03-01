@@ -1,12 +1,10 @@
 #include "Crypto.h"
 
-#include "../../Common/Tools/DataCoding.h"
-
-using namespace Decent::Tools;
+#include <cppcodec/base64_default_rfc4648.hpp>
 
 const std::string & Decent::Crypto::GetSelfHashBase64()
 {
-	static const std::string hashBase64 = SerializeStruct(GetSelfHash().data(), GetSelfHash().size());
+	static const std::string hashBase64 = cppcodec::base64_rfc4648::encode(GetSelfHash());
 
 	return hashBase64;
 }
