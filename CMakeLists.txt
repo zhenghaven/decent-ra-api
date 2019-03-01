@@ -216,6 +216,7 @@ if(DECENT_API_DECENT_APP)
 	target_compile_options(DecentRa_App_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
 	set_target_properties(DecentRa_App_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
+    set_target_properties(DecentRa_App_Enclave PROPERTIES FOLDER "DecentRaApi")
 	
 	target_link_libraries(DecentRa_App_Enclave 
 		mbedcrypto_enclave 
@@ -234,6 +235,7 @@ if(DECENT_API_DECENT_APP)
 	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_App_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
+    set_target_properties(DecentRa_App_App PROPERTIES FOLDER "DecentRaApi")
 
 	target_link_libraries(DecentRa_App_App 
 		${COMMON_STANDARD_LIBRARIES} 
@@ -258,6 +260,7 @@ if(DECENT_API_DECENT_SERVER)
 	target_compile_options(DecentRa_Server_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
 	set_target_properties(DecentRa_Server_Enclave PROPERTIES LINK_FLAGS "${ENCLAVE_LINKER_OPTIONS} ${INTEL_SGX_SDK_LINKER_FLAGS_T}")
+    set_target_properties(DecentRa_Server_Enclave PROPERTIES FOLDER "DecentRaApi")
 	set_property(TARGET DecentRa_Server_Enclave APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 	
 	target_link_libraries(DecentRa_Server_Enclave 
@@ -277,6 +280,7 @@ if(DECENT_API_DECENT_SERVER)
 	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_Server_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
+    set_target_properties(DecentRa_Server_App PROPERTIES FOLDER "DecentRaApi")
 
 	target_link_libraries(DecentRa_Server_App 
 		${COMMON_STANDARD_LIBRARIES} 
