@@ -35,11 +35,7 @@ namespace
 
 	static std::string ParseString(const Json::Value & json)
 	{
-		if (json.JSON_IS_STRING())
-		{
-			return json.JSON_AS_STRING();
-		}
-		throw ConfigParseException();
+		return json.JSON_IS_STRING() ? json.JSON_AS_STRING() : throw ConfigParseException();
 	}
 
 	static std::string ParseAddr(const Json::Value & json)
@@ -111,6 +107,7 @@ namespace
 constexpr char const ConfigItem::sk_labelAddr[];
 constexpr char const ConfigItem::sk_labelPort[];
 constexpr char const ConfigItem::sk_labelIsLoadWl[];
+constexpr char const ConfigItem::sk_labelHash[];
 
 ConfigItem::ConfigItem(const Json::Value & json) :
 	ConfigItem(ParseAddr(json), ParsePort(json), ParseIsLoaddedList(json), json)

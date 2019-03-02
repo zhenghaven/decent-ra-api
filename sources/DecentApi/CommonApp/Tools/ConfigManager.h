@@ -3,7 +3,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <exception>
+#include "../../Common/RuntimeException.h"
 
 namespace Json
 {
@@ -22,14 +22,12 @@ namespace Decent
 
 	namespace Tools
 	{
-		class ConfigParseException : public std::runtime_error
+		class ConfigParseException : public RuntimeException
 		{
 		public:
 			ConfigParseException() :
-				std::runtime_error("Configuration File Parse Error!")
+				RuntimeException("Configuration File Parse Error!")
 			{}
-
-			virtual ~ConfigParseException() {}
 		};
 
 		class ConfigItem
@@ -85,7 +83,7 @@ namespace Decent
 			ConfigManager() = delete;
 			ConfigManager(const std::string& jsonStr);
 			ConfigManager(const Json::Value& json);
-			~ConfigManager();
+			virtual ~ConfigManager();
 
 			const ConfigItem* GetItemPtr(const std::string name) const;
 			const ConfigItem& GetItem(const std::string name) const;

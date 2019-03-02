@@ -287,8 +287,8 @@ Connector::Connector() :
 }
 
 Connector::Connector(const std::string & certPath, const std::string & keyPath) :
-	m_certPath(certPath),
-	m_keyPath(keyPath)
+	m_certPath(certPath.size() ? certPath : sk_defaultCertPath),
+	m_keyPath(keyPath.size() ? keyPath : sk_defaultKeyPath)
 {
 #ifndef SIMULATING_ENCLAVE
 	ValidateFilePath(m_certPath);
