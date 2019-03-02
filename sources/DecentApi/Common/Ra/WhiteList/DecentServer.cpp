@@ -3,13 +3,18 @@
 #include "../../Common.h"
 #include "../Crypto.h"
 #include "../RaReport.h"
-#include "../States.h"
+#include "../StatesSingleton.h"
 
 #include "HardCoded.h"
 
 using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Ra::WhiteList;
+
+namespace
+{
+	static const States& gs_state = GetStateSingleton();
+}
 
 DecentServer::DecentServer()
 {
@@ -36,7 +41,7 @@ bool DecentServer::AddTrustedNode(const ServerX509 & cert)
 #ifndef DEBUG
 	if (!verifyRes ||
 		!VerifyCertFirstTime(cert) ||
-		!States::Get().GetHardCodedWhiteList().CheckHashAndName(serverHash, sk_nameDecentServer))
+		!gs_state.GetHardCodedWhiteList().CheckHashAndName(serverHash, sk_nameDecentServer))
 	{
 		return false;
 	}

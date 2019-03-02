@@ -4,20 +4,20 @@
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-#include "Crypto.h"
+#include "../MbedTls/MbedTlsObjects.h"
 #include "../Common.h"
 
-using namespace Decent;
+using namespace Decent::Ra;
 
-Decent::Ra::CertContainer::CertContainer()
+CertContainer::CertContainer() noexcept
 {
 }
 
-Decent::Ra::CertContainer::~CertContainer()
+CertContainer::~CertContainer() noexcept
 {
 }
 
-std::shared_ptr<const MbedTlsObj::X509Cert> Decent::Ra::CertContainer::GetCert() const
+std::shared_ptr<const Decent::MbedTlsObj::X509Cert> CertContainer::GetCert() const noexcept
 {
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	return std::atomic_load(&m_cert);
@@ -26,7 +26,7 @@ std::shared_ptr<const MbedTlsObj::X509Cert> Decent::Ra::CertContainer::GetCert()
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-bool Decent::Ra::CertContainer::SetCert(std::shared_ptr<const MbedTlsObj::X509Cert> cert)
+bool CertContainer::SetCert(std::shared_ptr<const Decent::MbedTlsObj::X509Cert> cert) noexcept
 {
 	if (!cert || !*cert)
 	{

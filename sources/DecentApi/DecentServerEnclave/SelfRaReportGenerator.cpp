@@ -1,68 +1,32 @@
 #include "SelfRaReportGenerator.h"
 
-#include <rapidjson/document.h>
+#include "../Common/Ra/Crypto.h"
+#include "../Common/Ra/KeyContainer.h"
 
-#include <sgx_key_exchange.h>
+#include "../CommonEnclave/Ra/Crypto.h"
 
-#include "../Common/Tools/JsonTools.h"
-#include "../Common/Tools/DataCoding.h"
-#include "../Common/Ra/RaReport.h"
-#include "../Common/SGX/sgx_structs.h"
-#include "../Common/SGX/RaProcessorSp.h"
-#include "RaProcessor.h"
+#include "ServerStates.h"
+#include "ServerCertContainer.h"
 
-using namespace Decent::RaSgx;
-using namespace Decent::Tools;
+using namespace Decent::Ra;
 
-SelfRaReportGenerator::SelfRaReportGenerator(std::unique_ptr<Decent::Sgx::RaProcessorSp>& raSp, std::unique_ptr<RaProcessorClient>& raClient) :
-	m_raSp(std::move(raSp)),
-	m_raClient(std::move(raClient))
+bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator & reportGenerator, ServerStates& decentStates)
 {
-}
+	using namespace Decent;
 
-SelfRaReportGenerator::~SelfRaReportGenerator()
-{
-}
+	std::string platformType;
+	std::string selfRaReport;
 
-bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std::string & selfRaReport)
-{
-	using namespace Decent::Ra;
-
-	if (!m_raSp || !m_raClient)
-	{
-		return false;
-	}
-	
-	sgx_ra_msg0r_t msg0r;
-	sgx_ra_msg1_t msg1;
-	std::vector<uint8_t> msg2;
-	std::vector<uint8_t> msg3;
-	sgx_ra_msg4_t msg4;
-
-	sgx_report_data_t reportData;
-
-	if (!m_raSp->Init() ||
-		!m_raSp->GetMsg0r(msg0r) ||
-		!m_raClient->ProcessMsg0r(msg0r, msg1) ||
-		!m_raSp->ProcessMsg1(msg1, msg2) ||
-		!m_raClient->ProcessMsg2(*reinterpret_cast<sgx_ra_msg2_t*>(msg2.data()), msg2.size(), msg3) ||
-		!m_raSp->ProcessMsg3(*reinterpret_cast<sgx_ra_msg3_t*>(msg3.data()), msg3.size(), msg4, &reportData))
+	if (!reportGenerator.GenerateSelfRaReport(platformType, selfRaReport))
 	{
 		return false;
 	}
 
-	platformType = RaReport::sk_ValueReportTypeSgx;
+	const KeyContainer& keyContainer = decentStates.GetKeyContainer();
+	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = keyContainer.GetSignKeyPair();
 
-	rapidjson::Document doc;
-	JsonSetVal(doc, RaReport::sk_LabelIasReport, m_raSp->GetIasReportStr());
-	JsonSetVal(doc, RaReport::sk_LabelIasSign, m_raSp->GetIasReportSign());
-	JsonSetVal(doc, RaReport::sk_LabelIasCertChain, m_raSp->GetIasReportCert());
-	JsonSetVal(doc, RaReport::sk_LabelOriRepData, SerializeStruct(reportData));
+	std::shared_ptr<const ServerX509> serverCert(new ServerX509(*signkeyPair,
+		Decent::Crypto::GetSelfHashBase64(), platformType, selfRaReport));
 
-	rapidjson::Value report = std::move(static_cast<rapidjson::Value&>(doc));
-	JsonSetVal(doc, RaReport::sk_LabelRoot, report);
-
-	selfRaReport = Json2StyledString(doc);
-
-	return true;
+	return decentStates.GetServerCertContainer().SetServerCert(serverCert);
 }

@@ -18,15 +18,16 @@ namespace Decent
 }
 
 #define PRINT_I(...) Decent::Tools::LogInfo(__VA_ARGS__);
-#define PRINT_W(...) Decent::Tools::LogWarning(__FILE__, __LINE__, __VA_ARGS__);
 
 #ifndef NDEBUG
 
+#define PRINT_W(...) Decent::Tools::LogWarning(__FILE__, __LINE__, __VA_ARGS__);
 #define LOGI(...) PRINT_I(__VA_ARGS__)
 #define LOGW(...) PRINT_W(__VA_ARGS__)
 
 #else
 
+#define PRINT_W(...) Decent::Tools::LogWarning("", 0, __VA_ARGS__);
 #define LOGI(...) 
 #define LOGW(...) 
 

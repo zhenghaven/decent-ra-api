@@ -4,7 +4,6 @@ namespace Decent
 {
 	namespace Ra
 	{
-		class AppX509;
 		class CertContainer;
 		class KeyContainer;
 
@@ -21,13 +20,13 @@ namespace Decent
 			typedef const WhiteList::Loaded& (*GetLoadedWlFunc)(WhiteList::Loaded*);
 
 		public:
-			static States& Get()
-			{
-				static States inst;
-				return inst;
-			}
-
-			States();
+			States(CertContainer & certCntnr, KeyContainer & keyCntnr, WhiteList::DecentServer & serverWl, const WhiteList::HardCoded & hardCodedWl, GetLoadedWlFunc getLoadedFunc) :
+				m_certContainer(certCntnr),
+				m_keyContainer(keyCntnr),
+				m_serverWhiteList(serverWl),
+				m_hardCodedWhiteList(hardCodedWl),
+				m_getLoadedFunc(getLoadedFunc)
+			{}
 
 			virtual ~States()
 			{

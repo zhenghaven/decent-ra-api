@@ -1,31 +1,23 @@
 #pragma once
 
-#include <memory>
-
-#include "../CommonEnclave/Ra/SelfRaReportGenerator.h"
+#include <string>
 
 namespace Decent
 {
-	namespace Sgx
+	namespace Ra
 	{
-		class RaProcessorSp;
-	}
+		class ServerStates;
 
-	namespace RaSgx
-	{
-		class RaProcessorClient;
-
-		class SelfRaReportGenerator : public Decent::Ra::SelfRaReportGenerator
+		class SelfRaReportGenerator
 		{
 		public:
-			SelfRaReportGenerator(std::unique_ptr<Sgx::RaProcessorSp>& raSp, std::unique_ptr<RaSgx::RaProcessorClient>& raClient);
-			virtual ~SelfRaReportGenerator();
+			static bool GenerateAndStoreServerX509Cert(SelfRaReportGenerator& reportGenerator, ServerStates& decentStates);
 
-			virtual bool GenerateSelfRaReport(std::string& platformType, std::string& selfRaReport) override;
+		public:
+			virtual ~SelfRaReportGenerator() {}
 
-		private:
-			std::unique_ptr<Sgx::RaProcessorSp> m_raSp;
-			std::unique_ptr<RaSgx::RaProcessorClient> m_raClient;
+			virtual bool GenerateSelfRaReport(std::string& platformType, std::string& selfRaReport) = 0;
 		};
 	}
 }
+

@@ -1,4 +1,5 @@
 #include "States.h"
+#include "StatesSingleton.h"
 
 #include "KeyContainer.h"
 #include "CertContainer.h"
@@ -10,10 +11,10 @@ using namespace Decent::Ra;
 
 namespace
 {
-	static CertContainer certContainer;
-	static KeyContainer keyContainer;
-	static WhiteList::DecentServer serverWhiteList;
-	static const WhiteList::HardCoded hardCodedWhiteList;
+	static CertContainer gs_certContainer;
+	static KeyContainer gs_keyContainer;
+	static WhiteList::DecentServer gs_serverWhiteList;
+	static const WhiteList::HardCoded gs_hardCodedWhiteList;
 
 	static const WhiteList::Loaded& GetLoadedWhiteListImpl(WhiteList::Loaded* instPtr)
 	{
@@ -22,11 +23,9 @@ namespace
 	}
 }
 
-States::States() :
-	m_certContainer(certContainer),
-	m_serverWhiteList(serverWhiteList),
-	m_hardCodedWhiteList(hardCodedWhiteList),
-	m_keyContainer(keyContainer),
-	m_getLoadedFunc(&GetLoadedWhiteListImpl)
+States& Decent::Ra::GetStateSingleton()
 {
+	static States state(gs_certContainer, gs_keyContainer, gs_serverWhiteList, gs_hardCodedWhiteList, &GetLoadedWhiteListImpl);
+
+	return state;
 }

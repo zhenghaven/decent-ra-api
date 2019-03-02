@@ -14,12 +14,12 @@ namespace Decent
 		class CertContainer
 		{
 		public:
-			CertContainer();
-			~CertContainer();
+			CertContainer() noexcept;
+			virtual ~CertContainer() noexcept;
 
-			std::shared_ptr<const MbedTlsObj::X509Cert> GetCert() const;
+			std::shared_ptr<const MbedTlsObj::X509Cert> GetCert() const noexcept;
 
-			bool SetCert(std::shared_ptr<const MbedTlsObj::X509Cert> cert);
+			bool SetCert(std::shared_ptr<const MbedTlsObj::X509Cert> cert) noexcept;
 
 		private:
 			std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
