@@ -94,7 +94,7 @@ namespace
 			const ConfigItem& item = *(it->second);
 			if (item.GetIsLoaddedWhiteList())
 			{
-				res[it->first] = item.GetHashStr();
+				res[item.GetHashStr()] = it->first;
 			}
 		}
 		return std::move(res);

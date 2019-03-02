@@ -4,25 +4,31 @@
 #include <sgx_error.h>
 #include <sgx_dh.h>
 
-#include "../CommonEnclave/Ra/Crypto.h"
-#include "../CommonEnclave/SGX/LocAttCommLayer.h"
+#include "../../CommonEnclave/Ra/Crypto.h"
+#include "../../CommonEnclave/SGX/LocAttCommLayer.h"
 
-#include "../Common/Common.h"
-#include "../Common/Tools/DataCoding.h"
-#include "../Common/Ra/States.h"
-#include "../Common/Ra/Crypto.h"
-#include "../Common/Ra/KeyContainer.h"
-#include "../Common/Ra/CertContainer.h"
-#include "../Common/Ra/WhiteList/Loaded.h"
-#include "../Common/Ra/WhiteList/HardCoded.h"
+#include "../../Common/Common.h"
+#include "../../Common/Tools/DataCoding.h"
+#include "../../Common/Ra/Crypto.h"
+#include "../../Common/Ra/KeyContainer.h"
+#include "../../Common/Ra/WhiteList/Loaded.h"
+#include "../../Common/Ra/WhiteList/HardCoded.h"
+
+#include "../AppStatesSingleton.h"
+#include "../AppCertContainer.h"
 
 using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Ra::WhiteList;
 
+namespace
+{
+	static AppStates& gs_appStates = GetAppStateSingleton();
+}
+
 extern "C" size_t ecall_decent_ra_app_get_x509_pem(char* buf, size_t buf_len)
 {
-	auto cert = States::Get().GetCertContainer().GetCert();
+	auto cert = gs_appStates.GetCertContainer().GetCert();
 	if (!cert || !(*cert))
 	{
 		return 0;
@@ -43,18 +49,18 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 	PRINT_I("Initializing Decent App with hash: %s\n", Decent::Crypto::GetSelfHashBase64().c_str());
 
-	Ra::States& state = Ra::States::Get();
-	const HardCoded& hardcoded = state.GetHardCodedWhiteList();
+	const HardCoded& hardcoded = gs_appStates.GetHardCodedWhiteList();
 
 	Decent::Sgx::LocAttCommLayer commLayer(connection, false);
 	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
 	if (!identity ||
 		!hardcoded.CheckHashAndName(Tools::SerializeStruct(identity->mr_enclave), WhiteList::sk_nameDecentServer) )
 	{
+		PRINT_I("Could not verify the identity of the Decent Server.");
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	const KeyContainer& keyContainer = state.GetKeyContainer();
+	const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
 	X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 	if (!certReq)
@@ -77,11 +83,11 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	state.GetCertContainer().SetCert(cert);
+	gs_appStates.GetAppCertContainer().SetAppCert(cert);
 
 	//Set loaded whitelist.
 	WhiteList::Loaded loadedList(*cert);
-	state.GetLoadedWhiteList(&loadedList);
+	gs_appStates.GetLoadedWhiteList(&loadedList);
 
 	return SGX_SUCCESS;
 }

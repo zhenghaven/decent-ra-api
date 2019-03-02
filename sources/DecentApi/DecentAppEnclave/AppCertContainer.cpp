@@ -1,4 +1,4 @@
-#include "ServerCertContainer.h"
+#include "AppCertContainer.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>
@@ -8,15 +8,15 @@
 
 using namespace Decent::Ra;
 
-ServerCertContainer::ServerCertContainer() noexcept
+AppCertContainer::AppCertContainer() noexcept
 {
 }
 
-ServerCertContainer::~ServerCertContainer() noexcept
+AppCertContainer::~AppCertContainer() noexcept
 {
 }
 
-std::shared_ptr<const ServerX509> ServerCertContainer::GetServerCert() const noexcept
+std::shared_ptr<const AppX509> AppCertContainer::GetAppCert() const noexcept
 {
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	return std::atomic_load(&m_cert);
@@ -25,7 +25,7 @@ std::shared_ptr<const ServerX509> ServerCertContainer::GetServerCert() const noe
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-bool ServerCertContainer::SetServerCert(std::shared_ptr<const ServerX509> cert) noexcept
+bool AppCertContainer::SetAppCert(std::shared_ptr<const AppX509> cert) noexcept
 {
 	if (!CertContainer::SetCert(cert))
 	{

@@ -17,9 +17,7 @@ namespace Decent
 
 				StaticTypeList(const WhiteListType& whiteList);
 
-				StaticTypeList(WhiteListType&& whiteList) :
-					m_listMap(std::forward<WhiteListType>(whiteList))
-				{}
+				StaticTypeList(WhiteListType&& whiteList);
 
 				StaticTypeList(const StaticTypeList& rhs) :
 					m_listMap(rhs.m_listMap)

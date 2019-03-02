@@ -6,6 +6,8 @@
 
 #include <sgx_error.h>
 
+#include "EnclaveUtil.h"
+
 #define CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(X, Y) if(X != SGX_SUCCESS) {\
                                                   throw Decent::Sgx::EnclaveRuntimeException(X, #Y);}
 
@@ -16,28 +18,28 @@ namespace Decent
 {
 	namespace Sgx
 	{
-		class EnclaveRuntimeException : public Base::EnclaveException
+		class EnclaveRuntimeException : public Base::EnclaveAppException
 		{
+		private:
+			static std::string GetSgxErrorMsg(const sgx_status_t errCode) noexcept
+			{
+				try
+				{
+					return GetErrorMessage(errCode);
+				}
+				catch (...)
+				{
+					return "Unknown Error";
+				}
+			}
+
 		public:
 			EnclaveRuntimeException() = delete;
 			EnclaveRuntimeException(sgx_status_t errCode, const std::string& funcName) :
-				m_errCode(errCode),
-				m_funcName(funcName)
+				Base::EnclaveAppException("SGX Runtime Error:\nFunction: " + 
+				funcName + "\nSGX Err Msg: " + GetSgxErrorMsg(errCode))
 			{}
 
-			virtual ~EnclaveRuntimeException() {}
-
-			virtual const char* what() const throw()
-			{
-				return "SGX Enclave Runtime Exception";
-			}
-
-			sgx_status_t GetErrorCode() const { return m_errCode; }
-			std::string GetFuncName() const { return m_funcName; }
-
-		private:
-			sgx_status_t m_errCode;
-			std::string m_funcName;
 		};
 	}
 }

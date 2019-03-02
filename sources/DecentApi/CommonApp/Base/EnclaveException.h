@@ -1,22 +1,15 @@
 #pragma once
 
-#include <exception>
+#include "../../Common/RuntimeException.h"
 
 namespace Decent
 {
 	namespace Base
 	{
-		class EnclaveException : public std::exception
+		class EnclaveAppException : public Decent::RuntimeException
 		{
 		public:
-			EnclaveException() {}
-
-			virtual ~EnclaveException() {}
-
-			virtual const char* what() const throw()
-			{
-				return "General Enclave Exception.";
-			}
+			using RuntimeException::RuntimeException;
 		};
 	}
 }

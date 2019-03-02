@@ -27,6 +27,19 @@ StaticTypeList::StaticTypeList(const WhiteListType & whiteList) :
 #endif // DEBUG
 }
 
+StaticTypeList::StaticTypeList(WhiteListType && whiteList) :
+	m_listMap(std::forward<WhiteListType>(whiteList))
+{
+#ifdef DEBUG
+	LOGI("Constrcuted Static WhiteList (Size = %llu):", m_listMap.size());
+	for (auto it = m_listMap.cbegin(); it != m_listMap.cend(); ++it)
+	{
+		LOGI("\t%s\t:\t%s", it->first.c_str(), it->second.c_str());
+	}
+	LOGI("Static WhiteList End. \n");
+#endif // DEBUG
+}
+
 StaticTypeList::~StaticTypeList()
 {
 }
