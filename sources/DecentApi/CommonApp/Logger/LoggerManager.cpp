@@ -61,7 +61,7 @@ DecentLoggerManager::DecentLoggerManager(bool isCritical) :
 			{
 				try
 				{
-					DiskFile file(*m_outFilePath, FileBase::Mode::Append);
+					WritableDiskFile file(*m_outFilePath, WritableFileBase::WritableMode::Append);
 					LOGI("Writing log to file: %s\n", m_outFilePath->string().c_str());
 					file.WriteBlock(loggerQueue.front()->ToCsvLines());
 					loggerQueue.pop();

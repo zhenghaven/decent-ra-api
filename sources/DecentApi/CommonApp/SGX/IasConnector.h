@@ -21,10 +21,15 @@ namespace Decent
 #endif
 			static constexpr char const sk_iasSigRlPath[] = "/attestation/sgx/v2/sigrl/";
 			static constexpr char const sk_iasReportPath[] = "/attestation/sgx/v2/report";
-			static const std::string sk_iasUrlStr;
+
+			/** \brief	Default path to the Service Provider's cert file, which is %HOME%/SGX_IAS/client.crt */
 			static const std::string sk_defaultCertPath;
+
+			/** \brief	Default path to the Service Provider's private key file, which is %HOME%/SGX_IAS/client.pem */
 			static const std::string sk_defaultKeyPath;
-			static const std::string sk_defaultRsaKeyPath;
+
+			/** \brief	Default path to the Service Provider's private RSA key file, which is %HOME%/SGX_IAS/client.key */
+			//static const std::string sk_defaultRsaKeyPath;
 
 			static bool GetRevocationList(const sgx_epid_group_id_t& gid, const std::string& certPath, const std::string& keyPath,
 				std::string & outRevcList);
