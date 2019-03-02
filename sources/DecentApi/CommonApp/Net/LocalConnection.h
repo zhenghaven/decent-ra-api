@@ -20,8 +20,8 @@ namespace Decent
 		class SharedObject;
 
 		class LocalAcceptor;
+		class LocalMessageQueue;
 		struct LocalSessionStruct;
-		struct LocalMessageQueue;
 
 		struct LocalAcceptedResult;
 

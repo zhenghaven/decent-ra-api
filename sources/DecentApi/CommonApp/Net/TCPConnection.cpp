@@ -5,38 +5,10 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/io_service.hpp>
 
-#ifdef DEBUG
-#include <boost/exception/diagnostic_information.hpp>
-#endif // DEBUG
-
-#include "../../Common/Net/NetworkException.h"
+#include "NetworkException.h"
 
 using namespace boost::asio;
 using namespace Decent::Net;
-
-#ifdef DEBUG
-#define RETHROW_EXCEPTION_AS_DECENT_EXCEPTION(UNKNOWN_EXP_MSG) \
-		catch (const boost::exception& e) \
-		{ \
-			std::string errMsg = "Boost Exception:\n"; \
-			errMsg += boost::diagnostic_information(e); \
-			throw Decent::Net::Exception(errMsg); \
-		} \
-		catch (...) \
-		{ \
-			throw Decent::Net::Exception(UNKNOWN_EXP_MSG); \
-		}
-#else
-#define RETHROW_EXCEPTION_AS_DECENT_EXCEPTION(UNKNOWN_EXP_MSG) \
-		catch (const std::exception& e) \
-		{ \
-			throw Decent::Net::Exception(e.what()); \
-		} \
-		catch (...) \
-		{ \
-			throw Decent::Net::Exception(UNKNOWN_EXP_MSG); \
-		}
-#endif // DEBUG
 
 namespace
 {
@@ -46,7 +18,7 @@ namespace
 		{
 			return std::make_unique<ip::tcp::socket>(acceptor.accept());
 		}
-		RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP accept.")
+		RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP accept.")
 	}
 
 	static std::unique_ptr<io_service> ConstrIoContext()
@@ -55,7 +27,7 @@ namespace
 		{
 			return std::make_unique<io_service>();
 		}
-		RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at io_service constrcution.")
+		RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at io_service constrcution.")
 	}
 
 	static std::unique_ptr<ip::tcp::socket> ConstrSocket(io_service& ioCtx)
@@ -64,7 +36,7 @@ namespace
 		{
 			return std::make_unique<ip::tcp::socket>(ioCtx);
 		}
-		RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at tcp socket constrcution.")
+		RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at tcp socket constrcution.")
 	}
 }
 
@@ -82,7 +54,7 @@ TCPConnection::TCPConnection(uint32_t ipAddr, uint16_t portNum) :
 	{
 		m_socket->connect(ip::tcp::endpoint(ip::address_v4(ipAddr), portNum));
 	}
-	RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP connect.")
+	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP connect.")
 }
 
 TCPConnection::TCPConnection(TCPConnection && rhs) noexcept :
@@ -102,7 +74,7 @@ size_t TCPConnection::SendRaw(const void * const dataPtr, const size_t size)
 	{
 		return m_socket->send(boost::asio::buffer(dataPtr, size));
 	}
-	RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP send.")
+	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP send.")
 }
 
 size_t TCPConnection::ReceiveRaw(void * const bufPtr, const size_t size)
@@ -111,7 +83,7 @@ size_t TCPConnection::ReceiveRaw(void * const bufPtr, const size_t size)
 	{
 		return m_socket->receive(boost::asio::buffer(bufPtr, size));
 	}
-	RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP receive.")
+	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP receive.")
 }
 
 void TCPConnection::Terminate() noexcept
@@ -135,7 +107,7 @@ uint32_t TCPConnection::GetIPv4Addr() const
 	{
 		return m_socket->remote_endpoint().address().to_v4().to_uint();
 	}
-	RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught when getting IPv4 addr.")
+	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught when getting IPv4 addr.")
 }
 
 uint16_t TCPConnection::GetPortNum() const
@@ -144,7 +116,7 @@ uint16_t TCPConnection::GetPortNum() const
 	{
 		return m_socket->remote_endpoint().port();
 	}
-	RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught when getting port num.")
+	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught when getting port num.")
 }
 
 uint64_t TCPConnection::GetConnectionID() const

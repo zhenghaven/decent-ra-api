@@ -6,6 +6,7 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
+#include <boost/interprocess/ipc/message_queue.hpp>
 
 #include "LocalServer.h"
 #include "LocalConnectionStructs.h"

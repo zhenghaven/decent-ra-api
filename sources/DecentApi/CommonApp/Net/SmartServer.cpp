@@ -68,6 +68,11 @@ SmartServer::~SmartServer()
 
 SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler)
 {
+	if (!server || !handler)
+	{
+		return nullptr;
+	}
+
 	if (m_isTerminated)
 	{
 		return nullptr;
@@ -78,8 +83,7 @@ SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server
 		return nullptr;
 	}
 
-	if (!server ||
-		m_serverMap.find(server.get()) != m_serverMap.end()) //Usually this case will not happened.
+	if (m_serverMap.find(server.get()) != m_serverMap.end()) //Usually this case will not happened.
 	{
 		return nullptr;
 	}

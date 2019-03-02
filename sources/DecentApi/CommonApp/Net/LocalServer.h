@@ -21,9 +21,9 @@ namespace Decent
 		template<typename T>
 		class SharedObject;
 
+		class LocalMessageQueue;
 		struct LocalConnectStruct;
 		struct LocalSessionStruct;
-		struct LocalMessageQueue;
 
 		struct LocalAcceptedResult
 		{
@@ -57,7 +57,7 @@ namespace Decent
 			 *
 			 * \param	serverName	Name of the server.
 			 */
-			LocalAcceptor(const std::string& serverName) noexcept;
+			LocalAcceptor(const std::string& serverName);
 			LocalAcceptor(const LocalAcceptor& other) = delete; //Copy is not allowed.
 			LocalAcceptor(LocalAcceptor&& other) noexcept;
 			virtual ~LocalAcceptor() noexcept;

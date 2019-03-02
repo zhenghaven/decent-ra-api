@@ -3,39 +3,11 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#ifdef DEBUG
-#include <boost/exception/diagnostic_information.hpp>
-#endif // DEBUG
-
 #include "TCPConnection.h"
-#include "../../Common/Net/NetworkException.h"
+#include "NetworkException.h"
 
 using namespace boost::asio;
 using namespace Decent::Net;
-
-#ifdef DEBUG
-#define RETHROW_EXCEPTION_AS_DECENT_EXCEPTION(UNKNOWN_EXP_MSG) \
-		catch (const boost::exception& e) \
-		{ \
-			std::string errMsg = "Boost Exception:\n"; \
-			errMsg += boost::diagnostic_information(e); \
-			throw Decent::Net::Exception(errMsg); \
-		} \
-		catch (...) \
-		{ \
-			throw Decent::Net::Exception(UNKNOWN_EXP_MSG); \
-		}
-#else
-#define RETHROW_EXCEPTION_AS_DECENT_EXCEPTION(UNKNOWN_EXP_MSG) \
-		catch (const std::exception& e) \
-		{ \
-			throw Decent::Net::Exception(e.what()); \
-		} \
-		catch (...) \
-		{ \
-			throw Decent::Net::Exception(UNKNOWN_EXP_MSG); \
-		}
-#endif // DEBUG
 
 namespace
 {
@@ -45,7 +17,7 @@ namespace
 		{
 			return std::make_unique<io_service>();
 		}
-		RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at io_service constrcution.")
+		RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at io_service constrcution.")
 	}
 
 	static std::unique_ptr<ip::tcp::acceptor> ConstrAcceptor(io_service& serverIO, const uint32_t ipAddr, const uint16_t portNum)
@@ -54,7 +26,7 @@ namespace
 		{
 			return std::make_unique<ip::tcp::acceptor>(serverIO, ip::tcp::endpoint(ip::address_v4(ipAddr), portNum));
 		}
-		RETHROW_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at acceptor constrcution.")
+		RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at acceptor constrcution.")
 	}
 }
 

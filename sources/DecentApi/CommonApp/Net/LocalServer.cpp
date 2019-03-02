@@ -64,7 +64,7 @@ m_sharedObj_b(std::move(rhs.m_sharedObj_b)),
 m_msgQ_b(std::move(rhs.m_msgQ_b))
 {}
 
-LocalAcceptor::LocalAcceptor(const std::string & serverName) noexcept :
+LocalAcceptor::LocalAcceptor(const std::string & serverName) :
 	m_sharedObj(std::make_shared<SharedObject<LocalConnectStruct> >(serverName, true)),
 	m_isTerminated(0)
 {
