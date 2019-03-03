@@ -65,9 +65,44 @@ namespace Decent
 				return ParseValue<T>(GetMember(json, key));
 			}
 
+			/**
+			 * \brief	Parse a sub message inside of a message. For example, message B could be stored inside of a message A.
+			 *
+			 * \tparam	T	Generic type parameter. It must be a message class that has a constructor accepting JSON object.
+			 * \param	json	The JSON object.
+			 * \param	key 	The key that used to retrieve the sub json object.
+			 *
+			 * \return	A T type value.
+			 */
+			template<typename T>
+			static inline T ParseSubMessage(const Tools::JsonValue & json, const char* key)
+			{
+				return T(GetMember(json, key));
+			}
+
 		public:
+
+			/**
+			 * \brief	Converts this message to a JSON object
+			 *
+			 * \param [in,out]	doc	The JSON document.
+			 *
+			 * \return	JSON value reference to the generated JSON object.
+			 */
 			virtual Tools::JsonValue& ToJson(Tools::JsonDoc& doc) const = 0;
+
+			/**
+			 * \brief	Convert this message into a JSON format string representation
+			 *
+			 * \return	A std::string that represents this message.
+			 */
 			virtual std::string ToString() const;
+
+			/**
+			 * \brief	Converts this message into a JSON format string with all indentations and new lines.
+			 *
+			 * \return	A std::string that represents this message.
+			 */
 			virtual std::string ToStyledString() const;
 
 		};
