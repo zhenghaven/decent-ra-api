@@ -107,6 +107,8 @@ void Net::DestructMsgQueue(std::unique_ptr<bIp::message_queue>& queuePtr, const 
 	}
 }
 
+constexpr size_t LocalMessageQueue::MSG_SIZE;
+
 LocalMessageQueue::LocalMessageQueue(const std::string & name, const bool isOwner) :
 	m_msgQ(ConstructMsgQueue(name, isOwner)),
 	m_name(name),

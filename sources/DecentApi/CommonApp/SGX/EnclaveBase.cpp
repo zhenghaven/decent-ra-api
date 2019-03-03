@@ -147,7 +147,7 @@ bool EnclaveBase::UpdateToken(const fs::path& tokenPath, const std::vector<uint8
 {
 	try
 	{
-		DiskFile tokenFile(tokenPath, FileBase::Mode::Write);
+		WritableDiskFile tokenFile(tokenPath, WritableFileBase::WritableMode::Write);
 		tokenFile.WriteBlockExactSize(inToken);
 		return true;
 	}

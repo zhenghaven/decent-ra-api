@@ -18,6 +18,7 @@
 #include <cppcodec/hex_lower.hpp>
 
 #include "../../Common/Tools/DataCoding.h"
+#include "../../CommonApp/Tools/DiskFile.h"
 #include "../../Common/SGX/IasConnector.h"
 
 #include "../Tools/FileSystemUtil.h"
@@ -99,15 +100,15 @@ namespace
 constexpr char const Connector::sk_iasUrl[];
 constexpr char const Connector::sk_iasSigRlPath[];
 constexpr char const Connector::sk_iasReportPath[];
-const std::string Connector::sk_iasUrlStr = sk_iasUrl;
 const std::string Connector::sk_defaultCertPath = fs::path(gsk_defaultIasPath).append("client.crt").string();
 const std::string Connector::sk_defaultKeyPath = fs::path(gsk_defaultIasPath).append("client.pem").string();
-const std::string Connector::sk_defaultRsaKeyPath = fs::path(gsk_defaultIasPath).append("client.key").string();
+//const std::string Connector::sk_defaultRsaKeyPath = fs::path(gsk_defaultIasPath).append("client.key").string();
 
 bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::string & certPath, const std::string & keyPath, 
 	std::string & outRevcList)
 {
-	const std::string iasURL = sk_iasUrlStr + sk_iasSigRlPath + GetGIDBigEndianStr(gid);
+	static const std::string s_iasSigRlRootPath = std::string(sk_iasUrl) + sk_iasSigRlPath;
+	const std::string iasSigRlFullPath = s_iasSigRlRootPath + GetGIDBigEndianStr(gid);
 
 	outRevcList.resize(0);
 	std::string requestId;
@@ -137,7 +138,7 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 	if (hnd == nullptr ||
 		headers == nullptr ||
 		curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "GET") != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_URL, iasSigRlFullPath.c_str()) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str()) != CURLE_OK ||
@@ -169,7 +170,7 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::string & certPath, const std::string & keyPath, 
 	std::string & outReport, std::string & outSign, std::string & outCert)
 {
-	const std::string iasURL = sk_iasUrlStr + sk_iasReportPath;
+	static const std::string s_iasReportFullPath = std::string(sk_iasUrl) + sk_iasReportPath;
 
 	outReport.resize(0);
 	outSign.resize(0);
@@ -210,7 +211,7 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 		headers == nullptr ||
 		(headers = curl_slist_append(headers, "Content-Type: application/json")) == nullptr ||
 		curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST") != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_URL, iasURL.c_str()) != CURLE_OK ||
+		curl_easy_setopt(hnd, CURLOPT_URL, s_iasReportFullPath.c_str()) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str()) != CURLE_OK ||
@@ -272,15 +273,27 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 #endif // !SIMULATING_ENCLAVE
 }
 
+namespace
+{
+	static void ValidateFilePath(const std::string& filePath)
+	{
+		DiskFile testFile(filePath, FileBase::Mode::Read);
+	}
+}
+
 Connector::Connector() :
 	Connector(sk_defaultCertPath, sk_defaultKeyPath)
 {
 }
 
 Connector::Connector(const std::string & certPath, const std::string & keyPath) :
-	m_certPath(certPath),
-	m_keyPath(keyPath)
+	m_certPath(certPath.size() ? certPath : sk_defaultCertPath),
+	m_keyPath(keyPath.size() ? keyPath : sk_defaultKeyPath)
 {
+#ifndef SIMULATING_ENCLAVE
+	ValidateFilePath(m_certPath);
+	ValidateFilePath(m_keyPath);
+#endif // SIMULATING_ENCLAVE
 }
 
 Connector::~Connector()
