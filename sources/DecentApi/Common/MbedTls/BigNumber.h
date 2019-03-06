@@ -316,6 +316,13 @@ namespace Decent
 			 */
 			uint64_t operator%(int64_t rhs) const;
 
+			/**
+			 * \brief	Negation operator
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumber operator-() const;
+
 			//BigNumber operator<<(size_t count) const;
 
 			//BigNumber operator>>(size_t count) const;
@@ -592,9 +599,29 @@ namespace Decent
 			 */
 			std::string ToBigEndianHexStr() const;
 
+			/**
+			 * \brief	Query if this big number is positive
+			 *
+			 * \return	True if positive, false if not.
+			 */
+			bool IsPositive() const;
+
+			/**
+			 * \brief	Flip sign (i.e. negative to positive, or positive to negative.)
+			 *
+			 * \return	A reference to a this instance.
+			 */
+			BigNumber& FlipSign();
+
+		private:
+			BigNumber(mbedtls_mpi* ptr, FreeFuncType freeFunc) noexcept :
+				ObjBase(ptr, freeFunc)
+			{}
+
+			friend class ConstBigNumber;
 		};
 
-		class ConstBigNumber : public ObjBase<mbedtls_mpi>
+		class ConstBigNumber
 		{
 		public: //static members:
 
@@ -681,7 +708,7 @@ namespace Decent
 			* \param [in,out]	other	The other instance.
 			*/
 			ConstBigNumber(ConstBigNumber&& other) noexcept :
-			ObjBase(std::forward<ObjBase>(other))
+				m_bigNum(std::forward<BigNumber>(other.m_bigNum))
 			{}
 
 			ConstBigNumber(const ConstBigNumber& rhs) = delete;
@@ -690,272 +717,49 @@ namespace Decent
 			virtual ~ConstBigNumber() noexcept {}
 
 			/**
-			* \brief	Swaps this instance with the given right hand side var
-			*
-			* \param [in,out]	rhs	The right hand side var.
-			*/
-			virtual void Swap(ConstBigNumber& rhs) noexcept
+			 * \brief	Cast to a reference to a const BigNumber.
+			 *
+			 * \return	A reference to a const BigNumber.
+			 */
+			operator const BigNumber&() const noexcept;
+
+			/**
+			 * \brief	Get a reference to a const BigNumber.
+			 *
+			 * \return	A reference to a const BigNumber.
+			 */
+			const BigNumber& Get() const noexcept;
+
+			/**
+			 * \brief	Swaps the given right hand side var
+			 *
+			 * \param	rhs	The right hand side.
+			 */
+			void Swap(ConstBigNumber& rhs) noexcept
 			{
-				ObjBase::Swap(rhs);
+				m_bigNum.Swap(rhs.m_bigNum);
 			}
 
-			/**
-			 * \brief	Compares this const ConstBigNumber&amp; object to another to determine their relative
-			 * 			ordering
-			 *
-			 * \param	rhs	The constant big number&amp; to compare to this object.
-			 *
-			 * \return	Negative if 'rhs' is less than this, 0 if they are equal, or positive if it is greater.
-			 */
-			int Compare(const ConstBigNumber& rhs) const noexcept;
+			//Overriding the const operators:
 
-			/**
-			 * \brief	Addition operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator+(const ConstBigNumber& rhs) const;
+			BigNumber operator+(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) + rhs; }
+			BigNumber operator+(int64_t rhs) const { return static_cast<const BigNumber&>(*this) + rhs; }
+			BigNumber operator-(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) - rhs; }
+			BigNumber operator-(int64_t rhs) const { return static_cast<const BigNumber&>(*this) - rhs; }
+			BigNumber operator*(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) * rhs; }
+			BigNumber operator*(uint64_t rhs) const { return static_cast<const BigNumber&>(*this) * rhs; }
+			BigNumber operator/(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) / rhs; }
+			BigNumber operator/(int64_t rhs) const { return static_cast<const BigNumber&>(*this) / rhs; }
+			BigNumber operator%(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) % rhs; }
+			uint64_t operator%(int64_t rhs) const { return static_cast<const BigNumber&>(*this) % rhs; }
+			BigNumber operator-() const { return -static_cast<const BigNumber&>(*this); }
 
-			/**
-			 * \brief	Addition operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator+(int64_t rhs) const;
+			bool operator==(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) == rhs; }
+			bool operator<(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) < rhs; }
+			bool operator<=(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) <= rhs; }
+			bool operator>(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) > rhs; }
+			bool operator>=(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) >= rhs; }
 
-			/**
-			 * \brief	Subtraction operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator-(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Subtraction operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator-(int64_t rhs) const;
-
-			/**
-			 * \brief	Multiplication operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator*(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Multiplication operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator*(uint64_t rhs) const;
-
-			/**
-			 * \brief	Division operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator/(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Division operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator/(int64_t rhs) const;
-
-			/**
-			 * \brief	Modulus operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumber operator%(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Modulus operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			uint64_t operator%(int64_t rhs) const;
-
-			//BigNumber operator<<(size_t count) const;
-
-			//BigNumber operator>>(size_t count) const;
-
-			/**
-			 * \brief	Equal comparison operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	True if the first parameter is equal to the second.
-			 */
-			bool operator==(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Less-than comparison operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	True if the first parameter is less than the second.
-			 */
-			bool operator<(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Less-than-or-equal comparison operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	True if the first parameter is less than or equal to the second.
-			 */
-			bool operator<=(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Greater-than comparison operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	True if the first parameter is greater than to the second.
-			 */
-			bool operator>(const ConstBigNumber& rhs) const;
-
-			/**
-			 * \brief	Greater-than-or-equal comparison operator
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	True if the first parameter is greater than or equal to the second.
-			 */
-			bool operator>=(const ConstBigNumber& rhs) const;
-
-			/**
-			* \brief	Gets the size of this big number in Bytes.
-			*
-			* \return	The size.
-			*/
-			size_t GetSize() const;
-
-			/**
-			* \brief	Gets the size of this big number in bits.
-			*
-			* \return	The size.
-			*/
-			size_t GetBitSize() const;
-
-
-			/**
-			* \brief	Converts this big number to a little endian binary
-			*
-			* \param [in,out]	out 	If non-null, the output address.
-			* \param 		  	size	The size of the output buffer.
-			*/
-			void ToBinary(void* out, const size_t size) const;
-
-			/**
-			 * \brief	Convert this object into a little endian binary
-			 *
-			 * \tparam	T   	Generic type parameter.
-			 * \tparam	size	Size of the array.
-			 * \param [in,out]	out	The output.
-			 */
-			template<typename T, size_t size>
-			void ToBinary(std::array<T, size>& out) const
-			{
-				constexpr size_t totalSize = size * sizeof(T);
-				return ToBinary(out.data(), totalSize);
-			}
-
-			/**
-			 * \brief	Convert this object into a little endian binary
-			 *
-			 * \tparam	T	Generic type parameter.
-			 * \param [in,out]	out	The output.
-			 */
-			template<typename T>
-			void ToBinary(std::vector<T>& out) const
-			{
-				return ToBinary(out.data(), out.size() * sizeof(T));
-			}
-
-			/**
-			* \brief	Converts this big number to a little endian binary
-			*
-			* \param [in,out]	out 	The reference to the output buffer.
-			*/
-			template<typename T>
-			void ToBinary(T& out, const StructIn&) const
-			{
-				return ToBinary(&out, sizeof(T));
-			}
-
-			/**
-			* \brief	Converts this big number to a big endian binary
-			*
-			* \param [in,out]	out 	If non-null, the output address.
-			* \param 		  	size	The size of the output buffer.
-			*/
-			void ToBinary(void* out, const size_t size, const BigEndian&) const;
-
-			/**
-			 * \brief	Convert this object into a big endian binary
-			 *
-			 * \tparam	T   	Generic type parameter.
-			 * \tparam	size	Size of the the array.
-			 * \param [in,out]	out		  	The out.
-			 * \param 		  	parameter2	Indicate this is converted to big endian.
-			 */
-			template<typename T, size_t size>
-			void ToBinary(std::array<T, size>& out, const BigEndian&) const
-			{
-				constexpr size_t totalSize = size * sizeof(T);
-				return ToBinary(out.data(), totalSize, sk_bigEndian);
-			}
-
-			/**
-			 * \brief	Convert this object into a big endian binary
-			 *
-			 * \tparam		T		Generic type parameter.
-			 * \param [in,out]	out		  	The output.
-			 * \param 		  	parameter2	Indicate this is converted to big endian.
-			 */
-			template<typename T>
-			void ToBinary(std::vector<T>& out, const BigEndian&) const
-			{
-				return ToBinary(out.data(), out.size() * sizeof(T), sk_bigEndian);
-			}
-
-			/**
-			* \brief	Converts this big number to a big endian binary
-			*
-			* \param [in,out]	out 	The reference to the output buffer.
-			 * \param 		  	parameter2	Indicate output buffer is a struct.
-			 * \param 		  	parameter3	Indicate this is converted to big endian.
-			*/
-			template<typename T>
-			void ToBinary(T& out, const StructIn&, const BigEndian&) const
-			{
-				return ToBinary(&out, sizeof(T), sk_bigEndian);
-			}
 		private:
 
 			/**
@@ -968,12 +772,7 @@ namespace Decent
 			 */
 			ConstBigNumber(const void* ptr, const size_t size, const Generate&) noexcept;
 
-			/**
-			 * \brief	Converts this object to a big endian hexadecimal string
-			 *
-			 * \return	This object as a std::string.
-			 */
-			std::string ToBigEndianHexStr() const;
+			BigNumber m_bigNum;
 
 		};
 	}

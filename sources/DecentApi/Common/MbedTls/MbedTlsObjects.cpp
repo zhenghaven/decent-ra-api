@@ -357,7 +357,7 @@ bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const
 	}
 
 	return mbedtls_ecdsa_verify(&grp.m_grp, hash, hashLen, &ecPtr.Q,
-		r.Get(), s.Get()) == MBEDTLS_SUCCESS_RET;
+		r.Get().Get(), s.Get().Get()) == MBEDTLS_SUCCESS_RET;
 }
 
 std::string ECKeyPublic::ToPubPemString() const

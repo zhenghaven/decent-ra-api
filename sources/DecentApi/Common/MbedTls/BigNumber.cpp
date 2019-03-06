@@ -90,7 +90,7 @@ BigNumber::BigNumber(const BigNumber & rhs) :
 }
 
 BigNumber::BigNumber(const ConstBigNumber & rhs) :
-	BigNumber(*rhs.Get())
+	BigNumber(*static_cast<const BigNumber&>(rhs).Get())
 {
 }
 
@@ -279,6 +279,13 @@ uint64_t BigNumber::operator%(int64_t rhs) const
 	return res;
 }
 
+BigNumber BigNumber::operator-() const
+{
+	BigNumber cpy(*this);
+	cpy.FlipSign();
+	return std::move(cpy);
+}
+
 BigNumber & BigNumber::operator%=(const BigNumber & rhs)
 {
 	BigNumber res = (*this % rhs);
@@ -313,27 +320,27 @@ BigNumber & BigNumber::operator>>=(size_t count)
 
 bool BigNumber::operator==(const BigNumber & rhs) const
 {
-	return BigNumber::Compare(rhs) == 0;
+	return Compare(rhs) == 0;
 }
 
 bool BigNumber::operator<(const BigNumber & rhs) const
 {
-	return BigNumber::Compare(rhs) < 0;
+	return Compare(rhs) < 0;
 }
 
 bool BigNumber::operator<=(const BigNumber & rhs) const
 {
-	return BigNumber::Compare(rhs) <= 0;
+	return Compare(rhs) <= 0;
 }
 
 bool BigNumber::operator>(const BigNumber & rhs) const
 {
-	return BigNumber::Compare(rhs) > 0;
+	return Compare(rhs) > 0;
 }
 
 bool BigNumber::operator>=(const BigNumber & rhs) const
 {
-	return BigNumber::Compare(rhs) >= 0;
+	return Compare(rhs) >= 0;
 }
 
 size_t BigNumber::GetSize() const
@@ -367,6 +374,17 @@ std::string BigNumber::ToBigEndianHexStr() const
 	return ToHexStr(Get()->p, Get()->n * sizeof(mbedtls_mpi_uint), sk_bigEndian);
 }
 
+bool BigNumber::IsPositive() const
+{
+	return Get()->s > 0;
+}
+
+BigNumber& BigNumber::FlipSign()
+{
+	Get()->s *= -1;
+	return *this;
+}
+
 void ConstBigNumber::FreeStruct(mbedtls_mpi * ptr)
 {
 	delete ptr;
@@ -378,7 +396,7 @@ ConstBigNumber::ConstBigNumber(const BigNumber & ref) noexcept :
 }
 
 ConstBigNumber::ConstBigNumber(mbedtls_mpi & ref) noexcept :
-ObjBase(&ref, &ObjBase::DoNotFree)
+	m_bigNum(&ref, &BigNumber::DoNotFree)
 {
 }
 
@@ -390,147 +408,21 @@ ConstBigNumber::ConstBigNumber(const void * ptr, const size_t size) :
 		sk_gen)
 {}
 
+ConstBigNumber::operator const BigNumber&() const noexcept
+{
+	return m_bigNum;
+}
+
+const BigNumber & ConstBigNumber::Get() const noexcept
+{
+	return m_bigNum;
+}
+
 ConstBigNumber::ConstBigNumber(const void * ptr, const size_t size, const Generate &) noexcept :
-ObjBase(new mbedtls_mpi, &ConstBigNumber::FreeStruct)
+	m_bigNum(new mbedtls_mpi{1, /* s */
+		(size / sizeof(mbedtls_mpi_uint)), /* n */
+		static_cast<mbedtls_mpi_uint*>(const_cast<void*>(ptr)) /* p */
+		}, &ConstBigNumber::FreeStruct)
 {
-	Get()->s = 1;
-	Get()->p = static_cast<mbedtls_mpi_uint*>(const_cast<void*>(ptr));
-
-	Get()->n = (size / sizeof(mbedtls_mpi_uint));
 }
 
-std::string ConstBigNumber::ToBigEndianHexStr() const
-{
-	return BigNumber::ToHexStr(Get()->p, Get()->n * sizeof(mbedtls_mpi_uint), sk_bigEndian);
-}
-
-int ConstBigNumber::Compare(const ConstBigNumber & rhs) const noexcept
-{
-	return mbedtls_mpi_cmp_mpi(Get(), rhs.Get());
-}
-
-BigNumber ConstBigNumber::operator+(const ConstBigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_add_mpi(res.Get(), Get(), rhs.Get()));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator+(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_add_int(res.Get(), Get(), rhs));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator-(const ConstBigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_sub_mpi(res.Get(), Get(), rhs.Get()));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator-(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_sub_int(res.Get(), Get(), rhs));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator*(const ConstBigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mul_mpi(res.Get(), Get(), rhs.Get()));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator*(uint64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_uint, uint64_t>::value, "Currently, we only consider 64-bit numbers.");
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mul_int(res.Get(), Get(), rhs));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator/(const ConstBigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_div_mpi(res.Get(), nullptr, Get(), rhs.Get()));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator/(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_div_int(res.Get(), nullptr, Get(), rhs));
-	return std::move(res);
-}
-
-BigNumber ConstBigNumber::operator%(const ConstBigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mod_mpi(res.Get(), Get(), rhs.Get()));
-	return std::move(res);
-}
-
-uint64_t ConstBigNumber::operator%(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-	uint64_t res = 0;
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mod_int(&res, Get(), rhs));
-	return res;
-}
-
-bool ConstBigNumber::operator==(const ConstBigNumber & rhs) const
-{
-	return Compare(rhs) == 0;
-}
-
-bool ConstBigNumber::operator<(const ConstBigNumber & rhs) const
-{
-	return Compare(rhs) < 0;
-}
-
-bool ConstBigNumber::operator<=(const ConstBigNumber & rhs) const
-{
-	return Compare(rhs) <= 0;
-}
-
-bool ConstBigNumber::operator>(const ConstBigNumber & rhs) const
-{
-	return Compare(rhs) > 0;
-}
-
-bool ConstBigNumber::operator>=(const ConstBigNumber & rhs) const
-{
-	return Compare(rhs) >= 0;
-}
-
-size_t ConstBigNumber::GetSize() const
-{
-	return mbedtls_mpi_size(Get());
-}
-
-size_t ConstBigNumber::GetBitSize() const
-{
-	return mbedtls_mpi_bitlen(Get());
-}
-
-void ConstBigNumber::ToBinary(void * out, const size_t size) const
-{
-	size_t actualSize = GetSize();
-	if (size < actualSize) { throw MbedTlsException(__FUNCTION__, MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL); }
-
-	memset(out, 0, size);
-
-	memcpy(out, Get()->p, actualSize);
-}
-
-void ConstBigNumber::ToBinary(void * out, const size_t size, const BigEndian &) const
-{
-	uint8_t* outByte = static_cast<uint8_t*>(out);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_write_binary(Get(), outByte, size));
-}
