@@ -83,7 +83,7 @@ ServerX509::ServerX509(mbedtls_x509_crt & cert) :
 }
 
 ServerX509::ServerX509(const MbedTlsObj::ECKeyPair & prvKey, const std::string & enclaveHash, const std::string & platformType, const std::string & selfRaReport) :
-	MbedTlsObj::X509Cert(prvKey, MbedTlsObj::BigNumber::GenRandomNumber(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
+	MbedTlsObj::X509Cert(prvKey, MbedTlsObj::BigNumber::Rand(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
 		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
 		MBEDTLS_X509_NS_CERT_TYPE_SSL_CA | MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT | MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER,
 		("CN=" + enclaveHash).c_str(),
@@ -145,7 +145,7 @@ AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey,
 AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey, 
 	const MbedTlsObj::X509Cert & caCert, const MbedTlsObj::ECKeyPair & serverPrvKey, 
 	const std::string & commonName, const std::string & platformType, const std::string & appId, const std::string & whiteList) :
-	MbedTlsObj::X509Cert(caCert, serverPrvKey, pubKey, MbedTlsObj::BigNumber::GenRandomNumber(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
+	MbedTlsObj::X509Cert(caCert, serverPrvKey, pubKey, MbedTlsObj::BigNumber::Rand(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
 		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
 		MBEDTLS_X509_NS_CERT_TYPE_SSL_CA | MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT | MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER,
 		("CN=" + commonName).c_str(),

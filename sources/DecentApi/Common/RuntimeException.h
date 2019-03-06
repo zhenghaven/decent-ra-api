@@ -9,7 +9,7 @@ namespace Decent
 	{
 	public:
 		explicit RuntimeException(const std::string& what_arg) :
-			std::runtime_error(what_arg.c_str())
+			std::runtime_error(what_arg)
 		{}
 
 		explicit RuntimeException(const char* what_arg) :

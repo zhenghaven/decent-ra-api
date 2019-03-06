@@ -32,6 +32,8 @@
 #include "../Common.h"
 #include "../make_unique.h"
 
+//#include "BigNumber.h"
+
 using namespace Decent::MbedTlsObj;
 using namespace Decent;
 
@@ -56,8 +58,6 @@ namespace std
 
 namespace
 {
-	static constexpr int MBEDTLS_SUCCESS_RET = 0;
-
 	static constexpr mbedtls_ecp_group_id SECP256R1_CURVE_ID = mbedtls_ecp_group_id::MBEDTLS_ECP_DP_SECP256R1;
 
 	static constexpr char const PEM_BEGIN_PUBLIC_KEY[] = "-----BEGIN PUBLIC KEY-----\n";
@@ -110,88 +110,28 @@ namespace
 		CalcPemMaxBytes(X509_CRT_DER_MAX_BYTES, sizeof(PEM_BEGIN_CRT) - 1, sizeof(PEM_END_CRT) - 1);
 
 
-}
 
-struct EcGroupWarp
-{
-	mbedtls_ecp_group m_grp;
-
-	EcGroupWarp()
+	struct EcGroupWarp
 	{
-		mbedtls_ecp_group_init(&m_grp);
-	}
+		mbedtls_ecp_group m_grp;
 
-	~EcGroupWarp()
-	{
-		mbedtls_ecp_group_free(&m_grp);
-	}
+		EcGroupWarp()
+		{
+			mbedtls_ecp_group_init(&m_grp);
+		}
 
-	bool Copy(const mbedtls_ecp_group& grp)
-	{
-		return mbedtls_ecp_group_copy(&m_grp, &grp) == MBEDTLS_SUCCESS_RET;
-	}
-};
+		~EcGroupWarp()
+		{
+			mbedtls_ecp_group_free(&m_grp);
+		}
 
-void BigNumber::FreeObject(mbedtls_mpi* ptr)
-{
-	mbedtls_mpi_free(ptr);
-	delete ptr;
+		bool Copy(const mbedtls_ecp_group& grp)
+		{
+			return mbedtls_ecp_group_copy(&m_grp, &grp) == MBEDTLS_SUCCESS_RET;
+		}
+	};
 }
 
-BigNumber BigNumber::GenRandomNumber(size_t size)
-{
-	BigNumber res(gen);
-
-	MbedTlsHelper::Drbg drbg;
-
-	return (mbedtls_mpi_fill_random(res.Get(), size, &MbedTlsHelper::Drbg::CallBack, &drbg) 
-		== MBEDTLS_SUCCESS_RET) ?
-		std::move(res) :
-		BigNumber(nullptr, &ObjBase::DoNotFree);
-}
-
-BigNumber BigNumber::FromLittleEndian(const void * in, const size_t size)
-{
-	const uint8_t* inByte = static_cast<const uint8_t*>(in);
-
-	std::vector<uint8_t> tmpBuf(std::reverse_iterator<const uint8_t*>(inByte + size), std::reverse_iterator<const uint8_t*>(inByte));
-
-	BigNumber res(gen);
-
-	if (!res ||
-		mbedtls_mpi_read_binary(res.Get(), tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
-	{
-		return BigNumber(nullptr, &ObjBase::DoNotFree);
-	}
-
-	return res;
-}
-
-BigNumber::BigNumber(const Generate &) :
-	ObjBase(new mbedtls_mpi, &FreeObject)
-{
-	mbedtls_mpi_init(Get());
-}
-
-size_t BigNumber::GetSize() const
-{
-	return *this ? mbedtls_mpi_size(Get()) : 0;
-}
-
-bool BigNumber::ToLittleEndian(void * out, const size_t size)
-{
-	uint8_t* outByte = static_cast<uint8_t*>(out);
-
-	if (!*this || 
-		mbedtls_mpi_size(Get()) != size ||
-		mbedtls_mpi_write_binary(Get(), outByte, size) != MBEDTLS_SUCCESS_RET)
-	{
-		return false;
-	}
-
-	std::reverse(outByte, outByte + size);
-	return true;
-}
 
 void PKey::FreeObject(mbedtls_pk_context * ptr)
 {
@@ -405,13 +345,13 @@ bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const
 	{
 		return false;
 	}
-	BigNumber r = BigNumber::FromLittleEndian(inSign.x);
-	BigNumber s = BigNumber::FromLittleEndian(inSign.y);
+	const ConstBigNumber r(inSign.x, sk_struct);
+	const ConstBigNumber s(inSign.y, sk_struct);
 	EcGroupWarp grp;
 
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
 
-	if (!r || !s || !grp.Copy(ecPtr.grp))
+	if (!grp.Copy(ecPtr.grp))
 	{
 		return false;
 	}
@@ -587,9 +527,9 @@ bool ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic &
 	}
 
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-	BigNumber sharedKey(gen);
+	BigNumber sharedKey(sk_empty);
 	EcGroupWarp grp;
-	if (!sharedKey || !grp.Copy(ecPtr.grp))
+	if (!grp.Copy(ecPtr.grp))
 	{
 		return false;
 	}
@@ -620,12 +560,12 @@ bool ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t
 	}
 
 	int mbedRet = 0;
-	BigNumber r(gen);
-	BigNumber s(gen);
+	BigNumber r(sk_empty);
+	BigNumber s(sk_empty);
 	EcGroupWarp grp;
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
 
-	if (!r ||!s || !grp.Copy(ecPtr.grp))
+	if (!grp.Copy(ecPtr.grp))
 	{
 		return false;
 	}
@@ -639,7 +579,15 @@ bool ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t
 		&ecPtr.d, hash, hashLen, &MbedTlsHelper::Drbg::CallBack, &drbg);
 #endif 
 
-	return mbedRet == MBEDTLS_SUCCESS_RET && r.ToLittleEndian(outSign.x) && s.ToLittleEndian(outSign.y);
+	if (mbedRet != MBEDTLS_SUCCESS_RET)
+	{
+		return false;
+	}
+	
+	r.ToBinary(outSign.x, sk_struct);
+	s.ToBinary(outSign.y, sk_struct);
+
+	return true;
 }
 
 std::string ECKeyPair::ToPrvPemString() const
