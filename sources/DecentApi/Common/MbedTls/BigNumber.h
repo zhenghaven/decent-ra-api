@@ -3,6 +3,8 @@
 #include "ObjBase.h"
 
 #include <cstdint>
+
+#include <string>
 #include <array>
 #include <vector>
 
@@ -672,7 +674,7 @@ namespace Decent
 			ConstBigNumber(const std::array<T, size>& in) noexcept :
 				ConstBigNumber(in.data(), size * sizeof(T), sk_gen)
 			{
-				static_assert(!(totalSize % sizeof(mbedtls_mpi_uint)), "The size of the given big number must be a factor of 8-Byte (64-bit). ");
+				static_assert(!((size * sizeof(T)) % sizeof(mbedtls_mpi_uint)), "The size of the given big number must be a factor of 8-Byte (64-bit). ");
 			}
 
 			/**
