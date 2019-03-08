@@ -58,19 +58,27 @@ extern "C" sgx_status_t ecall_decent_ra_server_gen_x509(const void * const ias_c
 	std::shared_ptr<const general_secp256r1_public_t> signPub = keyContainer.GetSignPubKey();
 	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = keyContainer.GetSignKeyPair();
 
-	std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub), gs_serverState);
-	std::unique_ptr<RaProcessorClient> clientProcessor = Tools::make_unique<RaProcessorClient>(
-		enclave_Id,
-		[](const sgx_ec256_public_t& pubKey) {
-			return true;
-		},
-		RaProcessorClient::sk_acceptDefaultConfig,
-		gs_serverState
-		);
+	try
+	{
+		std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub), gs_serverState);
+		std::unique_ptr<RaProcessorClient> clientProcessor = Tools::make_unique<RaProcessorClient>(
+			enclave_Id,
+			[](const sgx_ec256_public_t& pubKey) {
+				return true;
+			},
+			RaProcessorClient::sk_acceptDefaultConfig,
+			gs_serverState
+			);
 
-	Decent::RaSgx::SelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
-	
-	return Decent::RaSgx::SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener, gs_serverState) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
+		Decent::RaSgx::SelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
+
+		return Decent::RaSgx::SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener, gs_serverState) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
+	}
+	catch (const std::exception& e)
+	{
+		PRINT_W("Failed to generate server certificate. Caught exception: %s", e.what());
+		return SGX_ERROR_UNEXPECTED;
+	}
 }
 
 //Output cert to the untrusted side.
@@ -81,12 +89,19 @@ extern "C" size_t ecall_decent_ra_server_get_x509_pem(char* buf, size_t buf_len)
 	{
 		return 0;
 	}
+	try
+	{
+		const std::string& x509Pem = serverCert->ToPemString();
 
-	const std::string& x509Pem = serverCert->ToPemString();
+		std::memcpy(buf, x509Pem.data(), buf_len >= x509Pem.size() ? x509Pem.size() : buf_len);
 
-	std::memcpy(buf, x509Pem.data(), buf_len >= x509Pem.size() ? x509Pem.size() : buf_len);
-
-	return x509Pem.size();
+		return x509Pem.size();
+	}
+	catch (const std::exception& e)
+	{
+		PRINT_W("Failed to get server certificate. Caught exception: %s", e.what());
+		return 0;
+	}
 }
 
 //Load const white list to the const white list manager.
@@ -102,37 +117,46 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
 	
-	std::string plainMsg;
-	Decent::Sgx::LocAttCommLayer commLayer(connection, true);
-	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
-	if (!identity ||
-		!commLayer.ReceiveMsg(connection, plainMsg))
+	try
+	{
+		std::string plainMsg;
+		Decent::Sgx::LocAttCommLayer commLayer(connection, true);
+		const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
+		if (!identity)
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
+
+		commLayer.ReceiveMsg(connection, plainMsg);
+		X509Req appX509Req(plainMsg);
+		if (!appX509Req || !appX509Req.VerifySignature())
+		{
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
+
+		std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = gs_serverState.GetKeyContainer().GetSignKeyPair();
+		std::shared_ptr<const ServerX509> serverCert = gs_serverState.GetServerCertContainer().GetServerCert();
+
+		if (!serverCert || !*serverCert ||
+			!signKey || !*signKey)
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
+
+		std::string whiteList = WhiteList::ConstManager::Get().GetWhiteList(key);
+		AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity->mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(*identity), whiteList);
+
+		if (!appX509)
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
+
+		commLayer.SendMsg(connection, appX509.ToPemString());
+	}
+	catch (const std::exception&)
 	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-	X509Req appX509Req(plainMsg);
-	if (!appX509Req || !appX509Req.VerifySignature())
-	{
-		return SGX_ERROR_INVALID_PARAMETER;
-	}
-
-	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = gs_serverState.GetKeyContainer().GetSignKeyPair();
-	std::shared_ptr<const ServerX509> serverCert = gs_serverState.GetServerCertContainer().GetServerCert();
-
-	if (!serverCert || !*serverCert || 
-		!signKey || !*signKey)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	std::string whiteList = WhiteList::ConstManager::Get().GetWhiteList(key);
-	AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity->mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(*identity), whiteList);
-
-	if (!appX509 ||
-		!commLayer.SendMsg(connection, appX509.ToPemString()))
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
+	
 	return SGX_SUCCESS;
 }
