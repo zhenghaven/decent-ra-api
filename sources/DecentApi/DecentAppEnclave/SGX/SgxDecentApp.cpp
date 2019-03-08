@@ -51,43 +51,47 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 	const HardCoded& hardcoded = gs_appStates.GetHardCodedWhiteList();
 
-	Decent::Sgx::LocAttCommLayer commLayer(connection, false);
-	const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
-	if (!identity ||
-		!hardcoded.CheckHashAndName(Tools::SerializeStruct(identity->mr_enclave), WhiteList::sk_nameDecentServer) )
+	try
 	{
-		PRINT_I("Could not verify the identity of the Decent Server.");
+		Decent::Sgx::LocAttCommLayer commLayer(connection, false);
+		const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
+		if (!identity ||
+			!hardcoded.CheckHashAndName(Tools::SerializeStruct(identity->mr_enclave), WhiteList::sk_nameDecentServer))
+		{
+			PRINT_I("Could not verify the identity of the Decent Server.");
+			return SGX_ERROR_UNEXPECTED;
+		}
+
+		const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
+		std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
+		X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
+		if (!certReq)
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
+
+		std::string plainMsg;
+		commLayer.SendMsg(connection, certReq.ToPemString());
+		commLayer.ReceiveMsg(connection, plainMsg);
+
+		//Process X509 Message:
+
+		std::shared_ptr<AppX509> cert = std::make_shared<AppX509>(plainMsg);
+		if (!cert || !*cert)
+		{
+			return SGX_ERROR_UNEXPECTED;
+		}
+
+		gs_appStates.GetAppCertContainer().SetAppCert(cert);
+
+		//Set loaded whitelist.
+		WhiteList::Loaded loadedList(*cert);
+		gs_appStates.GetLoadedWhiteList(&loadedList);
+	}
+	catch (const std::exception&)
+	{
 		return SGX_ERROR_UNEXPECTED;
 	}
-
-	const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
-	std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
-	X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
-	if (!certReq)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	std::string plainMsg;
-	if (!commLayer.SendMsg(connection, certReq.ToPemString()) ||
-		!commLayer.ReceiveMsg(connection, plainMsg))
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	//Process X509 Message:
-
-	std::shared_ptr<AppX509> cert = std::make_shared<AppX509>(plainMsg);
-	if (!cert || !*cert)
-	{
-		return SGX_ERROR_UNEXPECTED;
-	}
-
-	gs_appStates.GetAppCertContainer().SetAppCert(cert);
-
-	//Set loaded whitelist.
-	WhiteList::Loaded loadedList(*cert);
-	gs_appStates.GetLoadedWhiteList(&loadedList);
 
 	return SGX_SUCCESS;
 }

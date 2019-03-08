@@ -11,7 +11,6 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/md.h>
 #include <mbedtls/md_internal.h>
-#include <mbedtls/gcm.h>
 #include <mbedtls/ecp.h>
 #include <mbedtls/ecdh.h>
 #include <mbedtls/pem.h>
@@ -33,6 +32,7 @@
 #include "../make_unique.h"
 
 //#include "BigNumber.h"
+#include "Drbg.h"
 
 using namespace Decent::MbedTlsObj;
 using namespace Decent;
@@ -201,50 +201,6 @@ bool PKey::ToPubDerArray(std::vector<uint8_t>& outArray) const
 	return PKey::ToPubDerArray(outArray, PUB_DER_MAX_BYTES);
 }
 
-void Gcm::FreeObject(mbedtls_gcm_context * ptr)
-{
-	mbedtls_gcm_free(ptr);
-	delete ptr;
-}
-
-bool Gcm::Encrypt(const void * inData, void * outData, const size_t dataLen,
-	const void* iv, const size_t ivLen, const void * add, const size_t addLen,
-	void* tag, const size_t tagLen)
-{
-	if (!*this)
-	{
-		return false;
-	}
-	return mbedtls_gcm_crypt_and_tag(Get(), MBEDTLS_GCM_ENCRYPT, dataLen, 
-		static_cast<const uint8_t*>(iv), ivLen, 
-		static_cast<const uint8_t*>(add), addLen, 
-		static_cast<const uint8_t*>(inData), 
-		static_cast<uint8_t*>(outData), 
-		tagLen, static_cast<uint8_t*>(tag)) == MBEDTLS_SUCCESS_RET;
-}
-
-bool Gcm::Decrypt(const void * inData, void * outData, const size_t dataLen,
-	const void * iv, const size_t ivLen, const void * add, const size_t addLen,
-	const void* tag, const size_t tagLen)
-{
-	if (!*this)
-	{
-		return false;
-	}
-	return mbedtls_gcm_auth_decrypt(Get(), dataLen,
-		static_cast<const uint8_t*>(iv), ivLen, 
-		static_cast<const uint8_t*>(add), addLen, 
-		static_cast<const uint8_t*>(tag), tagLen, 
-		static_cast<const uint8_t*>(inData), 
-		static_cast<uint8_t*>(outData)) == MBEDTLS_SUCCESS_RET;
-}
-
-Gcm::Gcm() :
-	ObjBase(new mbedtls_gcm_context, &FreeObject)
-{
-	mbedtls_gcm_init(Get());
-}
-
 ECKeyPublic ECKeyPublic::FromPemDer(const void* ptr, size_t size)
 {
 	ECKeyPublic res;
@@ -408,8 +364,8 @@ static bool CheckPublicAndPrivatePair(const mbedtls_ecp_keypair* pair)
 
 	mbedtls_ecp_group_copy(&grp, &pair->grp);
 
-	MbedTlsHelper::Drbg drbg;
-	int mbedRet = mbedtls_ecp_mul(&grp, &Q, &pair->d, &grp.G, &MbedTlsHelper::Drbg::CallBack, &drbg);
+	Drbg drbg;
+	int mbedRet = mbedtls_ecp_mul(&grp, &Q, &pair->d, &grp.G, &Drbg::CallBack, &drbg);
 
 	bool negRes = (mbedRet != MBEDTLS_SUCCESS_RET) ||
 		mbedtls_mpi_cmp_mpi(&Q.X, &pair->Q.X) ||
@@ -450,8 +406,8 @@ ECKeyPair ECKeyPair::FromGeneral(const general_secp256r1_private_t & prv, const 
 	}
 	else
 	{
-		MbedTlsHelper::Drbg drbg;
-		if (mbedtls_ecp_mul(&ecPtr->grp, &ecPtr->Q, &ecPtr->d, &ecPtr->grp.G, &MbedTlsHelper::Drbg::CallBack, &drbg)
+		Drbg drbg;
+		if (mbedtls_ecp_mul(&ecPtr->grp, &ecPtr->Q, &ecPtr->d, &ecPtr->grp.G, &Drbg::CallBack, &drbg)
 			!= MBEDTLS_SUCCESS_RET)
 		{
 			return fail;
@@ -467,12 +423,12 @@ ECKeyPair ECKeyPair::GenerateNewKey()
 	ECKeyPair fail(nullptr, ObjBase::DoNotFree);
 
 	mbedtls_ecp_keypair* ecPtr = nullptr;
-	MbedTlsHelper::Drbg drbg;
+	Drbg drbg;
 
 	if (mbedtls_pk_setup(res.Get(), mbedtls_pk_info_from_type(mbedtls_pk_type_t::MBEDTLS_PK_ECKEY))
 		!= MBEDTLS_SUCCESS_RET ||
 		!(ecPtr = mbedtls_pk_ec(*res.Get())) ||
-		mbedtls_ecp_gen_key(SECP256R1_CURVE_ID, ecPtr, &MbedTlsHelper::Drbg::CallBack, &drbg)
+		mbedtls_ecp_gen_key(SECP256R1_CURVE_ID, ecPtr, &Drbg::CallBack, &drbg)
 		!= MBEDTLS_SUCCESS_RET)
 	{
 		return fail;
@@ -534,11 +490,11 @@ bool ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic &
 		return false;
 	}
 
-	MbedTlsHelper::Drbg drbg;
+	Drbg drbg;
 
 	int mbedRet = mbedtls_ecdh_compute_shared(&grp.m_grp, sharedKey.Get(),
 		&peerPubKey.GetEcKeyPtr()->Q, &ecPtr.d,
-		&MbedTlsHelper::Drbg::CallBack, &drbg);
+		&Drbg::CallBack, &drbg);
 
 	if (mbedRet != MBEDTLS_SUCCESS_RET ||
 		mbedtls_mpi_size(sharedKey.Get()) != outKey.size() ||
@@ -574,9 +530,9 @@ bool ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t
 	mbedRet = mbedtls_ecdsa_sign_det(&grp.m_grp, r.Get(), s.Get(), 
 		&ecPtr.d, hash, hashLen, mdInfo->type);
 #else
-	MbedTlsHelper::Drbg drbg;
+	Drbg drbg;
 	mbedRet = mbedtls_ecdsa_sign(&grp.m_grp, r.Get(), s.Get(),
-		&ecPtr.d, hash, hashLen, &MbedTlsHelper::Drbg::CallBack, &drbg);
+		&ecPtr.d, hash, hashLen, &Drbg::CallBack, &drbg);
 #endif 
 
 	if (mbedRet != MBEDTLS_SUCCESS_RET)
@@ -662,12 +618,12 @@ static const std::string CreateX509Pem(const PKey & keyPair, const std::string& 
 		return std::string();
 	}
 
-	MbedTlsHelper::Drbg drbg;
+	Drbg drbg;
 
 	std::vector<char> tmpRes(X509_REQ_PEM_MAX_BYTES);
 	int mbedRet = mbedtls_x509write_csr_pem(&csr, 
 		reinterpret_cast<unsigned char*>(tmpRes.data()), tmpRes.size(), 
-		&MbedTlsHelper::Drbg::CallBack, &drbg);
+		&Drbg::CallBack, &drbg);
 
 	mbedtls_x509write_csr_free(&csr);
 	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) : std::string();
@@ -944,12 +900,12 @@ static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvK
 		return std::string();
 	}
 
-	MbedTlsHelper::Drbg drbg;
+	Drbg drbg;
 
 	std::vector<uint8_t> tmpDerBuf(X509_CRT_DER_MAX_BYTES + extTotalSize + 5);
 
 	mbedRet = myX509WriteCrtDer(&cert, tmpDerBuf,
-		&MbedTlsHelper::Drbg::CallBack, &drbg);
+		&Drbg::CallBack, &drbg);
 	if (mbedRet < 0)
 	{
 		mbedtls_x509write_crt_free(&cert);
@@ -1292,36 +1248,6 @@ X509Crl::X509Crl() :
 	mbedtls_x509_crl_init(Get());
 }
 
-Aes128Gcm Aes128Gcm::ConstructGcmCtx(const void* key, const size_t size)
-{
-	Aes128Gcm res;
-	const uint8_t* keyByte = static_cast<const uint8_t*>(key);
-
-	const unsigned int keyBits = static_cast<unsigned int>(size * GENERAL_BITS_PER_BYTE);
-
-	if (mbedtls_gcm_setkey(res.Get(), mbedtls_cipher_id_t::MBEDTLS_CIPHER_ID_AES, keyByte, keyBits) != MBEDTLS_SUCCESS_RET)
-	{
-		Gcm::Empty();
-	}
-
-	return res;
-}
-
-Aes128Gcm::Aes128Gcm(const General128BitKey & key) :
-	Aes128Gcm(ConstructGcmCtx(key.data(), key.size()))
-{
-}
-
-Aes128Gcm::Aes128Gcm(const uint8_t(&key)[GENERAL_128BIT_16BYTE_SIZE]) :
-	Aes128Gcm(ConstructGcmCtx(key, GENERAL_128BIT_16BYTE_SIZE))
-{
-}
-
-Aes128Gcm::Aes128Gcm(Aes128Gcm && other) :
-	Gcm(std::forward<Gcm>(other))
-{
-}
-
 void TlsConfig::FreeObject(mbedtls_ssl_config * ptr)
 {
 	mbedtls_ssl_config_free(ptr);
@@ -1336,15 +1262,15 @@ TlsConfig::TlsConfig(TlsConfig&& other) :
 
 TlsConfig::TlsConfig() : 
 	ObjBase(new mbedtls_ssl_config, &FreeObject),
-	m_rng(Tools::make_unique<MbedTlsHelper::Drbg>())
+	m_rng(Tools::make_unique<Drbg>())
 {
 	mbedtls_ssl_config_init(Get());
-	mbedtls_ssl_conf_rng(Get(), &MbedTlsHelper::Drbg::CallBack, m_rng.get());
+	mbedtls_ssl_conf_rng(Get(), &Drbg::CallBack, m_rng.get());
 }
 
 TlsConfig::TlsConfig(mbedtls_ssl_config * ptr, FreeFuncType freeFunc) :
 	ObjBase(ptr, freeFunc),
-	m_rng(Tools::make_unique<MbedTlsHelper::Drbg>())
+	m_rng(Tools::make_unique<Drbg>())
 {
 }
 

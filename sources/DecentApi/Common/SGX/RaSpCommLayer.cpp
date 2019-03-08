@@ -24,16 +24,32 @@ static std::unique_ptr<RaProcessorSp> DoHandShake(void* const connectionPtr, std
 	std::vector<uint8_t> msg2;
 	sgx_ra_msg4_t msg4;
 
-	if (!StatConnection::ReceivePack(connectionPtr, buf1) ||
-		buf1.size() != sizeof(sgx_ra_msg0s_t) ||
-		!raProcessor->ProcessMsg0(*reinterpret_cast<const sgx_ra_msg0s_t*>(buf1.data()), msg0r) ||
-		!StatConnection::SendAndReceivePack(connectionPtr, &msg0r, sizeof(msg0r), buf1) ||
-		buf1.size() != sizeof(sgx_ra_msg1_t) ||
-		!raProcessor->ProcessMsg1(*reinterpret_cast<const sgx_ra_msg1_t*>(buf1.data()), msg2) ||
-		!StatConnection::SendAndReceivePack(connectionPtr, msg2.data(), msg2.size(), buf1) ||
-		buf1.size() < sizeof(sgx_ra_msg3_t) ||
-		!raProcessor->ProcessMsg3(*reinterpret_cast<const sgx_ra_msg3_t*>(buf1.data()), buf1.size(), msg4, nullptr) ||
-		!StatConnection::SendPack(connectionPtr, &msg4, sizeof(msg4)) )
+	try
+	{
+		StatConnection::ReceivePack(connectionPtr, buf1);
+		if (buf1.size() != sizeof(sgx_ra_msg0s_t) ||
+			!raProcessor->ProcessMsg0(*reinterpret_cast<const sgx_ra_msg0s_t*>(buf1.data()), msg0r))
+		{
+			return nullptr;
+		}
+
+		StatConnection::SendAndReceivePack(connectionPtr, &msg0r, sizeof(msg0r), buf1);
+		if (buf1.size() != sizeof(sgx_ra_msg1_t) ||
+			!raProcessor->ProcessMsg1(*reinterpret_cast<const sgx_ra_msg1_t*>(buf1.data()), msg2))
+		{
+			return nullptr;
+		}
+
+		StatConnection::SendAndReceivePack(connectionPtr, msg2.data(), msg2.size(), buf1);
+		if (buf1.size() < sizeof(sgx_ra_msg3_t) ||
+			!raProcessor->ProcessMsg3(*reinterpret_cast<const sgx_ra_msg3_t*>(buf1.data()), buf1.size(), msg4, nullptr))
+		{
+			return nullptr;
+		}
+
+		StatConnection::SendPack(connectionPtr, &msg4, sizeof(msg4));
+	}
+	catch (const std::exception&)
 	{
 		return nullptr;
 	}

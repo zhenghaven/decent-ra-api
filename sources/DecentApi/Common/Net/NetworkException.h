@@ -10,7 +10,7 @@ namespace Decent
 		{
 		public:
 			explicit Exception(const std::string& what_arg) :
-				RuntimeException(what_arg.c_str())
+				RuntimeException(what_arg)
 			{}
 
 			explicit Exception(const char* what_arg) :
@@ -33,6 +33,14 @@ namespace Decent
 		public:
 			ConnectionClosedException() :
 				Exception("The connection is closed!")
+			{}
+		};
+
+		class ConnectionNotEstablished : public Exception
+		{
+		public:
+			ConnectionNotEstablished() :
+				Exception("The connection has not established!")
 			{}
 		};
 	}

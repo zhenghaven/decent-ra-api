@@ -215,7 +215,9 @@ extern "C" int ocall_decent_sgx_ra_send_msg0s(void* const connection_ptr)
 			return false;
 		}
 
-		return StatConnection::SendPack(connection_ptr, &msg0s, sizeof(msg0s));
+		StatConnection::SendPack(connection_ptr, &msg0s, sizeof(msg0s));
+
+		return true;
 	}
 	catch (const std::exception&)
 	{

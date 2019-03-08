@@ -34,8 +34,13 @@ namespace Decent
 
 			operator bool() const;
 
-			virtual bool ReceiveMsg(void* const connectionPtr, std::string& outMsg) override;
-			virtual bool SendMsg(void* const connectionPtr, const std::string& inMsg) override;
+			virtual void SendRaw(void* const connectionPtr, const void* buf, const size_t size) override;
+
+			virtual void ReceiveRaw(void* const connectionPtr, void* buf, const size_t size) override;
+
+			virtual void SendMsg(void* const connectionPtr, const std::string& inMsg) override;
+
+			virtual void ReceiveMsg(void* const connectionPtr, std::string& outMsg) override;
 
 			std::string GetPeerCertPem() const;
 			std::string GetPublicKeyPem() const;

@@ -22,20 +22,21 @@ extern "C" int ocall_decent_net_cnet_send_pack(void* const ptr, const char* msg,
 	}
 }
 
-extern "C" size_t ocall_decent_net_cnet_recv_pack(void* const ptr, char** msg)
+extern "C" int ocall_decent_net_cnet_recv_pack(size_t* recv_size, void* const ptr, char** msg)
 {
-	if (!ptr || !msg)
+	if (!recv_size || !ptr || !msg)
 	{
-		return 0;
+		return false;
 	}
 
 	try
 	{
-		return reinterpret_cast<Connection*>(ptr)->ReceivePack(*msg);
+		*recv_size = reinterpret_cast<Connection*>(ptr)->ReceivePack(*msg);
+		return true;
 	}
 	catch (const std::exception&)
 	{
-		return 0;
+		return false;
 	}
 }
 
@@ -58,37 +59,39 @@ extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const c
 	}
 }
 
-extern "C" size_t ocall_decent_net_cnet_send_raw(void* const ptr, const char* msg, size_t size)
+extern "C" int ocall_decent_net_cnet_send_raw(size_t* sent_size, void* const ptr, const char* msg, size_t size)
 {
-	if (!ptr || !msg)
+	if (!sent_size || !ptr || !msg)
 	{
-		return 0;
+		return false;
 	}
 
 	try
 	{
-		return reinterpret_cast<Connection*>(ptr)->SendRaw(msg, size);
+		*sent_size = reinterpret_cast<Connection*>(ptr)->SendRaw(msg, size);
+		return true;
 	}
 	catch (const std::exception&)
 	{
-		return 0;
+		return false;
 	}
 }
 
-extern "C" size_t ocall_decent_net_cnet_recv_raw(void* const ptr, char* buf, size_t buf_size)
+extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr, char* buf, size_t buf_size)
 {
-	if (!ptr || !buf)
+	if (!recv_size || !ptr || !buf)
 	{
-		return 0;
+		return false;
 	}
 
 	try
 	{
-		return reinterpret_cast<Connection*>(ptr)->ReceiveRaw(buf, buf_size);
+		*recv_size = reinterpret_cast<Connection*>(ptr)->ReceiveRaw(buf, buf_size);
+		return true;
 	}
 	catch (const std::exception&)
 	{
-		return 0;
+		return false;
 	}
 }
 

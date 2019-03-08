@@ -12,11 +12,11 @@
 
 //For now, we put them together here.
 #include "BigNumber.h"
+#include "Gcm.h"
 
 typedef struct mbedtls_entropy_context mbedtls_entropy_context;
 typedef struct mbedtls_pk_context mbedtls_pk_context;
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
-typedef struct mbedtls_gcm_context mbedtls_gcm_context;
 typedef struct mbedtls_x509_crt mbedtls_x509_crt;
 typedef struct mbedtls_x509_csr mbedtls_x509_csr;
 typedef struct mbedtls_x509_crl mbedtls_x509_crl;
@@ -28,12 +28,13 @@ namespace Decent
 {
 	namespace MbedTlsHelper
 	{
-		class Drbg;
 		class MbedTlsInitializer;
 	}
 
 	namespace MbedTlsObj
 	{
+		class Drbg;
+
 		class PKey : public ObjBase<mbedtls_pk_context>
 		{
 		public:
@@ -122,114 +123,6 @@ namespace Decent
 			virtual std::string ToPubPemString(const size_t maxBufSize) const;
 
 			virtual bool ToPubDerArray(std::vector<uint8_t>& outArray, const size_t maxBufSize) const;
-		};
-
-		class Gcm : public ObjBase<mbedtls_gcm_context>
-		{
-		public:
-			/**
-			* \brief	Function that frees MbedTLS object and delete the pointer.
-			*
-			* \param [in,out]	ptr	If non-null, the pointer.
-			*/
-			static void FreeObject(mbedtls_gcm_context* ptr);
-
-			static Gcm Empty() { return Gcm(nullptr, &ObjBase::DoNotFree); }
-
-		public:
-			/**
-			* \brief	Constructor that accept a reference to mbedtls_gcm_context object, thus, this instance doesn't
-			* 			has the ownership.
-			*
-			* \param [in,out]	ref	The reference.
-			*/
-			Gcm(mbedtls_gcm_context& ref) noexcept :
-				ObjBase(&ref, &ObjBase::DoNotFree)
-			{}
-
-			/**
-			 * \brief	Move constructor
-			 *
-			 * \param [in,out]	other	The other.
-			 */
-			Gcm(Gcm&& other) noexcept :
-				ObjBase(std::forward<ObjBase>(other))
-			{}
-
-			/** \brief	Destructor */
-			virtual ~Gcm() {}
-
-			virtual Gcm& operator=(Gcm&& other) noexcept
-			{
-				ObjBase::operator=(std::forward<ObjBase>(other));
-				return *this;
-			}
-
-			template<typename DataCtar, typename AddCtar, typename IvStru, typename TagStru>
-			bool EncryptStruct(const DataCtar& inData, void* outData, const size_t outLen,
-				const IvStru& iv, const AddCtar& add, TagStru& outTag)
-			{
-				return inData.size() <= outLen && Encrypt(inData.data(), outData, inData.size(), 
-					&iv, sizeof(iv), add.data(), add.size(), 
-					&outTag, sizeof(outTag));
-			}
-
-			template<typename DataCtar, typename IvStru, typename TagStru>
-			bool EncryptStruct(const DataCtar& inData, void* outData, const size_t outLen,
-				const IvStru& iv, TagStru& outTag)
-			{
-				return inData.size() <= outLen && Encrypt(inData.data(), outData, inData.size(),
-					&iv, sizeof(iv), nullptr, 0, 
-					&outTag, sizeof(outTag));
-			}
-
-			template<typename DataCtar, typename AddCtar, typename IvStru, typename TagStru>
-			bool DecryptStruct(const void* inData, DataCtar& outData, const size_t inLen,
-				const IvStru& iv, const AddCtar& add, const TagStru& outTag)
-			{
-				return outData && outData.size() >= inLen && Decrypt(inData, &outData[0], inLen,
-					&iv, sizeof(iv), add.data(), add.size(),
-					&outTag, sizeof(outTag));
-			}
-
-			template<typename DataCtar, typename IvStru, typename TagStru>
-			bool DecryptStruct(const void* inData, DataCtar& outData, const size_t inLen,
-				const IvStru& iv, const TagStru& outTag)
-			{
-				return inData && outData.size() >= inLen && Decrypt(inData, &outData[0], inLen,
-					&iv, sizeof(iv), nullptr, 0,
-					&outTag, sizeof(outTag));
-			}
-		
-		protected:
-			Gcm();
-
-			Gcm(mbedtls_gcm_context* ptr, FreeFuncType freeFunc) noexcept :
-				ObjBase(ptr, freeFunc)
-			{}
-
-			/**
-			* \brief	Encrypts data with AES-GCM.
-			*
-			* \param 		  	inData 	Input data to be encrypted.
-			* \param [out]		outData	Output encrypted data.
-			* \param 		  	dataLen	Length of the data.
-			* \param 		  	iv	   	The iv.
-			* \param 		  	ivLen  	Length of the iv.
-			* \param 		  	add	   	The additional authentication info.
-			* \param 		  	addLen 	Length of the add.
-			* \param [out]		tag	   	Output tag.
-			* \param 		  	tagLen 	Length of the tag.
-			*
-			* \return	True if it succeeds, false if it fails.
-			*/
-			virtual bool Encrypt(const void* inData, void* outData, const size_t dataLen,
-				const void* iv, const size_t ivLen, const void* add, const size_t addLen,
-				void* tag, const size_t tagLen);
-
-			virtual bool Decrypt(const void* inData, void* outData, const size_t dataLen,
-				const void* iv, const size_t ivLen, const void* add, const size_t addLen,
-				const void* tag, const size_t tagLen);
 		};
 
 		class ECKeyPublic : public PKey
@@ -533,29 +426,6 @@ namespace Decent
 			std::vector<mbedtls_x509_crt*> m_certStack;
 		};
 
-		class Aes128Gcm : public Gcm
-		{
-		public:
-			Aes128Gcm(const General128BitKey& key);
-			Aes128Gcm(const uint8_t(&key)[GENERAL_128BIT_16BYTE_SIZE]);
-			Aes128Gcm(Aes128Gcm&& other);
-			virtual ~Aes128Gcm() {}
-
-			virtual Aes128Gcm& operator=(const Aes128Gcm& other) = delete;
-			virtual Aes128Gcm& operator=(Aes128Gcm&& other)
-			{
-				Gcm::operator=(std::forward<Gcm>(other));
-				return *this;
-			}
-
-		protected:
-			static Aes128Gcm ConstructGcmCtx(const void* key, const size_t size);
-
-			Aes128Gcm() :
-				Gcm()
-			{}
-		};
-
 		class TlsConfig : public ObjBase<mbedtls_ssl_config>
 		{
 		public:
@@ -585,7 +455,7 @@ namespace Decent
 			TlsConfig(mbedtls_ssl_config* ptr, FreeFuncType freeFunc);
 
 		private:
-			std::unique_ptr<Decent::MbedTlsHelper::Drbg> m_rng;
+			std::unique_ptr<Decent::MbedTlsObj::Drbg> m_rng;
 		};
 
 		class EntropyCtx : public Decent::MbedTlsObj::ObjBase<mbedtls_entropy_context>

@@ -2,75 +2,74 @@
 
 #include <string.h>
 
+#include "../../Common/Net/NetworkException.h"
 #include "edl_decent_net.h"
 #include "edl_decent_tools.h"
 
 using namespace Decent::Net;
 
-bool StatConnection::SendPack(void* const connection, const std::string& inMsg)
-{
-	return StatConnection::SendPack(connection, inMsg.data(), inMsg.size());
-}
+#define CHECK_SGX_ERROR(X) if (X != SGX_SUCCESS) { throw Decent::Net::Exception("OCall to send message pack failed with SGX error code: " + std::to_string(X)); }
+#define CHECK_OCALL_BOOL_RET(X) if (!X) { throw Decent::Net::Exception("OCall to send message pack returned false."); }
 
-bool StatConnection::SendPack(void * const connection, const void * const data, const size_t dataLen)
+void StatConnection::SendPack(void * const connection, const void * const data, const size_t dataLen)
 {
 	int sentRes = 0;
 	sgx_status_t enclaveRet = ocall_decent_net_cnet_send_pack(&sentRes, connection, reinterpret_cast<const char*>(data), dataLen);
 
-	return enclaveRet == SGX_SUCCESS && sentRes;
+	CHECK_SGX_ERROR(enclaveRet);
+	CHECK_OCALL_BOOL_RET(sentRes);
 }
 
-int StatConnection::SendRaw(void * const connection, const void * const data, const size_t dataLen)
+size_t StatConnection::SendRaw(void * const connection, const void * const data, const size_t dataLen)
 {
+	int sentRes = 0;
 	size_t sentSize = 0;
-	sgx_status_t enclaveRet = ocall_decent_net_cnet_send_raw(&sentSize, connection, reinterpret_cast<const char*>(data), dataLen);
+	sgx_status_t enclaveRet = ocall_decent_net_cnet_send_raw(&sentRes, &sentSize, connection, reinterpret_cast<const char*>(data), dataLen);
 
-	return enclaveRet == SGX_SUCCESS ? static_cast<int>(sentSize) : -1;
+	CHECK_SGX_ERROR(enclaveRet);
+	CHECK_OCALL_BOOL_RET(sentRes);
+	return sentSize;
 }
 
-bool StatConnection::ReceivePack(void* const connection, std::string& outMsg)
+void StatConnection::ReceivePack(void* const connection, std::string& outMsg)
 {
+	int recvRes = 0;
 	size_t size = 0;
 	char* msgPtr = nullptr;
 
-	sgx_status_t enclaveRet = ocall_decent_net_cnet_recv_pack(&size, connection, &msgPtr);
-	if (enclaveRet != SGX_SUCCESS || size == 0)
-	{
-		return false;
-	}
+	sgx_status_t enclaveRet = ocall_decent_net_cnet_recv_pack(&recvRes, &size, connection, &msgPtr);
+	CHECK_SGX_ERROR(enclaveRet);
+	CHECK_OCALL_BOOL_RET(recvRes);
 
 	outMsg.resize(size);
 	std::memcpy(&outMsg[0], msgPtr, size);
 
 	ocall_decent_tools_del_buf_char(msgPtr);
-
-	return true;
 }
 
-int StatConnection::ReceiveRaw(void * const connection, void * const buf, const size_t bufLen)
+size_t StatConnection::ReceiveRaw(void * const connection, void * const buf, const size_t bufLen)
 {
+	int recvRes = 0;
 	size_t recvSize = 0;
-	sgx_status_t enclaveRet = ocall_decent_net_cnet_recv_raw(&recvSize, connection, reinterpret_cast<char*>(buf), bufLen);
+	sgx_status_t enclaveRet = ocall_decent_net_cnet_recv_raw(&recvRes, &recvSize, connection, reinterpret_cast<char*>(buf), bufLen);
 
-	return enclaveRet == SGX_SUCCESS ? static_cast<int>(recvSize) : -1;
+	CHECK_SGX_ERROR(enclaveRet);
+	CHECK_OCALL_BOOL_RET(recvRes);
+	return recvSize;
 }
 
-bool StatConnection::SendAndReceivePack(void* const connection, const void* const inData, const size_t inDataLen, std::string& outMsg)
+void StatConnection::SendAndReceivePack(void* const connection, const void* const inData, const size_t inDataLen, std::string& outMsg)
 {
+	int retVal = 0;
 	size_t size = 0;
 	char* msgPtr = nullptr;
-	int retVal = 0;
 
 	sgx_status_t enclaveRet = ocall_decent_net_cnet_send_and_recv_pack(&retVal, connection, reinterpret_cast<const char*>(inData), inDataLen, &msgPtr, &size);
-	if (enclaveRet != SGX_SUCCESS || !retVal)
-	{
-		return false;
-	}
+	CHECK_SGX_ERROR(enclaveRet);
+	CHECK_OCALL_BOOL_RET(retVal);
 
 	outMsg.resize(size);
 	std::memcpy(&outMsg[0], msgPtr, size);
 
 	ocall_decent_tools_del_buf_char(msgPtr);
-
-	return true;
 }

@@ -7,7 +7,7 @@
 #include <mbedtls/bignum.h>
 
 #include "MbedTlsException.h"
-#include "MbedTlsHelpers.h"
+#include "Drbg.h"
 
 using namespace Decent::MbedTlsObj;
 
@@ -23,9 +23,9 @@ BigNumber BigNumber::Rand(size_t size)
 {
 	BigNumber res(sk_empty);
 
-	MbedTlsHelper::Drbg drbg;
+	Drbg drbg;
 
-	CHECK_MBEDTLS_RET(mbedtls_mpi_fill_random(res.Get(), size, &MbedTlsHelper::Drbg::CallBack, &drbg));
+	CHECK_MBEDTLS_RET(mbedtls_mpi_fill_random(res.Get(), size, &Drbg::CallBack, &drbg));
 
 	return std::move(res);
 }
@@ -383,6 +383,18 @@ BigNumber& BigNumber::FlipSign()
 {
 	Get()->s *= -1;
 	return *this;
+}
+
+BigNumber & BigNumber::SetBit(const size_t pos, bool bit)
+{
+	CHECK_MBEDTLS_RET(mbedtls_mpi_set_bit(Get(), pos, bit ? 1 : 0));
+
+	return *this;
+}
+
+bool BigNumber::GetBit(const size_t pos)
+{
+	return mbedtls_mpi_get_bit(Get(), pos) == 1;
 }
 
 void ConstBigNumber::FreeStruct(mbedtls_mpi * ptr)

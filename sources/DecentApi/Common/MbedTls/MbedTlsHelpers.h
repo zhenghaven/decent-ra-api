@@ -15,32 +15,6 @@ namespace Decent
 {
 	namespace MbedTlsHelper
 	{
-		class Drbg
-		{
-		public:
-			Drbg();
-			virtual ~Drbg();
-
-			virtual bool Rand(void* buf, const size_t size);
-
-			template<typename T>
-			bool RandStruct(T& stru)
-			{
-				return Rand(&stru, sizeof(T));
-			}
-
-			template<typename T>
-			bool RandContainer(T& stru)
-			{
-				return Rand(&(stru[0]), stru.size());
-			}
-
-			static int CallBack(void * ctx, unsigned char * buf, size_t len);
-
-		private:
-			void* m_state;
-		};
-
 		//Dest is allocated but not initialized.
 		bool MbedTlsAsn1DeepCopy(mbedtls_asn1_buf& dest, const mbedtls_asn1_buf& src);
 

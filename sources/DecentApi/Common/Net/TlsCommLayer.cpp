@@ -8,6 +8,7 @@
 
 #include "../MbedTls/MbedTlsObjects.h"
 
+#include "NetworkException.h"
 #include "Connection.h"
 
 using namespace Decent::Net;
@@ -22,54 +23,48 @@ namespace
 {
 	static int MbedTlsSslSend(void *ctx, const unsigned char *buf, size_t len)
 	{
-		if (!ctx)
-		{
-			return -1;
-		}
-
-		return StatConnection::SendRaw(ctx, buf, len);
+		return StatConnection::SendRawCallback(ctx, buf, len);
 	}
 
 	static int MbedTlsSslRecv(void *ctx, unsigned char *buf, size_t len)
 	{
-		if (!ctx)
-		{
-			return -1;
-		}
-
-		return StatConnection::ReceiveRaw(ctx, buf, len);
+		return StatConnection::ReceiveRawCallback(ctx, buf, len);
 	}
 
-	static bool MbedTlsSslWriteWrap(mbedtls_ssl_context *ssl, const void* const buf, const size_t len)
+	static void MbedTlsSslWriteWrap(mbedtls_ssl_context *ssl, const void* const buf, const size_t len)
 	{
 		size_t sentSize = 0;
 		int res = 0;
 		while (sentSize < len)
 		{
-			res = mbedtls_ssl_write(ssl, reinterpret_cast<const uint8_t*>(buf), len - sentSize);
-			if (res < 0)
+			res = mbedtls_ssl_write(ssl, reinterpret_cast<const uint8_t*>(buf), len - sentSize); //Pure C function, assume throw();
+			if (res < 0 && res != MBEDTLS_ERR_SSL_WANT_WRITE)
 			{
-				return false;
+				throw Exception("TLS send data failed.");
 			}
-			sentSize += res;
+			else if(res >= 0)
+			{
+				sentSize += res;
+			}
 		}
-		return true;
 	}
 
-	static bool MbedTlsSslReadWrap(mbedtls_ssl_context *ssl, void* const buf, const size_t len)
+	static void MbedTlsSslReadWrap(mbedtls_ssl_context *ssl, void* const buf, const size_t len)
 	{
 		size_t recvSize = 0;
 		int res = 0;
 		while (recvSize < len)
 		{
 			res = mbedtls_ssl_read(ssl, reinterpret_cast<uint8_t*>(buf), len - recvSize);
-			if (res < 0)
+			if (res < 0 && res != MBEDTLS_ERR_SSL_WANT_READ)
 			{
-				return false;
+				throw Exception("TLS read data failed.");
 			}
-			recvSize += res;
+			else if (res >= 0)
+			{
+				recvSize += res;
+			}
 		}
-		return true;
 	}
 
 	static mbedtls_ssl_context* ConstructTlsConnection(void * const connectionPtr, bool reqPeerCert,
@@ -159,32 +154,59 @@ TlsCommLayer::operator bool() const
 	return m_sslCtx != nullptr && m_tlsConfig && *m_tlsConfig && m_hasHandshaked;
 }
 
-bool TlsCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
+void TlsCommLayer::SendRaw(void * const connectionPtr, const void * buf, const size_t size)
 {
 	if (!*this)
 	{
-		return false;
+		throw ConnectionNotEstablished();
 	}
-	uint64_t msgSize = 0;
-	if (!MbedTlsSslReadWrap(m_sslCtx, &msgSize, sizeof(uint64_t)))
-	{
-		return false;
-	}
-	outMsg.resize(msgSize);
-	return MbedTlsSslReadWrap(m_sslCtx, &outMsg[0], outMsg.size());
+
+	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
+	MbedTlsSslWriteWrap(m_sslCtx, buf, size);
 }
 
-bool TlsCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg)
+void TlsCommLayer::ReceiveRaw(void * const connectionPtr, void * buf, const size_t size)
+{
+	std::string msgBuf;
+	ReceiveMsg(connectionPtr, msgBuf);
+	if (msgBuf.size() != size)
+	{
+		throw Exception("The size of received message does not match the size that requested!");
+	}
+
+	uint8_t* bytePtr = static_cast<uint8_t*>(buf);
+	memcpy(bytePtr, msgBuf.data(), size);
+}
+
+void TlsCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg)
 {
 	if (!*this)
 	{
-		return false;
+		throw ConnectionNotEstablished();
 	}
 
 	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 
 	uint64_t msgSize = static_cast<uint64_t>(inMsg.size());
-	return MbedTlsSslWriteWrap(m_sslCtx, &msgSize, sizeof(uint64_t)) && MbedTlsSslWriteWrap(m_sslCtx, inMsg.data(), inMsg.size());
+	MbedTlsSslWriteWrap(m_sslCtx, &msgSize, sizeof(uint64_t));
+	MbedTlsSslWriteWrap(m_sslCtx, inMsg.data(), inMsg.size());
+}
+
+void TlsCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
+{
+	if (!*this)
+	{
+		throw ConnectionNotEstablished();
+	}
+
+	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
+
+	uint64_t msgSize = 0;
+	MbedTlsSslReadWrap(m_sslCtx, &msgSize, sizeof(uint64_t));
+
+	outMsg.resize(msgSize);
+
+	MbedTlsSslReadWrap(m_sslCtx, &outMsg[0], outMsg.size());
 }
 
 std::string TlsCommLayer::GetPeerCertPem() const

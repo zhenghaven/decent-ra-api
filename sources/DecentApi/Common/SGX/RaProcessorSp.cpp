@@ -19,6 +19,7 @@
 #include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/MbedTlsHelpers.h"
+#include "../MbedTls/Drbg.h"
 
 #include "sgx_structs.h"
 #include "IasReport.h"
@@ -29,11 +30,10 @@ using namespace Decent;
 using namespace Decent::Sgx;
 using namespace Decent::Ias;
 using namespace Decent::Tools;
+using namespace Decent::MbedTlsObj;
 
 namespace
 {
-	//typedef bool(*KeyDeriveFuncType)(const General256BitKey& key, const std::string& label, General128BitKey& outKey);
-
 	static std::shared_ptr<const sgx_spid_t> g_sgxSpid = std::make_shared<const sgx_spid_t>();
 
 	static std::string ConstructNonce(size_t size)
@@ -41,9 +41,10 @@ namespace
 		size_t dataSize = (size / 4) * 3;
 		std::vector<uint8_t> randData(dataSize);
 
-		MbedTlsHelper::Drbg drbg;
+		Drbg drbg;
+		drbg.RandContainer(randData);
 
-		return drbg.RandContainer(randData) ? cppcodec::base64_rfc4648::encode(randData) : std::string();
+		return cppcodec::base64_rfc4648::encode(randData);
 	}
 
 }

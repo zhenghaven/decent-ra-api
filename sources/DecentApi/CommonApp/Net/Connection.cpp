@@ -1,56 +1,49 @@
 #include "Connection.h"
+#include "../../Common/Net/Connection.h"
 
 #include <json/json.h>
 
 #include "SmartMessages.h"
-#include "../../Common/Net/Connection.h"
+#include "../../Common/Net/NetworkException.h"
 #include "../../Common/Tools/JsonTools.h"
 
 using namespace Decent::Net;
 using namespace Decent::Tools;
 
-bool StatConnection::SendPack(void* const connection, const std::string& inMsg)
-{
-	return StatConnection::SendPack(connection, inMsg.data(), inMsg.size());
-}
+#define CHECK_CONNECTION_PTR(X) if (!X) { throw Decent::Net::Exception("Connection pointer is null!"); }
 
-bool StatConnection::SendPack(void* const connection, const void* const data, const size_t dataLen)
+void StatConnection::SendPack(void* const connection, const void* const data, const size_t dataLen)
 {
-	if (!connection)
-	{
-		return false;
-	}
+	CHECK_CONNECTION_PTR(connection);
 
 	reinterpret_cast<Connection*>(connection)->SendPack(data, dataLen);
-	return true;
 }
 
-int StatConnection::SendRaw(void * const connection, const void * const data, const size_t dataLen)
+size_t StatConnection::SendRaw(void * const connection, const void * const data, const size_t dataLen)
 {
-	return static_cast<int>(reinterpret_cast<Connection*>(connection)->SendRaw(data, dataLen));
+	CHECK_CONNECTION_PTR(connection);
+
+	return reinterpret_cast<Connection*>(connection)->SendRaw(data, dataLen);
 }
 
-bool StatConnection::ReceivePack(void* const connection, std::string& outMsg)
+void StatConnection::ReceivePack(void* const connection, std::string& outMsg)
 {
-	if (!connection)
-	{
-		return false;
-	}
+	CHECK_CONNECTION_PTR(connection);
 
 	reinterpret_cast<Connection*>(connection)->ReceivePack(outMsg);
-	return true;
 }
 
-int StatConnection::ReceiveRaw(void * const connection, void * const buf, const size_t bufLen)
+size_t StatConnection::ReceiveRaw(void * const connection, void * const buf, const size_t bufLen)
 {
-	return static_cast<int>(reinterpret_cast<Connection*>(connection)->ReceiveRaw(buf, bufLen));
+	CHECK_CONNECTION_PTR(connection);
+
+	return reinterpret_cast<Connection*>(connection)->ReceiveRaw(buf, bufLen);
 }
 
-bool StatConnection::SendAndReceivePack(void * const connection, const void * const inData, const size_t inDataLen, std::string & outMsg)
+void StatConnection::SendAndReceivePack(void * const connection, const void * const inData, const size_t inDataLen, std::string & outMsg)
 {
 	reinterpret_cast<Connection*>(connection)->SendPack(inData, inDataLen);
 	reinterpret_cast<Connection*>(connection)->ReceivePack(outMsg);
-	return true;
 }
 
 void Connection::SendRawGuarantee(const void * const dataPtr, const size_t size)

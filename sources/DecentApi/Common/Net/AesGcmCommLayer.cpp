@@ -4,11 +4,13 @@
 #include "../GeneralKeyTypes.h"
 
 #include "../Tools/DataCoding.h"
-#include "../MbedTls/MbedTlsHelpers.h"
+#include "../MbedTls/Drbg.h"
 
+#include "NetworkException.h"
 #include "Connection.h"
 
 using namespace Decent::Net;
+using namespace Decent::MbedTlsObj;
 
 struct EncryptedStruct
 {
@@ -53,7 +55,7 @@ AesGcmCommLayer & AesGcmCommLayer::operator=(AesGcmCommLayer && other)
 {
 	if (this != &other)
 	{
-		m_gcm = std::forward<MbedTlsObj::Aes128Gcm>(other.m_gcm);
+		m_gcm = std::forward<GcmObjType>(other.m_gcm);
 	}
 	return *this;
 }
@@ -63,71 +65,97 @@ AesGcmCommLayer::operator bool() const
 	return m_gcm;
 }
 
-//bool AESGCMCommLayer::DecryptMsg(std::string & outMsg, const char * inMsg)
-//{
-//	return AESGCMCommLayer::DecryptMsg(outMsg, std::string(inMsg));
-//}
-
-bool AesGcmCommLayer::DecryptMsg(std::string & outMsg, const std::string & inMsg)
+std::string AesGcmCommLayer::DecryptMsg(const void* inMsg, const size_t inSize)
 {
-	if (inMsg.size() <= sizeof(EncryptedStruct))
+	if (inSize <= sizeof(EncryptedStruct))
 	{
-		return false;
-	}
-	const EncryptedStruct& encryptedStruct = reinterpret_cast<const EncryptedStruct&>(inMsg[0]);
-
-	size_t messageSize = inMsg.size() - sizeof(EncryptedStruct);
-	outMsg.resize(messageSize);
-
-	bool res = m_gcm.DecryptStruct(
-		&encryptedStruct.m_msg,
-		outMsg,
-		messageSize,
-		encryptedStruct.m_iv,
-		encryptedStruct.m_mac);
-
-	return res;
-}
-
-bool AesGcmCommLayer::EncryptMsg(std::string & outMsg, const std::string & inMsg)
-{
-	outMsg.resize(inMsg.size() + sizeof(EncryptedStruct));
-
-	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(outMsg[0]);
-
-	MbedTlsHelper::Drbg drbg;
-	if (!drbg.RandStruct(encryptedStruct.m_iv))
-	{
-		return false;
+		throw Exception("Invalid input parameters for function " __FUNCTION__ ". The input message is even smaller than an empty encrypted message!");
 	}
 
-	bool res = m_gcm.EncryptStruct(
-		inMsg,
-		&encryptedStruct.m_msg,
-		inMsg.size(),
-		encryptedStruct.m_iv,
-		encryptedStruct.m_mac);
+	const EncryptedStruct& encryptedStruct = *reinterpret_cast<const EncryptedStruct*>(inMsg);
 
-	return res;
+	std::string res;
+
+	size_t messageSize = inSize - sizeof(EncryptedStruct);
+	res.resize(messageSize);
+
+	try
+	{
+		m_gcm.DecryptStruct(
+			&encryptedStruct.m_msg, messageSize,
+			&res[0], res.size(),
+			encryptedStruct.m_iv,
+			encryptedStruct.m_mac);
+	}
+	catch (const std::exception& e)
+	{
+		throw Exception(std::string("Decryption failed with error: ") + e.what());
+	}
+
+	return std::move(res);
 }
 
-bool AesGcmCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
+std::string AesGcmCommLayer::EncryptMsg(const void * inMsg, const size_t inSize)
 {
+	std::string res;
+	res.resize(sizeof(EncryptedStruct) + inSize);
+
+	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(res[0]);
+
+	try
+	{
+		Drbg drbg;
+		drbg.RandStruct(encryptedStruct.m_iv);
+
+		m_gcm.EncryptStruct(
+			inMsg, inSize,
+			&encryptedStruct.m_msg, inSize,
+			encryptedStruct.m_iv,
+			encryptedStruct.m_mac);
+	}
+	catch (const std::exception& e)
+	{
+		throw Exception(std::string("Encryption failed with error: ") + e.what());
+	}
+
+	return std::move(res);
+}
+
+void AesGcmCommLayer::ReceiveRaw(void * const connectionPtr, void * buf, const size_t size)
+{
+	std::string msgBuf;
+	ReceiveMsg(connectionPtr, msgBuf);
+	if (msgBuf.size() != size)
+	{
+		throw Exception("The size of received message does not match the size that requested!");
+	}
+
+	uint8_t* bytePtr = static_cast<uint8_t*>(buf);
+	memcpy(bytePtr, msgBuf.data(), size);
+}
+
+void AesGcmCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
+{
+	if (!*this)
+	{
+		throw ConnectionNotEstablished();
+	}
+
 	std::string encrypted;
-	if (!StatConnection::ReceivePack(connectionPtr, encrypted))
-	{
-		return false;
-	}
-	return DecryptMsg(outMsg, encrypted);
+	StatConnection::ReceivePack(connectionPtr, encrypted);
+	
+	outMsg = DecryptMsg(encrypted);
 }
 
-bool AesGcmCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg)
+void AesGcmCommLayer::SendRaw(void * const connectionPtr, const void * buf, const size_t size)
 {
-	std::string encrypted;
-	if (!EncryptMsg(encrypted, inMsg))
+	if (!*this)
 	{
-		return false;
+		throw ConnectionNotEstablished();
 	}
-	return StatConnection::SendPack(connectionPtr, encrypted);
+
+	std::string encrypted = EncryptMsg(buf, size);
+
+	StatConnection::SendPack(connectionPtr, encrypted);
 }
 

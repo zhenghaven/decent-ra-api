@@ -615,6 +615,10 @@ namespace Decent
 			 */
 			BigNumber& FlipSign();
 
+			BigNumber& SetBit(const size_t pos, bool bit);
+
+			bool GetBit(const size_t pos);
+
 		private:
 			BigNumber(mbedtls_mpi* ptr, FreeFuncType freeFunc) noexcept :
 				ObjBase(ptr, freeFunc)
