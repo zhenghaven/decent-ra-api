@@ -64,6 +64,17 @@ namespace Decent
 			TCPConnection(uint32_t ipAddr, uint16_t portNum);
 
 			/**
+			 * \brief	Construct TCP connection by connecting to a server. Usually this constructor is called in client side.
+			 * 			Known exceptions: Decent::Net::Exception
+			 *
+			 * \param	addr	The address, which is IP & port in the format of IP(32-bits)|Port(16-bits)|0x0000.
+			 */
+			TCPConnection(uint64_t addr) :
+				TCPConnection(static_cast<uint32_t>((addr >> 32) & 0xFFFFFFFFU), 
+					static_cast<uint16_t>(addr & 0xFFFF))
+			{}
+
+			/**
 			 * \brief	Move constructor
 			 *
 			 * \param [in,out]	rhs	The right hand side.
@@ -97,7 +108,8 @@ namespace Decent
 			uint16_t GetPortNum() const;
 
 			/**
-			 * \brief	Connection ID is a combination of IPv4 and Port num.
+			 * \brief	Connection ID is a combination of IPv4 and Port number in the format of 
+			 * 			IP(32-bits)|Port(16-bits)|0x0000.
 			 *
 			 * \return	The connection identifier.
 			 */
