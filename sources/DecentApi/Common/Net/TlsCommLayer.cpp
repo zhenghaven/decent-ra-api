@@ -167,15 +167,13 @@ void TlsCommLayer::SendRaw(void * const connectionPtr, const void * buf, const s
 
 void TlsCommLayer::ReceiveRaw(void * const connectionPtr, void * buf, const size_t size)
 {
-	std::string msgBuf;
-	ReceiveMsg(connectionPtr, msgBuf);
-	if (msgBuf.size() != size)
+	if (!*this)
 	{
-		throw Exception("The size of received message does not match the size that requested!");
+		throw ConnectionNotEstablished();
 	}
+	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 
-	uint8_t* bytePtr = static_cast<uint8_t*>(buf);
-	memcpy(bytePtr, msgBuf.data(), size);
+	MbedTlsSslReadWrap(m_sslCtx, buf, size);
 }
 
 void TlsCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg)
