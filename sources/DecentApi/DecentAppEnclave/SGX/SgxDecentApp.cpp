@@ -88,8 +88,9 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		WhiteList::Loaded loadedList(*cert);
 		gs_appStates.GetLoadedWhiteList(&loadedList);
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e)
 	{
+		PRINT_W("Failed to initialize Decent App. Caught exception: %s", e.what());
 		return SGX_ERROR_UNEXPECTED;
 	}
 

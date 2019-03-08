@@ -18,7 +18,7 @@ Drbg::~Drbg()
 
 void Drbg::Rand(void* buf, const size_t size)
 {
-	if (!CallBack(nullptr, static_cast<unsigned char *>(buf), size))
+	if (CallBack(nullptr, static_cast<unsigned char *>(buf), size) != 0)
 	{
 		throw RuntimeException("SGX failed to generate random number!");
 	}

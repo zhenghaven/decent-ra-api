@@ -24,7 +24,7 @@ void GcmBase::Encrypt(const void * inData, const size_t inLen, void * outData, c
 	void* tag, const size_t tagLen)
 {
 	if (!*this ||
-		!inData || !outData || !iv || !add || !tag ||
+		!inData || !outData || !iv || !tag ||
 		inLen > outLen)
 	{
 		throw RuntimeException("Invalid input parameters for function " __FUNCTION__ ". ");
@@ -46,7 +46,7 @@ void GcmBase::Decrypt(const void * inData, const size_t inLen, void * outData, c
 	const void* tag, const size_t tagLen)
 {
 	if (!*this ||
-		!inData || !outData || !iv || !add || !tag ||
+		!inData || !outData || !iv || !tag ||
 		inLen > outLen)
 	{
 		throw RuntimeException("Invalid input parameters for function " __FUNCTION__ ". ");
