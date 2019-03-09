@@ -422,6 +422,15 @@ namespace Decent
 			bool operator==(const BigNumber& rhs) const;
 
 			/**
+			 * \brief	Inequality operator
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	True if the parameters are not considered equivalent.
+			 */
+			bool operator!=(const BigNumber& rhs) const;
+
+			/**
 			 * \brief	Less-than comparison operator
 			 *
 			 * \param	rhs	The right hand side.
@@ -901,6 +910,7 @@ namespace Decent
 			BigNumber operator-() const { return -static_cast<const BigNumber&>(*this); }
 
 			bool operator==(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) == rhs; }
+			bool operator!=(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) != rhs; }
 			bool operator<(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) < rhs; }
 			bool operator<=(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) <= rhs; }
 			bool operator>(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) > rhs; }

@@ -289,14 +289,14 @@ BigNumber BigNumber::operator-() const
 BigNumber BigNumber::operator<<(size_t count) const
 {
 	BigNumber res(*this);
-	res << count;
+	res <<= count;
 	return std::move(res);
 }
 
 BigNumber Decent::MbedTlsObj::BigNumber::operator>>(size_t count) const
 {
 	BigNumber res(*this);
-	res >> count;
+	res >>= count;
 	return std::move(res);
 }
 
@@ -335,6 +335,11 @@ BigNumber & BigNumber::operator>>=(size_t count)
 bool BigNumber::operator==(const BigNumber & rhs) const
 {
 	return Compare(rhs) == 0;
+}
+
+bool BigNumber::operator!=(const BigNumber & rhs) const
+{
+	return Compare(rhs) != 0;
 }
 
 bool BigNumber::operator<(const BigNumber & rhs) const
