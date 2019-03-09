@@ -12,10 +12,29 @@ using namespace Decent::Ra;
 
 namespace
 {
-	static AppCertContainer gs_certContainer;
-	static KeyContainer gs_keyContainer;
-	static WhiteList::DecentServer gs_serverWhiteList;
-	static const WhiteList::HardCoded gs_hardCodedWhiteList;
+	static AppCertContainer& GetCertContainer()
+	{
+		static AppCertContainer inst;
+		return inst;
+	}
+
+	static KeyContainer& GetKeyContainer()
+	{
+		static KeyContainer inst;
+		return inst;
+	}
+
+	static WhiteList::DecentServer& GetServerWhiteList()
+	{
+		static WhiteList::DecentServer inst;
+		return inst;
+	}
+
+	static const WhiteList::HardCoded& GetHardCodedWhiteList()
+	{
+		static const WhiteList::HardCoded inst;
+		return inst;
+	}
 
 	static const WhiteList::Loaded& GetLoadedWhiteListImpl(WhiteList::Loaded* instPtr)
 	{
@@ -26,7 +45,7 @@ namespace
 
 AppStates& Decent::Ra::GetAppStateSingleton()
 {
-	static AppStates state(gs_certContainer, gs_keyContainer, gs_serverWhiteList, gs_hardCodedWhiteList, &GetLoadedWhiteListImpl);
+	static AppStates state(GetCertContainer(), GetKeyContainer(), GetServerWhiteList(), GetHardCodedWhiteList(), &GetLoadedWhiteListImpl);
 
 	return state;
 }
