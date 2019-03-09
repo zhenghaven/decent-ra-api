@@ -286,6 +286,20 @@ BigNumber BigNumber::operator-() const
 	return std::move(cpy);
 }
 
+BigNumber BigNumber::operator<<(size_t count) const
+{
+	BigNumber res(*this);
+	res << count;
+	return std::move(res);
+}
+
+BigNumber Decent::MbedTlsObj::BigNumber::operator>>(size_t count) const
+{
+	BigNumber res(*this);
+	res >> count;
+	return std::move(res);
+}
+
 BigNumber & BigNumber::operator%=(const BigNumber & rhs)
 {
 	BigNumber res = (*this % rhs);
