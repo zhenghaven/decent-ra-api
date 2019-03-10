@@ -69,7 +69,7 @@ std::string AesGcmCommLayer::DecryptMsg(const void* inMsg, const size_t inSize)
 {
 	if (inSize <= sizeof(EncryptedStruct))
 	{
-		throw Exception("Invalid input parameters for function " __FUNCTION__ ". The input message is even smaller than an empty encrypted message!");
+		throw Exception("Invalid input parameters for function " "AesGcmCommLayer::DecryptMsg" ". The input message is even smaller than an empty encrypted message!");
 	}
 
 	const EncryptedStruct& encryptedStruct = *reinterpret_cast<const EncryptedStruct*>(inMsg);
