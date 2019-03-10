@@ -8,7 +8,8 @@ option(DECENT_API_DECENT_APP "Add decent app module." OFF)
 option(DECENT_API_SGX_PLATFORM "Use SGX platform." ON)
 
 if(APPLE)
-	message(FATAL_ERROR "Mac OS is not supported for now.")
+	message(WARNING "Mac OS is not supported by Intel SGX for now. Trying to build in simulation mode...")
+	set(CMAKE_BUILD_TYPE DebugSimulation)
 endif()
 
 #==========================================================

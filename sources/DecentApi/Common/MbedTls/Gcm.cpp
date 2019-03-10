@@ -11,7 +11,7 @@ namespace
 	static constexpr size_t GENERAL_BITS_PER_BYTE = 8;
 }
 
-#define CHECK_MBEDTLS_RET(VAL) if(VAL != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(__FUNCTION__, VAL); }
+#define CHECK_MBEDTLS_RET(VAL, FUNCSTR) if(VAL != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(#FUNCSTR, VAL); }
 
 void GcmBase::FreeObject(mbedtls_gcm_context * ptr)
 {
@@ -27,7 +27,7 @@ void GcmBase::Encrypt(const void * inData, const size_t inLen, void * outData, c
 		!inData || !outData || !iv || !tag ||
 		inLen > outLen)
 	{
-		throw RuntimeException("Invalid input parameters for function " __FUNCTION__ ". ");
+		throw RuntimeException("Invalid input parameters for function " "GcmBase::Encrypt" ". ");
 	}
 	CHECK_MBEDTLS_RET(
 		mbedtls_gcm_crypt_and_tag(
@@ -37,7 +37,8 @@ void GcmBase::Encrypt(const void * inData, const size_t inLen, void * outData, c
 			static_cast<const uint8_t*>(inData),
 			static_cast<uint8_t*>(outData),
 			tagLen, static_cast<uint8_t*>(tag)
-		)
+		),
+		GcmBase::Encrypt
 	);
 }
 
@@ -49,7 +50,7 @@ void GcmBase::Decrypt(const void * inData, const size_t inLen, void * outData, c
 		!inData || !outData || !iv || !tag ||
 		inLen > outLen)
 	{
-		throw RuntimeException("Invalid input parameters for function " __FUNCTION__ ". ");
+		throw RuntimeException("Invalid input parameters for function " "GcmBase::Decrypt" ". ");
 	}
 	CHECK_MBEDTLS_RET(
 		mbedtls_gcm_auth_decrypt(Get(), inLen,
@@ -57,7 +58,8 @@ void GcmBase::Decrypt(const void * inData, const size_t inLen, void * outData, c
 		static_cast<const uint8_t*>(add), addLen,
 		static_cast<const uint8_t*>(tag), tagLen,
 		static_cast<const uint8_t*>(inData),
-		static_cast<uint8_t*>(outData))
+		static_cast<uint8_t*>(outData)),
+		GcmBase::Decrypt
 	);
 }
 
@@ -65,7 +67,7 @@ void GcmBase::SetGcmKey(mbedtls_gcm_context & ctx, const void * key, const size_
 {
 	if (!key)
 	{
-		throw RuntimeException("Invalid input parameters for function " __FUNCTION__ ". ");
+		throw RuntimeException("Invalid input parameters for function " "GcmBase::SetGcmKey" ". ");
 	}
 
 	mbedtls_cipher_id_t mbedTlsCipher;
@@ -75,13 +77,13 @@ void GcmBase::SetGcmKey(mbedtls_gcm_context & ctx, const void * key, const size_
 		mbedTlsCipher = mbedtls_cipher_id_t::MBEDTLS_CIPHER_ID_AES;
 		break;
 	default:
-		throw RuntimeException("Invalid cipher for function " __FUNCTION__ ". ");
+		throw RuntimeException("Invalid cipher for function " "GcmBase::SetGcmKey" ". ");
 	}
 
 	const uint8_t* keyByte = static_cast<const uint8_t*>(key);
 	const unsigned int keySizeBits = static_cast<unsigned int>(size * GENERAL_BITS_PER_BYTE);
 
-	CHECK_MBEDTLS_RET(mbedtls_gcm_setkey(&ctx, mbedTlsCipher, keyByte, keySizeBits))
+	CHECK_MBEDTLS_RET(mbedtls_gcm_setkey(&ctx, mbedTlsCipher, keyByte, keySizeBits), GcmBase::SetGcmKey)
 }
 
 GcmBase::GcmBase(const Empty&) :

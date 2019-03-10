@@ -95,4 +95,9 @@ extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr
 	}
 }
 
+extern "C" void ocall_decent_net_cnet_close(void* cnt_ptr)
+{
+	delete static_cast<Connection*>(cnt_ptr);
+}
+
 //#endif //ENCLAVE_PLATFORM_SGX

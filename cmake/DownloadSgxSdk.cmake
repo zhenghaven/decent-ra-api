@@ -8,7 +8,7 @@ if(WIN32)
 	set(INTEL_SGX_SDK_BIN_URL "")
 	set(INTEL_SGX_SDK_BIN_SHA256 "")
 
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)
 
 	find_program(LSB_RELEASE_EXEC lsb_release)
 	execute_process(COMMAND ${LSB_RELEASE_EXEC} -is

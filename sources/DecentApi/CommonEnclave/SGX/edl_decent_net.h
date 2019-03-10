@@ -13,6 +13,7 @@ extern "C" {
 	sgx_status_t SGX_CDECL ocall_decent_net_cnet_send_and_recv_pack(int* retval, void* ptr, const char* in_msg, size_t in_size, char** out_msg, size_t* out_size);
 	sgx_status_t SGX_CDECL ocall_decent_net_cnet_send_raw(int* retval, size_t* sent_size, void* ptr, const char* msg, size_t size);
 	sgx_status_t SGX_CDECL ocall_decent_net_cnet_recv_raw(int* retval, size_t* recv_size, void* ptr, char* buf, size_t buf_size);
+	sgx_status_t SGX_CDECL ocall_decent_net_cnet_close(void* cnt_ptr);
 
 #ifdef __cplusplus
 }
