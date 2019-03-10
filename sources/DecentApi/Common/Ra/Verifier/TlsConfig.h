@@ -31,7 +31,7 @@ namespace Decent
 					Decent::Ra::TlsConfig::operator=(std::forward<Decent::Ra::TlsConfig>(other));
 					if (this != &other)
 					{
-						m_expectedVerifiedAppName = std::move(other.m_expectedVerifiedAppName);
+						m_expectedVerifiedAppName.swap(other.m_expectedVerifiedAppName);
 					}
 					return *this;
 				}

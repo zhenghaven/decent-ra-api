@@ -139,12 +139,15 @@ TlsCommLayer & TlsCommLayer::operator=(TlsCommLayer && other)
 {
 	if (this != &other)
 	{
+		mbedtls_ssl_context * tmpCtx = m_sslCtx;
+		bool tmpHasHs = m_hasHandshaked;
+
 		m_sslCtx = other.m_sslCtx;
-		m_tlsConfig = std::move(other.m_tlsConfig);
+		m_tlsConfig.swap(other.m_tlsConfig);
 		m_hasHandshaked = other.m_hasHandshaked;
 
-		other.m_sslCtx = nullptr;
-		other.m_hasHandshaked = false;
+		other.m_sslCtx = tmpCtx;
+		other.m_hasHandshaked = tmpHasHs;
 	}
 	return *this;
 }

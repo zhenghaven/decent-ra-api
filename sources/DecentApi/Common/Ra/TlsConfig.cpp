@@ -181,11 +181,13 @@ TlsConfig & TlsConfig::operator=(TlsConfig && other)
 	MbedTlsObj::TlsConfig::operator=(std::forward<MbedTlsObj::TlsConfig>(other));
 	if (this != &other)
 	{
-		m_prvKey = std::move(other.m_prvKey);
-		m_cert = std::move(other.m_cert);
-		m_expectedAppName = std::move(other.m_expectedAppName);
+		m_prvKey.swap(other.m_prvKey);
+		m_cert.swap(other.m_cert);
+		m_expectedAppName.swap(other.m_expectedAppName);
+
+		bool tmpIsValid = m_isValid;
 		m_isValid = other.m_isValid;
-		other.m_isValid = false;
+		other.m_isValid = tmpIsValid;
 
 		if (*this)
 		{

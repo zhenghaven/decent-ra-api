@@ -76,7 +76,9 @@ namespace Decent
 			}
 
 		public:
-			BigNumber() = delete;
+			BigNumber() :
+				BigNumber(sk_empty)
+			{}
 
 			/**
 			* \brief	Constructor that generate a big number. Nothing has been filled-in.
@@ -260,10 +262,7 @@ namespace Decent
 			 */
 			BigNumber& operator=(BigNumber&& rhs) noexcept
 			{
-				if (this != &rhs)
-				{
-					ObjBase::operator=(std::forward<ObjBase>(rhs));
-				}
+				ObjBase::operator=(std::forward<ObjBase>(rhs));
 				return *this;
 			}
 
@@ -298,6 +297,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator+(int64_t rhs) const;
+			BigNumber operator+(int32_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(int16_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(int8_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(uint32_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(uint16_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(uint8_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Subtraction operator
@@ -320,6 +325,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator-(int64_t rhs) const;
+			BigNumber operator-(int32_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(int16_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(int8_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(uint32_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(uint16_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(uint8_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Multiplication operator
@@ -342,6 +353,9 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator*(uint64_t rhs) const;
+			BigNumber operator*(uint32_t rhs) const { return this->operator*(static_cast<uint64_t>(rhs)); }
+			BigNumber operator*(uint16_t rhs) const { return this->operator*(static_cast<uint64_t>(rhs)); }
+			BigNumber operator*(uint8_t rhs) const { return this->operator*(static_cast<uint64_t>(rhs)); }
 
 			/**
 			 * \brief	Division operator
@@ -364,6 +378,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator/(int64_t rhs) const;
+			BigNumber operator/(int32_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(int16_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(int8_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(uint32_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(uint16_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(uint8_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Modulus operator
@@ -386,6 +406,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			uint64_t operator%(int64_t rhs) const;
+			uint32_t operator%(int32_t rhs) const { return static_cast<uint32_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint16_t operator%(int16_t rhs) const { return static_cast<uint16_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint8_t operator%(int8_t rhs) const { return static_cast<uint8_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint32_t operator%(uint32_t rhs) const { return static_cast<uint32_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint16_t operator%(uint16_t rhs) const { return static_cast<uint16_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint8_t operator%(uint8_t rhs) const { return static_cast<uint8_t>(this->operator%(static_cast<int64_t>(rhs))); }
 
 			/**
 			 * \brief	Negation operator
@@ -501,6 +527,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator+=(int64_t rhs);
+			BigNumber& operator+=(int32_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(int16_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(int8_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint32_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint16_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint8_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Subtraction assignment operator
@@ -523,6 +555,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator-=(int64_t rhs);
+			BigNumber& operator-=(int32_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(int16_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(int8_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint32_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint16_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint8_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Multiplication assignment operator
@@ -545,6 +583,9 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator*=(uint64_t rhs);
+			BigNumber& operator*=(uint32_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator*=(uint16_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator*=(uint8_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
 
 			/**
 			 * \brief	Division assignment operator
@@ -567,6 +608,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator/=(int64_t rhs);
+			BigNumber& operator/=(int32_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(int16_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(int8_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint32_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint16_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint8_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Modulus assignment operator
@@ -589,6 +636,12 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator%=(int64_t rhs);
+			BigNumber& operator%=(int32_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(int16_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(int8_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint32_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint16_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint8_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Bitwise left shift assignment operator

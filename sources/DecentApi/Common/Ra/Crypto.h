@@ -76,8 +76,8 @@ namespace Decent
 				MbedTlsObj::X509Cert::operator=(std::forward<MbedTlsObj::X509Cert>(other));
 				if (this != &other)
 				{
-					m_platformType = std::move(other.m_platformType);
-					m_selfRaReport = std::move(other.m_selfRaReport);
+					m_platformType.swap(other.m_platformType);
+					m_selfRaReport.swap(other.m_selfRaReport);
 					m_ecPubKey = std::move(other.m_ecPubKey);
 				}
 				return *this;
@@ -126,8 +126,8 @@ namespace Decent
 				MbedTlsObj::X509Cert::operator=(std::forward<MbedTlsObj::X509Cert>(other));
 				if (this != &other)
 				{
-					m_platformType = std::move(other.m_platformType);
-					m_appId = std::move(other.m_appId);
+					m_platformType.swap(other.m_platformType);
+					m_appId.swap(other.m_appId);
 					m_ecPubKey = std::move(other.m_ecPubKey);
 				}
 				return *this;
