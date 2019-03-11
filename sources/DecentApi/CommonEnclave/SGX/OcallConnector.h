@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Net/EnclaveNetConnector.h"
+
 #include "edl_decent_net.h"
 #include "../../Common/Net/NetworkException.h"
 
@@ -8,8 +10,11 @@ namespace Decent
 	namespace Net
 	{
 		/** \brief	An OCall connector that uses OCall function to establish connections. */
-		struct OcallConnector
+		class OcallConnector : public EnclaveNetConnector
 		{
+		public:
+			OcallConnector() = delete;
+
 			/**
 			 * \brief	Constructor
 			 *
@@ -26,7 +31,7 @@ namespace Decent
 			 */
 			template<class FuncT, class... Args>
 			OcallConnector(FuncT cntBuilder, Args&&... args) :
-				m_ptr(nullptr)
+				EnclaveNetConnector()
 			{
 				if ((*cntBuilder)(&m_ptr, std::forward<Args>(args)...) != SGX_SUCCESS ||
 					m_ptr == nullptr)
@@ -35,11 +40,11 @@ namespace Decent
 				}
 			}
 
-			~OcallConnector()
+			/** \brief	Destructor */
+			virtual ~OcallConnector()
 			{
 				ocall_decent_net_cnet_close(m_ptr);
 			}
-			void* m_ptr;
 		};
 	}
 }

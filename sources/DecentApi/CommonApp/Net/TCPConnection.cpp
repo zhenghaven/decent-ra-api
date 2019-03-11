@@ -40,6 +40,11 @@ namespace
 	}
 }
 
+uint32_t TCPConnection::GetIpAddressFromStr(const std::string & ipAddrStr)
+{
+	return boost::asio::ip::address_v4::from_string(ipAddrStr).to_uint();
+}
+
 TCPConnection::TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, TcpAcceptorType & acceptor) :
 	m_ioService(ioService),
 	m_socket(AcceptConnection(acceptor))
@@ -121,9 +126,5 @@ uint16_t TCPConnection::GetPortNum() const
 
 uint64_t TCPConnection::GetConnectionID() const
 {
-	uint64_t res = GetIPv4Addr();
-	res = (res << 32);
-	res = res | GetPortNum();
-
-	return res;
+	return CombineIpAndPort(GetIPv4Addr(), GetPortNum());
 }

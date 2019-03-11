@@ -119,19 +119,38 @@ namespace Decent
 				return EncryptMsg(inMsg.data(), inMsg.size());
 			}
 			
-			virtual void ReceiveRaw(void* const connectionPtr, void* buf, const size_t size) override;
-
-			virtual void SendRaw(void* const connectionPtr, const void* buf, const size_t size) override;
-
-			virtual void SendMsg(void* const connectionPtr, const std::string& inMsg) override
+			virtual void ReceiveRaw(void* buf, const size_t size) override;
+			virtual void ReceiveRaw(void* const connectionPtr, void* buf, const size_t size) override
 			{
-				SendRaw(connectionPtr, inMsg.data(), inMsg.size());
+				SecureCommLayer::ReceiveRaw(connectionPtr, buf, size);
 			}
 
-			virtual void ReceiveMsg(void* const connectionPtr, std::string& outMsg) override;
+			virtual void SendRaw(const void* buf, const size_t size) override;
+			virtual void SendRaw(void* const connectionPtr, const void* buf, const size_t size) override
+			{
+				SecureCommLayer::SendRaw(connectionPtr, buf, size);
+			}
+
+			virtual void SendMsg(const std::string& inMsg) override
+			{
+				SendRaw(inMsg.data(), inMsg.size());
+			}
+			virtual void SendMsg(void* const connectionPtr, const std::string& inMsg) override
+			{
+				SecureCommLayer::SendMsg(connectionPtr, inMsg);
+			}
+
+			virtual void ReceiveMsg(std::string& outMsg) override;
+			virtual void ReceiveMsg(void* const connectionPtr, std::string& outMsg) override
+			{
+				SecureCommLayer::ReceiveMsg(connectionPtr, outMsg);
+			}
+
+			virtual void SetConnectionPtr(void* const connectionPtr) override;
 
 		private:
 			GcmObjType m_gcm;
+			void* m_connection;
 		};
 	}
 }
