@@ -3,6 +3,7 @@
 #include <sgx_tkey_exchange.h>
 
 #include "../../Common/SGX/sgx_structs.h"
+#include "../../Common/SGX/IasReport.h"
 #include "../../Common/Common.h"
 #include "../../Common/Ra/KeyContainer.h"
 
@@ -22,15 +23,7 @@ const RaProcessorClient::SpSignPubKeyVerifier RaProcessorClient::sk_acceptAnyPub
 const RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptAnyRaConfig(
 	[](const sgx_ra_config& raConfig) -> bool
 	{
-		if ((raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE) ||
-			(raConfig.enable_pse != 0 && raConfig.enable_pse != 1) ||
-			(raConfig.allow_ofd_enc != 0 && raConfig.allow_ofd_enc != 1) ||
-			(raConfig.allow_ofd_pse != 0 && raConfig.allow_ofd_pse != 1))
-		{
-			return false;
-		}
-
-		return true;
+		return Ias::CheckRaConfigValidaty(raConfig);
 	}
 );
 

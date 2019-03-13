@@ -13,7 +13,7 @@
 #include "../Tools/JsonTools.h"
 #include "../MbedTls/MbedTlsHelpers.h"
 #include "../SGX/IasReport.h"
-#include "../SGX/sgx_structs.h"
+#include "../SGX/sgx_structs.h" /*TODO: remove this dependency.*/
 
 #include "Crypto.h"
 
@@ -68,23 +68,6 @@ bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::
 	return false;
 }
 
-const sgx_ra_config & RaReport::GetSgxDecentRaConfig()
-{
-	static const sgx_ra_config raCfg
-	{
-	SGX_QUOTE_LINKABLE_SIGNATURE,
-	SGX_DEFAULT_AES_CMAC_KDF_ID,
-#ifndef SIMULATING_ENCLAVE
-	1,
-#else
-	0,
-#endif 
-	1,
-	1
-	};
-	return raCfg;
-}
-
 bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string & raReport, sgx_ias_report_t & outIasReport)
 {
 	if (raReport.size() == 0)
@@ -115,11 +98,7 @@ bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::s
 			sizeof(sgx_report_data_t) / 2);
 	};
 
-	bool reportVerifyRes = Decent::Ias::ParseAndVerifyIasReport(outIasReport, iasReportStr, iasCertChain, iasSign, nullptr, GetSgxDecentRaConfig(), quoteVerifier);
-	//LOGI("IAS Report Is Verified:             %s \n", reportVerifyRes ? "Yes!" : "No!");
-	//LOGI("IAS Report Is Report Data Match:    %s \n", reportVerifyRes ? "Yes!" : "No!");
-	//LOGI("IAS Report Is Hash Match:           %s \n", reportVerifyRes ? "Yes!" : "No!");
-	//LOGI("IAS Report Is Quote Status Valid:   %s \n", reportVerifyRes ? "Yes!" : "No!");
+	bool reportVerifyRes = Decent::Ias::ParseAndVerifyIasReport(outIasReport, iasReportStr, iasCertChain, iasSign, nullptr, sk_sgxDecentRaConfig, quoteVerifier);
 
 	return reportVerifyRes;
 }

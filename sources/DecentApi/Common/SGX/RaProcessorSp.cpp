@@ -54,19 +54,6 @@ const RaProcessorSp::SgxReportDataVerifier RaProcessorSp::sk_defaultRpDataVrfy([
 	return consttime_memequal(&initData, &expected, sizeof(sgx_report_data_t)) == 1;
 });
 
-const sgx_ra_config RaProcessorSp::sk_defaultRaConfig 
-{ 
-	SGX_QUOTE_LINKABLE_SIGNATURE, 
-	SGX_DEFAULT_AES_CMAC_KDF_ID,
-#ifndef SIMULATING_ENCLAVE
-	1,
-#else
-	0,
-#endif
-	1,
-	1
-};
-
 void RaProcessorSp::SetSpid(const sgx_spid_t & spid)
 {
 	std::shared_ptr<const sgx_spid_t> tmpSPID = std::make_shared<const sgx_spid_t>(spid);
@@ -79,7 +66,7 @@ void RaProcessorSp::SetSpid(const sgx_spid_t & spid)
 }
 
 RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey, 
-	const sgx_ra_config& raConfig, SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy) :
+	SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig) :
 	m_raConfig(raConfig),
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	m_spid(std::atomic_load(&g_sgxSpid)),
@@ -301,7 +288,7 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 		return false;
 	}
 
-	return true;
+	return m_isAttested;
 }
 
 const sgx_ra_config & RaProcessorSp::GetRaConfig() const

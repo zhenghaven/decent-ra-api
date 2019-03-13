@@ -8,6 +8,7 @@
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
 #include "../../Common/SGX/SgxCryptoConversions.h"
+#include "../../Common/SGX/IasReport.h"
 
 #include "../../CommonEnclave/Ra/Crypto.h"
 #include "../../CommonEnclave/SGX/edl_decent_tools.h"
@@ -20,13 +21,9 @@ using namespace Decent::RaSgx;
 using namespace Decent::Ra;
 
 const Decent::Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaultConfig(
-	[](const sgx_ra_config& raConfig) {
-	const sgx_ra_config& cmp = RaReport::GetSgxDecentRaConfig();
-	return raConfig.enable_pse == cmp.enable_pse && 
-		raConfig.linkable_sign == cmp.linkable_sign && 
-		raConfig.ckdf_id == cmp.ckdf_id &&
-		raConfig.allow_ofd_enc == cmp.allow_ofd_enc &&
-		raConfig.allow_ofd_pse == cmp.allow_ofd_pse;
+	[](const sgx_ra_config& raConfig) -> bool
+	{
+		return Ias::CheckRaConfigEqual(raConfig, RaReport::sk_sgxDecentRaConfig);
 	}
 );
 
@@ -139,7 +136,6 @@ std::unique_ptr<Decent::Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcess
 {
 	sgx_ec256_public_t signKey(peerSignkey);
 	return Tools::make_unique<Sgx::RaProcessorSp>(iasConnectorPtr, decentStates.GetKeyContainer().GetSignKeyPair(),
-		RaReport::GetSgxDecentRaConfig(),
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
 		MbedTlsObj::ECKeyPublic pubKey = MbedTlsObj::ECKeyPublic::FromGeneral(SgxEc256Type2General(signKey));
@@ -151,5 +147,6 @@ std::unique_ptr<Decent::Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcess
 		return RaReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
 			consttime_memequal(initData.d + (sizeof(initData) / 2), expected.d + (sizeof(expected) / 2), sizeof(expected) / 2) == 1;
 	},
-		defaultServerQuoteVerifier);
+		defaultServerQuoteVerifier,
+		RaReport::sk_sgxDecentRaConfig);
 }

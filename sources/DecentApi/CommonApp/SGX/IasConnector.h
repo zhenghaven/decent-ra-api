@@ -19,8 +19,8 @@ namespace Decent
 #else
 			static constexpr char const sk_iasUrl[] = "https://as.sgx.trustedservices.intel.com:443";
 #endif
-			static constexpr char const sk_iasSigRlPath[] = "/attestation/sgx/v2/sigrl/";
-			static constexpr char const sk_iasReportPath[] = "/attestation/sgx/v2/report";
+			static constexpr char const sk_iasSigRlPath[] = "/attestation/sgx/v3/sigrl/";
+			static constexpr char const sk_iasReportPath[] = "/attestation/sgx/v3/report";
 
 			/** \brief	Default path to the Service Provider's cert file, which is %HOME%/SGX_IAS/client.crt */
 			static const std::string sk_defaultCertPath;

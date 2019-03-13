@@ -35,11 +35,24 @@ namespace Decent
 			typedef std::function<bool(const sgx_quote_t& quote)> SgxQuoteVerifier;
 			static void SetSpid(const sgx_spid_t & spid);
 			static const SgxReportDataVerifier sk_defaultRpDataVrfy;
-			static const sgx_ra_config sk_defaultRaConfig;
+
+			static constexpr sgx_ra_config sk_defaultRaConfig = 
+			{
+				SGX_QUOTE_LINKABLE_SIGNATURE,
+				SGX_DEFAULT_AES_CMAC_KDF_ID,
+#ifndef SIMULATING_ENCLAVE
+				1, //Enable PSE
+#else
+				0,
+#endif 
+				1, //Allow out-of-date enclave
+				1, //Allow configuration needed enclave
+				1 //Allow out-of-date PSE
+			};
 
 		public:
 			RaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey,
-				const sgx_ra_config& raConfig, SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy);
+				SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig = sk_defaultRaConfig);
 
 			virtual ~RaProcessorSp();
 

@@ -22,55 +22,59 @@
 #include "sgx_structs.h"
 
 using namespace Decent;
+using namespace Decent::Ias;
 using namespace Decent::Tools;
 
 namespace
 {
-	static const std::map<std::string, ias_quote_status_t> gsk_quoteStatusMap =
-	{
-		std::pair<std::string, ias_quote_status_t>("OK", ias_quote_status_t::IAS_QUOTE_OK),
-		std::pair<std::string, ias_quote_status_t>("SIGNATURE_INVALID", ias_quote_status_t::IAS_QUOTE_SIGNATURE_INVALID),
-		std::pair<std::string, ias_quote_status_t>("GROUP_REVOKED", ias_quote_status_t::IAS_QUOTE_GROUP_REVOKED),
-		std::pair<std::string, ias_quote_status_t>("SIGNATURE_REVOKED", ias_quote_status_t::IAS_QUOTE_SIGNATURE_REVOKED),
-		std::pair<std::string, ias_quote_status_t>("KEY_REVOKED", ias_quote_status_t::IAS_QUOTE_KEY_REVOKED),
-		std::pair<std::string, ias_quote_status_t>("SIGRL_VERSION_MISMATCH", ias_quote_status_t::IAS_QUOTE_SIGRL_VERSION_MISMATCH),
-		std::pair<std::string, ias_quote_status_t>("GROUP_OUT_OF_DATE", ias_quote_status_t::IAS_QUOTE_GROUP_OUT_OF_DATE),
-	};
+	static const std::map<std::string, IasQuoteStatus>& GetQuoteStatusMap()
+	{//As long as we keep updated with IAS's API, we won't get exception about out of range.
+		static const std::map<std::string, IasQuoteStatus> quoteStatusMap =
+		{
+			std::make_pair("OK",                     IasQuoteStatus::OK),
+			std::make_pair("SIGNATURE_INVALID",      IasQuoteStatus::SIGNATURE_INVALID),
+			std::make_pair("GROUP_REVOKED",          IasQuoteStatus::GROUP_REVOKED),
+			std::make_pair("SIGNATURE_REVOKED",      IasQuoteStatus::SIGNATURE_REVOKED),
+			std::make_pair("KEY_REVOKED",            IasQuoteStatus::KEY_REVOKED),
+			std::make_pair("SIGRL_VERSION_MISMATCH", IasQuoteStatus::SIGRL_VERSION_MISMATCH),
+			std::make_pair("GROUP_OUT_OF_DATE",      IasQuoteStatus::GROUP_OUT_OF_DATE),
+			std::make_pair("CONFIGURATION_NEEDED",   IasQuoteStatus::CONFIGURATION_NEEDED),
+		};
 
-	static const std::map<std::string, ias_pse_status_t> gsk_quotePSEStatusMap =
-	{
-		std::pair<std::string, ias_pse_status_t>("OK", ias_pse_status_t::IAS_PSE_OK),
-		std::pair<std::string, ias_pse_status_t>("UNKNOWN", ias_pse_status_t::IAS_PSE_UNKNOWN),
-		std::pair<std::string, ias_pse_status_t>("INVALID", ias_pse_status_t::IAS_PSE_INVALID),
-		std::pair<std::string, ias_pse_status_t>("OUT_OF_DATE", ias_pse_status_t::IAS_PSE_OUT_OF_DATE),
-		std::pair<std::string, ias_pse_status_t>("REVOKED", ias_pse_status_t::IAS_PSE_REVOKED),
-		std::pair<std::string, ias_pse_status_t>("RL_VERSION_MISMATCH", ias_pse_status_t::IAS_PSE_RL_VERSION_MISMATCH),
-	};
+		return quoteStatusMap;
+	}
 
-	static inline ias_revoc_reason_t parse_revoc_reason(const int in_num)
+	static const std::map<std::string, IasPseStatus>& GetPseStatusMap()
+	{
+		static const std::map<std::string, IasPseStatus> pseStatusMap =
+		{
+			std::make_pair("OK",                  IasPseStatus::OK),
+			std::make_pair("UNKNOWN",             IasPseStatus::UNKNOWN),
+			std::make_pair("INVALID",             IasPseStatus::INVALID),
+			std::make_pair("OUT_OF_DATE",         IasPseStatus::OUT_OF_DATE),
+			std::make_pair("REVOKED",             IasPseStatus::REVOKED),
+			std::make_pair("RL_VERSION_MISMATCH", IasPseStatus::RL_VERSION_MISMATCH),
+		};
+
+		return pseStatusMap;
+	}
+
+	static inline IasRevocReason ParseRevocReason(const int in_num)
 	{
 		switch (in_num)
 		{
 		case 1:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_KEY_COMPROMISE;
 		case 2:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_CA_COMPROMISED;
 		case 3:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_AFFILIATION_CHANGED;
 		case 4:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_SUPERCEDED;
 		case 5:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_CESSATION_OF_OPERATION;
 		case 6:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_CERTIFICATE_HOLD;
 		case 8:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_REMOVE_FROM_CRL;
 		case 9:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_PRIVILEGE_WITHDRAWN;
 		case 10:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_AA_COMPROMISE;
+			return static_cast<IasRevocReason>(in_num);
 		default:
-			return ias_revoc_reason_t::IAS_REVOC_REASON_UNSPECIFIED;
+			return IasRevocReason::UNSPECIFIED;
 		}
 	}
 
@@ -155,16 +159,21 @@ namespace
 		return isValid;
 	}
 
-	static inline ias_quote_status_t ParseIASQuoteStatus(const std::string& statusStr)
-	{//As long as we keep updated with IAS's API, here should not throw exception.
-		return gsk_quoteStatusMap.at(statusStr);
-	}
-
-	static inline ias_pse_status_t ParseIASQuotePSEStatus(const std::string& statusStr)
-	{//As long as we keep updated with IAS's API, here should not throw exception.
-		return gsk_quotePSEStatusMap.at(statusStr);
-	}
+	constexpr char const gsk_repLblId[]        = "id";
+	constexpr char const gsk_repLblTimeStp[]   = "timestamp";
+	constexpr char const gsk_repLblVer[]       = "version";
+	constexpr char const gsk_repLblQuoteStat[] = "isvEnclaveQuoteStatus";
+	constexpr char const gsk_repLblRevcRes[]   = "revocationReason";
+	constexpr char const gsk_repLblPseStat[]   = "pseManifestStatus";
+	constexpr char const gsk_repLblPseHash[]   = "pseManifestHash";
+	constexpr char const gsk_repLblInfoBlob[]  = "platformInfoBlob";
+	constexpr char const gsk_repLblNonce[]     = "nonce";
+	constexpr char const gsk_repLblEpidPsy[]   = "epidPseudonym";
+	constexpr char const gsk_repLblQuoteBody[] = "isvEnclaveQuoteBody";
 }
+
+#define REP_STAT_EQ_QOT(status, value) (status == static_cast<uint8_t>(IasQuoteStatus::value))
+#define REP_STAT_EQ_PSE(status, value) (status == static_cast<uint8_t>(IasPseStatus::value))
 
 bool Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
 {
@@ -175,84 +184,114 @@ bool Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::
 	}
 
 	//ID:
-	if (!jsonDoc.JSON_HAS_MEMBER("id") || !jsonDoc["id"].JSON_IS_STRING())
+	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblId) || !jsonDoc[gsk_repLblId].JSON_IS_STRING())
 	{
 		return false;
 	}
-	outId = jsonDoc["id"].JSON_AS_STRING();
+	outId = jsonDoc[gsk_repLblId].JSON_AS_STRING();
 
 	//Timestamp:
-	if (!jsonDoc.JSON_HAS_MEMBER("timestamp") || !jsonDoc["timestamp"].JSON_IS_STRING()
-		|| !ParseTimestamp(jsonDoc["timestamp"].JSON_AS_STRING(), outReport.m_timestamp))
+	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblTimeStp) || !jsonDoc[gsk_repLblTimeStp].JSON_IS_STRING()
+		|| !ParseTimestamp(jsonDoc[gsk_repLblTimeStp].JSON_AS_STRING(), outReport.m_timestamp))
 	{
 		return false;
 	}
-	
+
+	//Version:
+	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblVer) || !jsonDoc[gsk_repLblVer].JSON_IS_NUMBER())
+	{
+		return false;
+	}
+	outReport.m_version = static_cast<uint8_t>(jsonDoc[gsk_repLblVer].JSON_AS_INT32());
+
 	//Status:
-	if (!jsonDoc.JSON_HAS_MEMBER("isvEnclaveQuoteStatus") || !jsonDoc["isvEnclaveQuoteStatus"].JSON_IS_STRING())
+	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblQuoteStat) || !jsonDoc[gsk_repLblQuoteStat].JSON_IS_STRING())
 	{
 		return false;
 	}
-	outReport.m_status = static_cast<uint8_t>(ParseIASQuoteStatus(jsonDoc["isvEnclaveQuoteStatus"].JSON_AS_STRING()));
+	outReport.m_status = static_cast<uint8_t>(GetQuoteStatusMap().at(jsonDoc[gsk_repLblQuoteStat].JSON_AS_STRING()));
 
 	//Revocation Reason:
-	outReport.m_revoc_reason = static_cast<uint8_t>(ias_revoc_reason_t::IAS_REVOC_REASON_UNSPECIFIED);
-	if (jsonDoc.JSON_HAS_MEMBER("revocationReason") && jsonDoc["revocationReason"].JSON_IS_NUMBER())
+	outReport.m_revoc_reason = static_cast<uint8_t>(IasRevocReason::UNSPECIFIED);
+	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblRevcRes) && jsonDoc[gsk_repLblRevcRes].JSON_IS_NUMBER())
 	{
-		outReport.m_revoc_reason = static_cast<uint8_t>(parse_revoc_reason(jsonDoc["revocationReason"].JSON_AS_INT32()));
+		outReport.m_revoc_reason = static_cast<uint8_t>(ParseRevocReason(jsonDoc[gsk_repLblRevcRes].JSON_AS_INT32()));
 	}
+
 	//PSE status:
-	outReport.m_pse_status = ias_pse_status_t::IAS_PSE_NA;
-	if (jsonDoc.JSON_HAS_MEMBER("pseManifestStatus") && jsonDoc["pseManifestStatus"].JSON_IS_STRING())
+	outReport.m_pse_status = static_cast<uint8_t>(IasPseStatus::NA);
+	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblPseStat) && jsonDoc[gsk_repLblPseStat].JSON_IS_STRING())
 	{
-		outReport.m_pse_status = static_cast<uint8_t>(ParseIASQuotePSEStatus(jsonDoc["pseManifestStatus"].JSON_AS_STRING()));
+		outReport.m_pse_status = static_cast<uint8_t>(GetPseStatusMap().at(jsonDoc[gsk_repLblPseStat].JSON_AS_STRING()));
 	}
 
 	//PSE Hash:
-	if (jsonDoc.JSON_HAS_MEMBER("pseManifestHash") && jsonDoc["pseManifestHash"].JSON_IS_STRING())
+	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblPseHash) && jsonDoc[gsk_repLblPseHash].JSON_IS_STRING())
 	{
-		std::string psehashHex(jsonDoc["pseManifestHash"].JSON_AS_STRING());
+		std::string psehashHex(jsonDoc[gsk_repLblPseHash].JSON_AS_STRING());
 		cppcodec::hex_upper::decode(reinterpret_cast<uint8_t*>(&outReport.m_pse_hash), sizeof(outReport.m_pse_hash), psehashHex.c_str(), psehashHex.size());
 	}
 
 	//Info Blob:
-	if (jsonDoc.JSON_HAS_MEMBER("platformInfoBlob") && jsonDoc["platformInfoBlob"].JSON_IS_STRING())
+	if (REP_STAT_EQ_QOT(outReport.m_status, GROUP_REVOKED) || REP_STAT_EQ_QOT(outReport.m_status, GROUP_OUT_OF_DATE) || REP_STAT_EQ_QOT(outReport.m_status, CONFIGURATION_NEEDED) ||
+		REP_STAT_EQ_PSE(outReport.m_pse_status, OUT_OF_DATE) || REP_STAT_EQ_PSE(outReport.m_pse_status, REVOKED) || REP_STAT_EQ_PSE(outReport.m_pse_status, RL_VERSION_MISMATCH) )
 	{
-		std::string infoblobHex(jsonDoc["platformInfoBlob"].JSON_AS_STRING());
-		cppcodec::hex_upper::decode(reinterpret_cast<uint8_t*>(&outReport.m_info_blob), sizeof(outReport.m_info_blob), infoblobHex.c_str(), infoblobHex.size());
-	}
+		if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblInfoBlob) || !jsonDoc[gsk_repLblInfoBlob].JSON_IS_STRING())
+		{
+			return false;
+		}
+		std::string infoBlobHex = jsonDoc[gsk_repLblInfoBlob].JSON_AS_STRING();
+		uint16_t typeCode = std::stoi(infoBlobHex.substr(0, 4), nullptr, 16);
+		uint16_t size = std::stoi(infoBlobHex.substr(4, 4), nullptr, 16);
 
+		infoBlobHex = infoBlobHex.substr(8);
+
+		if (size != sizeof(outReport.m_info_blob))
+		{
+			return false;
+		}
+		cppcodec::hex_upper::decode(reinterpret_cast<uint8_t*>(&outReport.m_info_blob), sizeof(outReport.m_info_blob), infoBlobHex.data(), infoBlobHex.size());
+	}
+	
 	//Nonce:
-	if (jsonDoc.JSON_HAS_MEMBER("nonce") && jsonDoc["nonce"].JSON_IS_STRING())
+	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblNonce) && jsonDoc[gsk_repLblNonce].JSON_IS_STRING())
 	{
-		outNonce = jsonDoc["nonce"].JSON_AS_STRING();
+		outNonce = jsonDoc[gsk_repLblNonce].JSON_AS_STRING();
 	}
 
 	//epidPseudonym:
-	if (jsonDoc.JSON_HAS_MEMBER("epidPseudonym") && jsonDoc["epidPseudonym"].JSON_IS_STRING())
+	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblEpidPsy) && jsonDoc[gsk_repLblEpidPsy].JSON_IS_STRING())
 	{
-		std::string epidPseHex(jsonDoc["epidPseudonym"].JSON_AS_STRING());
+		outReport.m_is_epid_pse_valid = 1;
+		std::string epidPseHex(jsonDoc[gsk_repLblEpidPsy].JSON_AS_STRING());
 		DeserializeStruct(outReport.m_epidPseudonym, epidPseHex);
 	}
 
 	//Quote Body:
-	if (!jsonDoc.JSON_HAS_MEMBER("isvEnclaveQuoteBody") || !jsonDoc["isvEnclaveQuoteBody"].JSON_IS_STRING())
+	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblQuoteBody) || !jsonDoc[gsk_repLblQuoteBody].JSON_IS_STRING())
 	{
 		return false;
 	}
-	DeserializeStruct(outReport.m_quote, jsonDoc["isvEnclaveQuoteBody"].JSON_AS_STRING());
+	DeserializeStruct(outReport.m_quote, jsonDoc[gsk_repLblQuoteBody].JSON_AS_STRING());
 
 	return true;
 }
 
-bool Ias::ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
+bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
 {
 #ifndef SIMULATING_ENCLAVE
 	MbedTlsObj::X509Cert trustedIasCert(Ias::gsk_IasReportCert);
 	MbedTlsObj::X509Cert reportCertChain(reportCert);
 
+	//Verify the certificate chain came from the report.
 	bool certVerRes = trustedIasCert && reportCertChain &&
 		reportCertChain.Verify(trustedIasCert, nullptr, nullptr, nullptr, nullptr);
+
+	if (!certVerRes)
+	{
+		//LOGI("Certificate chain came from the report is invalid!");
+		return false;
+	}
 
 	std::vector<uint8_t> signBinBuf = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
 
@@ -268,68 +307,73 @@ bool Ias::ParseAndCheckIasReport(sgx_ias_report_t & outIasReport, const std::str
 		signVerRes = reportCertChain.GetPublicKey().VerifySignSha256(hash, signBinBuf);
 	} while (!signVerRes && reportCertChain.NextCert());
 
-	//LOGI("IAS Report Certs Verify Result:     %s \n", certVerRes ? "Success!" : "Failed!");
-	//LOGI("IAS Report Signature Verify Result: %s \n", signVerRes ? "Success!" : "Failed!");
-
-	if (!certVerRes || !signVerRes)
+	if (!signVerRes)
 	{
+		//LOGI("Signature of the report is invalid!");
 		return false;
 	}
-#else
-	//LOGI("IAS Report Certs Verify Result:     %s \n", "Simulated!");
-	//LOGI("IAS Report Signature Verify Result: %s \n", "Simulated!");
+
 #endif // !SIMULATING_ENCLAVE
 
 	std::string idStr;
 	std::string nonceInReport;
 	if (!ParseIasReport(outIasReport, idStr, nonceInReport, iasReportStr))
 	{
-		return false;
-	}
-
-	bool isQuoteStatusValid = (outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_OK) || outIasReport.m_status == static_cast<uint8_t>(ias_quote_status_t::IAS_QUOTE_GROUP_OUT_OF_DATE));
-	bool isPseStatusValid = (outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_NA) || outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_OK) || outIasReport.m_pse_status == static_cast<uint8_t>(ias_pse_status_t::IAS_PSE_OUT_OF_DATE));
-	//LOGI("IAS Report Is Quote Status Valid:   %s \n", isQuoteStatusValid ? "Yes!" : "No!");
-	//LOGI("IAS Report Is PSE Status Valid:     %s \n", isQuoteStatusValid ? "Yes!" : "No!");
-	if (!isQuoteStatusValid || !isPseStatusValid)
-	{
+		LOGW("Could not parse the IAS report! Probably the IAS API has been updated recently.");
 		return false;
 	}
 
 	bool isNonceMatch = true;
 	if (nonce)
 	{
-		isNonceMatch = (std::strlen(nonce) == nonceInReport.size());
-		isNonceMatch = isNonceMatch && consttime_memequal(nonceInReport.c_str(), nonce, nonceInReport.size());
-		//LOGI("IAS Report Is Nonce Match:          %s \n", isNonceMatch ? "Yes!" : "No!");
+		isNonceMatch = (std::strlen(nonce) == nonceInReport.size()) && 
+			consttime_memequal(nonceInReport.c_str(), nonce, nonceInReport.size());
 		if (!isNonceMatch)
 		{
+			//LOGI("Nonce of the report is invalid!");
 			return false;
 		}
 	}
 
-	return isNonceMatch;
+	return true;
 }
 
-#define REP_STAT_EQ_QOT(status, value) (status == static_cast<uint8_t>(ias_quote_status_t::value))
-#define REP_STAT_EQ_PSE(status, value) (status == static_cast<uint8_t>(ias_pse_status_t::value))
-
-bool Ias::CheckIasReportStatus(const sgx_ias_report_t & iasReport, const sgx_ra_config & raConfig)
+bool Ias::CheckIasReportStatus(const sgx_ias_report_t & iasReport, const sgx_ra_config & raConfig) noexcept
 {
 	return (
-		REP_STAT_EQ_QOT(iasReport.m_status, IAS_QUOTE_OK) ||
-		(REP_STAT_EQ_QOT(iasReport.m_status, IAS_QUOTE_GROUP_OUT_OF_DATE) && raConfig.allow_ofd_enc)
+		REP_STAT_EQ_QOT(iasReport.m_status, OK) ||
+		(REP_STAT_EQ_QOT(iasReport.m_status, GROUP_OUT_OF_DATE) && raConfig.allow_ofd_enc) ||
+		(REP_STAT_EQ_QOT(iasReport.m_status, CONFIGURATION_NEEDED) && raConfig.allow_cfgn_enc)
 		)
 		&&
 		(
-		(REP_STAT_EQ_PSE(iasReport.m_pse_status, IAS_PSE_NA) && !raConfig.enable_pse) ||
+		(REP_STAT_EQ_PSE(iasReport.m_pse_status, NA) && !raConfig.enable_pse) ||
 		(
 			(
-			REP_STAT_EQ_PSE(iasReport.m_pse_status, IAS_PSE_OK) ||
-			(REP_STAT_EQ_PSE(iasReport.m_pse_status, IAS_PSE_OUT_OF_DATE) && raConfig.allow_ofd_pse)
+			REP_STAT_EQ_PSE(iasReport.m_pse_status, OK) ||
+			(REP_STAT_EQ_PSE(iasReport.m_pse_status, OUT_OF_DATE) && raConfig.allow_ofd_pse)
 			)
 			&&
 			raConfig.enable_pse
 		)
 		);
+}
+
+bool Ias::CheckRaConfigEqual(const sgx_ra_config & a, const sgx_ra_config & b) noexcept
+{
+	return a.enable_pse == b.enable_pse &&
+		a.linkable_sign == b.linkable_sign &&
+		a.ckdf_id == b.ckdf_id &&
+		a.allow_ofd_enc == b.allow_ofd_enc &&
+		a.allow_cfgn_enc == b.allow_cfgn_enc &&
+		a.allow_ofd_pse == b.allow_ofd_pse;
+}
+
+bool Ias::CheckRaConfigValidaty(const sgx_ra_config & a) noexcept
+{
+	return (a.linkable_sign == SGX_QUOTE_LINKABLE_SIGNATURE || a.linkable_sign == SGX_QUOTE_UNLINKABLE_SIGNATURE) &&
+		(a.enable_pse == 0 || a.enable_pse == 1) &&
+		(a.allow_ofd_enc == 0 || a.allow_ofd_enc == 1) &&
+		(a.allow_cfgn_enc == 0 || a.allow_cfgn_enc == 1) &&
+		(a.allow_ofd_pse == 0 || a.allow_ofd_pse == 1);
 }
