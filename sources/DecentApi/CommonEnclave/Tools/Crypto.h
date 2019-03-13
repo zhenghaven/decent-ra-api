@@ -7,7 +7,7 @@
 
 namespace Decent
 {
-	namespace Crypto
+	namespace Tools
 	{
 		const std::string& GetSelfHashBase64();
 

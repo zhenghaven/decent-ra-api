@@ -22,19 +22,21 @@ namespace Decent
 		public: //static members:
 
 			/**
-			* \brief	Function that frees MbedTLS object and delete the pointer.
-			*
-			* \param [in,out]	ptr	If non-null, the pointer.
-			*/
+			 * \brief	Function that frees MbedTLS object and delete the pointer.
+			 *
+			 * \param [in,out]	ptr	If non-null, the pointer.
+			 */
 			static void FreeObject(mbedtls_mpi* ptr);
 
 			/**
-			* \brief	Generates a random number with specific size.
-			*
-			* \param	size	The size.
-			*
-			* \return	The random number.
-			*/
+			 * \brief	Generates a random number with specific size.
+			 * 
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
+			 * \param	size	The size.
+			 *
+			 * \return	The random number.
+			 */
 			static BigNumber Rand(size_t size);
 
 			/**
@@ -74,7 +76,9 @@ namespace Decent
 			}
 
 		public:
-			BigNumber() = delete;
+			BigNumber() :
+				BigNumber(sk_empty)
+			{}
 
 			/**
 			* \brief	Constructor that generate a big number. Nothing has been filled-in.
@@ -86,6 +90,8 @@ namespace Decent
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in little-endian.
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	ptr 	The pointer.
 			 * \param	size	The size.
 			 */
@@ -93,6 +99,8 @@ namespace Decent
 
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in little-endian.
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \tparam	T   	Generic type parameter.
 			 * \tparam	size	Size of the array.
@@ -106,6 +114,8 @@ namespace Decent
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in little-endian.
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param	in	The input.
 			 */
@@ -116,6 +126,8 @@ namespace Decent
 
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in little-endian.
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param	in		  	The input.
@@ -129,6 +141,8 @@ namespace Decent
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in big-endian.
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	ptr		  	The pointer.
 			 * \param	size	  	The size.
 			 * \param	parameter3	Indicate the input is in big endian.
@@ -137,6 +151,8 @@ namespace Decent
 
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in big-endian.
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \tparam	T   	Generic type parameter.
 			 * \tparam	size	Size of the array.
@@ -151,6 +167,8 @@ namespace Decent
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in big-endian.
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param	in		  	The input.
 			 * \param	parameter2	Indicate the input is in big endian.
@@ -162,6 +180,8 @@ namespace Decent
 
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in big-endian.
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param	in		  	The input.
@@ -185,6 +205,8 @@ namespace Decent
 			/**
 			 * \brief	Construct a big number by copy an existing mbed TLS big number.
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 */
 			BigNumber(const mbedtls_mpi& rhs);
@@ -192,12 +214,16 @@ namespace Decent
 			/**
 			 * \brief	Copy constructor
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 */
 			BigNumber(const BigNumber& rhs);
 
 			/**
 			 * \brief	Constructor a big number by copy an existing const big number.
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 */
@@ -216,7 +242,29 @@ namespace Decent
 				ObjBase::Swap(rhs);
 			}
 
+			/**
+			 * \brief	Assignment operator (deep copy).
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	A reference to this instance.
+			 */
 			BigNumber& operator=(const BigNumber& rhs);
+
+			/**
+			 * \brief	Move assignment operator
+			 *
+			 * \param [in,out]	rhs	The right hand side.
+			 *
+			 * \return	A reference to this instance.
+			 */
+			BigNumber& operator=(BigNumber&& rhs) noexcept
+			{
+				ObjBase::operator=(std::forward<ObjBase>(rhs));
+				return *this;
+			}
 
 			/**
 			 * \brief	Compares this const BigNumber&amp; object to another to determine their relative
@@ -231,6 +279,8 @@ namespace Decent
 			/**
 			 * \brief	Addition operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
@@ -240,14 +290,24 @@ namespace Decent
 			/**
 			 * \brief	Addition operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator+(int64_t rhs) const;
+			BigNumber operator+(int32_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(int16_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(int8_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(uint32_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(uint16_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
+			BigNumber operator+(uint8_t rhs) const { return this->operator+(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Subtraction operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -258,14 +318,24 @@ namespace Decent
 			/**
 			 * \brief	Subtraction operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator-(int64_t rhs) const;
+			BigNumber operator-(int32_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(int16_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(int8_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(uint32_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(uint16_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
+			BigNumber operator-(uint8_t rhs) const { return this->operator-(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Multiplication operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -276,14 +346,21 @@ namespace Decent
 			/**
 			 * \brief	Multiplication operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator*(uint64_t rhs) const;
+			BigNumber operator*(uint32_t rhs) const { return this->operator*(static_cast<uint64_t>(rhs)); }
+			BigNumber operator*(uint16_t rhs) const { return this->operator*(static_cast<uint64_t>(rhs)); }
+			BigNumber operator*(uint8_t rhs) const { return this->operator*(static_cast<uint64_t>(rhs)); }
 
 			/**
 			 * \brief	Division operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -294,14 +371,24 @@ namespace Decent
 			/**
 			 * \brief	Division operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber operator/(int64_t rhs) const;
+			BigNumber operator/(int32_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(int16_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(int8_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(uint32_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(uint16_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
+			BigNumber operator/(uint8_t rhs) const { return this->operator/(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Modulus operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -312,11 +399,19 @@ namespace Decent
 			/**
 			 * \brief	Modulus operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			uint64_t operator%(int64_t rhs) const;
+			uint32_t operator%(int32_t rhs) const { return static_cast<uint32_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint16_t operator%(int16_t rhs) const { return static_cast<uint16_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint8_t operator%(int8_t rhs) const { return static_cast<uint8_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint32_t operator%(uint32_t rhs) const { return static_cast<uint32_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint16_t operator%(uint16_t rhs) const { return static_cast<uint16_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint8_t operator%(uint8_t rhs) const { return static_cast<uint8_t>(this->operator%(static_cast<int64_t>(rhs))); }
 
 			/**
 			 * \brief	Negation operator
@@ -325,9 +420,23 @@ namespace Decent
 			 */
 			BigNumber operator-() const;
 
-			//BigNumber operator<<(size_t count) const;
+			/**
+			 * \brief	Bitwise left shift operator
+			 *
+			 * \param	count	Number of bits to shift.
+			 *
+			 * \return	The shifted result.
+			 */
+			BigNumber operator<<(size_t count) const;
 
-			//BigNumber operator>>(size_t count) const;
+			/**
+			 * \brief	Bitwise right shift operator
+			 *
+			 * \param	count	Number of bits to shift.
+			 *
+			 * \return	The shifted result.
+			 */
+			BigNumber operator>>(size_t count) const;
 
 			/**
 			* \brief	Equal comparison operator
@@ -337,6 +446,15 @@ namespace Decent
 			* \return	True if the first parameter is equal to the second.
 			*/
 			bool operator==(const BigNumber& rhs) const;
+
+			/**
+			 * \brief	Inequality operator
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	True if the parameters are not considered equivalent.
+			 */
+			bool operator!=(const BigNumber& rhs) const;
 
 			/**
 			 * \brief	Less-than comparison operator
@@ -391,6 +509,8 @@ namespace Decent
 			/**
 			 * \brief	Addition assignment operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
@@ -400,14 +520,24 @@ namespace Decent
 			/**
 			 * \brief	Addition assignment operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator+=(int64_t rhs);
+			BigNumber& operator+=(int32_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(int16_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(int8_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint32_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint16_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint8_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Subtraction assignment operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -418,14 +548,24 @@ namespace Decent
 			/**
 			 * \brief	Subtraction assignment operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator-=(int64_t rhs);
+			BigNumber& operator-=(int32_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(int16_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(int8_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint32_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint16_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint8_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Multiplication assignment operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -436,14 +576,21 @@ namespace Decent
 			/**
 			 * \brief	Multiplication assignment operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator*=(uint64_t rhs);
+			BigNumber& operator*=(uint32_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator*=(uint16_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator*=(uint8_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
 
 			/**
 			 * \brief	Division assignment operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -454,14 +601,24 @@ namespace Decent
 			/**
 			 * \brief	Division assignment operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator/=(int64_t rhs);
+			BigNumber& operator/=(int32_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(int16_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(int8_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint32_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint16_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint8_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Modulus assignment operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	rhs	The right hand side.
 			 *
@@ -472,14 +629,24 @@ namespace Decent
 			/**
 			 * \brief	Modulus assignment operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator%=(int64_t rhs);
+			BigNumber& operator%=(int32_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(int16_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(int8_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint32_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint16_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint8_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Bitwise left shift assignment operator
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \param	count	Number of.
 			 *
@@ -490,6 +657,8 @@ namespace Decent
 			/**
 			 * \brief	Bitwise right shift assignment operator
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param	count	Number of.
 			 *
 			 * \return	The result of the operation.
@@ -497,15 +666,19 @@ namespace Decent
 			BigNumber& operator>>=(size_t count);
 
 			/**
-			* \brief	Converts this big number to a little endian binary
-			*
-			* \param [in,out]	out 	If non-null, the output address.
-			* \param 		  	size	The size of the output buffer.
-			*/
+			 * \brief	Converts this big number to a little endian binary
+			 * 
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
+			 * \param [in,out]	out 	If non-null, the output address.
+			 * \param 		  	size	The size of the output buffer.
+			 */
 			void ToBinary(void* out, const size_t size) const;
 
 			/**
 			 * \brief	Convert this object into a binary representation
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \tparam	T   	Generic type parameter.
 			 * \tparam	size	Size of the array.
@@ -521,6 +694,8 @@ namespace Decent
 			/**
 			 * \brief	Convert this object into a binary representation
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param [in,out]	out	The output.
 			 */
@@ -531,12 +706,14 @@ namespace Decent
 			}
 
 			/**
-			* \brief	Converts this big number to a little endian binary
-			*
-			* \param [in,out]	out 	The reference to the output space.
-			*
-			* \return	Whether or not the conversion is successful.
-			*/
+			 * \brief	Converts this big number to a little endian binary
+			 * 
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
+			 * \tparam	T	Generic type parameter.
+			 * \param [in,out]	out		  	The reference to the output space.
+			 * \param 		  	parameter2	Indicate the output is in a struct.
+			 */
 			template<typename T>
 			void ToBinary(T& out, const StructIn&) const
 			{
@@ -546,6 +723,8 @@ namespace Decent
 			/**
 			 * \brief	Converts this big number to a big endian binary
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \param [in,out]	out		  	If non-null, the output address.
 			 * \param 		  	size	  	The size of the output buffer.
 			 * \param 		  	parameter3	Indicate the output should be in big endian.
@@ -554,6 +733,8 @@ namespace Decent
 
 			/**
 			 * \brief	Convert this object into a binary representation
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \tparam	T   	Generic type parameter.
 			 * \tparam	size	Size of the array.
@@ -570,6 +751,8 @@ namespace Decent
 			/**
 			 * \brief	Convert this object into a binary representation
 			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param [in,out]	out		  	The output.
 			 * \param 		  	parameter2	Indicate the output should be in big endian.
@@ -582,6 +765,8 @@ namespace Decent
 
 			/**
 			 * \brief	Converts this big number to a big endian binary
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
 			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param [in,out]	out		  	The reference to the output buffer.
@@ -615,8 +800,25 @@ namespace Decent
 			 */
 			BigNumber& FlipSign();
 
+			/**
+			 * \brief	Sets a bit
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
+			 * \param	pos	The position; start from zero.
+			 * \param	bit	True for 1; false for 0.
+			 *
+			 * \return	A reference to this instance.
+			 */
 			BigNumber& SetBit(const size_t pos, bool bit);
 
+			/**
+			 * \brief	Gets a bit
+			 *
+			 * \param	pos	The position; start from zero.
+			 *
+			 * \return	Got bit, true for 1 and false for 0.
+			 */
 			bool GetBit(const size_t pos);
 
 		private:
@@ -761,6 +963,7 @@ namespace Decent
 			BigNumber operator-() const { return -static_cast<const BigNumber&>(*this); }
 
 			bool operator==(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) == rhs; }
+			bool operator!=(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) != rhs; }
 			bool operator<(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) < rhs; }
 			bool operator<=(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) <= rhs; }
 			bool operator>(const BigNumber& rhs) const { return static_cast<const BigNumber&>(*this) > rhs; }

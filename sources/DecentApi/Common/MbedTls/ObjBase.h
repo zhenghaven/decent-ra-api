@@ -97,11 +97,14 @@ namespace Decent
 			{
 				if (this != &other)
 				{
+					T * tmpPtr = this->m_ptr;
+					FreeFuncType tmpFreeFunc = this->m_freeFunc;
+
 					this->m_ptr = other.m_ptr;
 					this->m_freeFunc = other.m_freeFunc;
 
-					other.m_ptr = nullptr;
-					other.m_freeFunc = &DoNotFree;
+					other.m_ptr = tmpPtr;
+					other.m_freeFunc = tmpFreeFunc;
 				}
 				return *this;
 			}

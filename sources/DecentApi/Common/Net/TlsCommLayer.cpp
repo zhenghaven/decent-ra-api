@@ -139,12 +139,15 @@ TlsCommLayer & TlsCommLayer::operator=(TlsCommLayer && other)
 {
 	if (this != &other)
 	{
+		mbedtls_ssl_context * tmpCtx = m_sslCtx;
+		bool tmpHasHs = m_hasHandshaked;
+
 		m_sslCtx = other.m_sslCtx;
-		m_tlsConfig = std::move(other.m_tlsConfig);
+		m_tlsConfig.swap(other.m_tlsConfig);
 		m_hasHandshaked = other.m_hasHandshaked;
 
-		other.m_sslCtx = nullptr;
-		other.m_hasHandshaked = false;
+		other.m_sslCtx = tmpCtx;
+		other.m_hasHandshaked = tmpHasHs;
 	}
 	return *this;
 }
@@ -154,50 +157,44 @@ TlsCommLayer::operator bool() const
 	return m_sslCtx != nullptr && m_tlsConfig && *m_tlsConfig && m_hasHandshaked;
 }
 
-void TlsCommLayer::SendRaw(void * const connectionPtr, const void * buf, const size_t size)
+void TlsCommLayer::SendRaw(const void * buf, const size_t size)
 {
 	if (!*this)
 	{
 		throw ConnectionNotEstablished();
 	}
 
-	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 	MbedTlsSslWriteWrap(m_sslCtx, buf, size);
 }
 
-void TlsCommLayer::ReceiveRaw(void * const connectionPtr, void * buf, const size_t size)
+void TlsCommLayer::ReceiveRaw(void * buf, const size_t size)
 {
 	if (!*this)
 	{
 		throw ConnectionNotEstablished();
 	}
-	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 
 	MbedTlsSslReadWrap(m_sslCtx, buf, size);
 }
 
-void TlsCommLayer::SendMsg(void * const connectionPtr, const std::string & inMsg)
+void TlsCommLayer::SendMsg(const std::string & inMsg)
 {
 	if (!*this)
 	{
 		throw ConnectionNotEstablished();
 	}
-
-	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 
 	uint64_t msgSize = static_cast<uint64_t>(inMsg.size());
 	MbedTlsSslWriteWrap(m_sslCtx, &msgSize, sizeof(uint64_t));
 	MbedTlsSslWriteWrap(m_sslCtx, inMsg.data(), inMsg.size());
 }
 
-void TlsCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
+void TlsCommLayer::ReceiveMsg(std::string & outMsg)
 {
 	if (!*this)
 	{
 		throw ConnectionNotEstablished();
 	}
-
-	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 
 	uint64_t msgSize = 0;
 	MbedTlsSslReadWrap(m_sslCtx, &msgSize, sizeof(uint64_t));
@@ -205,6 +202,11 @@ void TlsCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
 	outMsg.resize(msgSize);
 
 	MbedTlsSslReadWrap(m_sslCtx, &outMsg[0], outMsg.size());
+}
+
+void TlsCommLayer::SetConnectionPtr(void* const connectionPtr)
+{
+	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 }
 
 std::string TlsCommLayer::GetPeerCertPem() const

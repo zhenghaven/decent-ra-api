@@ -391,7 +391,7 @@ namespace Decent
 				if (this != &other)
 				{
 					m_pubKey = std::move(other.m_pubKey);
-					m_certStack = std::move(other.m_certStack);
+					m_certStack.swap(other.m_certStack);
 				}
 				return *this;
 			}

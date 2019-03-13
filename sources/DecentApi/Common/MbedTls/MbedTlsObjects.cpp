@@ -1283,7 +1283,7 @@ TlsConfig& TlsConfig::operator=(TlsConfig&& other) noexcept
 	ObjBase::operator=(std::forward<ObjBase>(other));
 	if (this != &other)
 	{
-		m_rng = std::move(other.m_rng);
+		m_rng.swap(other.m_rng);
 	}
 	return *this;
 }

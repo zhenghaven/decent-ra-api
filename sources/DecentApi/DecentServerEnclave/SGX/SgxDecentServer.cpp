@@ -7,7 +7,7 @@
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/Tools/DataCoding.h"
-#include "../../Common/Ra/Crypto.h"
+#include "../../Common/Tools/Crypto.h"
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
 
@@ -40,7 +40,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_init(const sgx_spid_t* inSpid)
 	}
 	Decent::Sgx::RaProcessorSp::SetSpid(*inSpid);
 	
-	PRINT_I("Initializing Decent Server with hash: %s\n", Decent::Crypto::GetSelfHashBase64().c_str());
+	PRINT_I("Initializing Decent Server with hash: %s\n", Tools::GetSelfHashBase64().c_str());
 
 	return SGX_SUCCESS;
 }

@@ -43,8 +43,10 @@ AesGcmCommLayer::AesGcmCommLayer(const AesGcm128bKeyType & sKey) :
 }
 
 AesGcmCommLayer::AesGcmCommLayer(AesGcmCommLayer && other) :
-	m_gcm(std::move(other.m_gcm))
+	m_gcm(std::move(other.m_gcm)),
+	m_connection(other.m_connection)
 {
+	other.m_connection = nullptr;
 }
 
 AesGcmCommLayer::~AesGcmCommLayer()
@@ -56,6 +58,10 @@ AesGcmCommLayer & AesGcmCommLayer::operator=(AesGcmCommLayer && other)
 	if (this != &other)
 	{
 		m_gcm = std::forward<GcmObjType>(other.m_gcm);
+
+		void* tmpCnt = m_connection;
+		m_connection = other.m_connection;
+		other.m_connection = tmpCnt;
 	}
 	return *this;
 }
@@ -69,7 +75,7 @@ std::string AesGcmCommLayer::DecryptMsg(const void* inMsg, const size_t inSize)
 {
 	if (inSize <= sizeof(EncryptedStruct))
 	{
-		throw Exception("Invalid input parameters for function " __FUNCTION__ ". The input message is even smaller than an empty encrypted message!");
+		throw Exception("Invalid input parameters for function " "AesGcmCommLayer::DecryptMsg" ". The input message is even smaller than an empty encrypted message!");
 	}
 
 	const EncryptedStruct& encryptedStruct = *reinterpret_cast<const EncryptedStruct*>(inMsg);
@@ -121,10 +127,15 @@ std::string AesGcmCommLayer::EncryptMsg(const void * inMsg, const size_t inSize)
 	return std::move(res);
 }
 
-void AesGcmCommLayer::ReceiveRaw(void * const connectionPtr, void * buf, const size_t size)
+void AesGcmCommLayer::SetConnectionPtr(void * const connectionPtr)
+{
+	m_connection = connectionPtr;
+}
+
+void AesGcmCommLayer::ReceiveRaw(void * buf, const size_t size)
 {
 	std::string msgBuf;
-	ReceiveMsg(connectionPtr, msgBuf);
+	ReceiveMsg(msgBuf);
 	if (msgBuf.size() != size)
 	{
 		throw Exception("The size of received message does not match the size that requested!");
@@ -134,7 +145,7 @@ void AesGcmCommLayer::ReceiveRaw(void * const connectionPtr, void * buf, const s
 	memcpy(bytePtr, msgBuf.data(), size);
 }
 
-void AesGcmCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMsg)
+void AesGcmCommLayer::ReceiveMsg(std::string & outMsg)
 {
 	if (!*this)
 	{
@@ -142,12 +153,12 @@ void AesGcmCommLayer::ReceiveMsg(void * const connectionPtr, std::string & outMs
 	}
 
 	std::string encrypted;
-	StatConnection::ReceivePack(connectionPtr, encrypted);
+	StatConnection::ReceivePack(m_connection, encrypted);
 	
 	outMsg = DecryptMsg(encrypted);
 }
 
-void AesGcmCommLayer::SendRaw(void * const connectionPtr, const void * buf, const size_t size)
+void AesGcmCommLayer::SendRaw(const void * buf, const size_t size)
 {
 	if (!*this)
 	{
@@ -156,6 +167,6 @@ void AesGcmCommLayer::SendRaw(void * const connectionPtr, const void * buf, cons
 
 	std::string encrypted = EncryptMsg(buf, size);
 
-	StatConnection::SendPack(connectionPtr, encrypted);
+	StatConnection::SendPack(m_connection, encrypted);
 }
 
