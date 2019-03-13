@@ -14,8 +14,16 @@ namespace
 {
 	static Json::Value ParseJsonStr(const std::string & jsonStr)
 	{
-		Json::Value res;
-		return ParseStr2Json(res, jsonStr) ? std::move(res) : throw ConfigParseException();
+		try
+		{
+			Json::Value res;
+			ParseStr2Json(res, jsonStr);
+			return std::move(res);
+		}
+		catch (const std::exception&)
+		{
+			throw ConfigParseException();
+		}
 	}
 
 	static const Json::Value& GetJsonDecentServerRoot(const Json::Value & json)

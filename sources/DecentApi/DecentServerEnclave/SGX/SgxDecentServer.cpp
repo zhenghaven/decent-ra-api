@@ -7,14 +7,14 @@
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/Tools/DataCoding.h"
-#include "../../Common/Tools/Crypto.h"
+#include "../../Common/Ra/Crypto.h"
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
 
 #include "../../Common/SGX/SgxCryptoConversions.h"
 
 #include "../../CommonEnclave/Ra/WhiteList/ConstManager.h"
-#include "../../CommonEnclave/Ra/Crypto.h"
+#include "../../CommonEnclave/Tools/Crypto.h"
 #include "../../CommonEnclave/SGX/LocAttCommLayer.h"
 
 #include "RaProcessor.h"

@@ -33,7 +33,7 @@ bool DecentServer::AddTrustedNode(const ServerX509 & cert)
 		return true;
 	}
 
-	TimeStamp timestamp;
+	report_timestamp_t timestamp;
 	std::string serverHash;
 	bool verifyRes = RaReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
 		cert.GetSelfRaReport(), serverHash, timestamp);
@@ -63,7 +63,7 @@ bool DecentServer::IsNodeTrusted(const std::string & key) const
 	return m_acceptedNodes.find(key) != m_acceptedNodes.cend();
 }
 
-bool DecentServer::GetAcceptedTimestamp(const std::string & key, TimeStamp& outTime) const
+bool DecentServer::GetAcceptedTimestamp(const std::string & key, report_timestamp_t& outTime) const
 {
 	std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
 	auto it = m_acceptedNodes.find(key);

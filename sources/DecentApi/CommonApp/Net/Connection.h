@@ -36,7 +36,7 @@ namespace Decent
 			virtual void ReceivePack(std::vector<uint8_t>& msg);
 
 			virtual size_t ReceivePack(char*& dest);
-			virtual bool ReceivePack(Json::Value& msg);
+			virtual void ReceivePack(Json::Value& msg);
 
 			virtual void Terminate() noexcept = 0;
 		};

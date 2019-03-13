@@ -29,6 +29,16 @@ extern "C"
 		uint8_t   allow_ofd_pse;   //Allow(1) or Disallow(0) out-of-date PSE.
 	} sgx_ra_config;
 
+	typedef struct _report_timestamp_t
+	{
+		uint16_t m_year;
+		uint8_t  m_month;
+		uint8_t  m_day;
+
+		uint32_t  m_sec;
+		uint32_t m_nanoSec;
+	} report_timestamp_t;
+
 #pragma pack(pop)
 
 #ifdef __cplusplus

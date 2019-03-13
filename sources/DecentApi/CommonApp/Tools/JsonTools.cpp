@@ -1,61 +1,76 @@
 #include "../../Common/Tools/JsonTools.h"
 
-#include <string>
 #include <cstring>
+
+#include <string>
+#include <memory>
 
 #include <json/json.h>
 
-#include "../../Common/Common.h"
+#include "../../Common/RuntimeException.h"
 
 using namespace Decent;
 using namespace Decent::Tools;
 
-bool Tools::ParseStr2Json(JsonDoc& outJson, const std::string& inStr)
+void Tools::ParseStr2Json(JsonDoc& outJson, const std::string& inStr)
 {
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-#ifndef NDEBUG
+	bool isValid = false;
 	std::string errStr;
-#endif // !NDEBUG
+	try
+	{
+		Json::CharReaderBuilder rbuilder;
+		rbuilder["collectComments"] = false;
 
-	Json::CharReader* reader = rbuilder.newCharReader();
-#ifndef NDEBUG
-	bool isValid = reader->parse(inStr.c_str(), inStr.c_str() + inStr.size(), &outJson, &errStr);
+		std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
+		isValid = reader->parse(inStr.c_str(), inStr.c_str() + inStr.size(), &outJson, &errStr);
+	}
+	catch (const std::bad_alloc)
+	{ //We run out of space, there is nothing we can do...
+		throw;
+	}
+	catch (const std::exception& e)
+	{
+		std::string errStrFinal = "JsonCpp parse error: ";
+		errStrFinal += e.what();
+		throw RuntimeException(errStrFinal);
+
+	}
 	if (!isValid)
 	{
-		LOGW("Json::CharReader: %s\n", errStr.c_str());
+		std::string errStrFinal = "JsonCpp parse error: " + errStr;
+		throw RuntimeException(errStrFinal);
 	}
-#else
-	bool isValid = reader->parse(inStr.c_str(), inStr.c_str() + inStr.size(), &outJson, nullptr);
-#endif // !NDEBUG
-
-	delete reader;
-
-	return isValid;
 }
 
-bool Tools::ParseStr2Json(JsonDoc& outJson, const char* inStr)
+void Tools::ParseStr2Json(JsonDoc& outJson, const char* inStr)
 {
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-#ifndef NDEBUG
+	bool isValid = false;
 	std::string errStr;
-#endif // !NDEBUG
+	try
+	{
+		Json::CharReaderBuilder rbuilder;
+		rbuilder["collectComments"] = false;
 
-	Json::CharReader* reader = rbuilder.newCharReader();
-#ifndef NDEBUG
-	bool isValid = reader->parse(inStr, inStr + std::strlen(inStr), &outJson, &errStr);
+		std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
+
+		isValid = reader->parse(inStr, inStr + std::strlen(inStr), &outJson, &errStr);
+	}
+	catch (const std::bad_alloc)
+	{
+		throw;
+	}
+	catch (const std::exception& e)
+	{
+		std::string errStrFinal = "JsonCpp parse error: ";
+		errStrFinal += e.what();
+		throw RuntimeException(errStrFinal);
+
+	}
 	if (!isValid)
 	{
-		LOGW("Json::CharReader: %s\n", errStr.c_str());
+		std::string errStrFinal = "JsonCpp parse error: " + errStr;
+		throw RuntimeException(errStrFinal);
 	}
-#else
-	bool isValid = reader->parse(inStr, inStr + std::strlen(inStr), &outJson, nullptr);
-#endif // !NDEBUG
-
-	delete reader;
-
-	return isValid;
 }
 
 std::string Tools::Json2StyledString(const Json::Value & inJson)

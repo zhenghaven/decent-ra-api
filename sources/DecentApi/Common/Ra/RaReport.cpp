@@ -8,6 +8,8 @@
 
 #include "../consttime_memequal.h"
 #include "../Common.h"
+#include "../RuntimeException.h"
+#include "../Net/CommonMessages.h"
 
 #include "../Tools/DataCoding.h"
 #include "../Tools/JsonTools.h"
@@ -20,12 +22,6 @@
 using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Tools;
-
-namespace
-{
-	static constexpr uint32_t sk_sec2MicroSec = 1000000;
-	static constexpr uint32_t sk_microSec2NanoSec = 1000;
-}
 
 bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)
 {
@@ -45,49 +41,44 @@ bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const ui
 	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;
 }
 
-bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, std::string & outHashStr, TimeStamp& outTimestamp)
+bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, std::string & outHashStr, report_timestamp_t& outTimestamp)
 {
 	if (platformType == sk_ValueReportTypeSgx)
 	{
 		sgx_ias_report_t outIasReport;
 		bool verifyRes = ProcessSgxSelfRaReport(pubKeyPem, raReport, outIasReport);
-		outTimestamp.m_year = outIasReport.m_timestamp.m_year;
-		outTimestamp.m_month = outIasReport.m_timestamp.m_month;
-		outTimestamp.m_day = outIasReport.m_timestamp.m_day;
 
-		outTimestamp.m_hour = outIasReport.m_timestamp.m_hour;
-		outTimestamp.m_min = outIasReport.m_timestamp.m_min;
-		outTimestamp.m_sec = static_cast<uint8_t>(outIasReport.m_timestamp.m_sec);
-		//TODO: Fix time precision later.
-		outTimestamp.m_nanoSec = static_cast<uint32_t>((outIasReport.m_timestamp.m_sec - outTimestamp.m_sec) * sk_sec2MicroSec) * sk_microSec2NanoSec;
+		outTimestamp = outIasReport.m_timestamp;
 
 		outHashStr = SerializeStruct(outIasReport.m_quote.report_body.mr_enclave);
 
 		return verifyRes;
 	}
-	return false;
+
+	throw RuntimeException("Process Self-RA Report failed: Unrecognized enclave platform.");
 }
 
 bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::string & raReport, sgx_ias_report_t & outIasReport)
 {
+	using namespace Decent::Net;
 	if (raReport.size() == 0)
 	{
 		return false;
 	}
 
 	JsonDoc jsonDoc;
+	ParseStr2Json(jsonDoc, raReport);
 
-	if (!ParseStr2Json(jsonDoc, raReport) ||
-		!jsonDoc.JSON_HAS_MEMBER(RaReport::sk_LabelRoot))
+	if (!jsonDoc.JSON_HAS_MEMBER(RaReport::sk_LabelRoot) || !jsonDoc[RaReport::sk_LabelRoot].JSON_IS_OBJECT())
 	{
-		return false;
+		throw RuntimeException("Process SGX Self-RA Report failed: invalid JSON format.");
 	}
 	JsonValue& jsonRoot = jsonDoc[RaReport::sk_LabelRoot];
 
-	std::string iasReportStr = jsonRoot[RaReport::sk_LabelIasReport].JSON_AS_STRING();
-	std::string iasSign = jsonRoot[RaReport::sk_LabelIasSign].JSON_AS_STRING();
-	std::string iasCertChain = jsonRoot[RaReport::sk_LabelIasCertChain].JSON_AS_STRING();
-	std::string oriRDB64 = jsonRoot[RaReport::sk_LabelOriRepData].JSON_AS_STRING();
+	std::string iasReportStr = CommonJsonMsg::ParseValue<std::string>(jsonRoot, RaReport::sk_LabelIasReport);
+	std::string iasSign = CommonJsonMsg::ParseValue<std::string>(jsonRoot, RaReport::sk_LabelIasSign);
+	std::string iasCertChain = CommonJsonMsg::ParseValue<std::string>(jsonRoot, RaReport::sk_LabelIasCertChain);
+	std::string oriRDB64 = CommonJsonMsg::ParseValue<std::string>(jsonRoot, RaReport::sk_LabelOriRepData);
 
 	sgx_report_data_t oriReportData;
 	DeserializeStruct(oriReportData, oriRDB64);

@@ -10,7 +10,7 @@
 #include "../../Common/SGX/SgxCryptoConversions.h"
 #include "../../Common/SGX/IasReport.h"
 
-#include "../../CommonEnclave/Ra/Crypto.h"
+#include "../../CommonEnclave/Tools/Crypto.h"
 #include "../../CommonEnclave/SGX/edl_decent_tools.h"
 
 #include "DecentReplace/decent_tkey_exchange.h"
@@ -125,7 +125,7 @@ bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 const Decent::Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQuoteVerifier(
 	[](const sgx_quote_t& quote) -> bool
 {
-	const std::vector<uint8_t>& decentHash = Decent::Crypto::GetSelfHash();
+	const std::vector<uint8_t>& decentHash = Decent::Tools::GetSelfHash();
 	return sizeof(quote.report_body.mr_enclave) == decentHash.size() &&
 		consttime_memequal(decentHash.data(), &quote.report_body.mr_enclave, decentHash.size());
 }

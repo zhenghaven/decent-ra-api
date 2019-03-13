@@ -119,9 +119,9 @@ size_t Connection::ReceivePack(char *& dest)
 	return static_cast<size_t>(packSize);
 }
 
-bool Connection::ReceivePack(Json::Value & msg)
+void Connection::ReceivePack(Json::Value & msg)
 {
 	std::string buffer;
 	ReceivePack(buffer);
-	return ParseStr2Json(msg, buffer);
+	ParseStr2Json(msg, buffer);
 }

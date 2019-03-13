@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "../RuntimeException.h"
+
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
 typedef struct _sgx_ra_config sgx_ra_config;
 
@@ -46,20 +48,28 @@ namespace Decent
 			RL_VERSION_MISMATCH      = 6,
 		};
 
+		class ReportParseError : public RuntimeException
+		{
+		public:
+			using RuntimeException::RuntimeException;
+		};
+
 		/**
 		 * \brief	This function only parses IAS's report
+		 *
+		 * \exception	Ias::ReportParseError	The IAS report has unrecognized format (probably IAS API has been updated).
 		 *
 		 * \param [in,out]	outReport	The output for parsed IAS report.
 		 * \param [in,out]	outId	 	the output for report ID.
 		 * \param [in,out]	outNonce 	The output for nonce in the report.
 		 * \param 		  	inStr	 	The input for IAS report string.
-		 *
-		 * \return	True if it succeeds, false if it fails.
 		 */
-		bool ParseIasReport(sgx_ias_report_t& outReport, std::string& outId, std::string& outNonce, const std::string& inStr);
+		void ParseIasReport(sgx_ias_report_t& outReport, std::string& outId, std::string& outNonce, const std::string& inStr);
 
 		/**
 		 * \brief	This function only parses IAS's report and check its signature and nonce.
+		 *
+		 * \exception	Decent::RuntimeException	Parse IAS report failed, or certificate parse failed.
 		 *
 		 * \param [in,out]	outIasReport	The output for parsed IAS report.
 		 * \param 		  	iasReportStr	The input for IAS report string.
@@ -75,6 +85,8 @@ namespace Decent
 
 		/**
 		 * \brief	Parse and verify ias report
+		 *
+		 * \exception	Decent::RuntimeException	Parse IAS report failed, or certificate parse failed.
 		 *
 		 * \tparam	Vrfier	Type of the verifier function. User provides verifier to verify the report in detail.
 		 * \param [in,out]	outIasReport	The output for parsed IAS report.

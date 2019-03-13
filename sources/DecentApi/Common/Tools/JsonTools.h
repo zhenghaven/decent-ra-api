@@ -59,9 +59,28 @@ namespace Decent
 {
 	namespace Tools
 	{
-		bool ParseStr2Json(JsonDoc& outDoc, const std::string& inStr);
+		/**
+		 * \brief	Parse string to JSON document
+		 *
+		 * \exception	Decent::RuntimeException	Failed to parse the string. There is some format
+		 * 											error.
+		 * \exception	std::bad_alloc				Thrown by underlying calls.
+		 *
+		 * \param [in,out]	outDoc	The output JSON document.
+		 * \param 		  	inStr 	The input string.
+		 */
+		void ParseStr2Json(JsonDoc& outDoc, const std::string& inStr);
 
-		bool ParseStr2Json(JsonDoc& outDoc, const char* inStr);
+		/**
+		 * \brief	Parse string to JSON document
+		 *
+		 * \exception	Decent::RuntimeException	Failed to parse the string. There is some format
+		 * 											error.
+		 *
+		 * \param [in,out]	outDoc	The output JSON document.
+		 * \param 		  	inStr 	The input string.
+		 */
+		void ParseStr2Json(JsonDoc& outDoc, const char* inStr);
 
 		std::string Json2StyledString(const JsonValue& inJson);
 

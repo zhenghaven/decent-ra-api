@@ -261,6 +261,7 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 
 	reportJson["id"] = "165171271757108173876306223827987629752";
 	reportJson["timestamp"] = "2015-09-29T10:07:26.711023";
+	reportJson["version"] = 3;
 	reportJson["isvEnclaveQuoteStatus"] = "OK";
 	//reportJson["pseManifestStatus"] = "OK";
 	//reportJson["pseManifestHash"] = "7563016AF9AE650FCAE9D94FBEE7DA39264A5C6C2B85CCDA8337D208BA17709E";

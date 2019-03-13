@@ -13,9 +13,9 @@
 #endif // ENCLAVE_ENVIRONMENT
 
 #include "../Common.h"
+#include "../consttime_memequal.h"
 #include "../Tools/JsonTools.h"
 #include "../Tools/DataCoding.h"
-#include "../consttime_memequal.h"
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/MbedTlsHelpers.h"
 #include "IasReportCert.h"
@@ -24,6 +24,8 @@
 using namespace Decent;
 using namespace Decent::Ias;
 using namespace Decent::Tools;
+
+#define THROW_REPORT_PARSE_ERROR(ERR) throw ReportParseError("Failed to parse IAS Report: " ERR);
 
 namespace
 {
@@ -59,22 +61,24 @@ namespace
 		return pseStatusMap;
 	}
 
-	static inline IasRevocReason ParseRevocReason(const int in_num)
+	static inline uint8_t ParseRevocReason(const int inNum)
 	{
-		switch (in_num)
+		IasRevocReason readable = static_cast<IasRevocReason>(inNum);
+		switch (readable)
 		{
-		case 1:
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 8:
-		case 9:
-		case 10:
-			return static_cast<IasRevocReason>(in_num);
+		case IasRevocReason::UNSPECIFIED:
+		case IasRevocReason::KEY_COMPROMISE:
+		case IasRevocReason::CA_COMPROMISED:
+		case IasRevocReason::AFFILIATION_CHANGED:
+		case IasRevocReason::SUPERCEDED:
+		case IasRevocReason::CESSATION_OF_OPERATION:
+		case IasRevocReason::CERTIFICATE_HOLD:
+		case IasRevocReason::REMOVE_FROM_CRL:
+		case IasRevocReason::PRIVILEGE_WITHDRAWN:
+		case IasRevocReason::AA_COMPROMISE:
+			return static_cast<uint8_t>(inNum);
 		default:
-			return IasRevocReason::UNSPECIFIED;
+			THROW_REPORT_PARSE_ERROR("Failed to parse revocation reason.");
 		}
 	}
 
@@ -82,81 +86,73 @@ namespace
 	* There is no much date time libs we can use in sgx SDK. And, since the timestamp format
 	* used by IAS API is very straight forward to parse, we can just use our simple functions to parse.
 	*/
-	static bool ParseTimestampDate(const std::string& dateStr, sgx_timestamp_t& outTime)
+	static void ParseTimestampDate(const std::string& dateStr, report_timestamp_t& outTime)
 	{
 		size_t nextPos = 0;
 		size_t nextPosAbs = 0;
 
 		int tmpOut[3];
-		bool isValid = true;
 		for (size_t i = 0; i < 3; ++i)
 		{
 			try
 			{
 				tmpOut[i] = std::stoi(dateStr.substr(nextPosAbs), &nextPos);
-				isValid = true & isValid;
 			}
 			catch (const std::exception&)
 			{
-				isValid = false;
+				THROW_REPORT_PARSE_ERROR("Failed to parse date field in timestamp.");
 			}
 			nextPosAbs += nextPos + 1;
 		}
 		outTime.m_year = static_cast<uint16_t>(tmpOut[0]); //Year
 		outTime.m_month = static_cast<uint8_t>(tmpOut[1]); //Month
 		outTime.m_day = static_cast<uint8_t>(tmpOut[2]); //Day
-
-		return isValid;
 	}
 
-	static bool ParseTimestampTime(const std::string& timeStr, sgx_timestamp_t& outTime)
+	static void ParseTimestampTime(const std::string& timeStr, report_timestamp_t& outTime)
 	{
+		static constexpr uint8_t SEC_PER_MIN = 60;
+		static constexpr uint8_t MIN_PER_HOR = 60;
+		static constexpr uint16_t NaS_PER_MiS = 1000;
+
 		size_t nextPos = 0;
 		size_t nextPosAbs = 0;
 
-		int tmpOut[2];
-		bool isValid = true;
-		for (size_t i = 0; i < 2; ++i)
+		int32_t tmpOut[4];
+		for (size_t i = 0; i < 4; ++i)
 		{
 			try
 			{
-				tmpOut[i] = std::stoi(timeStr.substr(nextPosAbs), &nextPos);
-				isValid = true & isValid;
+				tmpOut[i] = static_cast<int32_t>(std::stol(timeStr.substr(nextPosAbs), &nextPos));
 			}
 			catch (const std::exception&)
 			{
-				isValid = false;
+				THROW_REPORT_PARSE_ERROR("Failed to parse time field in timestamp.");
 			}
 			nextPosAbs += nextPos + 1;
 		}
-		outTime.m_hour = static_cast<uint8_t>(tmpOut[0]); //Year
-		outTime.m_min = static_cast<uint8_t>(tmpOut[1]); //Month
 
-		try
-		{
-			outTime.m_sec = std::stof(timeStr.substr(nextPosAbs), &nextPos);
-			isValid = true & isValid;
-		}
-		catch (const std::exception&)
-		{
-			isValid = false;
-		}
+		// tmpOut[0] is hour, tmpOut[1] is min, tmpOut[2] is sec, tmpOut[3] is microSec;
+		// References shouldn't cost extra computing time in release.
+		const int32_t& hour = tmpOut[1];
+		const int32_t& min = tmpOut[2];
+		const int32_t& sec = tmpOut[3];
+		const int32_t& microSec = tmpOut[4];
 
-		return isValid;
+		outTime.m_sec = ((hour * MIN_PER_HOR) + min) * SEC_PER_MIN;
+		outTime.m_nanoSec = microSec * NaS_PER_MiS;
 	}
 
-	static bool ParseTimestamp(const std::string& timeStr, sgx_timestamp_t& outTime)
+	static void ParseTimestamp(const std::string& timeStr, report_timestamp_t& outTime)
 	{
 		size_t middlePos = timeStr.find('T');
 		if (middlePos == std::string::npos || middlePos + 1 == timeStr.size())
 		{
-			return false;
+			THROW_REPORT_PARSE_ERROR("Failed to parse timestamp.");
 		}
 
-		bool isValid = ParseTimestampDate(timeStr.substr(0, middlePos), outTime);
-		isValid = isValid & ParseTimestampTime(timeStr.substr(middlePos + 1), outTime);
-
-		return isValid;
+		ParseTimestampDate(timeStr.substr(0, middlePos), outTime);
+		ParseTimestampTime(timeStr.substr(middlePos + 1), outTime);
 	}
 
 	constexpr char const gsk_repLblId[]        = "id";
@@ -175,91 +171,114 @@ namespace
 #define REP_STAT_EQ_QOT(status, value) (status == static_cast<uint8_t>(IasQuoteStatus::value))
 #define REP_STAT_EQ_PSE(status, value) (status == static_cast<uint8_t>(IasPseStatus::value))
 
-bool Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
+static uint8_t ParseQuoteStatus(const std::string& str)
+{
+	try
+	{
+		return static_cast<uint8_t>(GetQuoteStatusMap().at(str));
+	}
+	catch (const std::exception&)
+	{
+		THROW_REPORT_PARSE_ERROR("Failed to parse report quote status.");
+	}
+}
+
+static uint8_t ParsePseStatus(const std::string& str)
+{
+	try
+	{
+		return static_cast<uint8_t>(GetPseStatusMap().at(str));
+	}
+	catch (const std::exception&)
+	{
+		THROW_REPORT_PARSE_ERROR("Failed to parse report PSE status.");
+	}
+}
+
+void Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::string& outNonce, const std::string & inStr)
 {
 	JsonDoc jsonDoc;
-	if (!ParseStr2Json(jsonDoc, inStr))
-	{
-		return false;
-	}
+	ParseStr2Json(jsonDoc, inStr);
 
-	//ID:
+	//ID: (Mandatory)
 	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblId) || !jsonDoc[gsk_repLblId].JSON_IS_STRING())
 	{
-		return false;
+		THROW_REPORT_PARSE_ERROR("Failed to parse report ID.");
 	}
 	outId = jsonDoc[gsk_repLblId].JSON_AS_STRING();
 
-	//Timestamp:
-	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblTimeStp) || !jsonDoc[gsk_repLblTimeStp].JSON_IS_STRING()
-		|| !ParseTimestamp(jsonDoc[gsk_repLblTimeStp].JSON_AS_STRING(), outReport.m_timestamp))
+	//Timestamp: (Mandatory)
+	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblTimeStp) || !jsonDoc[gsk_repLblTimeStp].JSON_IS_STRING())
 	{
-		return false;
+		THROW_REPORT_PARSE_ERROR("Failed to parse report timestamp.");
 	}
+	ParseTimestamp(jsonDoc[gsk_repLblTimeStp].JSON_AS_STRING(), outReport.m_timestamp);
 
-	//Version:
+	//Version: (Mandatory)
 	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblVer) || !jsonDoc[gsk_repLblVer].JSON_IS_NUMBER())
 	{
-		return false;
+		THROW_REPORT_PARSE_ERROR("Failed to parse report version.");
 	}
 	outReport.m_version = static_cast<uint8_t>(jsonDoc[gsk_repLblVer].JSON_AS_INT32());
 
-	//Status:
+	//Status: (Mandatory)
 	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblQuoteStat) || !jsonDoc[gsk_repLblQuoteStat].JSON_IS_STRING())
 	{
-		return false;
+		THROW_REPORT_PARSE_ERROR("Failed to parse report quote status.");
 	}
-	outReport.m_status = static_cast<uint8_t>(GetQuoteStatusMap().at(jsonDoc[gsk_repLblQuoteStat].JSON_AS_STRING()));
+	outReport.m_status = ParseQuoteStatus(jsonDoc[gsk_repLblQuoteStat].JSON_AS_STRING());
 
-	//Revocation Reason:
-	outReport.m_revoc_reason = static_cast<uint8_t>(IasRevocReason::UNSPECIFIED);
-	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblRevcRes) && jsonDoc[gsk_repLblRevcRes].JSON_IS_NUMBER())
+	//Revocation Reason: (Optional, when quoteStatus == GROUP_REVOKED)
+	if (REP_STAT_EQ_QOT(outReport.m_status, GROUP_REVOKED))
 	{
-		outReport.m_revoc_reason = static_cast<uint8_t>(ParseRevocReason(jsonDoc[gsk_repLblRevcRes].JSON_AS_INT32()));
+		if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblRevcRes) || !jsonDoc[gsk_repLblRevcRes].JSON_IS_NUMBER())
+		{
+			THROW_REPORT_PARSE_ERROR("Failed to parse revocation reason.");
+		}
+		outReport.m_revoc_reason = ParseRevocReason(jsonDoc[gsk_repLblRevcRes].JSON_AS_INT32());
 	}
 
-	//PSE status:
+	//PSE status: (Optional)
 	outReport.m_pse_status = static_cast<uint8_t>(IasPseStatus::NA);
 	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblPseStat) && jsonDoc[gsk_repLblPseStat].JSON_IS_STRING())
 	{
-		outReport.m_pse_status = static_cast<uint8_t>(GetPseStatusMap().at(jsonDoc[gsk_repLblPseStat].JSON_AS_STRING()));
+		outReport.m_pse_status = ParsePseStatus(jsonDoc[gsk_repLblPseStat].JSON_AS_STRING());
 	}
 
-	//PSE Hash:
+	//PSE Hash: (Optional)
 	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblPseHash) && jsonDoc[gsk_repLblPseHash].JSON_IS_STRING())
 	{
 		std::string psehashHex(jsonDoc[gsk_repLblPseHash].JSON_AS_STRING());
 		cppcodec::hex_upper::decode(reinterpret_cast<uint8_t*>(&outReport.m_pse_hash), sizeof(outReport.m_pse_hash), psehashHex.c_str(), psehashHex.size());
 	}
 
-	//Info Blob:
+	//Info Blob: (Optional)
 	if (REP_STAT_EQ_QOT(outReport.m_status, GROUP_REVOKED) || REP_STAT_EQ_QOT(outReport.m_status, GROUP_OUT_OF_DATE) || REP_STAT_EQ_QOT(outReport.m_status, CONFIGURATION_NEEDED) ||
 		REP_STAT_EQ_PSE(outReport.m_pse_status, OUT_OF_DATE) || REP_STAT_EQ_PSE(outReport.m_pse_status, REVOKED) || REP_STAT_EQ_PSE(outReport.m_pse_status, RL_VERSION_MISMATCH) )
 	{
 		if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblInfoBlob) || !jsonDoc[gsk_repLblInfoBlob].JSON_IS_STRING())
 		{
-			return false;
+			THROW_REPORT_PARSE_ERROR("Failed to parse info blob.");
 		}
 		std::string infoBlobHex = jsonDoc[gsk_repLblInfoBlob].JSON_AS_STRING();
-		uint16_t typeCode = std::stoi(infoBlobHex.substr(0, 4), nullptr, 16);
-		uint16_t size = std::stoi(infoBlobHex.substr(4, 4), nullptr, 16);
-
-		infoBlobHex = infoBlobHex.substr(8);
-
+		uint16_t size = static_cast<uint16_t>(std::stoi(infoBlobHex.substr(4, 4), nullptr, 16));
 		if (size != sizeof(outReport.m_info_blob))
 		{
-			return false;
+			THROW_REPORT_PARSE_ERROR("Failed to parse info blob.");
 		}
+		//uint16_t typeCode = static_cast<uint16_t>(std::stoi(infoBlobHex.substr(0, 4), nullptr, 16)); //Not in use for now.
+
+		infoBlobHex = infoBlobHex.substr(8);
 		cppcodec::hex_upper::decode(reinterpret_cast<uint8_t*>(&outReport.m_info_blob), sizeof(outReport.m_info_blob), infoBlobHex.data(), infoBlobHex.size());
 	}
 	
-	//Nonce:
+	//Nonce: (Optional)
 	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblNonce) && jsonDoc[gsk_repLblNonce].JSON_IS_STRING())
 	{
 		outNonce = jsonDoc[gsk_repLblNonce].JSON_AS_STRING();
 	}
 
-	//epidPseudonym:
+	//epidPseudonym: (Optional)
 	if (jsonDoc.JSON_HAS_MEMBER(gsk_repLblEpidPsy) && jsonDoc[gsk_repLblEpidPsy].JSON_IS_STRING())
 	{
 		outReport.m_is_epid_pse_valid = 1;
@@ -270,11 +289,9 @@ bool Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::
 	//Quote Body:
 	if (!jsonDoc.JSON_HAS_MEMBER(gsk_repLblQuoteBody) || !jsonDoc[gsk_repLblQuoteBody].JSON_IS_STRING())
 	{
-		return false;
+		THROW_REPORT_PARSE_ERROR("Failed to parse quote body.");
 	}
 	DeserializeStruct(outReport.m_quote, jsonDoc[gsk_repLblQuoteBody].JSON_AS_STRING());
-
-	return true;
 }
 
 bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
@@ -284,10 +301,7 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 	MbedTlsObj::X509Cert reportCertChain(reportCert);
 
 	//Verify the certificate chain came from the report.
-	bool certVerRes = trustedIasCert && reportCertChain &&
-		reportCertChain.Verify(trustedIasCert, nullptr, nullptr, nullptr, nullptr);
-
-	if (!certVerRes)
+	if (!reportCertChain.Verify(trustedIasCert, nullptr, nullptr, nullptr, nullptr))
 	{
 		//LOGI("Certificate chain came from the report is invalid!");
 		return false;
@@ -317,16 +331,11 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 
 	std::string idStr;
 	std::string nonceInReport;
-	if (!ParseIasReport(outIasReport, idStr, nonceInReport, iasReportStr))
-	{
-		LOGW("Could not parse the IAS report! Probably the IAS API has been updated recently.");
-		return false;
-	}
+	ParseIasReport(outIasReport, idStr, nonceInReport, iasReportStr);
 
-	bool isNonceMatch = true;
 	if (nonce)
 	{
-		isNonceMatch = (std::strlen(nonce) == nonceInReport.size()) && 
+		bool isNonceMatch = (std::strlen(nonce) == nonceInReport.size()) &&
 			consttime_memequal(nonceInReport.c_str(), nonce, nonceInReport.size());
 		if (!isNonceMatch)
 		{
