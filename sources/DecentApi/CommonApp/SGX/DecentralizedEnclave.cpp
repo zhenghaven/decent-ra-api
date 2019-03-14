@@ -1,6 +1,6 @@
 #include "DecentralizedEnclave.h"
 
-#include "EnclaveRuntimeException.h"
+#include "../../Common/SGX/RuntimeError.h"
 #include "edl_decent_sgx_decentralized.h"
 
 using namespace Decent::Sgx;
@@ -9,9 +9,8 @@ using namespace Decent::Tools;
 static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
 {
 	sgx_status_t retval = SGX_SUCCESS;
-	sgx_status_t enclaveRet = ecall_decent_sgx_decentralized_init(id, &retval, &spid);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
+	DECENT_CHECK_SGX_STATUS_ERROR(ecall_decent_sgx_decentralized_init(id, &retval, &spid), ecall_decent_sgx_decentralized_init);
+	DECENT_CHECK_SGX_STATUS_ERROR(retval, ecall_decent_sgx_decentralized_init);
 }
 
 DecentralizedEnclave::DecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<Decent::Ias::Connector>& iasConnector, const std::string & enclavePath, const std::string & tokenPath) :

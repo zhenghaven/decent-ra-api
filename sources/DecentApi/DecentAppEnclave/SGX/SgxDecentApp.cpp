@@ -55,9 +55,8 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		const HardCoded& hardcoded = gs_appStates.GetHardCodedWhiteList();
 
 		Decent::Sgx::LocAttCommLayer commLayer(connection, false);
-		const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
-		if (!identity ||
-			!hardcoded.CheckHashAndName(Tools::SerializeStruct(identity->mr_enclave), WhiteList::sk_nameDecentServer))
+		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
+		if (!hardcoded.CheckHashAndName(Tools::SerializeStruct(identity.mr_enclave), WhiteList::sk_nameDecentServer))
 		{
 			PRINT_I("Could not verify the identity of the Decent Server.");
 			return SGX_ERROR_UNEXPECTED;

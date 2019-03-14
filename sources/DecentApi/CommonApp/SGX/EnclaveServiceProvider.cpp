@@ -3,7 +3,8 @@
 #include "edl_decent_sgx_sp.h"
 
 #include "../../Common/SGX/SgxCryptoConversions.h"
-#include "EnclaveRuntimeException.h"
+#include "../../Common/SGX/RuntimeError.h"
+#include "../Base/EnclaveException.h"
 
 using namespace Decent::Sgx;
 using namespace Decent::Tools;
@@ -40,8 +41,8 @@ void EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & out
 	int retval = 0;
 
 	sgx_status_t enclaveRet = ecall_decent_sgx_sp_get_pub_sign_key(GetEnclaveId(), &retval, GeneralEc256Type2Sgx(&outKey));
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_enclave_get_pub_sign_key);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION_INT(retval, ecall_enclave_get_pub_sign_key);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_sgx_sp_get_pub_sign_key);
+	DECENT_ASSERT_ENCLAVE_APP_RESULT(retval, "get service provider public key");
 }
 
 bool EnclaveServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Decent::Net::Connection& connection)

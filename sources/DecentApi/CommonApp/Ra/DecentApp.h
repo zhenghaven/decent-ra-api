@@ -15,9 +15,7 @@ namespace Decent
 		class DecentApp
 		{
 		public:
-			virtual bool GetX509FromServer(const std::string& decentId, Net::Connection& connection) = 0;
-
-			virtual const std::string& GetAppCert() const = 0;
+			virtual std::string GetAppX509Cert() = 0;
 		};
 	}
 }

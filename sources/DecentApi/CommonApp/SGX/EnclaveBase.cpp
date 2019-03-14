@@ -17,9 +17,9 @@
 #include "../../Common/Tools/DataCoding.h"
 #include "../../Common/Net/Connection.h"
 #include "../../Common/SGX/sgx_structs.h"
+#include "../../Common/SGX/RuntimeError.h"
+#include "../Base/EnclaveException.h"
 
-#include "EnclaveUtil.h"
-#include "EnclaveRuntimeException.h"
 #include "edl_decent_sgx_client.h"
 
 using namespace Decent::Sgx;
@@ -32,7 +32,7 @@ static void CheckFilePath(const fs::path& enclavePath, const fs::path& tokenPath
 {
 	if (!fs::exists(enclavePath))
 	{
-		throw EnclaveRuntimeException(SGX_ERROR_INVALID_PARAMETER, "Enclave program file doesn't exist!");
+		throw Decent::Base::EnclaveAppException("Enclave program file doesn't exist!");
 	}
 	if (!fs::exists(tokenPath.parent_path()))
 	{
@@ -59,10 +59,7 @@ sgx_enclave_id_t EnclaveBase::LaunchEnclave(const fs::path& enclavePath, const f
 
 	LOGI("SGX Enclave Token: \n%s\n\n", SerializeStruct(tokenBuf.data(), sizeof(sgx_launch_token_t)).c_str());
 	sgx_status_t enclaveRet = sgx_create_enclave(enclavePath.string().c_str(), SGX_DEBUG_FLAG, reinterpret_cast<sgx_launch_token_t*>(tokenBuf.data()), &needUpdateToken, &outEnclaveID, NULL);
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		throw EnclaveRuntimeException(enclaveRet, "sgx_create_enclave");
-	}
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, sgx_create_enclave);
 
 	if (needUpdateToken)
 	{
@@ -75,8 +72,8 @@ sgx_enclave_id_t EnclaveBase::LaunchEnclave(const fs::path& enclavePath, const f
 
 	sgx_status_t retval = SGX_SUCCESS;
 	enclaveRet = ecall_decent_sgx_client_enclave_init(outEnclaveID, &retval);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_enclave_init);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_enclave_init);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_sgx_client_enclave_init);
+	DECENT_CHECK_SGX_STATUS_ERROR(retval, ecall_decent_sgx_client_enclave_init);
 
 	return outEnclaveID;
 }
@@ -112,7 +109,7 @@ uint32_t EnclaveBase::GetExGroupID()
 {
 	uint32_t res = 0;
 	sgx_status_t enclaveRet = sgx_get_extended_epid_group_id(&res);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, sgx_get_extended_epid_group_id);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, sgx_get_extended_epid_group_id);
 
 	return res;
 }

@@ -24,9 +24,7 @@ namespace Decent
 
 			virtual ~DecentApp();
 
-			virtual bool GetX509FromServer(const std::string& decentId, Net::Connection& connection) override;
-
-			virtual const std::string& GetAppCert() const override;
+			virtual std::string GetAppX509Cert() override;
 
 			virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Net::Connection& connection) override;
 

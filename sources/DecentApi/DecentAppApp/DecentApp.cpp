@@ -4,9 +4,10 @@
 #include <sgx_report.h>
 
 #include "../Common/Tools/DataCoding.h"
+#include "../Common/SGX/RuntimeError.h"
 #include "../CommonApp/Ra/Messages.h"
 #include "../CommonApp/Net/Connection.h"
-#include "../CommonApp/SGX/EnclaveRuntimeException.h"
+#include "../CommonApp/Base/EnclaveException.h"
 
 #include "edl_decent_ra_app.h"
 
@@ -36,7 +37,7 @@ DecentApp::~DecentApp()
 {
 }
 
-bool DecentApp::GetX509FromServer(const std::string & decentId, Connection& connection)
+std::string DecentApp::GetAppX509Cert()
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
@@ -45,24 +46,19 @@ bool DecentApp::GetX509FromServer(const std::string & decentId, Connection& conn
 	std::string retReport(5000, '\0');
 
 	enclaveRet = ecall_decent_ra_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_get_x509_pem);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_app_get_x509_pem);
+	DECENT_ASSERT_ENCLAVE_APP_RESULT(certLen > 0, "get Decent App's certificate.");
 
 	if (certLen > retReport.size())
 	{
 		retReport.resize(certLen);
 
 		enclaveRet = ecall_decent_ra_app_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
-		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_get_x509_pem);
+		DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_app_get_x509_pem);
+		DECENT_ASSERT_ENCLAVE_APP_RESULT(certLen > 0, "get Decent App's certificate.");
 	}
 
-	retReport.resize(certLen);
-
-	return retval == SGX_SUCCESS;
-}
-
-const std::string & DecentApp::GetAppCert() const
-{
-	return m_appCert;
+	return retReport;
 }
 
 bool DecentApp::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
@@ -79,8 +75,8 @@ bool DecentApp::InitEnclave(const std::string & wListKey, Connection & serverCon
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
 	enclaveRet = ecall_decent_ra_app_init(GetEnclaveId(), &retval, &serverConn); //Get X509 Cert.
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_app_init);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_app_init);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_app_init);
+	DECENT_CHECK_SGX_STATUS_ERROR(retval, ecall_decent_app_init);
 	
 	return true;
 }
