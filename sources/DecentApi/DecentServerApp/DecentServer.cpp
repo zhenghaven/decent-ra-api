@@ -10,7 +10,8 @@
 #include "../Common/Tools/DataCoding.h"
 
 #include "../CommonApp/Ra/Messages.h"
-#include "../CommonApp/SGX/EnclaveRuntimeException.h"
+#include "../CommonApp/Base/EnclaveException.h"
+#include "../Common/SGX/RuntimeError.h"
 
 #include "edl_decent_ra_server.h"
 
@@ -25,8 +26,8 @@ namespace
 	{
 		sgx_status_t retval = SGX_SUCCESS;
 		sgx_status_t enclaveRet = ecall_decent_ra_server_init(id, &retval, &spid);
-		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_init);
-		CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_init);
+		DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_init);
+		DECENT_CHECK_SGX_STATUS_ERROR(retval, ecall_decent_ra_server_init);
 	}
 }
 
@@ -67,7 +68,7 @@ void DecentServer::LoadConstWhiteList(const std::string & key, const std::string
 	int retval = 0;
 
 	enclaveRet = ecall_decent_ra_server_load_const_loaded_list(GetEnclaveId(), &retval, key.c_str(), whiteList.c_str());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_load_const_white_list);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_load_const_loaded_list);
 }
 
 void DecentServer::ProcessAppCertReq(const std::string & wListKey, Connection& connection)
@@ -76,7 +77,7 @@ void DecentServer::ProcessAppCertReq(const std::string & wListKey, Connection& c
 	sgx_status_t retval = SGX_SUCCESS;
 
 	enclaveRet = ecall_decent_ra_server_proc_app_cert_req(GetEnclaveId(), &retval, wListKey.c_str(), &connection);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_proc_app_cert_req);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_proc_app_cert_req);
 }
 
 bool DecentServer::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
@@ -105,18 +106,20 @@ std::string DecentServer::GenerateDecentSelfRAReport()
 {
 	sgx_status_t retval = SGX_SUCCESS;
 	sgx_status_t enclaveRet = ecall_decent_ra_server_gen_x509(GetEnclaveId(), &retval, m_ias.get(), GetEnclaveId());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_generate_x509);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(retval, ecall_decent_server_generate_x509);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_gen_x509);
+	DECENT_CHECK_SGX_STATUS_ERROR(retval, ecall_decent_ra_server_gen_x509);
 
 	size_t certLen = 0;
 
 	enclaveRet = ecall_decent_ra_server_get_x509_pem(GetEnclaveId(), &certLen, nullptr, 0);
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_get_x509_pem);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_get_x509_pem);
+	DECENT_ASSERT_ENCLAVE_APP_RESULT(certLen > 0, "get Decent Server's certificate");
 
 	std::string retReport(certLen, '\0');
 	
 	enclaveRet = ecall_decent_ra_server_get_x509_pem(GetEnclaveId(), &certLen, &retReport[0], retReport.size());
-	CHECK_SGX_ENCLAVE_RUNTIME_EXCEPTION(enclaveRet, ecall_decent_server_get_x509_pem);
+	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_get_x509_pem);
+	DECENT_ASSERT_ENCLAVE_APP_RESULT(certLen > 0, "get Decent Server's certificate");
 
 	return retReport;
 }

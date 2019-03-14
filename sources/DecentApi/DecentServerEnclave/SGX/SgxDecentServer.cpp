@@ -121,11 +121,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 	{
 		std::string plainMsg;
 		Decent::Sgx::LocAttCommLayer commLayer(connection, true);
-		const sgx_dh_session_enclave_identity_t* identity = commLayer.GetIdentity();
-		if (!identity)
-		{
-			return SGX_ERROR_UNEXPECTED;
-		}
+		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
 		commLayer.ReceiveMsg(connection, plainMsg);
 		X509Req appX509Req(plainMsg);
@@ -144,7 +140,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 		}
 
 		std::string whiteList = WhiteList::ConstManager::Get().GetWhiteList(key);
-		AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity->mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(*identity), whiteList);
+		AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(identity), whiteList);
 
 		if (!appX509)
 		{
