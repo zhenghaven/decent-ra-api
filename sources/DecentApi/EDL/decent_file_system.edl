@@ -1,0 +1,21 @@
+enclave
+{
+	from "sgx_tprotected_fs.edl" import *;
+
+	untrusted
+	{
+		void*  ocall_decent_tools_fopen([in, string] const char* filename, [in, string] const char* mode);
+
+		int    ocall_decent_tools_fclose([user_check] void* file);
+
+		int    ocall_decent_tools_fflush([user_check] void* file);
+
+		int    ocall_decent_tools_fseek([user_check] void* file, int64_t offset, int origin);
+
+		size_t ocall_decent_tools_ftell([user_check] void* file);
+
+		size_t ocall_decent_tools_fread([out, size=buffer_size] void* buffer, size_t buffer_size, [user_check] void* file);
+
+		size_t ocall_decent_tools_fwrite([in, size=buffer_size] const void* buffer, size_t buffer_size, [user_check] void* file);
+	};
+};

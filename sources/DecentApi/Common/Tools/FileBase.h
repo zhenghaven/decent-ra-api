@@ -7,6 +7,11 @@
 
 #include "../RuntimeException.h"
 
+//Parameters for fseek. These constant may not be available in enclaves.
+#define DECENT_FS_SEEK_CUR    1
+#define DECENT_FS_SEEK_END    2
+#define DECENT_FS_SEEK_SET    0
+
 namespace Decent
 {
 	namespace Tools
@@ -36,11 +41,18 @@ namespace Decent
 			virtual void Open() = 0;
 			virtual bool IsOpen() const = 0;
 
-			virtual int FSeek(const size_t pos) = 0;
-			virtual int FSeek(const size_t pos, const int origin) = 0;
+			virtual int FSeek(const int64_t pos) = 0;
+			virtual int FSeek(const int64_t pos, const int origin) = 0;
 			virtual size_t FTell() const = 0;
 
-			virtual size_t GetFileSize() = 0;
+			virtual size_t GetFileSize()
+			{
+				const size_t tmp = FTell();
+				FSeek(0, DECENT_FS_SEEK_END);
+				const size_t res = FTell();
+				FSeek(tmp);
+				return res;
+			}
 
 			virtual void ReadBlockExactSize(std::vector<uint8_t>& buffer)
 			{

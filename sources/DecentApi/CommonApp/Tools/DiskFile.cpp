@@ -56,14 +56,14 @@ void DiskFile::Open()
 	}
 }
 
-int DiskFile::FSeek(const size_t pos)
+int DiskFile::FSeek(const int64_t pos)
 {
 	return FSeek(pos, SEEK_SET);
 }
 
 #define THROW_FILE_NOT_OPENED_EXCEPTION throw FileException("Specified file is not opened yet!")
 
-int DiskFile::FSeek(const size_t pos, const int origin)
+int DiskFile::FSeek(const int64_t pos, const int origin)
 {
 #ifdef __CYGWIN__
 	return IsOpen() ? std::fseek(m_file, pos, origin) : THROW_FILE_NOT_OPENED_EXCEPTION;
@@ -83,15 +83,6 @@ size_t DiskFile::FTell() const
 #else
 	return IsOpen() ? ftello64(m_file) : THROW_FILE_NOT_OPENED_EXCEPTION;
 #endif
-}
-
-size_t DiskFile::GetFileSize()
-{
-	const size_t tmp = FTell();
-	FSeek(0, SEEK_END);
-	const size_t res = FTell();
-	FSeek(tmp);
-	return res;
 }
 
 DiskFile::DiskFile(const boost::filesystem::path & filePath, ConstCharType modeStr) :

@@ -77,28 +77,19 @@ void SecureFile::Open()
 	}
 }
 
-int SecureFile::FSeek(const size_t pos)
+int SecureFile::FSeek(const int64_t pos)
 {
 	return FSeek(pos, SEEK_SET);
 }
 
-int SecureFile::FSeek(const size_t pos, const int origin)
+int SecureFile::FSeek(const int64_t pos, const int origin)
 {
-	return IsOpen() ? static_cast<int>(sgx_fseek(static_cast<SGX_FILE*>(m_file), static_cast<int64_t>(pos), origin)) : THROW_FILE_NOT_OPENED_EXCEPTION;
+	return IsOpen() ? static_cast<int>(sgx_fseek(static_cast<SGX_FILE*>(m_file), pos, origin)) : THROW_FILE_NOT_OPENED_EXCEPTION;
 }
 
 size_t SecureFile::FTell() const
 {
 	return IsOpen() ? static_cast<size_t>(sgx_ftell(static_cast<SGX_FILE*>(m_file))) : THROW_FILE_NOT_OPENED_EXCEPTION;
-}
-
-size_t SecureFile::GetFileSize()
-{
-	const size_t tmp = FTell();
-	FSeek(0, SEEK_END);
-	const size_t res = FTell();
-	FSeek(tmp);
-	return res;
 }
 
 size_t SecureFile::ReadBlockRaw(void * buffer, const size_t size)

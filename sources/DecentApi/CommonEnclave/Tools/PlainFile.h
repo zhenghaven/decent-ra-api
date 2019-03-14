@@ -25,11 +25,9 @@ namespace Decent
 
 			virtual bool IsOpen() const override { return m_file != nullptr; }
 
-			virtual int FSeek(const size_t pos) override;
-			virtual int FSeek(const size_t pos, const int origin) override;
+			virtual int FSeek(const int64_t pos) override;
+			virtual int FSeek(const int64_t pos, const int origin) override;
 			virtual size_t FTell() const override;
-
-			virtual size_t GetFileSize() override;
 
 			virtual operator bool() const { return IsOpen(); }
 
@@ -66,8 +64,8 @@ namespace Decent
 			virtual void Open() override { return PlainFile::Open(); }
 			virtual bool IsOpen() const override { return PlainFile::IsOpen(); }
 
-			virtual int FSeek(const size_t pos) override { return PlainFile::FSeek(pos); }
-			virtual int FSeek(const size_t pos, const int origin) override { return PlainFile::FSeek(pos, origin); }
+			virtual int FSeek(const int64_t pos) override { return PlainFile::FSeek(pos); }
+			virtual int FSeek(const int64_t pos, const int origin) override { return PlainFile::FSeek(pos, origin); }
 			virtual size_t FTell() const override { return PlainFile::FTell(); }
 			virtual void FFlush() override;
 

@@ -1,4 +1,7 @@
 #include "FileSystemUtil.h"
+#include "../../Common/Tools/FileSystemUtil.h"
+
+#include <cstdio>
 
 #ifdef _WIN32
 #include <ShlObj.h>
@@ -9,6 +12,7 @@
 
 #include <boost/filesystem.hpp>
 
+using namespace Decent;
 using namespace Decent::Tools;
 namespace fs = boost::filesystem;
 
@@ -117,4 +121,9 @@ fs::path Decent::Tools::GetKnownFolderPath(KnownFolderType type)
 	}
 #endif // _WIN32
 	return fs::path(".");
+}
+
+int Tools::FileSysDeleteFile(const std::string& path)
+{
+	return std::remove(path.c_str());
 }
