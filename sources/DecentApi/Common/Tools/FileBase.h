@@ -39,7 +39,6 @@ namespace Decent
 			virtual int FSeek(const size_t pos) = 0;
 			virtual int FSeek(const size_t pos, const int origin) = 0;
 			virtual size_t FTell() const = 0;
-			virtual void FFlush() = 0;
 
 			virtual size_t GetFileSize() = 0;
 
@@ -88,6 +87,8 @@ namespace Decent
 			};
 
 		public:
+
+			virtual void FFlush() = 0;
 
 			virtual void WriteBlockExactSize(const std::vector<uint8_t>& buffer)
 			{

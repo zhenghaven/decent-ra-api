@@ -85,11 +85,6 @@ size_t DiskFile::FTell() const
 #endif
 }
 
-void DiskFile::FFlush()
-{
-	int res = IsOpen() ? std::fflush(m_file) : THROW_FILE_NOT_OPENED_EXCEPTION;
-}
-
 size_t DiskFile::GetFileSize()
 {
 	const size_t tmp = FTell();
@@ -133,6 +128,11 @@ WritableDiskFile::WritableDiskFile(WritableDiskFile && rhs) :
 
 WritableDiskFile::~WritableDiskFile()
 {
+}
+
+void WritableDiskFile::FFlush()
+{
+	int res = IsOpen() ? std::fflush(GetFilePtr()) : THROW_FILE_NOT_OPENED_EXCEPTION;
 }
 
 size_t WritableDiskFile::WriteBlockRaw(const void * buffer, const size_t size)

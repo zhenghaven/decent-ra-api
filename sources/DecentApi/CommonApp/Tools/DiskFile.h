@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../../Common/Tools/FileBase.h"
 
 #include <memory>
@@ -46,7 +48,6 @@ namespace Decent
 			virtual int FSeek(const size_t pos) override;
 			virtual int FSeek(const size_t pos, const int origin) override;
 			virtual size_t FTell() const override;
-			virtual void FFlush() override;
 
 			virtual size_t GetFileSize() override;
 
@@ -93,7 +94,7 @@ namespace Decent
 			virtual int FSeek(const size_t pos) override { return DiskFile::FSeek(pos); }
 			virtual int FSeek(const size_t pos, const int origin) override { return DiskFile::FSeek(pos, origin); }
 			virtual size_t FTell() const override { return DiskFile::FTell(); }
-			virtual void FFlush() override { return DiskFile::FFlush(); }
+			virtual void FFlush() override;
 
 			virtual size_t GetFileSize() override { return DiskFile::GetFileSize(); }
 
