@@ -55,6 +55,36 @@ namespace Decent
 		};
 
 		/**
+		 * \brief	Check Quote status and PSE status stated in the IAS report, based on the requirement
+		 * 			set in the RA config. No exception, only logical expressions.
+		 *
+		 * \param	iasReport	The input for parsed IAS report.
+		 * \param	raConfig 	The input for RA configuration.
+		 *
+		 * \return	True if it is considered as valid according to the configuration, false if not.
+		 */
+		bool CheckIasReportStatus(const sgx_ias_report_t& iasReport, const sgx_ra_config& raConfig) noexcept;
+
+		/**
+		 * \brief	Check if two RA configurations are equal
+		 *
+		 * \param	a	configuration A.
+		 * \param	b	configuration B.
+		 *
+		 * \return	True if A == B, false if not.
+		 */
+		bool CheckRaConfigEqual(const sgx_ra_config& a, const sgx_ra_config& b) noexcept;
+
+		/**
+		 * \brief	Check RA configuration's validity. which means all values must be within the possible range.
+		 *
+		 * \param	a	A sgx_ra_config to check.
+		 *
+		 * \return	True if it it valid, false if not.
+		 */
+		bool CheckRaConfigValidaty(const sgx_ra_config& a) noexcept;
+
+		/**
 		 * \brief	This function only parses IAS's report
 		 *
 		 * \exception	Ias::ReportParseError	The IAS report has unrecognized format (probably IAS API has been updated).
@@ -108,35 +138,5 @@ namespace Decent
 			return ParseIasReportAndCheckSignature(outIasReport, iasReportStr, reportCert, reportSign, nonce) &&
 				CheckIasReportStatus(iasReport, raConfig) && vrfier(iasReport);
 		}
-
-		/**
-		 * \brief	Check Quote status and PSE status stated in the IAS report, based on the requirement
-		 * 			set in the RA config. No exception, only logical expressions.
-		 *
-		 * \param	iasReport	The input for parsed IAS report.
-		 * \param	raConfig 	The input for RA configuration.
-		 *
-		 * \return	True if it is considered as valid according to the configuration, false if not.
-		 */
-		bool CheckIasReportStatus(const sgx_ias_report_t& iasReport, const sgx_ra_config& raConfig) noexcept;
-
-		/**
-		 * \brief	Check if two RA configurations are equal
-		 *
-		 * \param	a	configuration A.
-		 * \param	b	configuration B.
-		 *
-		 * \return	True if A == B, false if not.
-		 */
-		bool CheckRaConfigEqual(const sgx_ra_config& a, const sgx_ra_config& b) noexcept;
-
-		/**
-		 * \brief	Check RA configuration's validity. which means all values must be within the possible range.
-		 *
-		 * \param	a	A sgx_ra_config to check.
-		 *
-		 * \return	True if it it valid, false if not.
-		 */
-		bool CheckRaConfigValidaty(const sgx_ra_config& a) noexcept;
 	}
 }

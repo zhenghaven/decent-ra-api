@@ -89,118 +89,123 @@ elseif(UNIX AND NOT APPLE)
 			
 		endif(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_SDK_BIN_SHA256})
 			
-		######
-		# Install Driver
-		######
-		set(READ_INSTALLED_SHA256 "N/A")
-		if(EXISTS "${INTEL_SGX_DRI_INSTALL_DIR}/SHA256")
-		 file(READ ${INTEL_SGX_DRI_INSTALL_DIR}/SHA256 READ_INSTALLED_SHA256)
-		endif()
-		
-		message(STATUS "Driver Ver installed: ${READ_INSTALLED_SHA256}")
-		message(STATUS "The version we need: ${INTEL_SGX_DRI_BIN_SHA256}")
-		if(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_DRI_BIN_SHA256})
-		
-			message(STATUS "Couldn't find the driver we need, try to install one...")
+		if(NOT ${CMAKE_BUILD_TYPE} MATCHES "DebugSimulation")
 			
-			file(DOWNLOAD 
-			${INTEL_SGX_DRI_BIN_URL}  
-			${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_driver.bin 
-			SHOW_PROGRESS
-			)
-			
-			file(SHA256 ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_driver.bin DOWNLOADED_SHA256)
-			
-			if(NOT ${DOWNLOADED_SHA256} STREQUAL ${INTEL_SGX_DRI_BIN_SHA256})
-				message(FATAL_ERROR "The checksum of downloaded file is invalid!")
+			######
+			# Install Driver
+			######
+			set(READ_INSTALLED_SHA256 "N/A")
+			if(EXISTS "${INTEL_SGX_DRI_INSTALL_DIR}/SHA256")
+			 file(READ ${INTEL_SGX_DRI_INSTALL_DIR}/SHA256 READ_INSTALLED_SHA256)
 			endif()
 			
-			if(EXISTS "${INTEL_SGX_DRI_INSTALL_DIR}/isgx.ko")
-				if(EXISTS "${INTEL_SGX_INSTALL_DIR}/sgxdriver/uninstall.sh")
+			message(STATUS "Driver Ver installed: ${READ_INSTALLED_SHA256}")
+			message(STATUS "The version we need: ${INTEL_SGX_DRI_BIN_SHA256}")
+			if(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_DRI_BIN_SHA256})
+			
+				message(STATUS "Couldn't find the driver we need, try to install one...")
+				
+				file(DOWNLOAD 
+				${INTEL_SGX_DRI_BIN_URL}  
+				${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_driver.bin 
+				SHOW_PROGRESS
+				)
+				
+				file(SHA256 ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_driver.bin DOWNLOADED_SHA256)
+				
+				if(NOT ${DOWNLOADED_SHA256} STREQUAL ${INTEL_SGX_DRI_BIN_SHA256})
+					message(FATAL_ERROR "The checksum of downloaded file is invalid!")
+				endif()
+				
+				if(EXISTS "${INTEL_SGX_DRI_INSTALL_DIR}/isgx.ko")
+					if(EXISTS "${INTEL_SGX_INSTALL_DIR}/sgxdriver/uninstall.sh")
+						execute_process(
+							COMMAND sudo ./uninstall.sh
+							WORKING_DIRECTORY "${INTEL_SGX_INSTALL_DIR}/sgxdriver/"
+							)
+					else()
+						execute_process(
+							COMMAND sudo service aesmd stop
+							COMMAND sudo /sbin/modprobe -r isgx
+							COMMAND sudo rm -rf ${INTEL_SGX_DRI_INSTALL_DIR}
+							COMMAND sudo /sbin/depmod
+							COMMAND sudo /bin/sed -i '/^isgx$/d' /etc/modules
+							WORKING_DIRECTORY "${INTEL_SGX_DRI_INSTALL_DIR}"
+							)
+					endif()
+				endif()
+				
+				execute_process(
+					COMMAND chmod +x ./sgx_linux_x64_driver.bin
+					COMMAND sudo ./sgx_linux_x64_driver.bin
+					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
+					)
+				
+				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/Driver/SHA256 "${INTEL_SGX_DRI_BIN_SHA256}")
+				
+				execute_process(
+					COMMAND sudo mv "./Driver/SHA256" "${INTEL_SGX_DRI_INSTALL_DIR}/SHA256"
+					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
+					)
+				
+				message(STATUS "Successfully installed Intel SGX Driver!")
+				
+			endif(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_DRI_BIN_SHA256})
+			
+			######
+			# Install PSW
+			######
+			set(READ_INSTALLED_SHA256 "N/A")
+			if(EXISTS "${INTEL_SGX_PSW_INSTALL_DIR}/SHA256")
+			 file(READ ${INTEL_SGX_PSW_INSTALL_DIR}/SHA256 READ_INSTALLED_SHA256)
+			endif()
+			
+			message(STATUS "PSW Ver installed: ${READ_INSTALLED_SHA256}")
+			message(STATUS "The version we need: ${INTEL_SGX_PSW_BIN_SHA256}")
+			
+			if(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
+			
+				message(STATUS "Couldn't find the PSW we need, try to install one...")
+				
+				file(DOWNLOAD 
+				${INTEL_SGX_PSW_BIN_URL}  
+				${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb 
+				SHOW_PROGRESS
+				)
+				
+				file(SHA256 ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb DOWNLOADED_SHA256)
+				
+				if(NOT ${DOWNLOADED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
+					message(FATAL_ERROR "The checksum of downloaded file is invalid!")
+				endif()
+				
+				if(EXISTS "${INTEL_SGX_PSW_INSTALL_DIR}/uninstall.sh")
 					execute_process(
 						COMMAND sudo ./uninstall.sh
-						WORKING_DIRECTORY "${INTEL_SGX_INSTALL_DIR}/sgxdriver/"
-						)
-				else()
-					execute_process(
-						COMMAND sudo service aesmd stop
-						COMMAND sudo /sbin/modprobe -r isgx
-						COMMAND sudo rm -rf ${INTEL_SGX_DRI_INSTALL_DIR}
-						COMMAND sudo /sbin/depmod
-						COMMAND sudo /bin/sed -i '/^isgx$/d' /etc/modules
-						WORKING_DIRECTORY "${INTEL_SGX_DRI_INSTALL_DIR}"
+						COMMAND sudo apt remove libsgx-enclave-common
+						WORKING_DIRECTORY "${INTEL_SGX_PSW_INSTALL_DIR}"
 						)
 				endif()
-			endif()
-			
-			execute_process(
-				COMMAND chmod +x ./sgx_linux_x64_driver.bin
-				COMMAND sudo ./sgx_linux_x64_driver.bin
-				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
-				)
-			
-			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/Driver/SHA256 "${INTEL_SGX_DRI_BIN_SHA256}")
-			
-			execute_process(
-				COMMAND sudo mv "./Driver/SHA256" "${INTEL_SGX_DRI_INSTALL_DIR}/SHA256"
-				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
-				)
-			
-			message(STATUS "Successfully installed Intel SGX Driver!")
-			
-		endif(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_DRI_BIN_SHA256})
-		
-		######
-		# Install PSW
-		######
-		set(READ_INSTALLED_SHA256 "N/A")
-		if(EXISTS "${INTEL_SGX_PSW_INSTALL_DIR}/SHA256")
-		 file(READ ${INTEL_SGX_PSW_INSTALL_DIR}/SHA256 READ_INSTALLED_SHA256)
-		endif()
-		
-		message(STATUS "PSW Ver installed: ${READ_INSTALLED_SHA256}")
-		message(STATUS "The version we need: ${INTEL_SGX_PSW_BIN_SHA256}")
-		
-		if(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
-		
-			message(STATUS "Couldn't find the PSW we need, try to install one...")
-			
-			file(DOWNLOAD 
-			${INTEL_SGX_PSW_BIN_URL}  
-			${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb 
-			SHOW_PROGRESS
-			)
-			
-			file(SHA256 ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb DOWNLOADED_SHA256)
-			
-			if(NOT ${DOWNLOADED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
-				message(FATAL_ERROR "The checksum of downloaded file is invalid!")
-			endif()
-			
-			if(EXISTS "${INTEL_SGX_PSW_INSTALL_DIR}/uninstall.sh")
+				
 				execute_process(
-					COMMAND sudo ./uninstall.sh
-					COMMAND sudo apt remove libsgx-enclave-common
-					WORKING_DIRECTORY "${INTEL_SGX_PSW_INSTALL_DIR}"
+					COMMAND chmod +x ./sgx_linux_x64_psw.deb
+					COMMAND sudo apt install ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb
+					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
 					)
-			endif()
+				
+				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/PSW/SHA256 "${INTEL_SGX_PSW_BIN_SHA256}")
+				
+				execute_process(
+					COMMAND sudo mv "./PSW/SHA256" "${INTEL_SGX_PSW_INSTALL_DIR}/SHA256"
+					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
+					)
+				
+				message(STATUS "Successfully installed Intel SGX PSW!")
+				
+			endif(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
 			
-			execute_process(
-				COMMAND chmod +x ./sgx_linux_x64_psw.deb
-				COMMAND sudo apt install ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb
-				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
-				)
-			
-			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/PSW/SHA256 "${INTEL_SGX_PSW_BIN_SHA256}")
-			
-			execute_process(
-				COMMAND sudo mv "./PSW/SHA256" "${INTEL_SGX_PSW_INSTALL_DIR}/SHA256"
-				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
-				)
-			
-			message(STATUS "Successfully installed Intel SGX PSW!")
-			
-		endif(NOT ${READ_INSTALLED_SHA256} STREQUAL ${INTEL_SGX_PSW_BIN_SHA256})
+		endif(NOT ${CMAKE_BUILD_TYPE} MATCHES "DebugSimulation")
+		
 	endif(LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu")
 
 endif()
