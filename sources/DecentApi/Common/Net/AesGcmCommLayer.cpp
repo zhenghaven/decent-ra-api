@@ -71,6 +71,22 @@ AesGcmCommLayer::operator bool() const
 	return m_gcm;
 }
 
+static void DecryptMsgPreChecked(const EncryptedStruct& encryptedStruct, void* outBuffer, size_t messageSize, AesGcmCommLayer::GcmObjType& gcm)
+{
+	try
+	{
+		gcm.Decrypt(
+			&encryptedStruct.m_msg, messageSize,
+			outBuffer, messageSize,
+			encryptedStruct.m_iv,
+			encryptedStruct.m_mac);
+	}
+	catch (const std::exception& e)
+	{
+		throw Exception(std::string("Decryption failed with error: ") + e.what());
+	}
+}
+
 std::string AesGcmCommLayer::DecryptMsg(const void* inMsg, const size_t inSize)
 {
 	if (inSize <= sizeof(EncryptedStruct))
@@ -85,35 +101,38 @@ std::string AesGcmCommLayer::DecryptMsg(const void* inMsg, const size_t inSize)
 	size_t messageSize = inSize - sizeof(EncryptedStruct);
 	res.resize(messageSize);
 
-	try
-	{
-		m_gcm.DecryptStruct(
-			&encryptedStruct.m_msg, messageSize,
-			&res[0], res.size(),
-			encryptedStruct.m_iv,
-			encryptedStruct.m_mac);
-	}
-	catch (const std::exception& e)
-	{
-		throw Exception(std::string("Decryption failed with error: ") + e.what());
-	}
+	DecryptMsgPreChecked(encryptedStruct, &res[0], messageSize, m_gcm);
 
 	return std::move(res);
 }
 
-std::string AesGcmCommLayer::EncryptMsg(const void * inMsg, const size_t inSize)
+std::vector<uint8_t> AesGcmCommLayer::DecryptBin(const void * inMsg, const size_t inSize)
 {
-	std::string res;
-	res.resize(sizeof(EncryptedStruct) + inSize);
+	if (inSize <= sizeof(EncryptedStruct))
+	{
+		throw Exception("Invalid input parameters for function " "AesGcmCommLayer::DecryptMsg" ". The input message is even smaller than an empty encrypted message!");
+	}
 
-	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(res[0]);
+	const EncryptedStruct& encryptedStruct = *reinterpret_cast<const EncryptedStruct*>(inMsg);
 
+	std::vector<uint8_t> res;
+
+	size_t messageSize = inSize - sizeof(EncryptedStruct);
+	res.resize(messageSize);
+
+	DecryptMsgPreChecked(encryptedStruct, &res[0], messageSize, m_gcm);
+
+	return std::move(res);
+}
+
+static void EncryptMsgPreChecked(EncryptedStruct& encryptedStruct, const void * inMsg, const size_t inSize, AesGcmCommLayer::GcmObjType& gcm)
+{
 	try
 	{
 		Drbg drbg;
 		drbg.RandStruct(encryptedStruct.m_iv);
 
-		m_gcm.EncryptStruct(
+		gcm.Encrypt(
 			inMsg, inSize,
 			&encryptedStruct.m_msg, inSize,
 			encryptedStruct.m_iv,
@@ -123,6 +142,28 @@ std::string AesGcmCommLayer::EncryptMsg(const void * inMsg, const size_t inSize)
 	{
 		throw Exception(std::string("Encryption failed with error: ") + e.what());
 	}
+}
+
+std::string AesGcmCommLayer::EncryptMsg(const void * inMsg, const size_t inSize)
+{
+	std::string res;
+	res.resize(sizeof(EncryptedStruct) + inSize);
+
+	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(res[0]);
+
+	EncryptMsgPreChecked(encryptedStruct, inMsg, inSize, m_gcm);
+
+	return std::move(res);
+}
+
+std::vector<uint8_t> AesGcmCommLayer::EncryptBin(const void * inMsg, const size_t inSize)
+{
+	std::vector<uint8_t> res;
+	res.resize(sizeof(EncryptedStruct) + inSize);
+
+	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(res[0]);
+
+	EncryptMsgPreChecked(encryptedStruct, inMsg, inSize, m_gcm);
 
 	return std::move(res);
 }
@@ -155,6 +196,19 @@ void AesGcmCommLayer::ReceiveMsg(std::string & outMsg)
 	std::string encrypted;
 	StatConnection::ReceivePack(m_connection, encrypted);
 	
+	outMsg = DecryptMsg(encrypted);
+}
+
+void AesGcmCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
+{
+	if (!*this)
+	{
+		throw ConnectionNotEstablished();
+	}
+
+	std::vector<uint8_t> encrypted;
+	StatConnection::ReceivePack(m_connection, encrypted);
+
 	outMsg = DecryptMsg(encrypted);
 }
 

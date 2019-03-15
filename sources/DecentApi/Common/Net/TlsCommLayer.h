@@ -58,6 +58,18 @@ namespace Decent
 				SecureCommLayer::ReceiveMsg(connectionPtr, outMsg);
 			}
 
+			virtual void SendMsg(const std::vector<uint8_t>& inMsg) override;
+			virtual void SendMsg(void* const connectionPtr, const std::vector<uint8_t>& inMsg) override
+			{
+				SecureCommLayer::SendMsg(connectionPtr, inMsg);
+			}
+
+			virtual void ReceiveMsg(std::vector<uint8_t>& outMsg) override;
+			virtual void ReceiveMsg(void* const connectionPtr, std::vector<uint8_t>& outMsg) override
+			{
+				SecureCommLayer::ReceiveMsg(connectionPtr, outMsg);
+			}
+
 			virtual void SetConnectionPtr(void* const connectionPtr) override;
 
 			std::string GetPeerCertPem() const;

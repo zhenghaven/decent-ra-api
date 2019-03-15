@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstdint>
+
 #include <string>
+#include <vector>
 
 namespace Decent
 {
@@ -154,6 +157,46 @@ namespace Decent
 			 * \param [in,out]	outMsg		 	Received message.
 			 */
 			virtual void ReceiveMsg(void* const connectionPtr, std::string& outMsg)
+			{
+				SetConnectionPtr(connectionPtr);
+				ReceiveMsg(outMsg);
+			}
+
+			/**
+			 * \brief	Sends a message.
+			 *
+			 * \param 		  	inMsg	Message to be sent.
+			 */
+			virtual void SendMsg(const std::vector<uint8_t>& inMsg) = 0;
+
+			/**
+			 * \brief	Sends a message.
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
+			 * \param 		  	inMsg		 	Message to be sent.
+			 */
+			virtual void SendMsg(void* const connectionPtr, const std::vector<uint8_t>& inMsg)
+			{
+				SetConnectionPtr(connectionPtr);
+				SendMsg(inMsg);
+			}
+
+			/**
+			 * \brief	Receives a message. Output message size will be automatically adjusted to fit the
+			 * 			message received.
+			 *
+			 * \param [in,out]	outMsg	Received message.
+			 */
+			virtual void ReceiveMsg(std::vector<uint8_t>& outMsg) = 0;
+
+			/**
+			 * \brief	Receives a message. Output message size will be automatically adjusted to fit the
+			 * 			message received.
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer.
+			 * \param [in,out]	outMsg		 	Received message.
+			 */
+			virtual void ReceiveMsg(void* const connectionPtr, std::vector<uint8_t>& outMsg)
 			{
 				SetConnectionPtr(connectionPtr);
 				ReceiveMsg(outMsg);

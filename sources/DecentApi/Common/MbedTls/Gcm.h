@@ -90,12 +90,12 @@ namespace Decent
 			 * \param [in,out]	outTag 	The out tag.
 			 */
 			template<typename AddCtar, typename IvStru, typename TagStru>
-			void EncryptStruct(const void* inData, const size_t inLen, void* outData, const size_t outLen,
+			void Encrypt(const void* inData, const size_t inLen, void* outData, const size_t outLen,
 				const IvStru& iv, const AddCtar& add, TagStru& outTag)
 			{
 				Encrypt(inData, inLen, outData, outLen,
-					&iv, sizeof(iv), add.data(), add.size(),
-					&outTag, sizeof(outTag));
+					detail::GetPtr(iv), detail::GetSize(iv), detail::GetPtr(add), detail::GetSize(add),
+					detail::GetPtr(outTag), detail::GetSize(outTag));
 			}
 
 			/**
@@ -114,12 +114,12 @@ namespace Decent
 			 * \param [in,out]	outTag 	The out tag.
 			 */
 			template<typename IvStru, typename TagStru>
-			void EncryptStruct(const void* inData, const size_t inLen, void* outData, const size_t outLen,
+			void Encrypt(const void* inData, const size_t inLen, void* outData, const size_t outLen,
 				const IvStru& iv, TagStru& outTag)
 			{
 				Encrypt(inData, inLen, outData, outLen,
-					&iv, sizeof(iv), nullptr, 0,
-					&outTag, sizeof(outTag));
+					detail::GetPtr(iv), detail::GetSize(iv), nullptr, 0,
+					detail::GetPtr(outTag), detail::GetSize(outTag));
 			}
 
 			/**
@@ -137,15 +137,15 @@ namespace Decent
 			 * \param 		  	outLen 	Size of the output buffer.
 			 * \param 		  	iv	   	The iv.
 			 * \param 		  	add	   	The additional authentication info.
-			 * \param 		  	outTag 	The out tag.
+			 * \param 		  	outTag 	The input tag.
 			 */
 			template<typename AddCtar, typename IvStru, typename TagStru>
-			void DecryptStruct(const void* inData, const size_t inLen, void* outData, const size_t outLen,
-				const IvStru& iv, const AddCtar& add, const TagStru& outTag)
+			void Decrypt(const void* inData, const size_t inLen, void* outData, const size_t outLen,
+				const IvStru& iv, const AddCtar& add, const TagStru& inTag)
 			{
 				Decrypt(inData, inLen, outData, outLen,
-					&iv, sizeof(iv), add.data(), add.size(),
-					&outTag, sizeof(outTag));
+					detail::GetPtr(iv), detail::GetSize(iv), detail::GetPtr(add), detail::GetSize(add),
+					detail::GetPtr(inTag), detail::GetSize(inTag));
 			}
 
 			/**
@@ -161,15 +161,15 @@ namespace Decent
 			 * \param [in,out]	outData	Output decrypted data.
 			 * \param 		  	outLen 	Size of the output buffer.
 			 * \param 		  	iv	   	The iv.
-			 * \param 		  	outTag 	The out tag.
+			 * \param 		  	outTag 	The input tag.
 			 */
 			template<typename IvStru, typename TagStru>
-			void DecryptStruct(const void* inData, const size_t inLen, void* outData, const size_t outLen,
-				const IvStru& iv, const TagStru& outTag)
+			void Decrypt(const void* inData, const size_t inLen, void* outData, const size_t outLen,
+				const IvStru& iv, const TagStru& inTag)
 			{
 				Decrypt(inData, inLen, outData, outLen,
-					&iv, sizeof(iv), nullptr, 0,
-					&outTag, sizeof(outTag));
+					detail::GetPtr(iv), detail::GetSize(iv), nullptr, 0,
+					detail::GetPtr(inTag), detail::GetSize(inTag));
 			}
 
 		protected:

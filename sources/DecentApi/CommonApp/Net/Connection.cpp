@@ -40,6 +40,13 @@ size_t StatConnection::ReceiveRaw(void * const connection, void * const buf, con
 	return reinterpret_cast<Connection*>(connection)->ReceiveRaw(buf, bufLen);
 }
 
+void StatConnection::ReceivePack(void * const connection, std::vector<uint8_t>& outMsg)
+{
+	CHECK_CONNECTION_PTR(connection);
+
+	reinterpret_cast<Connection*>(connection)->ReceivePack(outMsg);
+}
+
 void StatConnection::SendAndReceivePack(void * const connection, const void * const inData, const size_t inDataLen, std::string & outMsg)
 {
 	reinterpret_cast<Connection*>(connection)->SendPack(inData, inDataLen);

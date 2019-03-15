@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+
+#include <vector>
 #include <string>
 #include <exception>
 
@@ -42,6 +45,29 @@ namespace Decent
 			 * \param [in,out]	outMsg	  	Received message.
 			 */
 			void ReceivePack(void* const connection, std::string& outMsg);
+
+			/**
+			 * \brief	Sends a pack of message
+			 *
+			 * \exception Decent::Net::Exception
+			 *
+			 * \param [in,out]	connection	The connection pointer (must not null).
+			 * \param 		  	inMsg	  	Message to be sent.
+			 */
+			inline void SendPack(void* const connection, const std::vector<uint8_t>& inMsg)
+			{
+				SendPack(connection, inMsg.data(), inMsg.size());
+			}
+
+			/**
+			 * \brief	Receives a pack of message
+			 *
+			 * \exception Decent::Net::Exception
+			 *
+			 * \param [in,out]	connection	The connection pointer (must not null).
+			 * \param [in,out]	outMsg	  	Received message.
+			 */
+			void ReceivePack(void* const connection, std::vector<uint8_t>& outMsg);
 
 			/**
 			 * \brief	Sends and receives a pack of message

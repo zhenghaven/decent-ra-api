@@ -204,6 +204,33 @@ void TlsCommLayer::ReceiveMsg(std::string & outMsg)
 	MbedTlsSslReadWrap(m_sslCtx, &outMsg[0], outMsg.size());
 }
 
+void TlsCommLayer::SendMsg(const std::vector<uint8_t>& inMsg)
+{
+	if (!*this)
+	{
+		throw ConnectionNotEstablished();
+	}
+
+	uint64_t msgSize = static_cast<uint64_t>(inMsg.size());
+	MbedTlsSslWriteWrap(m_sslCtx, &msgSize, sizeof(uint64_t));
+	MbedTlsSslWriteWrap(m_sslCtx, inMsg.data(), inMsg.size());
+}
+
+void TlsCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
+{
+	if (!*this)
+	{
+		throw ConnectionNotEstablished();
+	}
+
+	uint64_t msgSize = 0;
+	MbedTlsSslReadWrap(m_sslCtx, &msgSize, sizeof(uint64_t));
+
+	outMsg.resize(msgSize);
+
+	MbedTlsSslReadWrap(m_sslCtx, &outMsg[0], outMsg.size());
+}
+
 void TlsCommLayer::SetConnectionPtr(void* const connectionPtr)
 {
 	mbedtls_ssl_set_bio(m_sslCtx, connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);

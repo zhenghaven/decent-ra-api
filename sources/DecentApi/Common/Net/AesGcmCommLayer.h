@@ -82,6 +82,42 @@ namespace Decent
 			virtual std::string DecryptMsg(const void* inMsg, const size_t inSize);
 
 			/**
+			 * \brief	Encrypts a message
+			 *
+			 * \exception Decent::Net::Exception
+			 *
+			 * \param	inMsg 	Input message (plain text).
+			 * \param	inSize	Message length.
+			 *
+			 * \return	Output message (cipher text).
+			 */
+			virtual std::string EncryptMsg(const void* inMsg, const size_t inSize);
+
+			/**
+			 * \brief	Decrypts a message into binary.
+			 *
+			 * \exception Decent::Net::Exception
+			 *
+			 * \param	inMsg 	Input message (cipher text).
+			 * \param	inSize	Message length.
+			 *
+			 * \return	Output message in binary (plain text).
+			 */
+			virtual std::vector<uint8_t> DecryptBin(const void* inMsg, const size_t inSize);
+
+			/**
+			 * \brief	Encrypts a message into binary.
+			 *
+			 * \exception Decent::Net::Exception
+			 *
+			 * \param	inMsg 	Input message (plain text).
+			 * \param	inSize	Message length.
+			 *
+			 * \return	Output message in binary (cipher text).
+			 */
+			virtual std::vector<uint8_t> EncryptBin(const void* inMsg, const size_t inSize);
+
+			/**
 			 * \brief	Decrypts a message
 			 *
 			 * \param 	inMsg	Input message (cipher text).
@@ -98,18 +134,6 @@ namespace Decent
 			 *
 			 * \exception Decent::Net::Exception
 			 *
-			 * \param	inMsg 	Input message (plain text).
-			 * \param	inSize	Message length.
-			 *
-			 * \return	Output message (cipher text).
-			 */
-			virtual std::string EncryptMsg(const void* inMsg, const size_t inSize);
-
-			/**
-			 * \brief	Encrypts a message
-			 *
-			 * \exception Decent::Net::Exception
-			 *
 			 * \param 	inMsg	Input message (plain text).
 			 *
 			 * \return	Output message (cipher text).
@@ -118,7 +142,33 @@ namespace Decent
 			{
 				return EncryptMsg(inMsg.data(), inMsg.size());
 			}
-			
+
+			/**
+			 * \brief	Decrypts a message into binary
+			 *
+			 * \param 	inMsg	Input message (cipher text).
+			 *
+			 * \return	Output message in binary (plain text).
+			 */
+			virtual std::vector<uint8_t> DecryptMsg(const std::vector<uint8_t>& inMsg)
+			{
+				return DecryptBin(inMsg.data(), inMsg.size());
+			}
+
+			/**
+			 * \brief	Encrypts a message into binary
+			 *
+			 * \exception Decent::Net::Exception
+			 *
+			 * \param 	inMsg	Input message (plain text).
+			 *
+			 * \return	Output message in binary (cipher text).
+			 */
+			virtual std::vector<uint8_t> EncryptMsg(const std::vector<uint8_t>& inMsg)
+			{
+				return EncryptBin(inMsg.data(), inMsg.size());
+			}
+
 			virtual void ReceiveRaw(void* buf, const size_t size) override;
 			virtual void ReceiveRaw(void* const connectionPtr, void* buf, const size_t size) override
 			{
@@ -142,6 +192,21 @@ namespace Decent
 
 			virtual void ReceiveMsg(std::string& outMsg) override;
 			virtual void ReceiveMsg(void* const connectionPtr, std::string& outMsg) override
+			{
+				SecureCommLayer::ReceiveMsg(connectionPtr, outMsg);
+			}
+
+			virtual void SendMsg(const std::vector<uint8_t>& inMsg) override
+			{
+				SendRaw(inMsg.data(), inMsg.size());
+			}
+			virtual void SendMsg(void* const connectionPtr, const std::vector<uint8_t>& inMsg) override
+			{
+				SecureCommLayer::SendMsg(connectionPtr, inMsg);
+			}
+
+			virtual void ReceiveMsg(std::vector<uint8_t>& outMsg) override;
+			virtual void ReceiveMsg(void* const connectionPtr, std::vector<uint8_t>& outMsg) override
 			{
 				SecureCommLayer::ReceiveMsg(connectionPtr, outMsg);
 			}
