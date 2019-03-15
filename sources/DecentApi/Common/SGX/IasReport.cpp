@@ -17,7 +17,7 @@
 #include "../Tools/JsonTools.h"
 #include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsObjects.h"
-#include "../MbedTls/MbedTlsHelpers.h"
+#include "../MbedTls/Hasher.h"
 #include "IasReportCert.h"
 #include "sgx_structs.h"
 
@@ -296,6 +296,8 @@ void Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::
 
 bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
 {
+	using namespace Decent::MbedTlsObj;
+
 #ifndef SIMULATING_ENCLAVE
 	MbedTlsObj::X509Cert trustedIasCert(Ias::gsk_IasReportCert);
 	MbedTlsObj::X509Cert reportCertChain(reportCert);
@@ -310,10 +312,7 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 	std::vector<uint8_t> signBinBuf = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
 
 	General256Hash hash;
-	if (!MbedTlsHelper::CalcHashSha256(iasReportStr, hash))
-	{
-		return false;
-	}
+	Hasher::Calc<HashType::SHA256>(iasReportStr, hash);
 
 	bool signVerRes = false;
 	do

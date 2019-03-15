@@ -19,6 +19,7 @@
 #include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/MbedTlsHelpers.h"
+#include "../MbedTls/Hasher.h"
 #include "../MbedTls/Drbg.h"
 
 #include "sgx_structs.h"
@@ -180,7 +181,7 @@ bool RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 	msg2Ref.kdf_id = m_raConfig.ckdf_id;
 
 	General256Hash hashToBeSigned;
-	MbedTlsHelper::CalcHashSha256(&m_myEncrKey, 2 * sizeof(sgx_ec256_public_t), hashToBeSigned);
+	Hasher::Calc<HashType::SHA256>(&m_myEncrKey, 2 * sizeof(sgx_ec256_public_t), hashToBeSigned);
 
 	if (!m_mySignKey->EcdsaSign(SgxEc256Type2General(msg2Ref.sign_gb_ga), hashToBeSigned,
 		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
@@ -236,10 +237,12 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 	// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
 	// The second 32 bytes of report_data are set to zero.
 	General256Hash reportDataHash;
-	MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, {
-		{&(m_peerEncrKey), sizeof(sgx_ec256_public_t)},
-		{&(m_myEncrKey), sizeof(sgx_ec256_public_t)},
-		{&(m_vk), sizeof(sgx_ec_key_128bit_t)},
+	Hasher().BatchedCalc<HashType::SHA256>(
+		std::array<DataListItem, 3>
+		{
+			DataListItem{&(m_peerEncrKey), sizeof(sgx_ec256_public_t)},
+			DataListItem{&(m_myEncrKey), sizeof(sgx_ec256_public_t)},
+			DataListItem{&(m_vk), sizeof(sgx_ec_key_128bit_t)},
 		},
 		reportDataHash);
 
@@ -265,7 +268,7 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 		if (m_raConfig.enable_pse)
 		{
 			General256Hash pseHash;
-			MbedTlsHelper::CalcHashSha256(&msg3.ps_sec_prop, sizeof(msg3.ps_sec_prop), pseHash);
+			Hasher::Calc<HashType::SHA256>(msg3.ps_sec_prop.sgx_ps_sec_prop_desc, pseHash);
 
 			if (!consttime_memequal(pseHash.data(), &m_iasReport->m_pse_hash, pseHash.size()))
 			{
@@ -280,7 +283,7 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 	msg4.is_accepted = m_isAttested ? 1 : 0;
 
 	General256Hash hashToBeSigned;
-	MbedTlsHelper::CalcHashSha256(&msg4.is_accepted, sizeof(msg4) - sizeof(sgx_ec256_signature_t), hashToBeSigned);
+	Hasher::Calc<HashType::SHA256>(&msg4.is_accepted, sizeof(msg4) - sizeof(sgx_ec256_signature_t), hashToBeSigned);
 
 	if (!m_mySignKey->EcdsaSign(SgxEc256Type2General(msg4.signature), hashToBeSigned,
 		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))

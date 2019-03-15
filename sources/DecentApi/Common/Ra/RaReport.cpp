@@ -13,7 +13,7 @@
 
 #include "../Tools/DataCoding.h"
 #include "../Tools/JsonTools.h"
-#include "../MbedTls/MbedTlsHelpers.h"
+#include "../MbedTls/Hasher.h"
 #include "../SGX/IasReport.h"
 #include "../SGX/sgx_structs.h" /*TODO: remove this dependency.*/
 
@@ -25,6 +25,8 @@ using namespace Decent::Tools;
 
 bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)
 {
+	using namespace Decent::MbedTlsObj;
+
 	if (size != GENERAL_256BIT_32BYTE_SIZE ||
 		pubSignKey.size() == 0 )
 	{
@@ -32,10 +34,11 @@ bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const ui
 	}
 
 	General256Hash hashRes;
-	MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, 
+	Hasher().BatchedCalc<HashType::SHA256>(
+		std::array<DataListItem, 2>
 		{
-			{initData, size},
-			{pubSignKey.data(), pubSignKey.size()},
+			DataListItem{initData, size},
+			DataListItem{pubSignKey.data(), pubSignKey.size()},
 		}, hashRes);
 
 	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;

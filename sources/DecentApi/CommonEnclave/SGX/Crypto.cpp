@@ -108,10 +108,12 @@ void detail::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key 
 
 void Tools::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string & label, General128BitKey outKey, const KeyRecoverMeta & meta)
 {
+	using namespace Decent::MbedTlsObj;
+
 	general_128bit_key initialKey = { 0 };
 	detail::DeriveKey(keyType, keyPolicy, initialKey, meta);
 
-	MbedTlsObj::HKDF(MbedTlsObj::HashType::SHA256, initialKey, label, meta.m_keyId, outKey);
+	HKDF<HashType::SHA256>(initialKey, label, meta.m_keyId, outKey);
 }
 
 void Tools::GenNewKeyRecoverMeta(KeyRecoverMeta & outMeta, bool isGenKeyId)
