@@ -1,41 +1,12 @@
 #pragma once
 
 #include <utility>
+#include "MbedTlsCppDefs.h"
 
 namespace Decent
 {
 	namespace MbedTlsObj
 	{
-		/** \brief	Dummy struct to indicate the need for generating an object. Similar way can be found in std::unique_lock. */
-		struct Generate
-		{
-			explicit Generate() = default;
-		};
-		constexpr Generate sk_gen;
-
-		/** \brief	Dummy struct to indicate the need for creating an empty object. */
-		struct Empty
-		{
-			explicit Empty() = default;
-		};
-		constexpr Empty sk_empty;
-
-		/** \brief	Dummy struct to indicate a struct input. */
-		struct StructIn
-		{
-			explicit StructIn() = default;
-		};
-		constexpr StructIn sk_struct;
-
-		/** \brief	Dummy struct to indicate a big-endian input. */
-		struct BigEndian
-		{
-			explicit BigEndian() = default;
-		};
-		constexpr BigEndian sk_bigEndian;
-
-		constexpr int MBEDTLS_SUCCESS_RET = 0;
-
 		/** \brief	An object base class for MbedTLS objects. */
 		template<typename T>
 		class ObjBase

@@ -11,7 +11,7 @@ namespace
 	static constexpr size_t GENERAL_BITS_PER_BYTE = 8;
 }
 
-#define CHECK_MBEDTLS_RET(VAL, FUNCSTR) if(VAL != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(#FUNCSTR, VAL); }
+#define CHECK_MBEDTLS_RET(VAL, FUNCSTR) {int retVal = VAL; if(retVal != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(#FUNCSTR, retVal); } }
 
 void GcmBase::FreeObject(mbedtls_gcm_context * ptr)
 {

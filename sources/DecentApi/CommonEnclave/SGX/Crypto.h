@@ -32,6 +32,15 @@ namespace Decent
 			uint16_t m_IsvSvn; //16-bit
 		};
 
+		namespace detail
+		{
+			void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key& outKey, const KeyRecoverMeta& meta);
+
+			//void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string& label, void* outKey, size_t outKeySize, const KeyRecoverMeta& meta);
+		}
+
+		void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string& label, General128BitKey outKey, const KeyRecoverMeta& meta);
+
 		/**
 		 * \brief	Generates a new key recover meta data.
 		 *
@@ -42,8 +51,6 @@ namespace Decent
 		 * \param 		  	isGenKeyId	(Optional) True if is needed to generate key ID, false if not.
 		 */
 		void GenNewKeyRecoverMeta(KeyRecoverMeta& outMeta, bool isGenKeyId = true);
-
-		void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key& outKey, const KeyRecoverMeta& meta);
 
 		/**
 		 * \brief	SGX get self report. There is only one static copy of this report, which is generated

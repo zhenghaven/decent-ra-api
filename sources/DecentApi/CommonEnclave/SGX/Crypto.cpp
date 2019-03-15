@@ -13,6 +13,8 @@
 #include "../../Common/Common.h"
 #include "../../Common/RuntimeException.h"
 
+#include "../../Common/MbedTls/Kdf.h"
+
 //These are came from SGX SDK:
 #define FLAGS_NON_SECURITY_BITS     (0xFFFFFFFFFFFFC0ULL | SGX_FLAGS_MODE64BIT | SGX_FLAGS_PROVISION_KEY| SGX_FLAGS_EINITTOKEN_KEY)
 #define TSEAL_DEFAULT_FLAGSMASK     (~FLAGS_NON_SECURITY_BITS)
@@ -47,18 +49,7 @@ namespace
 	}
 }
 
-void Tools::GenNewKeyRecoverMeta(KeyRecoverMeta & outMeta, bool isGenKeyId)
-{
-	if (isGenKeyId && sgx_read_rand(outMeta.m_keyId, sizeof(KeyRecoverMeta::m_keyId)) != SGX_SUCCESS)
-	{
-		LOGW("Failed to generate key ID!");
-		throw RuntimeException("Failed to generate key ID!");
-	}
-	memcpy(outMeta.m_CpuSvn, &SgxGetSelfReport().body.cpu_svn, sizeof(KeyRecoverMeta::m_CpuSvn));
-	outMeta.m_IsvSvn = SgxGetSelfReport().body.isv_svn;
-}
-
-void Tools::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key & outKey, const KeyRecoverMeta & meta)
+void detail::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key & outKey, const KeyRecoverMeta & meta)
 {
 	sgx_key_request_t keyReq;
 	memset(&keyReq, 0, sizeof(sgx_key_request_t));
@@ -113,6 +104,25 @@ void Tools::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key &
 	{
 		throw RuntimeException("Failed to get derived key from SGX!");
 	}
+}
+
+void Tools::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string & label, General128BitKey outKey, const KeyRecoverMeta & meta)
+{
+	general_128bit_key initialKey = { 0 };
+	detail::DeriveKey(keyType, keyPolicy, initialKey, meta);
+
+	MbedTlsObj::HKDF(MbedTlsObj::HashType::SHA256, initialKey, label, meta.m_keyId, outKey);
+}
+
+void Tools::GenNewKeyRecoverMeta(KeyRecoverMeta & outMeta, bool isGenKeyId)
+{
+	if (isGenKeyId && sgx_read_rand(outMeta.m_keyId, sizeof(KeyRecoverMeta::m_keyId)) != SGX_SUCCESS)
+	{
+		LOGW("Failed to generate key ID!");
+		throw RuntimeException("Failed to generate key ID!");
+	}
+	memcpy(outMeta.m_CpuSvn, &SgxGetSelfReport().body.cpu_svn, sizeof(KeyRecoverMeta::m_CpuSvn));
+	outMeta.m_IsvSvn = SgxGetSelfReport().body.isv_svn;
 }
 
 const sgx_report_t & Tools::SgxGetSelfReport()
