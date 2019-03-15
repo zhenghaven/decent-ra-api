@@ -11,7 +11,7 @@
 
 using namespace Decent::MbedTlsObj;
 
-#define CHECK_MBEDTLS_RET(VAL) if(VAL != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(__FUNCTION__, VAL); }
+#define CHECK_MBEDTLS_RET(VAL) { int retVal = VAL; if(retVal != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(__FUNCTION__, retVal); } }
 
 void BigNumber::FreeObject(mbedtls_mpi* ptr)
 {
