@@ -3,7 +3,7 @@
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/MbedTls/MbedTlsObjects.h"
-#include "../../Common/MbedTls/MbedTlsHelpers.h"
+#include "../../Common/MbedTls/Hasher.h"
 #include "../../Common/Ra/States.h"
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
@@ -63,6 +63,8 @@ bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg
 
 bool RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_ec256_public_t & pubKey)
 {
+	using namespace Decent::MbedTlsObj;
+
 	sgx_status_t ret;
 	if (raConfig.enable_pse)
 	{
@@ -83,9 +85,11 @@ bool RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_
 			}
 
 			General256Hash reportDataHash;
-			MbedTlsHelper::CalcHashSha256(MbedTlsHelper::hashListMode, {
-				{&initData, SGX_SHA256_HASH_SIZE},
-				{pubKeyPem.data(), pubKeyPem.size()},
+			Hasher().BatchedCalc<HashType::SHA256>(
+				std::array<DataListItem, 2>
+				{
+					DataListItem{&initData, SGX_SHA256_HASH_SIZE},
+					DataListItem{pubKeyPem.data(), pubKeyPem.size()},
 				},
 				reportDataHash);
 
