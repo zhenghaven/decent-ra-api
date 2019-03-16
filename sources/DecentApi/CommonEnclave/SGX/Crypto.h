@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Common/GeneralKeyTypes.h"
+#include "../Tools/Crypto.h"
 
 typedef struct _report_t sgx_report_t;
 
@@ -18,13 +18,6 @@ namespace Decent
 			Seal,
 		};
 
-		enum class KeyPolicy
-		{
-			ByMrEnclave,
-			ByMrSigner,
-			ByMrEnclaveAndMrSigner,
-		};
-
 		struct KeyRecoverMeta
 		{
 			uint8_t m_keyId[32];  //256-bit
@@ -36,10 +29,26 @@ namespace Decent
 		{
 			void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key& outKey, const KeyRecoverMeta& meta);
 
-			//void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string& label, void* outKey, size_t outKeySize, const KeyRecoverMeta& meta);
+			void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string& label, void* outKey, size_t outKeySize, const KeyRecoverMeta& meta);
 		}
 
-		void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string& label, General128BitKey outKey, const KeyRecoverMeta& meta);
+		/**
+		 * \brief	Derive key
+		 *
+		 * \exception	Decent::RuntimeException	Thrown when SGX SDK call failed or MbedTls function call failed.
+		 *
+		 * \tparam	KeyT	Data Type that holds the key.
+		 * \param 		  	keyType  	Type of the key.
+		 * \param 		  	keyPolicy	The key policy.
+		 * \param 		  	label	 	The label.
+		 * \param [in,out]	outKey   	The output key.
+		 * \param 		  	meta	 	The metadata used to derive the key.
+		 */
+		template<typename KeyT>
+		void DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string& label, KeyT& outKey, const KeyRecoverMeta& meta)
+		{
+			DeriveKey(keyType, keyPolicy, label, ArrayPtrAndSize::GetPtr(outKey), ArrayPtrAndSize::GetSize(outKey), meta);
+		}
 
 		/**
 		 * \brief	Generates a new key recover meta data.

@@ -106,14 +106,32 @@ void detail::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, general_128bit_key 
 	}
 }
 
-void Tools::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string & label, General128BitKey outKey, const KeyRecoverMeta & meta)
+void detail::DeriveKey(KeyType keyType, KeyPolicy keyPolicy, const std::string & label, void * outKey, size_t outKeySize, const KeyRecoverMeta & meta)
 {
 	using namespace Decent::MbedTlsObj;
 
 	general_128bit_key initialKey = { 0 };
 	detail::DeriveKey(keyType, keyPolicy, initialKey, meta);
 
-	HKDF<HashType::SHA256>(initialKey, label, meta.m_keyId, outKey);
+	HKDF<HashType::SHA256>(initialKey, label, meta.m_keyId, outKey, outKeySize);
+}
+
+void detail::DeriveSealKey(KeyPolicy keyPolicy, const std::string & label, void * outKey, size_t outKeySize, const std::vector<uint8_t>& meta)
+{
+	if (meta.size() != sizeof(KeyRecoverMeta))
+	{
+		throw RuntimeException("The key recovery meta has unexpected size!");
+	}
+
+	detail::DeriveKey(KeyType::Seal, keyPolicy, label, outKey, outKeySize, reinterpret_cast<const KeyRecoverMeta&>(*meta.data()));
+}
+
+void Tools::GenSealKeyRecoverMeta(std::vector<uint8_t>& outMeta)
+{
+	outMeta.resize(sizeof(KeyRecoverMeta));
+	KeyRecoverMeta& metaRef = reinterpret_cast<KeyRecoverMeta&>(*outMeta.data());
+
+	GenNewKeyRecoverMeta(metaRef, true);
 }
 
 void Tools::GenNewKeyRecoverMeta(KeyRecoverMeta & outMeta, bool isGenKeyId)
