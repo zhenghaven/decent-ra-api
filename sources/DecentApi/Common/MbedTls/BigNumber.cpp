@@ -59,7 +59,7 @@ BigNumber::BigNumber(const Empty &) :
 	mbedtls_mpi_init(Get());
 }
 
-BigNumber::BigNumber(const void * ptr, const size_t size) :
+BigNumber::BigNumber(const void * ptr, const size_t size, bool isPositive) :
 	BigNumber(sk_empty)
 {
 	int extraLimb = (size % sizeof(mbedtls_mpi_uint)) ? 1 : 0;
@@ -67,13 +67,23 @@ BigNumber::BigNumber(const void * ptr, const size_t size) :
 	CHECK_MBEDTLS_RET(mbedtls_mpi_grow(Get(), totalLimbs));
 
 	memcpy(Get()->p, ptr, size);
+
+	if (!isPositive)
+	{
+		Get()->s = -1;
+	}
 }
 
-BigNumber::BigNumber(const void * ptr, const size_t size, const BigEndian &) :
+BigNumber::BigNumber(const void * ptr, const size_t size, const BigEndian &, bool isPositive) :
 	BigNumber(sk_empty)
 {
 	const uint8_t* inByte = static_cast<const uint8_t*>(ptr);
 	CHECK_MBEDTLS_RET(mbedtls_mpi_read_binary(Get(), inByte, size));
+
+	if (!isPositive)
+	{
+		Get()->s = -1;
+	}
 }
 
 BigNumber::BigNumber(const mbedtls_mpi & rhs) :
@@ -311,7 +321,7 @@ BigNumber & BigNumber::operator%=(const BigNumber & rhs)
 
 BigNumber & BigNumber::operator%=(int64_t rhs)
 {
-	BigNumber res((*this % rhs), sk_struct);
+	BigNumber res(*this % rhs);
 
 	this->Swap(res);
 

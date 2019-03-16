@@ -90,98 +90,177 @@ namespace Decent
 			/**
 			 * \brief	Construct a big number by copy an existing binary data in little-endian.
 			 *
-			 * \exception: MbedTlsObj::MbedTlsException
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
 			 *
-			 * \param	ptr 	The pointer.
-			 * \param	size	The size.
+			 * \param	ptr		  	The pointer.
+			 * \param	size	  	The size.
+			 * \param	isPositive	(Optional) True if is positive, false if not.
 			 */
-			BigNumber(const void* ptr, const size_t size);
+			BigNumber(const void* ptr, const size_t size, bool isPositive = true);
 
 			/**
-			 * \brief	Construct a big number by copy an existing binary data in little-endian.
+			 * \brief	Constructor that constructs BigNumber from uint64_t.
 			 *
-			 * \exception: MbedTlsObj::MbedTlsException
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
 			 *
-			 * \tparam	T   	Generic type parameter.
-			 * \tparam	size	Size of the array.
-			 * \param	in	The input.
+			 * \param	val	The value.
 			 */
-			template<typename T, size_t size>
-			BigNumber(const std::array<T, size>& in) :
-				BigNumber(in.data(), size * sizeof(T))
+			BigNumber(uint64_t val) :
+				BigNumber(&val, sizeof(val), true)
 			{}
 
 			/**
-			 * \brief	Construct a big number by copy an existing binary data in little-endian.
+			 * \brief	Constructor that constructs BigNumber from int64_t.
 			 *
-			 * \exception: MbedTlsObj::MbedTlsException
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
 			 *
-			 * \tparam	T	Generic type parameter.
-			 * \param	in	The input.
+			 * \param	val	The value.
 			 */
-			template<typename T>
-			BigNumber(const std::vector<T>& in) :
-				BigNumber(in.data(), in.size() * sizeof(T))
+			BigNumber(int64_t val) :
+				BigNumber(val >= 0 ? static_cast<uint64_t>(val) : static_cast<uint64_t>(-val))
+			{
+				if (val < 0)
+				{
+					FlipSign();
+				}
+			}
+
+			/**
+			 * \brief	Constructor that constructs BigNumber from uint32_t.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \param	val	The value.
+			 */
+			BigNumber(uint32_t val) :
+				BigNumber(static_cast<uint64_t>(val))
 			{}
 
 			/**
-			 * \brief	Construct a big number by copy an existing binary data in little-endian.
+			 * \brief	Constructor that constructs BigNumber from int32_t.
 			 *
-			 * \exception: MbedTlsObj::MbedTlsException
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \param	val	The value.
+			 */
+			BigNumber(int32_t val) :
+				BigNumber(static_cast<int64_t>(val))
+			{}
+
+			/**
+			 * \brief	Constructor that constructs BigNumber from uint16_t.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \param	val	The value.
+			 */
+			BigNumber(uint16_t val) :
+				BigNumber(static_cast<uint64_t>(val))
+			{}
+
+			/**
+			 * \brief	Constructor that constructs BigNumber from int16_t.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \param	val	The value.
+			 */
+			BigNumber(int16_t val) :
+				BigNumber(static_cast<int64_t>(val))
+			{}
+
+			/**
+			 * \brief	Constructor that constructs BigNumber from uint8_t.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \param	val	The value.
+			 */
+			BigNumber(uint8_t val) :
+				BigNumber(static_cast<uint64_t>(val))
+			{}
+
+			/**
+			 * \brief	Constructor that constructs BigNumber from int8_t.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \param	val	The value.
+			 */
+			BigNumber(int8_t val) :
+				BigNumber(static_cast<int64_t>(val))
+			{}
+
+			/**
+			 * \brief	Constructor that constructs BigNumber from char.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \param	val	The value.
+			 */
+			BigNumber(char val) :
+				BigNumber(static_cast<int64_t>(val))
+			{}
+
+			/**
+			 * \brief	Construct a big number by copying an existing binary data in little-endian.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
+			 *
+			 * \tparam	ArrayT	Type of the array t.
+			 * \param	arr		  	The array.
+			 * \param	isPositive	True if is positive, false if not.
+			 */
+			template<typename ArrayT>
+			BigNumber(const ArrayT& arr, bool isPositive) :
+				BigNumber(detail::GetPtr(arr), detail::GetSize(arr), isPositive)
+			{}
+
+			/**
+			 * \brief	Construct a big number by copying an existing binary data in little-endian.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
 			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param	in		  	The input.
 			 * \param	parameter2	Indicate the input is a struct.
 			 */
 			template<typename T>
-			BigNumber(const T& in, const StructIn&) :
-				BigNumber(&in, sizeof(T))
+			BigNumber(const T& in, bool isPositive, const StructIn&) :
+				BigNumber(&in, sizeof(T), isPositive)
 			{}
 
 			/**
-			 * \brief	Construct a big number by copy an existing binary data in big-endian.
+			 * \brief	Construct a big number by copying an existing binary data in big-endian.
 			 *
-			 * \exception: MbedTlsObj::MbedTlsException
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
 			 *
 			 * \param	ptr		  	The pointer.
 			 * \param	size	  	The size.
 			 * \param	parameter3	Indicate the input is in big endian.
+			 * \param	isPositive	(Optional) True if is positive, false if not.
 			 */
-			BigNumber(const void* ptr, const size_t size, const BigEndian&);
+			BigNumber(const void* ptr, const size_t size, const BigEndian&, bool isPositive = true);
 
 			/**
-			 * \brief	Construct a big number by copy an existing binary data in big-endian.
+			 * \brief	Construct a big number by copying an existing binary data in big-endian.
 			 *
-			 * \exception: MbedTlsObj::MbedTlsException
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
 			 *
-			 * \tparam	T   	Generic type parameter.
-			 * \tparam	size	Size of the array.
+			 * \tparam	ArrayT	Type of the array t.
 			 * \param	in		  	The input.
-			 * \param	parameter2	Indicate the input is in big endian.
+			 * \param	isPositive	True if is positive, false if not.
+			 * \param	parameter3	Indicate the input is in big endian.
 			 */
-			template<typename T, size_t size>
-			BigNumber(const std::array<T, size>& in, const BigEndian&) :
-				BigNumber(in.data(), size * sizeof(T), sk_bigEndian)
+			template<typename ArrayT>
+			BigNumber(const ArrayT& arr, bool isPositive, const BigEndian&) :
+				BigNumber(detail::GetPtr(arr), detail::GetSize(arr), sk_bigEndian, isPositive)
 			{}
 
 			/**
-			 * \brief	Construct a big number by copy an existing binary data in big-endian.
+			 * \brief	Construct a big number by copying an existing binary data in big-endian.
 			 *
-			 * \exception: MbedTlsObj::MbedTlsException
-			 *
-			 * \tparam	T	Generic type parameter.
-			 * \param	in		  	The input.
-			 * \param	parameter2	Indicate the input is in big endian.
-			 */
-			template<typename T>
-			BigNumber(const std::vector<T>& in, const BigEndian&) :
-				BigNumber(in.data(), in.size() * sizeof(T), sk_bigEndian)
-			{}
-
-			/**
-			 * \brief	Construct a big number by copy an existing binary data in big-endian.
-			 *
-			 * \exception: MbedTlsObj::MbedTlsException
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error happened.
 			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param	in		  	The input.
@@ -189,8 +268,8 @@ namespace Decent
 			 * \param	parameter3	Indicate the input is in big endian.
 			 */
 			template<typename T>
-			BigNumber(const T& in, const StructIn&, const BigEndian&) :
-				BigNumber(&in, sizeof(T), sk_bigEndian)
+			BigNumber(const T& in, bool isPositive, const StructIn&, const BigEndian&) :
+				BigNumber(&in, sizeof(T), sk_bigEndian, isPositive)
 			{}
 
 			/**
@@ -203,7 +282,7 @@ namespace Decent
 			{}
 
 			/**
-			 * \brief	Construct a big number by copy an existing mbed TLS big number.
+			 * \brief	Construct a big number by copying an existing mbed TLS big number.
 			 *
 			 * \exception: MbedTlsObj::MbedTlsException
 			 *
@@ -221,7 +300,7 @@ namespace Decent
 			BigNumber(const BigNumber& rhs);
 
 			/**
-			 * \brief	Constructor a big number by copy an existing const big number.
+			 * \brief	Constructor a big number by copying an existing const big number.
 			 *
 			 * \exception: MbedTlsObj::MbedTlsException
 			 *
