@@ -1,51 +1,70 @@
 #pragma once
 
-#include "../MbedTls/MbedTlsObjects.h"
+#include "../MbedTls/TlsConfig.h"
 
 namespace Decent
 {
+	namespace MbedTlsObj
+	{
+		class ECKeyPair;
+		class X509Cert;
+	}
+
 	namespace Ra
 	{
 		class AppX509;
 		class ServerX509;
 		class States;
 
+		/** \brief	This TLS configuration class is a base class for Decent RA TLS configurations. */
 		class TlsConfig : public MbedTlsObj::TlsConfig
 		{
+		public: //Static member:
+			enum class Mode
+			{
+				ServerVerifyPeer,   //This is server side, and it is required to verify peer's certificate.
+				ServerNoVerifyPeer, //This is server side, and there is no need to verify peer's certificate.
+				ClientHasCert,      //This is client side, and a certificate, which is required during TLS handshake, is possessed by the client.
+				ClientNoCert,       //This is client side, and there is no certificate possessed by the client.
+			};
+
 		public:
-			TlsConfig(const std::string& expectedAppName, States& state, bool isServer);
-			TlsConfig(const std::string& expectedAppName, States& state);
+
+			/**
+			 * \brief	Constructor
+			 *
+			 * \param [in,out]	state  	The Decent's global state.
+			 * \param 		  	cntMode	The connection mode.
+			 */
+			TlsConfig(States& state, Mode cntMode);
 
 			TlsConfig(TlsConfig&& other);
+
 			TlsConfig(const TlsConfig& other) = delete;
-			virtual ~TlsConfig() {}
+
+			virtual ~TlsConfig();
 
 			virtual TlsConfig& operator=(const TlsConfig& other) = delete;
-			virtual TlsConfig& operator=(TlsConfig&& other);
+
+			virtual TlsConfig& operator=(TlsConfig&& other) = delete;
 
 			virtual operator bool() const noexcept override
 			{
-				return MbedTlsObj::TlsConfig::operator bool() && m_isValid;
+				return MbedTlsObj::TlsConfig::operator bool();
 			}
-
-			const std::string& GetExpectedAppName() const { return m_expectedAppName; }
 
 			States& GetState() const { return m_state; }
 
-			static int CertVerifyCallBack(void* inst, mbedtls_x509_crt* cert, int depth, uint32_t* flag);
-
 		protected:
-			virtual int CertVerifyCallBack(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const;
-			virtual int AppCertVerifyCallBack(const AppX509& cert, int depth, uint32_t& flag) const;
-			virtual int ServerCertVerifyCallBack(const ServerX509& cert, int depth, uint32_t& flag) const;
+			virtual int VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const override;
+
+			virtual int VerifyDecentServerCert(const ServerX509& cert, int depth, uint32_t& flag) const;
+			virtual int VerifyDecentAppCert(const AppX509& cert, int depth, uint32_t& flag) const = 0;
 
 		private:
 			States& m_state;
 			std::shared_ptr<const MbedTlsObj::ECKeyPair> m_prvKey;
 			std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
-			std::string m_expectedAppName;
-
-			bool m_isValid;
 		};
 	}
 }

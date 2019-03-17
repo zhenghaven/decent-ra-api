@@ -21,7 +21,6 @@ typedef struct mbedtls_x509_crt mbedtls_x509_crt;
 typedef struct mbedtls_x509_csr mbedtls_x509_csr;
 typedef struct mbedtls_x509_crl mbedtls_x509_crl;
 typedef struct mbedtls_x509_crt_profile mbedtls_x509_crt_profile;
-typedef struct mbedtls_ssl_config mbedtls_ssl_config;
 typedef struct mbedtls_md_info_t mbedtls_md_info_t;
 
 namespace Decent
@@ -424,38 +423,6 @@ namespace Decent
 		private:
 			PKey m_pubKey;
 			std::vector<mbedtls_x509_crt*> m_certStack;
-		};
-
-		class TlsConfig : public ObjBase<mbedtls_ssl_config>
-		{
-		public:
-			/**
-			* \brief	Function that frees MbedTLS object and delete the pointer.
-			*
-			* \param [in,out]	ptr	If non-null, the pointer.
-			*/
-			static void FreeObject(mbedtls_ssl_config* ptr);
-
-		public:
-			TlsConfig(TlsConfig&& other);
-
-			TlsConfig(const TlsConfig& other) = delete;
-
-			virtual ~TlsConfig();
-
-			virtual TlsConfig& operator=(const TlsConfig& other) = delete;
-
-			virtual TlsConfig& operator=(TlsConfig&& other) noexcept;
-
-			virtual operator bool() const noexcept override;
-
-		protected:
-			TlsConfig();
-
-			TlsConfig(mbedtls_ssl_config* ptr, FreeFuncType freeFunc);
-
-		private:
-			std::unique_ptr<Decent::MbedTlsObj::Drbg> m_rng;
 		};
 
 		class EntropyCtx : public Decent::MbedTlsObj::ObjBase<mbedtls_entropy_context>

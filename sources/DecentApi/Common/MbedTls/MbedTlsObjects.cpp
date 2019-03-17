@@ -20,7 +20,6 @@
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/x509_crl.h>
-#include <mbedtls/ssl.h>
 #include <mbedtls/base64.h>
 #include <mbedtls/entropy.h>
 
@@ -1246,51 +1245,6 @@ X509Crl::X509Crl() :
 	ObjBase(new mbedtls_x509_crl, &FreeObject)
 {
 	mbedtls_x509_crl_init(Get());
-}
-
-void TlsConfig::FreeObject(mbedtls_ssl_config * ptr)
-{
-	mbedtls_ssl_config_free(ptr);
-	delete ptr;
-}
-
-TlsConfig::TlsConfig(TlsConfig&& other) :
-	ObjBase(std::forward<ObjBase>(other)),
-	m_rng(std::move(other.m_rng))
-{
-}
-
-TlsConfig::TlsConfig() : 
-	ObjBase(new mbedtls_ssl_config, &FreeObject),
-	m_rng(Tools::make_unique<Drbg>())
-{
-	mbedtls_ssl_config_init(Get());
-	mbedtls_ssl_conf_rng(Get(), &Drbg::CallBack, m_rng.get());
-}
-
-TlsConfig::TlsConfig(mbedtls_ssl_config * ptr, FreeFuncType freeFunc) :
-	ObjBase(ptr, freeFunc),
-	m_rng(Tools::make_unique<Drbg>())
-{
-}
-
-TlsConfig::~TlsConfig()
-{
-}
-
-TlsConfig& TlsConfig::operator=(TlsConfig&& other) noexcept
-{
-	ObjBase::operator=(std::forward<ObjBase>(other));
-	if (this != &other)
-	{
-		m_rng.swap(other.m_rng);
-	}
-	return *this;
-}
-
-TlsConfig::operator bool() const noexcept
-{
-	return ObjBase::operator bool() && m_rng;
 }
 
 void EntropyCtx::FreeObject(mbedtls_entropy_context * ptr)

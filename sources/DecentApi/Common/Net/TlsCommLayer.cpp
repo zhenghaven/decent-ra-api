@@ -7,6 +7,7 @@
 #include "../Common.h"
 
 #include "../MbedTls/MbedTlsObjects.h"
+#include "../MbedTls/TlsConfig.h"
 
 #include "NetworkException.h"
 #include "Connection.h"

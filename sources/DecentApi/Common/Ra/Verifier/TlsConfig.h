@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../TlsConfig.h"
+#include "../TlsConfigWithName.h"
 
 namespace Decent
 {
@@ -10,38 +10,28 @@ namespace Decent
 		{
 			class AppX509;
 
-			class TlsConfig : public Decent::Ra::TlsConfig
+			class TlsConfig : public Decent::Ra::TlsConfigWithName
 			{
 			public:
-				TlsConfig(const std::string& expectedAppName, const std::string& expectedVerifierName, Decent::Ra::States& state, bool isServer);
+				TlsConfig(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName);
 
-				TlsConfig(Decent::Ra::Verifier::TlsConfig&& other) :
-					Decent::Ra::TlsConfig(std::forward<Decent::Ra::Verifier::TlsConfig>(other)),
-					m_expectedVerifiedAppName(std::move(other.m_expectedVerifiedAppName))
-				{}
+				TlsConfig(Decent::Ra::Verifier::TlsConfig&& other);
 
 				TlsConfig(const Decent::Ra::Verifier::TlsConfig& other) = delete;
 
-				virtual ~TlsConfig() {}
+				virtual ~TlsConfig();
 
 				virtual Decent::Ra::Verifier::TlsConfig& operator=(const Decent::Ra::Verifier::TlsConfig& other) = delete;
 
-				virtual Decent::Ra::Verifier::TlsConfig& operator=(Decent::Ra::Verifier::TlsConfig&& other)
-				{
-					Decent::Ra::TlsConfig::operator=(std::forward<Decent::Ra::TlsConfig>(other));
-					if (this != &other)
-					{
-						m_expectedVerifiedAppName.swap(other.m_expectedVerifiedAppName);
-					}
-					return *this;
-				}
+				virtual Decent::Ra::Verifier::TlsConfig& operator=(Decent::Ra::Verifier::TlsConfig&& other) = delete;
 
 				const std::string& GetExpectedVerifiedAppName() { return m_expectedVerifiedAppName; }
 
 			protected:
-				virtual int CertVerifyCallBack(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const override;
-				virtual int AppCertVerifyCallBack(const Decent::Ra::AppX509& cert, int depth, uint32_t& flag) const override;
-				virtual int AppCertVerifyCallBack(const Decent::Ra::Verifier::AppX509& cert, int depth, uint32_t& flag) const;
+				virtual int VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const override;
+
+				virtual int VerifyDecentAppCert(const Decent::Ra::AppX509& cert, int depth, uint32_t& flag) const override;
+				virtual int VerifyDecentVerifiedAppCert(const Decent::Ra::Verifier::AppX509& cert, int depth, uint32_t& flag) const;
 
 			private:
 				std::string m_expectedVerifiedAppName;
