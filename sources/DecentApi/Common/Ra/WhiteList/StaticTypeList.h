@@ -57,57 +57,82 @@ namespace Decent
 				virtual bool CheckHashAndName(const std::string& hashStr, const std::string& appName) const;
 
 				/**
-				 * \brief	Check if the list in this instance and the given list are match.
-				 * 			Match means both hash and app name are equal.
+				 * \brief	Check if 'this instance' is equivalent set of the 'right hand side'. Note: For each
+				 * 			item, both hashes and app names are compared.
 				 *
-				 * \param	otherMap	The other map (list).
+				 * \param	rhs	The right hand side.
 				 *
-				 * \return	True if it succeeds, false if it fails.
+				 * \return	True 'this' is equivalent set of the 'rhs', false if not.
 				 */
-				virtual bool CheckListsAreMatch(const WhiteListType& otherMap) const;
+				virtual bool IsEquivalentSetOf(const WhiteListType& rhs) const;
 
 				/**
-				 * \brief	Check if the given list is within the range of the list in this instance.
-				 * 			Items in the otherMap must also be in this instance. 
-				 * 			Items in this instance may not be in the otherMap.
-				 * 			For each item, both hash and app name are compared.
+				* \brief	Check if 'this instance' is equivalent set of the 'right hand side'. Note: For each
+				* 			item, both hashes and app names are compared.
+				*
+				* \param	rhs	The right hand side.
+				*
+				* \return	True 'this' is equivalent set of the 'rhs', false if not.
+				*/
+				virtual bool IsEquivalentSetOf(const StaticTypeList& rhs) const { return this->IsEquivalentSetOf(rhs.m_listMap); }
+
+				/**
+				 * \brief	Check if 'this instance' is a subset of the 'right hand side'. Note: For each
+				 * 			item, both hashes and app names are compared.
 				 *
-				 * \param	otherMap	The other map (list).
+				 * \param	rhs	The right hand side.
 				 *
-				 * \return	True if it succeeds, false if it fails.
+				 * \return	True if 'this' is a subset of 'rhs', false if not.
 				 */
-				virtual bool CheckListsWithinRange(const WhiteListType& otherMap) const;
+				virtual bool IsSubsetOf(const WhiteListType& rhs) const;
+
+				/**
+				* \brief	Check Check if 'this instance' is a subset of the 'right hand side'. Note: For each
+				* 			item, both hashes and app names are compared.
+				*
+				* \param	rhs	The right hand side.
+				*
+				* \return	True if 'this' is a subset of 'rhs', false if not.
+				*/
+				virtual bool IsSubsetOf(const StaticTypeList& rhs) const { return this->IsSubsetOf(rhs.m_listMap); }
 
 				/**
 				 * \brief	Equality operator
 				 * 			Check if the list in the right hand side is exact same as the left side.
-				 * 			Basically, it is calling CheckListsAreMatch.
+				 * 			Basically, it is calling IsEquivalentSetOf.
 				 *
-				 * \param	other	The right hand side.
+				 * \param	rhs	The right hand side.
 				 *
 				 * \return	True if the parameters are considered equivalent.
 				 */
-				virtual bool operator==(const StaticTypeList& other) const;
+				virtual bool operator==(const StaticTypeList& rhs) const;
 
 				/**
-				 * \brief	Inequality operator
-				 * 			Basically, it is calling !operator==.
+				 * \brief	Inequality operator. Basically, it is calling !operator==.
 				 *
-				 * \param	other	The right hand side.
+				 * \param	rhs	The right hand side.
 				 *
 				 * \return	True if the parameters are not considered equivalent.
 				 */
-				virtual bool operator!=(const StaticTypeList& other) const;
+				virtual bool operator!=(const StaticTypeList& rhs) const;
 
 				/**
-				 * \brief	Greater-than-or-equal comparison operator
-				 * 			Basically, it is calling CheckListsWithinRange.
+				 * \brief	Greater-than-or-equal comparison operator. Check if 'right hand side' is a subset of the 'this instance'. Also see IsSubsetOf().
 				 *
-				 * \param	other	The other.
+				 * \param	rhs	The right hand side.
 				 *
-				 * \return	True if the first parameter is greater than or equal to the second.
+				 * \return	True if 'rhs' is a subset of 'this', false if not.
 				 */
-				virtual bool operator>=(const StaticTypeList& other) const;
+				virtual bool operator>=(const StaticTypeList& rhs) const;
+
+				/**
+				 * \brief	Less-than-or-equal comparison operator. Check if 'this instance' is a subset of the 'right hand side'. Also see IsSubsetOf().
+				 *
+				 * \param	rhs	The right hand side.
+				 *
+				 * \return	True if 'this' is a subset of 'rhs', false if not.
+				 */
+				virtual bool operator<=(const StaticTypeList& rhs) const;
 
 				/**
 				 * \brief	Converts this white list to a JSON format.

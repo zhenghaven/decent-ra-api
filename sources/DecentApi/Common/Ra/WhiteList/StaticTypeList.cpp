@@ -78,47 +78,43 @@ bool StaticTypeList::CheckHashAndName(const std::string & hashStr, const std::st
 
 }
 
-bool StaticTypeList::CheckListsAreMatch(const WhiteListType & otherMap) const
+bool StaticTypeList::IsEquivalentSetOf(const WhiteListType & otherMap) const
 {
-	return (m_listMap.size() == otherMap.size()) &&
+	return (m_listMap.size() == otherMap.size()) && //Quick pre-check: two sets must have the same size.
 		std::equal(m_listMap.begin(), m_listMap.end(), otherMap.begin());
 }
 
-bool Decent::Ra::WhiteList::StaticTypeList::CheckListsWithinRange(const WhiteListType & otherMap) const
-{
-	if (m_listMap.size() < otherMap.size())
+bool StaticTypeList::IsSubsetOf(const WhiteListType & rhs) const
+{//Check if 'this instance' is a subset of 'rhs'.
+
+	// Quick pre-check:
+	// 'this' is a subset, so, its size must <= (i.e. smaller or equal) to 'rhs'.
+	if (this->m_listMap.size() > rhs.size())
 	{
 		return false;
 	}
 
-	for (auto ito = otherMap.begin(), ita = m_listMap.begin(); ito != otherMap.cend() && ita != m_listMap.cend(); ++ito)
-	{
-		while (ito->first != ita->first && (++ita) != m_listMap.cend())
-		{
-		}
-
-		if (ita == m_listMap.cend() ||
-			ito->second != ita->second)
-		{
-			return false;
-		}
-	}
-	return true;
+	return std::includes(rhs.begin(), rhs.end(), this->m_listMap.begin(), this->m_listMap.end());
 }
 
-bool StaticTypeList::operator==(const StaticTypeList & other) const
+bool StaticTypeList::operator==(const StaticTypeList & rhs) const
 {
-	return CheckListsAreMatch(other.m_listMap);
+	return IsEquivalentSetOf(rhs);
 }
 
-bool StaticTypeList::operator!=(const StaticTypeList & other) const
+bool StaticTypeList::operator!=(const StaticTypeList & rhs) const
 {
-	return !(*this == other);
+	return !(*this == rhs);
 }
 
-bool StaticTypeList::operator>=(const StaticTypeList & other) const
+bool StaticTypeList::operator>=(const StaticTypeList & rhs) const
 {
-	return CheckListsWithinRange(other.m_listMap);
+	return (rhs <= *this);
+}
+
+bool StaticTypeList::operator<=(const StaticTypeList & rhs) const
+{
+	return this->IsSubsetOf(rhs);
 }
 
 JsonValue & StaticTypeList::ToJson(JsonDoc & jsonDoc) const
