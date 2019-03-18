@@ -85,7 +85,7 @@ bool RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_
 			}
 
 			General256Hash reportDataHash;
-			Hasher().BatchedCalc<HashType::SHA256>(
+			Hasher::BatchedCalc<HashType::SHA256>(
 				std::array<DataListItem, 2>
 				{
 					DataListItem{&initData, SGX_SHA256_HASH_SIZE},
