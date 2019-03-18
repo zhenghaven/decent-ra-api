@@ -42,7 +42,7 @@ Hasher::~Hasher()
 {
 }
 
-void Hasher::BatchedCalc(const mbedtls_md_info_t& mdInfo, const DataListItem* dataList, size_t listLen, void * output, const size_t outSize)
+void Hasher::BatchedCalcInternal(const mbedtls_md_info_t& mdInfo, const DataListItem* dataList, size_t listLen, void * output, const size_t outSize)
 {
 	if (mbedtls_md_get_size(&mdInfo) != outSize)
 	{

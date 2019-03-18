@@ -34,7 +34,7 @@ bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const ui
 	}
 
 	General256Hash hashRes;
-	Hasher().BatchedCalc<HashType::SHA256>(
+	Hasher::BatchedCalc<HashType::SHA256>(
 		std::array<DataListItem, 2>
 		{
 			DataListItem{initData, size},

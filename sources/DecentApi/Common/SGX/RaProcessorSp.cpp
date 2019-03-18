@@ -237,7 +237,7 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 	// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
 	// The second 32 bytes of report_data are set to zero.
 	General256Hash reportDataHash;
-	Hasher().BatchedCalc<HashType::SHA256>(
+	Hasher::BatchedCalc<HashType::SHA256>(
 		std::array<DataListItem, 3>
 		{
 			DataListItem{&(m_peerEncrKey), sizeof(sgx_ec256_public_t)},
