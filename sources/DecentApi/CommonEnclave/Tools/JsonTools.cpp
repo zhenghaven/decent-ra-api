@@ -138,6 +138,11 @@ JsonValue& Tools::JsonConstructArray(JsonDoc& doc, std::vector<JsonValue>& vals)
 	return doc;
 }
 
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & val)
+{
+	return doc.SetString(rapidjson::StringRef(val.c_str(), val.size()), doc.GetAllocator());
+}
+
 JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const std::string & val)
 {
 	return ConstructIndex(doc, index, 

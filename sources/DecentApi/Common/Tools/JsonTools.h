@@ -88,6 +88,12 @@ namespace Decent
 
 		JsonValue& JsonConstructArray(JsonDoc& doc, std::vector<JsonValue>& vals);
 
+		JsonValue& JsonSetVal(JsonDoc& doc, const std::string& val);
+		inline JsonValue& JsonSetVal(JsonDoc& doc, const char* val)
+		{
+			return Decent::Tools::JsonSetVal(doc, std::string(val));
+		}
+
 		JsonValue& JsonSetVal(JsonDoc& doc, const std::string& index, const std::string& val);
 		inline JsonValue& JsonSetVal(JsonDoc& doc, const std::string& index, const char* val)
 		{

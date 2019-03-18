@@ -101,6 +101,11 @@ JsonValue& Tools::JsonConstructArray(JsonDoc& doc, std::vector<JsonValue>& vals)
 	return doc;
 }
 
+JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string& val)
+{
+	return (doc = val);
+}
+
 JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string& index, const std::string& val)
 {
 	return (doc[index.c_str()] = val);
