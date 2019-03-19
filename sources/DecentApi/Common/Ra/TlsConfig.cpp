@@ -100,7 +100,7 @@ int TlsConfig::VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) con
 			return Decent::MbedTlsObj::MBEDTLS_SUCCESS_RET;
 		}
 
-		LOGI("Verifing App Cert: %s.", appCert.GetCommonName().c_str());
+		//LOGI("Verifing App Cert: %s.", appCert.GetCommonName().c_str());
 		return VerifyDecentAppCert(appCert, depth, flag);
 	}
 	case 1: //Decent Server Cert
@@ -112,7 +112,7 @@ int TlsConfig::VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) con
 			return Decent::MbedTlsObj::MBEDTLS_SUCCESS_RET;
 		}
 
-		LOGI("Verifing Server Cert: %s.", serverCert.GetCommonName().c_str());
+		//LOGI("Verifing Server Cert: %s.", serverCert.GetCommonName().c_str());
 		return VerifyDecentServerCert(serverCert, depth, flag);
 	}
 	default:
