@@ -80,3 +80,30 @@ std::shared_ptr<const ECKeyPair> KeyContainer::GetSignKeyPair() const
 	return m_signPrvKeyObj;
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
+
+void KeyContainer::SetSignPrvKey(std::shared_ptr<const PrivateKeyWrap> key)
+{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&m_signPrvKey, key);
+#else
+	m_signPrvKey = key;
+#endif // DECENT_THREAD_SAFETY_HIGH
+}
+
+void KeyContainer::SetSignPubKey(std::shared_ptr<const general_secp256r1_public_t> key)
+{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&m_signPubKey, key);
+#else
+	m_signPubKey = key;
+#endif // DECENT_THREAD_SAFETY_HIGH
+}
+
+void KeyContainer::SetSignKeyPair(std::shared_ptr<const MbedTlsObj::ECKeyPair> key)
+{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+	std::atomic_store(&m_signPrvKeyObj, key);
+#else
+	m_signPrvKeyObj = key;
+#endif // DECENT_THREAD_SAFETY_HIGH
+}
