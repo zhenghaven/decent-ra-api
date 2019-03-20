@@ -175,7 +175,7 @@ void TlsCommLayer::ReceiveMsg(std::string & outMsg)
 
 	outMsg.resize(msgSize);
 
-	MbedTlsSslReadWrap(m_sslCtx.get(), &outMsg[0], outMsg.size());
+	MbedTlsSslReadWrap(m_sslCtx.get(), msgSize == 0 ? nullptr : &outMsg[0], outMsg.size());
 }
 
 void TlsCommLayer::SendMsg(const std::vector<uint8_t>& inMsg)
@@ -202,7 +202,7 @@ void TlsCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
 
 	outMsg.resize(msgSize);
 
-	MbedTlsSslReadWrap(m_sslCtx.get(), &outMsg[0], outMsg.size());
+	MbedTlsSslReadWrap(m_sslCtx.get(), outMsg.data(), outMsg.size());
 }
 
 void TlsCommLayer::SetConnectionPtr(void* const connectionPtr)
