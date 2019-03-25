@@ -168,16 +168,6 @@ const char* Sgx::GetErrorMessage(const sgx_status_t code)
 	case SGX_ERROR_FILE_CLOSE_FAILED:
 		return "fclose operation (to disk) failed (only used when no EXXX is returned)";
 	
-	//0x8...
-#ifdef _WIN32
-	case SGX_ERROR_IPLDR_NOTENCRYPTED:
-		return "sgx_create_encrypted_enclave was called but enclave dll is not encrypted";
-	case SGX_ERROR_IPLDR_MAC_MISMATCH:
-		return "sgx_create_encrypted_enclave was called but there was a verification error when decrypting the data";
-	case SGX_ERROR_IPLDR_ENCRYPTED:
-		return "sgx_create_enclave was called but enclave dll is encrypted";
-#endif
-	
 	default:
 		throw Decent::RuntimeException("Unknown SGX error code - " + std::to_string(code) + ".");
 	}
@@ -342,16 +332,6 @@ const char * Decent::Sgx::GetErrorSolution(const sgx_status_t code)
 		return gsk_notApplicableMsg;
 	case SGX_ERROR_FILE_CLOSE_FAILED:
 		return gsk_notApplicableMsg;
-
-		//0x8...
-#ifdef _WIN32
-	case SGX_ERROR_IPLDR_NOTENCRYPTED:
-		return gsk_notApplicableMsg;
-	case SGX_ERROR_IPLDR_MAC_MISMATCH:
-		return gsk_notApplicableMsg;
-	case SGX_ERROR_IPLDR_ENCRYPTED:
-		return gsk_notApplicableMsg;
-#endif
 
 	default:
 		throw Decent::RuntimeException("Unknown SGX error code - " + std::to_string(code) + ".");
