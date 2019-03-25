@@ -22,7 +22,7 @@ namespace Decent
 		{
 		public:
 			TlsCommLayer() = delete;
-			TlsCommLayer(void* const connectionPtr, const std::shared_ptr<const MbedTlsObj::TlsConfig>& tlsConfig, bool reqPeerCert);
+			TlsCommLayer(void* const connectionPtr, std::shared_ptr<const MbedTlsObj::TlsConfig> tlsConfig, bool reqPeerCert);
 
 			TlsCommLayer(const TlsCommLayer& other) = delete;
 			TlsCommLayer(TlsCommLayer&& other);
@@ -76,9 +76,8 @@ namespace Decent
 			std::string GetPublicKeyPem() const;
 
 		private:
-			mbedtls_ssl_context * m_sslCtx;
+			std::unique_ptr<mbedtls_ssl_context> m_sslCtx;
 			std::shared_ptr<const MbedTlsObj::TlsConfig> m_tlsConfig;
-			bool m_hasHandshaked;
 		};
 	}
 }

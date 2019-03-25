@@ -384,12 +384,12 @@ size_t BigNumber::GetBitSize() const
 
 void BigNumber::ToBinary(void * out, const size_t size) const
 {
-	size_t actualSize = GetSize();
+	size_t actualSize = Get()->n * sizeof(mbedtls_mpi_uint);
 	if (size < actualSize) { throw MbedTlsException(__FUNCTION__, MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL); }
 
-	memset(out, 0, size);
-
 	memcpy(out, Get()->p, actualSize);
+
+	memset(static_cast<uint8_t*>(out) + actualSize, 0, size - actualSize);
 }
 
 void BigNumber::ToBinary(void * out, const size_t size, const BigEndian &) const

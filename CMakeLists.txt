@@ -228,14 +228,14 @@ if(DECENT_API_DECENT_APP)
 	add_library(DecentRa_App_App STATIC ${SOURCES_APP_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
 	#includes:
 	target_include_directories(DecentRa_App_App PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIR}
-	                                            PUBLIC ${CPPCODEC_INCLUDE_DIR})
+	                                            PUBLIC ${CPPCODEC_INCLUDE_DIR}
+	                                            INTERFACE ${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_App_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
 	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_DEBUG "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_App_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
-	set_target_properties(DecentRa_App_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
     set_target_properties(DecentRa_App_App PROPERTIES FOLDER "DecentRaApi")
 
 	target_link_libraries(DecentRa_App_App 
@@ -273,14 +273,14 @@ if(DECENT_API_DECENT_SERVER)
 	add_library(DecentRa_Server_App STATIC ${SOURCES_SERVER_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
 	#includes:
 	target_include_directories(DecentRa_Server_App PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIR}
-	                                               PUBLIC ${CPPCODEC_INCLUDE_DIR})
+	                                               PUBLIC ${CPPCODEC_INCLUDE_DIR}
+	                                               INTERFACE ${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_Server_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
 	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_DEBUG "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_DEBUGSIMULATION "${APP_DEBUG_LINKER_OPTIONS}")
 	set_target_properties(DecentRa_Server_App PROPERTIES LINK_FLAGS_RELEASE "${APP_RELEASE_LINKER_OPTIONS}")
-	set_target_properties(DecentRa_Server_App PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
     set_target_properties(DecentRa_Server_App PROPERTIES FOLDER "DecentRaApi")
 
 	target_link_libraries(DecentRa_Server_App 
