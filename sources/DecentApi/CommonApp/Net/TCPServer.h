@@ -3,21 +3,20 @@
 #include "Server.h"
 
 #include <cstdint>
+
 #include <memory>
 #include <atomic>
-
-//#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
+#include <string>
 
 namespace boost {
 	namespace asio {
 		class io_context;
 		typedef io_context io_service;
-		//template <typename Protocol> class basic_socket_acceptor;
-		//namespace ip {
-		//	class tcp;
-		//	typedef basic_socket_acceptor<tcp> acceptor;
-		//}
+		template <typename Protocol> class basic_socket_acceptor;
+		namespace ip 
+		{
+			class tcp;
+		} // namespace ip
 	} // namespace asio
 } // namespace boost
 
@@ -41,6 +40,15 @@ namespace Decent
 			 * \param	portNum	The port number.
 			 */
 			TCPServer(const uint32_t ipAddr, const uint16_t portNum);
+
+			/**
+			 * \brief	Construct a TCP server.
+			 * 			Known exceptions: Decent::Net::Exception
+			 *
+			 * \param	ipAddr 	The IP address.
+			 * \param	portNum	The port number.
+			 */
+			TCPServer(const std::string& ipAddr, const uint16_t portNum);
 
 			/** \brief	Destructor */
 			virtual ~TCPServer() noexcept;
@@ -66,7 +74,7 @@ namespace Decent
 
 		protected:
 			std::shared_ptr<boost::asio::io_service> m_serverIO;
-			std::unique_ptr<boost::asio::ip::tcp::acceptor> m_serverAcc;
+			std::shared_ptr<boost::asio::basic_socket_acceptor<boost::asio::ip::tcp> > m_serverAcc;
 
 			std::atomic<uint8_t> m_isTerminated;
 		};

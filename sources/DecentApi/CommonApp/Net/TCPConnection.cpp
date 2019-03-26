@@ -45,9 +45,9 @@ uint32_t TCPConnection::GetIpAddressFromStr(const std::string & ipAddrStr)
 	return boost::asio::ip::address_v4::from_string(ipAddrStr).to_uint();
 }
 
-TCPConnection::TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, TcpAcceptorType & acceptor) :
+TCPConnection::TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, std::shared_ptr<TcpAcceptorType> acceptor) :
 	m_ioService(ioService),
-	m_socket(AcceptConnection(acceptor))
+	m_socket(AcceptConnection(*acceptor))
 {
 }
 

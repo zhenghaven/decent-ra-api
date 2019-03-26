@@ -37,6 +37,11 @@ TCPServer::TCPServer(const uint32_t ipAddr, const uint16_t portNum) :
 {
 }
 
+TCPServer::TCPServer(const std::string& ipAddr, const uint16_t portNum) :
+	TCPServer(TCPConnection::GetIpAddressFromStr(ipAddr), portNum)
+{
+}
+
 TCPServer::~TCPServer()
 {
 }
@@ -48,7 +53,7 @@ std::unique_ptr<Connection> TCPServer::AcceptConnection()
 		throw ConnectionClosedException();
 	}
 
-	return  std::make_unique<TCPConnection>(m_serverIO, *m_serverAcc);
+	return std::make_unique<TCPConnection>(m_serverIO, m_serverAcc);
 }
 
 bool TCPServer::IsTerminated() noexcept

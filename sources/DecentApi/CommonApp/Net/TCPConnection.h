@@ -81,7 +81,7 @@ namespace Decent
 			 * \param 		  	ioService	The i/o service.
 			 * \param [in,out]	acceptor 	The acceptor.
 			 */
-			TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, TcpAcceptorType& acceptor);
+			TCPConnection(std::shared_ptr<boost::asio::io_service> ioService, std::shared_ptr<TcpAcceptorType> acceptor);
 
 			/**
 			 * \brief	Construct TCP connection by connecting to a server. Usually this constructor is
