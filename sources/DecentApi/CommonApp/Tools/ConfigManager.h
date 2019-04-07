@@ -79,6 +79,9 @@ namespace Decent
 
 		class ConfigManager
 		{
+		public: //static members:
+			static constexpr char const sk_labelEnclaves[] = "Enclaves";
+
 		public:
 			ConfigManager() = delete;
 			ConfigManager(const std::string& jsonStr);

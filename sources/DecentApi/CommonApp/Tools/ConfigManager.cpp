@@ -26,18 +26,24 @@ namespace
 
 	static std::map<std::string, std::unique_ptr<ConfigItem> > ParseJson(const Json::Value& json)
 	{
-		std::map<std::string, std::unique_ptr<ConfigItem> > res;
-
-		if (json.isObject())
+		if (json.JSON_IS_OBJECT() && json.JSON_HAS_MEMBER(ConfigManager::sk_labelEnclaves))
 		{
-			for (auto it = json.begin(); it != json.end(); ++it)
+			const Json::Value& enclavesJson = json[ConfigManager::sk_labelEnclaves];
+
+			std::map<std::string, std::unique_ptr<ConfigItem> > res;
+
+			if (enclavesJson.JSON_IS_OBJECT())
 			{
-				res.insert(
-					std::make_pair(std::string(JSON_IT_GETKEY(it).JSON_AS_STRING()), std::make_unique<ConfigItem>(JSON_IT_GETVALUE(it)))
-				);
+				for (auto it = enclavesJson.begin(); it != enclavesJson.end(); ++it)
+				{
+					res.insert(
+						std::make_pair(std::string(JSON_IT_GETKEY(it).JSON_AS_STRING()), std::make_unique<ConfigItem>(JSON_IT_GETVALUE(it)))
+					);
+				}
+				return std::move(res);
 			}
-			return std::move(res);
 		}
+		
 		throw ConfigParseException();
 	}
 
@@ -126,6 +132,8 @@ ConfigItem::ConfigItem(std::string&& addr, const uint16_t port, const bool isLoa
 	ConfigItem(addr, port, isLoaddedList, isLoaddedList ? ParseHashStr(json) : "")
 {
 }
+
+constexpr char const ConfigManager::sk_labelEnclaves[];
 
 ConfigManager::ConfigManager(const std::string & jsonStr) :
 	ConfigManager(ParseJsonStr(jsonStr))

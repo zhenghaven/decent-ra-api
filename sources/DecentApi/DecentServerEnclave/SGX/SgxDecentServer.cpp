@@ -13,12 +13,12 @@
 
 #include "../../Common/SGX/SgxCryptoConversions.h"
 
-#include "../../CommonEnclave/Ra/WhiteList/ConstManager.h"
 #include "../../CommonEnclave/Tools/Crypto.h"
 #include "../../CommonEnclave/SGX/LocAttCommLayer.h"
 
 #include "RaProcessor.h"
 #include "SelfRaReportGenerator.h"
+#include "../AppWhiteListsManager.h"
 #include "../ServerStatesSingleton.h"
 
 using namespace Decent;
@@ -107,7 +107,7 @@ extern "C" size_t ecall_decent_ra_server_get_x509_pem(char* buf, size_t buf_len)
 //Load const white list to the const white list manager.
 extern "C" int ecall_decent_ra_server_load_const_loaded_list(const char* key, const char* listJson)
 {
-	return WhiteList::ConstManager::Get().AddWhiteList(key, listJson);
+	return gs_serverState.GetAppWhiteListsManager().AddWhiteList(key, listJson);
 }
 
 extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key, void* const connection)
@@ -139,7 +139,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 			return SGX_ERROR_UNEXPECTED;
 		}
 
-		std::string whiteList = WhiteList::ConstManager::Get().GetWhiteList(key);
+		std::string whiteList = gs_serverState.GetAppWhiteListsManager().GetWhiteList(key);
 		AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(identity), whiteList);
 
 		if (!appX509)

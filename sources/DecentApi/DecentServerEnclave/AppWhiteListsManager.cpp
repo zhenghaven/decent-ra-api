@@ -1,24 +1,18 @@
-#include "ConstManager.h"
+#include "AppWhiteListsManager.h"
 
-#include "../../../Common/Common.h"
+#include "../Common/Common.h"
 
 using namespace Decent::Ra::WhiteList;
 
-ConstManager & ConstManager::Get()
-{
-	static ConstManager inst;
-	return inst;
-}
-
-ConstManager::ConstManager()
+AppWhiteListsManager::AppWhiteListsManager()
 {
 }
 
-ConstManager::~ConstManager()
+AppWhiteListsManager::~AppWhiteListsManager()
 {
 }
 
-std::string ConstManager::GetWhiteList(const std::string & key) const
+std::string AppWhiteListsManager::GetWhiteList(const std::string & key) const
 {
 	std::unique_lock<std::mutex> listMapLock(m_listMapMutex);
 	auto it = m_listMap.find(key);
@@ -27,7 +21,7 @@ std::string ConstManager::GetWhiteList(const std::string & key) const
 	return isFound ? it ->second : std::string();
 }
 
-bool ConstManager::AddWhiteList(const std::string & key, const std::string & listJson)
+bool AppWhiteListsManager::AddWhiteList(const std::string & key, const std::string & listJson)
 {
 	//Add validation code for "listJson" as necessary here.
 	
