@@ -121,7 +121,7 @@ int TlsConfig::VerifyDecentServerCert(const ServerX509 & cert, int depth, uint32
 {
 	using namespace Decent::MbedTlsObj;
 
-	const bool verifyRes = m_state.GetServerWhiteList().AddTrustedNode(cert);
+	const bool verifyRes = m_state.GetServerWhiteList().AddTrustedNode(m_state, cert);
 	flag = verifyRes ? MBEDTLS_SUCCESS_RET : MBEDTLS_X509_BADCERT_NOT_TRUSTED;
 	return MBEDTLS_SUCCESS_RET;
 }

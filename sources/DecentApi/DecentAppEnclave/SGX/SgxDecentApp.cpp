@@ -6,13 +6,14 @@
 
 #include "../../CommonEnclave/Tools/Crypto.h"
 #include "../../CommonEnclave/SGX/LocAttCommLayer.h"
+#include "../../CommonEnclave/Ra/TlsConfigSameEnclave.h"
 
 #include "../../Common/Common.h"
 #include "../../Common/Tools/DataCoding.h"
 #include "../../Common/Ra/Crypto.h"
 #include "../../Common/Ra/KeyContainer.h"
 #include "../../Common/Ra/WhiteList/Loaded.h"
-#include "../../Common/Ra/WhiteList/HardCoded.h"
+#include "../../Common/Ra/WhiteList/DecentServer.h"
 
 #include "../AppStatesSingleton.h"
 #include "../AppCertContainer.h"
@@ -52,15 +53,8 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 	{
 		PRINT_I("Initializing Decent App with hash: %s\n", Tools::GetSelfHashBase64().c_str());
 
-		const HardCoded& hardcoded = gs_appStates.GetHardCodedWhiteList();
-
 		Decent::Sgx::LocAttCommLayer commLayer(connection, false);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
-		if (!hardcoded.CheckHashAndName(Tools::SerializeStruct(identity.mr_enclave), WhiteList::sk_nameDecentServer))
-		{
-			PRINT_I("Could not verify the identity of the Decent Server.");
-			return SGX_ERROR_UNEXPECTED;
-		}
 
 		const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
 		std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
@@ -82,11 +76,18 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 			return SGX_ERROR_UNEXPECTED;
 		}
 
-		gs_appStates.GetAppCertContainer().SetAppCert(cert);
-
 		//Set loaded whitelist.
 		WhiteList::Loaded loadedList(*cert);
 		gs_appStates.GetLoadedWhiteList(&loadedList);
+
+		gs_appStates.GetAppCertContainer().SetAppCert(cert);
+
+		TlsConfigSameEnclave tlsCfg(gs_appStates, TlsConfig::Mode::ClientHasCert);
+		//if (!cert->Verify(, nullptr, nullptr, &TlsConfigSameEnclave::CertVerifyCallBack, tlsCfg))
+		//{
+		//	PRINT_I("Could not verify the identity of the Decent Server.");
+		//	return SGX_ERROR_UNEXPECTED;
+		//}
 	}
 	catch (const std::exception& e)
 	{

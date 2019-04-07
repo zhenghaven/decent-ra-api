@@ -10,11 +10,8 @@ namespace Decent
 		class AppStates : public States
 		{
 		public:
-			typedef const WhiteList::Loaded& (*GetLoadedWlFunc)(WhiteList::Loaded*);
-
-		public:
-			AppStates(AppCertContainer & certCntnr, KeyContainer & keyCntnr, WhiteList::DecentServer & serverWl, const WhiteList::HardCoded & hardCodedWl, GetLoadedWlFunc getLoadedFunc) :
-				States(certCntnr, keyCntnr, serverWl, hardCodedWl, getLoadedFunc),
+			AppStates(AppCertContainer & certCntnr, KeyContainer & keyCntnr, WhiteList::DecentServer & serverWl, GetLoadedWlFunc getLoadedFunc) :
+				States(certCntnr, keyCntnr, serverWl, getLoadedFunc),
 				m_certContainer(certCntnr)
 			{}
 
