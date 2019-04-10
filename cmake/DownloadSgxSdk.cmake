@@ -19,14 +19,14 @@ elseif(UNIX AND NOT APPLE)
 	if(LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu")
 		message(STATUS "In Ubuntu OS...")
 		
-		set(INTEL_SGX_SDK_BIN_URL "https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/sgx_linux_x64_sdk_2.3.101.46683.bin")
-		set(INTEL_SGX_SDK_BIN_SHA256 "6483fd98dfaabf6f2ad2987b7bba562fabb92fb0da19285c7a298d5080b8de13")
+		set(INTEL_SGX_SDK_BIN_URL "https://download.01.org/intel-sgx/linux-2.5/ubuntu18.04-server/sgx_linux_x64_sdk_2.5.100.49891.bin")
+		set(INTEL_SGX_SDK_BIN_SHA256 "66b2d450196b939a15a955e0b835361d2b7fc195551b2f462a62885c2edb9f8b")
 
-		set(INTEL_SGX_PSW_BIN_URL "https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/libsgx-enclave-common_2.3.101.46683-1_amd64.deb")
-		set(INTEL_SGX_PSW_BIN_SHA256 "2b29bb006cd2542e417d92ebf4bb7c7f1effac144698ae6746e98427e99df308")
+		set(INTEL_SGX_PSW_BIN_URL "https://download.01.org/intel-sgx/linux-2.5/ubuntu18.04-server/libsgx-enclave-common_2.5.100.49891-bionic1_amd64.deb")
+		set(INTEL_SGX_PSW_BIN_SHA256 "94053e177422a62e75d3c730cb4235a835036b52f646f05bd4f845681bb7d8c4")
 
-		set(INTEL_SGX_DRI_BIN_URL "https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/sgx_linux_x64_driver_4d69b9c.bin")
-		set(INTEL_SGX_DRI_BIN_SHA256 "3b171fa3a2f0ce0415cdc77431d744213f094725b5bd26d8fb661970c1937c9b")
+		set(INTEL_SGX_DRI_BIN_URL "https://download.01.org/intel-sgx/linux-2.5/ubuntu18.04-server/sgx_linux_x64_driver_f7dc97c.bin")
+		set(INTEL_SGX_DRI_BIN_SHA256 "e62bf0698b6b5563f3526a097e19d2de73fc9d08adaa700fef6fc062e2bb14d3")
 		
 		set(INTEL_SGX_INSTALL_DIR "/opt/intel/")
 		set(INTEL_SGX_SDK_INSTALL_DIR "${INTEL_SGX_INSTALL_DIR}/sgxsdk/")
@@ -67,23 +67,38 @@ elseif(UNIX AND NOT APPLE)
 			
 			if(EXISTS "${INTEL_SGX_SDK_INSTALL_DIR}/uninstall.sh")
 				execute_process(
+					RESULT_VARIABLE exeProcRetVal
+					ERROR_VARIABLE  exeProcRetErr
 					COMMAND sudo ./uninstall.sh
 					WORKING_DIRECTORY "${INTEL_SGX_SDK_INSTALL_DIR}"
 					)
+				if(NOT ${exeProcRetVal} STREQUAL "0")
+					message(FATAL_ERROR "Failed to uninstall the existing SGX SDK. (Err: ${exeProcRetErr})")
+				endif()
 			endif()
 			
 			execute_process(
+				RESULT_VARIABLE exeProcRetVal
+				ERROR_VARIABLE  exeProcRetErr
 				COMMAND chmod +x ./sgx_linux_x64_sdk.bin
 				COMMAND sudo ./sgx_linux_x64_sdk.bin --prefix=${INTEL_SGX_INSTALL_DIR}
 				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
 				)
+			if(NOT ${exeProcRetVal} STREQUAL "0")
+				message(FATAL_ERROR "Failed to install the SGX SDK. (Err: ${exeProcRetErr})")
+			endif()
 			
 			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/SDK/SHA256 "${INTEL_SGX_SDK_BIN_SHA256}")
 			
 			execute_process(
+				RESULT_VARIABLE exeProcRetVal
+				ERROR_VARIABLE  exeProcRetErr
 				COMMAND sudo mv "./SDK/SHA256" "${INTEL_SGX_SDK_INSTALL_DIR}/SHA256"
 				WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
 				)
+			if(NOT ${exeProcRetVal} STREQUAL "0")
+				message(FATAL_ERROR "Failed to install the checksum for SGX SDK. (Err: ${exeProcRetErr})")
+			endif()
 			
 			message(STATUS "Successfully installed Intel SGX SDK!")
 			
@@ -120,11 +135,15 @@ elseif(UNIX AND NOT APPLE)
 				if(EXISTS "${INTEL_SGX_DRI_INSTALL_DIR}/isgx.ko")
 					if(EXISTS "${INTEL_SGX_INSTALL_DIR}/sgxdriver/uninstall.sh")
 						execute_process(
+							RESULT_VARIABLE exeProcRetVal
+							ERROR_VARIABLE  exeProcRetErr
 							COMMAND sudo ./uninstall.sh
 							WORKING_DIRECTORY "${INTEL_SGX_INSTALL_DIR}/sgxdriver/"
 							)
 					else()
 						execute_process(
+							RESULT_VARIABLE exeProcRetVal
+							ERROR_VARIABLE  exeProcRetErr
 							COMMAND sudo service aesmd stop
 							COMMAND sudo /sbin/modprobe -r isgx
 							COMMAND sudo rm -rf ${INTEL_SGX_DRI_INSTALL_DIR}
@@ -133,20 +152,33 @@ elseif(UNIX AND NOT APPLE)
 							WORKING_DIRECTORY "${INTEL_SGX_DRI_INSTALL_DIR}"
 							)
 					endif()
+					if(NOT ${exeProcRetVal} STREQUAL "0")
+						message(FATAL_ERROR "Failed to uninstall the existing SGX driver. (Err: ${exeProcRetErr})")
+					endif()
 				endif()
 				
 				execute_process(
+					RESULT_VARIABLE exeProcRetVal
+					ERROR_VARIABLE  exeProcRetErr
 					COMMAND chmod +x ./sgx_linux_x64_driver.bin
 					COMMAND sudo ./sgx_linux_x64_driver.bin
 					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
 					)
+				if(NOT ${exeProcRetVal} STREQUAL "0")
+					message(FATAL_ERROR "Failed to install the SGX driver. (Err: ${exeProcRetErr})")
+				endif()
 				
 				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/Driver/SHA256 "${INTEL_SGX_DRI_BIN_SHA256}")
 				
 				execute_process(
+					RESULT_VARIABLE exeProcRetVal
+					ERROR_VARIABLE  exeProcRetErr
 					COMMAND sudo mv "./Driver/SHA256" "${INTEL_SGX_DRI_INSTALL_DIR}/SHA256"
 					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
 					)
+				if(NOT ${exeProcRetVal} STREQUAL "0")
+					message(FATAL_ERROR "Failed to install the checksum for SGX driver. (Err: ${exeProcRetErr})")
+				endif()
 				
 				message(STATUS "Successfully installed Intel SGX Driver!")
 				
@@ -181,24 +213,39 @@ elseif(UNIX AND NOT APPLE)
 				
 				if(EXISTS "${INTEL_SGX_PSW_INSTALL_DIR}/uninstall.sh")
 					execute_process(
+						RESULT_VARIABLE exeProcRetVal
+						ERROR_VARIABLE  exeProcRetErr
 						COMMAND sudo ./uninstall.sh
-						COMMAND sudo apt remove libsgx-enclave-common
+						COMMAND sudo apt --assume-yes remove libsgx-enclave-common
 						WORKING_DIRECTORY "${INTEL_SGX_PSW_INSTALL_DIR}"
 						)
+					if(NOT ${exeProcRetVal} STREQUAL "0")
+							message(FATAL_ERROR "Failed to uninstall the existing SGX PSW. (Err: ${exeProcRetErr})")
+					endif()
 				endif()
 				
 				execute_process(
+					RESULT_VARIABLE exeProcRetVal
+					ERROR_VARIABLE  exeProcRetErr
 					COMMAND chmod +x ./sgx_linux_x64_psw.deb
-					COMMAND sudo apt install ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb
+					COMMAND sudo apt --assume-yes install ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/sgx_linux_x64_psw.deb
 					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
 					)
+				if(NOT ${exeProcRetVal} STREQUAL "0")
+					message(FATAL_ERROR "Failed to install the SGX PSW. (Err: ${exeProcRetErr})")
+				endif()
 				
 				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin/PSW/SHA256 "${INTEL_SGX_PSW_BIN_SHA256}")
 				
 				execute_process(
+					RESULT_VARIABLE exeProcRetVal
+					ERROR_VARIABLE  exeProcRetErr
 					COMMAND sudo mv "./PSW/SHA256" "${INTEL_SGX_PSW_INSTALL_DIR}/SHA256"
 					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Intel_SGX_Bin"
 					)
+				if(NOT ${exeProcRetVal} STREQUAL "0")
+					message(FATAL_ERROR "Failed to install the checksum for SGX PSW. (Err: ${exeProcRetErr})")
+				endif()
 				
 				message(STATUS "Successfully installed Intel SGX PSW!")
 				
@@ -210,5 +257,5 @@ elseif(UNIX AND NOT APPLE)
 
 endif()
 
-message(STATUS "Finished Checking Intel SGX SDK.")
+message(STATUS "Finished Checking/Downloading/Installing Intel SGX SDK.")
 message(STATUS "")
