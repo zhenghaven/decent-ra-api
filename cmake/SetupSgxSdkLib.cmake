@@ -96,6 +96,17 @@ if(WIN32)
 			IMPORTED_LOCATION_DEBUGSIMULATION "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tprotected_fs.lib"
 		)
 	endif()
+	if(NOT TARGET IntelSGX::Trusted::switchless)
+		add_library(IntelSGX::Trusted::switchless STATIC IMPORTED GLOBAL)
+		set_target_properties(IntelSGX::Trusted::switchless PROPERTIES 
+			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		#set_target_properties(IntelSGX::Trusted::switchless PROPERTIES 
+		#	IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tswitchless.lib"
+		#	IMPORTED_LOCATION_DEBUG           "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tswitchless.lib"
+		#	IMPORTED_LOCATION_RELEASE         "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tswitchless.lib"
+		#	IMPORTED_LOCATION_DEBUGSIMULATION "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_tswitchless.lib"
+		#)
+	endif()
 	if(NOT TARGET IntelSGX::SDK_Untrusted_file_system)
 		add_library(IntelSGX::SDK_Untrusted_file_system STATIC IMPORTED GLOBAL)
 		set_target_properties(IntelSGX::SDK_Untrusted_file_system PROPERTIES 
@@ -188,6 +199,14 @@ elseif(UNIX)
 			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
 		set_target_properties(IntelSGX::SDK_Trusted_file_system PROPERTIES 
 			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tprotected_fs.a"
+		)
+	endif()
+	if(NOT TARGET IntelSGX::Trusted::switchless)
+		add_library(IntelSGX::Trusted::switchless STATIC IMPORTED GLOBAL)
+		set_target_properties(IntelSGX::Trusted::switchless PROPERTIES 
+			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		set_target_properties(IntelSGX::Trusted::switchless PROPERTIES 
+			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/${LINUX_LIB_ARCHI_STR}/libsgx_tswitchless.a"
 		)
 	endif()
 	if(NOT TARGET IntelSGX::SDK_Untrusted_file_system)
