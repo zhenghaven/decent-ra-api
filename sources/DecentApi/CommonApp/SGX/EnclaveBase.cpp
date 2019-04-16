@@ -7,6 +7,7 @@
 #include <sgx_eid.h>
 #include <sgx_uae_service.h>
 #include <sgx_ukey_exchange.h>
+#include <sgx_uswitchless.h>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -58,7 +59,14 @@ sgx_enclave_id_t EnclaveBase::LaunchEnclave(const fs::path& enclavePath, const f
 	}
 
 	LOGI("SGX Enclave Token: \n%s\n\n", SerializeStruct(tokenBuf.data(), sizeof(sgx_launch_token_t)).c_str());
-	sgx_status_t enclaveRet = sgx_create_enclave(enclavePath.string().c_str(), SGX_DEBUG_FLAG, reinterpret_cast<sgx_launch_token_t*>(tokenBuf.data()), &needUpdateToken, &outEnclaveID, NULL);
+	sgx_uswitchless_config_t switchlessConfig = SGX_USWITCHLESS_CONFIG_INITIALIZER;
+	switchlessConfig.num_uworkers = 4;
+	switchlessConfig.num_tworkers = 4;
+
+	const void* enclaveEx[32] = { 0 };
+	enclaveEx[SGX_CREATE_ENCLAVE_EX_SWITCHLESS_BIT_IDX] = &switchlessConfig;
+	sgx_status_t enclaveRet = sgx_create_enclave_ex(enclavePath.string().c_str(), SGX_DEBUG_FLAG, reinterpret_cast<sgx_launch_token_t*>(tokenBuf.data()), &needUpdateToken, &outEnclaveID, NULL,
+													SGX_CREATE_ENCLAVE_EX_SWITCHLESS, enclaveEx);
 	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, sgx_create_enclave);
 
 	if (needUpdateToken)
