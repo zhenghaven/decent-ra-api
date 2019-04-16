@@ -123,14 +123,14 @@ elseif(UNIX AND NOT APPLE)
 	if(LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu")
 		message(STATUS "In Ubuntu OS...")
 		
-		set(INTEL_SGX_SDK_BIN_URL "https://download.01.org/intel-sgx/linux-2.5/ubuntu18.04-server/sgx_linux_x64_sdk_2.5.100.49891.bin")
-		set(INTEL_SGX_SDK_BIN_SHA256 "66b2d450196b939a15a955e0b835361d2b7fc195551b2f462a62885c2edb9f8b")
+		set(INTEL_SGX_SDK_BIN_URL "https://download.01.org/intel-sgx/linux-2.3/ubuntu18.04-desktop/sgx_linux_x64_sdk_2.3.100.46354.bin")
+		set(INTEL_SGX_SDK_BIN_SHA256 "21f71dc8d70d6b3a33983edfdea727ca637c14bf3910f56d8a4d608915213834")
 
-		set(INTEL_SGX_PSW_BIN_URL "https://download.01.org/intel-sgx/linux-2.5/ubuntu18.04-server/libsgx-enclave-common_2.5.100.49891-bionic1_amd64.deb")
-		set(INTEL_SGX_PSW_BIN_SHA256 "94053e177422a62e75d3c730cb4235a835036b52f646f05bd4f845681bb7d8c4")
+		set(INTEL_SGX_PSW_BIN_URL "https://download.01.org/intel-sgx/linux-2.3/ubuntu18.04-desktop/libsgx-enclave-common_2.3.100.46354-1_amd64.deb")
+		set(INTEL_SGX_PSW_BIN_SHA256 "6b03936a2e0d547a0739db5190f717e2f6c1c181466a430fd1a0a53e925ae9bb")
 
-		set(INTEL_SGX_DRI_BIN_URL "https://download.01.org/intel-sgx/linux-2.5/ubuntu18.04-server/sgx_linux_x64_driver_f7dc97c.bin")
-		set(INTEL_SGX_DRI_BIN_SHA256 "e62bf0698b6b5563f3526a097e19d2de73fc9d08adaa700fef6fc062e2bb14d3")
+		set(INTEL_SGX_DRI_BIN_URL "https://download.01.org/intel-sgx/linux-2.3/ubuntu18.04-desktop/sgx_linux_x64_driver_4d69b9c.bin")
+		set(INTEL_SGX_DRI_BIN_SHA256 "9562acc72a91ebc9572fd8c72b3b332af8b9d98c2b5ad4beced58ebeb5228ed6")
 		
 		set(INTEL_SGX_INSTALL_DIR "/opt/intel/")
 		set(INTEL_SGX_SDK_INSTALL_DIR "${INTEL_SGX_INSTALL_DIR}/sgxsdk/")
