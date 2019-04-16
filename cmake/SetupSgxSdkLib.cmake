@@ -298,8 +298,9 @@ endif()
 #######
 if(NOT TARGET IntelSGX::Trusted::WholeArcLibs)
 	add_library(IntelSGX::Trusted::WholeArcLibs INTERFACE IMPORTED GLOBAL)
-	set_target_properties(IntelSGX::Trusted::WholeArcLibs PROPERTIES INTERFACE_LINK_LIBRARIES 
-		IntelSGX::Trusted::rts
+	target_link_libraries(IntelSGX::Trusted::WholeArcLibs INTERFACE 
+		IntelSGX::Trusted::switchless 
+		IntelSGX::Trusted::rts 
 	)
 endif()
 
@@ -312,7 +313,6 @@ if(NOT TARGET IntelSGX::Trusted::GroupLibs)
 		IntelSGX::Trusted::key_exchange 
 		IntelSGX::Trusted::crypto 
 		IntelSGX::Trusted::file_system 
-		IntelSGX::Trusted::switchless 
 	)
 endif()
 
