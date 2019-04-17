@@ -70,7 +70,7 @@ if(WIN32) ## Windows OS
 		set_target_properties(IntelSGX::Trusted::rts PROPERTIES 
 			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
 		target_include_directories(IntelSGX::Trusted::rts BEFORE INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR})
-		set_target_properties(IntelSGX::Trusted::stdc PROPERTIES 
+		set_target_properties(IntelSGX::Trusted::rts PROPERTIES 
 			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_trts.lib"
 			IMPORTED_LOCATION_DEBUG           "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_trts.lib"
 			IMPORTED_LOCATION_RELEASE         "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_trts.lib"
@@ -150,9 +150,10 @@ if(WIN32) ## Windows OS
 		)
 	endif()
 	if(NOT TARGET IntelSGX::Trusted::switchless)
-		add_library(IntelSGX::Trusted::switchless STATIC IMPORTED GLOBAL)
-		set_target_properties(IntelSGX::Trusted::switchless PROPERTIES 
-			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		#add_library(IntelSGX::Trusted::switchless STATIC IMPORTED GLOBAL)
+		add_library(IntelSGX::Trusted::switchless INTERFACE IMPORTED GLOBAL)
+		#set_target_properties(IntelSGX::Trusted::switchless PROPERTIES 
+		#	IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
 		target_include_directories(IntelSGX::Trusted::switchless BEFORE INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR})
 		#set_target_properties(IntelSGX::Trusted::switchless PROPERTIES 
 		#	IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_tswitchless.lib"
