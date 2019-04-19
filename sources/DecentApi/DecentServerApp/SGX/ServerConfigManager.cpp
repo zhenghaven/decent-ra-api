@@ -49,7 +49,7 @@ namespace
 			spidStr = ParseStringObject(json, ServerConfigManager::sk_labelSpid);
 #ifdef SIMULATING_ENCLAVE
 		}
-		catch (const ConfigParseException&)
+		catch (const Tools::ConfigParseException&)
 		{
 			return std::move(res);
 		}
