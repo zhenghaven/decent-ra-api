@@ -319,7 +319,7 @@ endif()
 
 if(NOT TARGET IntelSGX::Untrusted::Libs)
 	add_library(IntelSGX::Untrusted::Libs INTERFACE IMPORTED GLOBAL)
-	set_target_properties(IntelSGX::Untrusted::Libs PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${INTEL_SGX_SDK_INCLUDE_DIR})
+	target_include_directories(IntelSGX::Untrusted::Libs INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR})
 	target_link_libraries(IntelSGX::Untrusted::Libs INTERFACE 
 		IntelSGX::Untrusted::service
 		IntelSGX::Untrusted::rts
