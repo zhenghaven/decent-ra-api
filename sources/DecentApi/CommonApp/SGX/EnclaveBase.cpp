@@ -129,7 +129,7 @@ bool EnclaveBase::LoadToken(const fs::path& tokenPath, std::vector<uint8_t>& out
 	outToken.resize(sizeof(sgx_launch_token_t), 0);
 	try
 	{
-		DiskFile tokenFile(tokenPath, FileBase::Mode::Read);
+		DiskFile tokenFile(tokenPath, FileBase::Mode::Read, true);
 		tokenFile.ReadBlockExactSize(outToken);
 		return true;
 	}
@@ -144,7 +144,7 @@ bool EnclaveBase::UpdateToken(const fs::path& tokenPath, const std::vector<uint8
 {
 	try
 	{
-		WritableDiskFile tokenFile(tokenPath, WritableFileBase::WritableMode::Write);
+		WritableDiskFile tokenFile(tokenPath, WritableFileBase::WritableMode::Write, true);
 		tokenFile.WriteBlockExactSize(inToken);
 		return true;
 	}

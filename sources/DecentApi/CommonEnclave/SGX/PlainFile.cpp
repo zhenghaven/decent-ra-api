@@ -7,14 +7,14 @@ using namespace Decent::Tools;
 
 #define THROW_FILE_NOT_OPENED_EXCEPTION throw FileException("Specified file is not opened yet!")
 
-PlainFile::PlainFile(const std::string & path, const Mode mode) :
-	PlainFile(path, mode, sk_deferOpen)
+PlainFile::PlainFile(const std::string & path, const Mode mode, bool isExclusive) :
+	PlainFile(path, mode, isExclusive, sk_deferOpen)
 {
 	Open();
 }
 
-PlainFile::PlainFile(const std::string & path, const Mode mode, DeferOpen) :
-	PlainFile(path, FileBase::InterpretMode(mode))
+PlainFile::PlainFile(const std::string & path, const Mode mode, bool isExclusive, DeferOpen) :
+	PlainFile(path, FileBase::InterpretMode(mode), isExclusive)
 {
 }
 
@@ -38,7 +38,7 @@ PlainFile::~PlainFile()
 
 void PlainFile::Open()
 {
-	sgx_status_t encRet = ocall_decent_tools_fopen(&m_file, m_path.c_str(), m_modeChar);
+	sgx_status_t encRet = ocall_decent_tools_fopen(&m_file, m_path.c_str(), m_modeChar, m_isExclusive);
 	DECENT_CHECK_SGX_STATUS_ERROR(encRet, ocall_decent_tools_fopen);
 
 	if (!IsOpen())
@@ -76,10 +76,11 @@ size_t PlainFile::FTell() const
 	return IsOpen() ? OcalllFtell(m_file) : THROW_FILE_NOT_OPENED_EXCEPTION;
 }
 
-PlainFile::PlainFile(const std::string & path, const char * modeStr) :
+PlainFile::PlainFile(const std::string & path, const char * modeStr, bool isExclusive) :
 	m_path(path),
 	m_modeChar(modeStr),
-	m_file(nullptr)
+	m_file(nullptr),
+	m_isExclusive(isExclusive)
 {
 }
 
@@ -95,14 +96,14 @@ size_t PlainFile::ReadBlockRaw(void * buffer, const size_t size)
 	return IsOpen() ? OcallFread(buffer, size, m_file) : THROW_FILE_NOT_OPENED_EXCEPTION;
 }
 
-WritablePlainFile::WritablePlainFile(const std::string & path, const WritableMode mode) :
-	WritablePlainFile(path, mode, sk_deferOpen)
+WritablePlainFile::WritablePlainFile(const std::string & path, const WritableMode mode, bool isExclusive) :
+	WritablePlainFile(path, mode, isExclusive, sk_deferOpen)
 {
 	Open();
 }
 
-WritablePlainFile::WritablePlainFile(const std::string & path, const WritableMode mode, DeferOpen) :
-	PlainFile(path, WritableFileBase::InterpretMode(mode))
+WritablePlainFile::WritablePlainFile(const std::string & path, const WritableMode mode, bool isExclusive, DeferOpen) :
+	PlainFile(path, WritableFileBase::InterpretMode(mode), isExclusive)
 {
 }
 

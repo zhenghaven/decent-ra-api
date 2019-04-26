@@ -278,7 +278,7 @@ namespace
 {
 	static void ValidateFilePath(const std::string& filePath)
 	{
-		DiskFile testFile(filePath, FileBase::Mode::Read);
+		DiskFile testFile(filePath, FileBase::Mode::Read, false);
 	}
 }
 

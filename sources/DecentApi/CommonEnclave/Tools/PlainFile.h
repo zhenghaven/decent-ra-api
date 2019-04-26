@@ -11,9 +11,9 @@ namespace Decent
 		public:
 			PlainFile() = delete;
 
-			PlainFile(const std::string& path, const Mode mode);
+			PlainFile(const std::string& path, const Mode mode, bool isExclusive);
 
-			PlainFile(const std::string& path, const Mode mode, DeferOpen);
+			PlainFile(const std::string& path, const Mode mode, bool isExclusive, DeferOpen);
 
 			PlainFile(const PlainFile& rhs) = delete;
 
@@ -32,7 +32,7 @@ namespace Decent
 			virtual operator bool() const { return IsOpen(); }
 
 		protected:
-			PlainFile(const std::string& path, const char* modeStr);
+			PlainFile(const std::string& path, const char* modeStr, bool isExclusive);
 
 			virtual size_t ReadBlockRaw(void* buffer, const size_t size) override;
 
@@ -44,6 +44,7 @@ namespace Decent
 			std::string m_path;
 			const char* m_modeChar;
 			void* m_file;
+			bool m_isExclusive;
 		};
 
 		class WritablePlainFile : public PlainFile, virtual public WritableFileBase
@@ -51,9 +52,9 @@ namespace Decent
 		public:
 			WritablePlainFile() = delete;
 
-			WritablePlainFile(const std::string& path, const WritableMode mode);
+			WritablePlainFile(const std::string& path, const WritableMode mode, bool isExclusive);
 
-			WritablePlainFile(const std::string& path, const WritableMode mode, DeferOpen);
+			WritablePlainFile(const std::string& path, const WritableMode mode, bool isExclusive, DeferOpen);
 
 			WritablePlainFile(const WritablePlainFile& rhs) = delete;
 
