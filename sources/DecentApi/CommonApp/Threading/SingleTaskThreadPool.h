@@ -1,0 +1,88 @@
+#pragma once
+
+#include <memory>
+#include <queue>
+#include <map>
+#include <mutex>
+#include <atomic>
+#include <condition_variable>
+
+#include "WorkerItem.h"
+
+namespace std
+{
+	class thread;
+}
+
+namespace Decent
+{
+	namespace Threading
+	{
+		class TaskSet;
+		class MainThreadAsynWorker;
+
+		class SingleTaskThreadPool
+		{
+		public:
+			SingleTaskThreadPool() = delete;
+
+			/**
+			 * \brief	Constructor
+			 *
+			 * \param [in,out]	mainThreadWorker	The reference to the main thread asynchronous worker.
+			 * 										Please make sure this worker will stay alive as long as the
+			 * 										main thread is alive.
+			 * \param 		  	cleanerNum			(Optional) The number of cleaner.
+			 */
+			SingleTaskThreadPool(MainThreadAsynWorker& mainThreadWorker, size_t cleanerNum = 1);
+
+			/** \brief	Destructor. Terminate will be called here. */
+			virtual ~SingleTaskThreadPool();
+
+			/**
+			 * \brief	Create a new thread and give this task set to the new thread. If the pointer is null,
+			 * 			this function will immediately return (No effect at all). Note: This function is
+			 * 			thread-safe.
+			 *
+			 * \exception	Decent::RuntimeException	thrown when this function is called but the thread
+			 * 											pool is already called to terminate.
+			 *
+			 * \param [in,out]	taskset	The unique pointer to the taskset. After the task set is added to the
+			 * 							pool, the ownership will be transferred to the pool, and thus, this
+			 * 							pointer will be null afterward.
+			 */
+			virtual void AddTaskSet(std::unique_ptr<TaskSet>& taskset);
+
+			/** \brief	Terminates this thread pool Note: thread-safe */
+			void Terminate();
+
+			/**
+			* \brief	Query if this thread pool is terminated. Note: thread-safe
+			*
+			* \return	True if terminated, false if not.
+			*/
+			bool IsTerminated() const noexcept;
+
+		protected:
+			virtual void Worker(std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::unique_ptr<TaskSet> > taskPtr);
+
+			virtual void Cleaner();
+
+		private:
+			const size_t m_cleanerNum;
+			std::vector<std::unique_ptr<std::thread> > m_cleanePool;
+
+			std::atomic<bool> m_isTerminated;
+
+			MainThreadAsynWorker& m_mainThreadWorker;
+
+			std::mutex m_workerMapMutex;
+			std::map<std::unique_ptr<TaskSet>*, WorkerItem> m_workMap;
+
+			std::mutex m_cleanQueueMutex;
+			std::queue<std::unique_ptr<TaskSet>* > m_cleanQueue;
+			std::condition_variable m_cleanQueueSignal;
+
+		};
+	}
+}
