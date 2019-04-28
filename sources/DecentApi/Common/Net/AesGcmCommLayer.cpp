@@ -7,7 +7,7 @@
 #include "../MbedTls/Drbg.h"
 
 #include "NetworkException.h"
-#include "Connection.h"
+#include "ConnectionBase.h"
 
 using namespace Decent::Net;
 using namespace Decent::MbedTlsObj;
@@ -59,7 +59,7 @@ AesGcmCommLayer & AesGcmCommLayer::operator=(AesGcmCommLayer && other)
 	{
 		m_gcm = std::forward<GcmObjType>(other.m_gcm);
 
-		void* tmpCnt = m_connection;
+		ConnectionBase* tmpCnt = m_connection;
 		m_connection = other.m_connection;
 		other.m_connection = tmpCnt;
 	}
@@ -168,9 +168,9 @@ std::vector<uint8_t> AesGcmCommLayer::EncryptBin(const void * inMsg, const size_
 	return std::move(res);
 }
 
-void AesGcmCommLayer::SetConnectionPtr(void * const connectionPtr)
+void AesGcmCommLayer::SetConnectionPtr(ConnectionBase& cnt)
 {
-	m_connection = connectionPtr;
+	m_connection = &cnt;
 }
 
 void AesGcmCommLayer::ReceiveRaw(void * buf, const size_t size)
@@ -194,7 +194,7 @@ void AesGcmCommLayer::ReceiveMsg(std::string & outMsg)
 	}
 
 	std::string encrypted;
-	StatConnection::ReceivePack(m_connection, encrypted);
+	m_connection->ReceivePack(encrypted);
 	
 	outMsg = DecryptMsg(encrypted);
 }
@@ -207,7 +207,7 @@ void AesGcmCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
 	}
 
 	std::vector<uint8_t> encrypted;
-	StatConnection::ReceivePack(m_connection, encrypted);
+	m_connection->ReceivePack(encrypted);
 
 	outMsg = DecryptMsg(encrypted);
 }
@@ -221,6 +221,6 @@ void AesGcmCommLayer::SendRaw(const void * buf, const size_t size)
 
 	std::string encrypted = EncryptMsg(buf, size);
 
-	StatConnection::SendPack(m_connection, encrypted);
+	m_connection->SendPack(encrypted);
 }
 

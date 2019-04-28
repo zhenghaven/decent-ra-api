@@ -170,52 +170,52 @@ namespace Decent
 			}
 
 			virtual void ReceiveRaw(void* buf, const size_t size) override;
-			virtual void ReceiveRaw(void* const connectionPtr, void* buf, const size_t size) override
+			virtual void ReceiveRaw(ConnectionBase& cnt, void* buf, const size_t size) override
 			{
-				SecureCommLayer::ReceiveRaw(connectionPtr, buf, size);
+				SecureCommLayer::ReceiveRaw(cnt, buf, size);
 			}
 
 			virtual void SendRaw(const void* buf, const size_t size) override;
-			virtual void SendRaw(void* const connectionPtr, const void* buf, const size_t size) override
+			virtual void SendRaw(ConnectionBase& cnt, const void* buf, const size_t size) override
 			{
-				SecureCommLayer::SendRaw(connectionPtr, buf, size);
+				SecureCommLayer::SendRaw(cnt, buf, size);
 			}
 
 			virtual void SendMsg(const std::string& inMsg) override
 			{
 				SendRaw(inMsg.data(), inMsg.size());
 			}
-			virtual void SendMsg(void* const connectionPtr, const std::string& inMsg) override
+			virtual void SendMsg(ConnectionBase& cnt, const std::string& inMsg) override
 			{
-				SecureCommLayer::SendMsg(connectionPtr, inMsg);
+				SecureCommLayer::SendMsg(cnt, inMsg);
 			}
 
 			virtual void ReceiveMsg(std::string& outMsg) override;
-			virtual void ReceiveMsg(void* const connectionPtr, std::string& outMsg) override
+			virtual void ReceiveMsg(ConnectionBase& cnt, std::string& outMsg) override
 			{
-				SecureCommLayer::ReceiveMsg(connectionPtr, outMsg);
+				SecureCommLayer::ReceiveMsg(cnt, outMsg);
 			}
 
 			virtual void SendMsg(const std::vector<uint8_t>& inMsg) override
 			{
 				SendRaw(inMsg.data(), inMsg.size());
 			}
-			virtual void SendMsg(void* const connectionPtr, const std::vector<uint8_t>& inMsg) override
+			virtual void SendMsg(ConnectionBase& cnt, const std::vector<uint8_t>& inMsg) override
 			{
-				SecureCommLayer::SendMsg(connectionPtr, inMsg);
+				SecureCommLayer::SendMsg(cnt, inMsg);
 			}
 
 			virtual void ReceiveMsg(std::vector<uint8_t>& outMsg) override;
-			virtual void ReceiveMsg(void* const connectionPtr, std::vector<uint8_t>& outMsg) override
+			virtual void ReceiveMsg(ConnectionBase& cnt, std::vector<uint8_t>& outMsg) override
 			{
-				SecureCommLayer::ReceiveMsg(connectionPtr, outMsg);
+				SecureCommLayer::ReceiveMsg(cnt, outMsg);
 			}
 
-			virtual void SetConnectionPtr(void* const connectionPtr) override;
+			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 
 		private:
 			GcmObjType m_gcm;
-			void* m_connection;
+			ConnectionBase* m_connection;
 		};
 	}
 }

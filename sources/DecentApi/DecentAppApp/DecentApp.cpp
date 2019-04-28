@@ -70,7 +70,7 @@ bool DecentApp::InitEnclave(const std::string & wListKey, Connection & serverCon
 {
 	using namespace Decent::Ra::Message;
 
-	serverConn.SendPack(RequestAppCert(wListKey)); //Send request.
+	serverConn.SendSmartMsg(RequestAppCert(wListKey)); //Send request.
 
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;

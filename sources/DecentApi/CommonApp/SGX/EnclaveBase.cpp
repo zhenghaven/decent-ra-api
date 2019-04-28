@@ -15,7 +15,7 @@
 
 #include "../../Common/Common.h"
 #include "../../Common/Tools/DataCoding.h"
-#include "../../Common/Net/Connection.h"
+#include "../../Common/Net/ConnectionBase.h"
 #include "../../Common/SGX/sgx_structs.h"
 #include "../../Common/SGX/RuntimeError.h"
 #include "../Base/EnclaveException.h"
@@ -212,7 +212,7 @@ extern "C" int ocall_decent_sgx_ra_send_msg0s(void* const connection_ptr)
 			return false;
 		}
 
-		StatConnection::SendPack(connection_ptr, &msg0s, sizeof(msg0s));
+		static_cast<ConnectionBase*>(connection_ptr)->SendPack(&msg0s, sizeof(msg0s));
 
 		return true;
 	}

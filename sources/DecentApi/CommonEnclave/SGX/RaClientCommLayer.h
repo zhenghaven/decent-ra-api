@@ -8,6 +8,11 @@ typedef struct _sgx_ias_report_t sgx_ias_report_t;
 
 namespace Decent
 {
+	namespace Net
+	{
+		class EnclaveCntTranslator;
+	}
+
 	namespace Sgx
 	{
 		class RaProcessorClient;
@@ -16,7 +21,7 @@ namespace Decent
 		{
 		public:
 			RaClientCommLayer() = delete;
-			RaClientCommLayer(void* const connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor);
+			RaClientCommLayer(Decent::Net::EnclaveCntTranslator& connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor);
 			RaClientCommLayer(const RaClientCommLayer& other) = delete;
 			RaClientCommLayer(RaClientCommLayer&& other);
 

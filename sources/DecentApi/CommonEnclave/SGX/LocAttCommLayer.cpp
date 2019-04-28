@@ -4,7 +4,7 @@
 
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
-#include "../../Common/Net/Connection.h"
+#include "../../Common/Net/ConnectionBase.h"
 #include "../../Common/Net/NetworkException.h"
 
 using namespace Decent;
@@ -29,8 +29,8 @@ namespace
 	}
 }
 
-LocAttCommLayer::LocAttCommLayer(void * const connectionPtr, bool isInitiator) :
-	LocAttCommLayer(std::move(Handshake(connectionPtr, isInitiator)))
+LocAttCommLayer::LocAttCommLayer(ConnectionBase& cnt, bool isInitiator) :
+	LocAttCommLayer(std::move(Handshake(cnt, isInitiator)))
 {
 }
 
@@ -65,7 +65,7 @@ LocAttCommLayer::LocAttCommLayer(std::unique_ptr<General128BitKey> key, std::uni
 {
 }
 
-void LocAttCommLayer::InitiatorHandshake(void * const connectionPtr, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity)
+void LocAttCommLayer::InitiatorHandshake(ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity)
 {
 	sgx_dh_session_t session;
 	std::string inMsgBuf;
@@ -75,19 +75,19 @@ void LocAttCommLayer::InitiatorHandshake(void * const connectionPtr, General128B
 	sgx_dh_msg2_t msg2;
 	std::memset(&msg2, 0, sizeof(msg2));
 
-	StatConnection::ReceivePack(connectionPtr, inMsgBuf);
+	cnt.ReceivePack(inMsgBuf);
 
 	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg1_t), "Received message 1 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg1(CastPtr<sgx_dh_msg1_t>(inMsgBuf.data()), &msg2, &session), "Failed to process message 1.");
 
-	StatConnection::SendAndReceivePack(connectionPtr, &msg2, sizeof(msg2), inMsgBuf);
+	cnt.SendAndReceivePack(&msg2, sizeof(msg2), inMsgBuf);
 
 	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg3_t), "Received message 3 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg3(CastPtr<sgx_dh_msg3_t>(inMsgBuf.data()), &session,
 		CastPtr<sgx_ec_key_128bit_t>(outKey.data()), &outIdentity), "Failed to process message 3.");
 }
 
-void LocAttCommLayer::ResponderHandshake(void * const connectionPtr, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity)
+void LocAttCommLayer::ResponderHandshake(ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity)
 {
 	sgx_dh_session_t session;
 	std::string inMsgBuf;
@@ -101,27 +101,27 @@ void LocAttCommLayer::ResponderHandshake(void * const connectionPtr, General128B
 
 	CHECK_SGX_SDK_RESULT(sgx_dh_responder_gen_msg1(&msg1, &session), "Failed to generate message 1.");
 
-	StatConnection::SendAndReceivePack(connectionPtr, &msg1, sizeof(sgx_dh_msg1_t), inMsgBuf);
+	cnt.SendAndReceivePack(&msg1, sizeof(sgx_dh_msg1_t), inMsgBuf);
 
 	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg2_t), "Received message 2 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(sgx_dh_responder_proc_msg2(CastPtr<sgx_dh_msg2_t>(inMsgBuf.data()), &msg3, &session,
 		CastPtr<sgx_ec_key_128bit_t>(outKey.data()), &outIdentity), "Failed to process message 2.");
 
-	StatConnection::SendPack(connectionPtr, &msg3, sizeof(msg3));
+	cnt.SendPack(&msg3, sizeof(msg3));
 }
 
-std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > LocAttCommLayer::Handshake(void * const connectionPtr, bool isInitiator)
+std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > LocAttCommLayer::Handshake(ConnectionBase& cnt, bool isInitiator)
 {
 	std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > retValue =
 		std::make_pair(Tools::make_unique<General128BitKey>(), Tools::make_unique<sgx_dh_session_enclave_identity_t>());
 
 	if (isInitiator)
 	{
-		InitiatorHandshake(connectionPtr, *retValue.first, *retValue.second);
+		InitiatorHandshake(cnt, *retValue.first, *retValue.second);
 	}
 	else
 	{
-		ResponderHandshake(connectionPtr, *retValue.first, *retValue.second);
+		ResponderHandshake(cnt, *retValue.first, *retValue.second);
 	}
 
 	return std::move(retValue);

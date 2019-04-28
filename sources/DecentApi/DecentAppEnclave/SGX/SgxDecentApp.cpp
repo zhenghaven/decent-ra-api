@@ -5,6 +5,7 @@
 #include <sgx_dh.h>
 
 #include "../../CommonEnclave/Tools/Crypto.h"
+#include "../../CommonEnclave/Net/EnclaveCntTranslator.h"
 #include "../../CommonEnclave/SGX/LocAttCommLayer.h"
 #include "../../CommonEnclave/Ra/TlsConfigSameEnclave.h"
 
@@ -19,6 +20,7 @@
 #include "../AppCertContainer.h"
 
 using namespace Decent;
+using namespace Decent::Net;
 using namespace Decent::Ra;
 using namespace Decent::Ra::WhiteList;
 
@@ -53,7 +55,9 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 	{
 		PRINT_I("Initializing Decent App with hash: %s\n", Tools::GetSelfHashBase64().c_str());
 
-		Decent::Sgx::LocAttCommLayer commLayer(connection, false);
+		EnclaveCntTranslator cnt(connection);
+		Decent::Sgx::LocAttCommLayer commLayer(cnt, false);
+		commLayer.SetConnectionPtr(cnt);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
 		const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
@@ -65,8 +69,8 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		}
 
 		std::string plainMsg;
-		commLayer.SendMsg(connection, certReq.ToPemString());
-		commLayer.ReceiveMsg(connection, plainMsg);
+		commLayer.SendMsg(certReq.ToPemString());
+		commLayer.ReceiveMsg(plainMsg);
 
 		//Process X509 Message:
 

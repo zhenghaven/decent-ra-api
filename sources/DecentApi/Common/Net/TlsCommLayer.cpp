@@ -12,7 +12,7 @@
 #include "../MbedTls/MbedTlsException.h"
 
 #include "NetworkException.h"
-#include "Connection.h"
+#include "ConnectionBase.h"
 
 using namespace Decent;
 using namespace Decent::Net;
@@ -24,12 +24,12 @@ namespace
 {
 	static int MbedTlsSslSend(void *ctx, const unsigned char *buf, size_t len)
 	{
-		return StatConnection::SendRawCallback(ctx, buf, len);
+		return ConnectionBase::SendRawCallback(ctx, buf, len);
 	}
 
 	static int MbedTlsSslRecv(void *ctx, unsigned char *buf, size_t len)
 	{
-		return StatConnection::ReceiveRawCallback(ctx, buf, len);
+		return ConnectionBase::ReceiveRawCallback(ctx, buf, len);
 	}
 
 	static void MbedTlsSslWriteWrap(mbedtls_ssl_context *ssl, const void* const buf, const size_t len)
@@ -69,12 +69,11 @@ namespace
 	}
 }
 
-TlsCommLayer::TlsCommLayer(void * const connectionPtr, std::shared_ptr<const TlsConfig> tlsConfig, bool reqPeerCert) :
+TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig> tlsConfig, bool reqPeerCert) :
 	m_sslCtx(Tools::make_unique<mbedtls_ssl_context>()),
 	m_tlsConfig(tlsConfig)
 {
-	if (!connectionPtr ||
-		!tlsConfig || !*tlsConfig)
+	if (!tlsConfig || !*tlsConfig)
 	{
 		throw Exception("The parameter given to the TLS Communication Layer is invalid.");
 	}
@@ -88,7 +87,7 @@ TlsCommLayer::TlsCommLayer(void * const connectionPtr, std::shared_ptr<const Tls
 		throw Decent::MbedTlsObj::MbedTlsException("TlsCommLayer::TlsCommLayer::mbedtls_ssl_setup", mbedRet);
 	}
 
-	mbedtls_ssl_set_bio(m_sslCtx.get(), connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
+	mbedtls_ssl_set_bio(m_sslCtx.get(), &cnt, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 	mbedtls_ssl_set_hs_authmode(m_sslCtx.get(), reqPeerCert ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_NONE);
 
 	mbedRet = mbedtls_ssl_handshake(m_sslCtx.get());
@@ -205,9 +204,9 @@ void TlsCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
 	MbedTlsSslReadWrap(m_sslCtx.get(), outMsg.data(), outMsg.size());
 }
 
-void TlsCommLayer::SetConnectionPtr(void* const connectionPtr)
+void TlsCommLayer::SetConnectionPtr(ConnectionBase& cnt)
 {
-	mbedtls_ssl_set_bio(m_sslCtx.get(), connectionPtr, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
+	mbedtls_ssl_set_bio(m_sslCtx.get(), &cnt, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 }
 
 std::string TlsCommLayer::GetPeerCertPem() const
