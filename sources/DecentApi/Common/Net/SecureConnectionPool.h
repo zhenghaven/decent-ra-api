@@ -72,7 +72,15 @@ namespace Decent
 					m_outCntCount--;
 					RemoveIndex(m_poolIndex, idxIt);
 
-					SecureConnectionPoolBase::ClientWakePeer(res);
+					try
+					{
+						SecureConnectionPoolBase::ClientWakePeer(res);
+					}
+					catch (const std::exception&)
+					{
+						//Peer closed the connection
+						return GetNew(addr, state);
+					}
 
 					return res;
 				}
