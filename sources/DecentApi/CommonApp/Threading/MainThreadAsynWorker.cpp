@@ -114,11 +114,12 @@ void MainThreadAsynWorker::InterruptSignalCatcher(std::atomic<bool>& interruptFl
 	};
 
 	boost::asio::signal_set signals(*io_service, SIGINT);
-	signals.async_wait([&interruptFlag, io_service, maxCount, caughtCount](const boost::system::error_code& error, int signal_number)
+	signals.async_wait([this, &interruptFlag, io_service, maxCount, caughtCount](const boost::system::error_code& error, int signal_number)
 	{
 		interruptFlag = true;
+		m_taskQueueSignal.notify_all();
 		++(*caughtCount);
-		if ((maxCount > 0 && (*caughtCount) < maxCount) && !io_service->stopped())
+		if ((maxCount > 0 && (*caughtCount) >= maxCount) && !io_service->stopped())
 		{
 			io_service->stop();
 		}

@@ -3,6 +3,8 @@
 #include <thread>
 #include <mutex>
 
+#include "../../Common/RuntimeException.h"
+
 #include "TaskSet.h"
 
 using namespace Decent::Threading;
@@ -12,6 +14,10 @@ WorkerItem::WorkerItem(std::unique_ptr<std::thread>&& thread, std::shared_ptr<st
 	m_mutex(std::forward<std::shared_ptr<std::mutex> >(mutex)), 
 	m_taskPtr(std::forward<std::shared_ptr<std::unique_ptr<TaskSet> > >(taskPtr))
 {
+	if (!m_thread || !m_mutex || !m_taskPtr)
+	{
+		throw RuntimeException("nullptr has been assigned to the WorkerItem.");
+	}
 }
 
 WorkerItem::WorkerItem(WorkerItem && other) :
@@ -28,6 +34,11 @@ WorkerItem::~WorkerItem()
 
 void WorkerItem::Kill()
 {
+	if (!m_thread)
+	{
+		return;
+	}
+
 	std::unique_lock<std::mutex> taskLock(*m_mutex, std::defer_lock);
 	if (!taskLock.try_lock())
 	{

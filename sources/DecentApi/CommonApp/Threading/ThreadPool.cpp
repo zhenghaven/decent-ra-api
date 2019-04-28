@@ -114,7 +114,7 @@ bool ThreadPool::AddWorker(std::unique_ptr<TaskSet>& taskset)
 	if (workerCount + 1 < m_maxPoolSize && !m_isTerminated)
 	{
 		//Yes, we can add one more.
-		if (workerCount + 2 == m_maxPoolSize)
+		if (workerCount + 1 == m_maxPoolSize)
 		{
 			//After adding this worker, pool will be full.
 			m_isWorkerPoolFull = true;
