@@ -35,6 +35,11 @@ namespace Decent
 
 			virtual void Put(const MapKeyType& addr, CntPair&& cntPair)
 			{
+				try
+				{
+					SecureConnectionPoolBase::ClientAckKeepAlive(cntPair);
+				} catch (const std::exception&) {}
+
 				const std::uint_fast64_t prevCount = m_outCntCount++;
 				if (prevCount == m_maxOutCnt)
 				{
@@ -47,6 +52,9 @@ namespace Decent
 			virtual CntPair Get(const MapKeyType& addr, Ra::States& state)
 			{
 				std::unique_lock<std::mutex> cntPoolLock(m_cntPoolMutex);
+				//LOGI("Pool Size: %llu", m_cntPool.size());
+				//LOGI("Index Size: %llu", m_poolIndex.size());
+				//LOGI("Count Size: %llu", m_outCntCount.load());
 				auto idxIt = m_poolIndex.find(addr);
 				if (idxIt == m_poolIndex.end() || idxIt->second.size() == 0)
 				{
@@ -61,7 +69,10 @@ namespace Decent
 					CntPair res = std::move(poolIt->first);
 
 					m_cntPool.erase(poolIt);
+					m_outCntCount--;
 					RemoveIndex(m_poolIndex, idxIt);
+
+					SecureConnectionPoolBase::ClientWakePeer(res);
 
 					return res;
 				}

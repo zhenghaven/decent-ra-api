@@ -46,6 +46,8 @@ namespace Decent
 
 			static void ClientAckKeepAlive(CntPair& cntPair);
 
+			static void ClientWakePeer(CntPair& cntPair);
+
 		public:
 			SecureConnectionPoolBase() = delete;
 

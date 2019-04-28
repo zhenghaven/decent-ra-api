@@ -61,6 +61,11 @@ void SecureConnectionPoolBase::ClientAckKeepAlive(CntPair & cntPair)
 	cntPair.GetCommLayer().ReceiveStruct(serverQuery);
 }
 
+void SecureConnectionPoolBase::ClientWakePeer(CntPair & cntPair)
+{
+	cntPair.GetCommLayer().SendStruct('W');
+}
+
 SecureConnectionPoolBase::SecureConnectionPoolBase(size_t maxInCnt) :
 	m_maxInCnt(maxInCnt),
 	m_inCntCount()
@@ -74,6 +79,7 @@ SecureConnectionPoolBase::~SecureConnectionPoolBase()
 bool Decent::Net::SecureConnectionPoolBase::HoldInComingConnection(SecureCommLayer& secComm)
 {
 	uint64_t currentCount = m_inCntCount++;
+	//LOGI("InComing Cnt Count: %llu.", currentCount);
 	if (currentCount >= m_maxInCnt)
 	{
 		//There is no more space
