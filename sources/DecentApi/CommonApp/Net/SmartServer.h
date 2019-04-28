@@ -1,87 +1,130 @@
 #pragma once
 
 #include <memory>
-#include <functional>
-#include <mutex>
-#include <map>
-#include <atomic>
+#include <tuple>
 #include <queue>
 #include <condition_variable>
 
-namespace std
-{
-	class thread;
-}
-
+#include "../Threading/ThreadPool.h"
+#include "../Threading/SingleTaskThreadPool.h"
 namespace Decent
 {
+	namespace Threading
+	{
+		class MainThreadAsynWorker;
+	}
+
 	namespace Net
 	{
 		class Server;
 		class Connection;
 		class ConnectionHandler;
 
-		typedef std::function<void(void)> JobAtCompletedType;
-
 		class SmartServer
 		{
-		public:
+		public: //static members:
 			typedef Server* ServerHandle;
-			typedef Connection* ConnectionHandle;
 
 		public:
-			SmartServer(const size_t acceptRetry = 10);
+			SmartServer() = delete;
 
+			/**
+			 * \brief	Constructor
+			 *
+			 * \param	minThreadPoolSize	The minimum size of the thread pool. All workers in thread pool
+			 * 								will poll connection to process when free. when all workers in
+			 * 								the thread pool are busy, single task worker will be created to
+			 * 								process the connection. There is no number limit for the single
+			 * 								task worker.
+			 * \param	acceptRetry		 	(Optional) number of retries before shutdown the server. If the
+			 * 								server *continuously* failed to accept connection for
+			 * 								'acceptRetry' times, the server will be automatically shutdown.
+			 */
+			SmartServer(const size_t minThreadPoolSize, Threading::MainThreadAsynWorker& mainThreadWorker, const size_t acceptRetry = 10);
+			
+			/** \brief	Destructor. Terminate will be called here. */
 			virtual ~SmartServer();
 
-			//Thread safe
+			/**
+			 * \brief	Adds a server. A new thread will be created to accept the connection.
+			 *
+			 * \param [in,out]	server 	The server.
+			 * \param 		  	handler	The handler for the incoming connections.
+			 *
+			 * \return	A ServerHandle, which can be used to shutdown the server later.
+			 */
 			virtual ServerHandle AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler);
-			//Thread safe
-			virtual void ShutdownServer(ServerHandle handle) noexcept;
 
-			//Thread safe.
-			virtual void AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler, JobAtCompletedType sameThrJob, JobAtCompletedType mainThrJob);
+			/**
+			 * \brief	Shutdown the specified server. However, the connection that created by this server is
+			 * 			not guaranteed to be terminated. This is determined by the implementation of the
+			 * 			Server::Terminate function.
+			 *
+			 * \param	handle	The server handle.
+			 */
+			virtual void ShutdownServer(ServerHandle handle);
 
+			/**
+			 * \brief	Adds a connection to the thread pool. A processor for this connection will be
+			 * 			created. The processor will be tried to add to the thread pool first. However, if all
+			 * 			workers are busy, it will be added to the single task thread pool.
+			 *
+			 * \param [in,out]	connection	The connection. The ownership of the connection will be transferred to the worker.
+			 * \param 		  	handler   	The handler for the connection.
+			 */
+			virtual void AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler);
+
+			/**
+			 * \brief	Query if this smart server is terminated
+			 *
+			 * \return	True if terminated, false if not.
+			 */
 			virtual bool IsTerminated() const noexcept;
 
-			//Thread safe
-			virtual void Terminate() noexcept;
+			/** \brief	Terminates this smart server */
+			void Terminate() noexcept;
 
-			virtual void Update();
+			/**
+			 * \brief	Gets maximum number of retries to accept connections.
+			 *
+			 * \return	The maximum number of retries to accept connections.
+			 */
+			size_t GetMaxAcceptRetry() const { return m_acceptRetry; }
 
-			virtual void RunUtilUserTerminate();
+			/**
+			 * \brief	Gets minimum thread pool size. See constructor's brief for details.
+			 *
+			 * \return	The minimum thread pool size.
+			 */
+			size_t GetMinThreadPoolSize() const { return m_threadPool.GetMaxPoolSize(); }
+
+		protected:
+			/** \brief	Worker that keeps accepting connection. */
+			virtual void AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler);
+
+			/** \brief	Server cleaner, who cleans the server that has already been shutdown-ed. */
+			virtual void ServerCleaner();
+
+			virtual void ConnectionProcesser(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler) noexcept;
 
 		private:
-			typedef std::map<ServerHandle, std::pair<std::unique_ptr<Server>, std::thread*> > ServerMapType;
-			typedef std::map<ConnectionHandle, std::pair<std::unique_ptr<Connection>, std::thread*> > ConnectionMapType;
+			const size_t m_acceptRetry;
+
+			Threading::MainThreadAsynWorker& m_mainThreadWorker;
+
+			std::vector<std::unique_ptr<std::thread> > m_cleanerPool;
+
+			std::atomic<bool> m_isTerminated;
+
+			Threading::ThreadPool m_threadPool;
+			Threading::SingleTaskThreadPool m_singleTaskPool;
 
 			std::mutex m_serverMapMutex;
-			ServerMapType m_serverMap;
+			std::map<ServerHandle, std::shared_ptr<Server> > m_serverMap;
 
-			std::mutex m_connectionMapMutex;
-			ConnectionMapType m_connectionMap;
-
-			std::mutex m_cleanningMutex;
-			std::condition_variable m_cleaningSignal;
-			std::queue<std::pair<std::unique_ptr<Server>, std::thread*> > m_terminatedServers;
-			std::queue<ConnectionHandle> m_terminatedConnections;
-
-			std::mutex m_mainThrJobMutex;
-			std::condition_variable m_mainThrSignal;
-			std::queue<JobAtCompletedType> m_mainThreadJob;
-
-			std::thread* m_cleanningThread;
-
-			std::atomic<uint8_t> m_isTerminated;
-
-			size_t m_acceptRetry;
-
-			void CleanAll() noexcept;
-			void AddToCleanQueue(std::pair<std::unique_ptr<Server>, std::thread*> server) noexcept;
-			void AddToCleanQueue(ConnectionHandle connection) noexcept;
-			void AddMainThreadJob(JobAtCompletedType mainThrJob);
-
-			void RunMainThrJobs();
+			std::mutex m_serverCleanQueueMutex;
+			std::queue<ServerHandle> m_serverCleanQueue;
+			std::condition_variable m_serverCleanSignal;
 		};
 	}
 }

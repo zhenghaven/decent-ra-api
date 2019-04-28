@@ -21,6 +21,12 @@ namespace Decent
 		class TaskSet;
 		class MainThreadAsynWorker;
 
+		/**
+		 * \brief	A single task thread pool. All threads in this pool will only perform one task. Once
+		 * 			the task is finished, the thread will be joined and cleaned. Thus, as you adding more
+		 * 			tasks to the pool, more threads will be created. Please keep in mind, thread creation
+		 * 			is expensive.
+		 */
 		class SingleTaskThreadPool
 		{
 		public:
@@ -54,7 +60,7 @@ namespace Decent
 			virtual void AddTaskSet(std::unique_ptr<TaskSet>& taskset);
 
 			/** \brief	Terminates this thread pool Note: thread-safe */
-			void Terminate();
+			void Terminate() noexcept;
 
 			/**
 			* \brief	Query if this thread pool is terminated. Note: thread-safe
@@ -63,6 +69,13 @@ namespace Decent
 			*/
 			bool IsTerminated() const noexcept;
 
+			/**
+			 * \brief	Gets number of cleaners.
+			 *
+			 * \return	The number of cleaners.
+			 */
+			size_t GetCleanerNum() const { return m_cleanerNum; }
+
 		protected:
 			virtual void Worker(std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::unique_ptr<TaskSet> > taskPtr);
 
@@ -70,7 +83,7 @@ namespace Decent
 
 		private:
 			const size_t m_cleanerNum;
-			std::vector<std::unique_ptr<std::thread> > m_cleanePool;
+			std::vector<std::unique_ptr<std::thread> > m_cleanerPool;
 
 			std::atomic<bool> m_isTerminated;
 

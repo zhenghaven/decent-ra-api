@@ -10,7 +10,7 @@ using namespace Decent::Threading;
 
 SingleTaskThreadPool::SingleTaskThreadPool(MainThreadAsynWorker & mainThreadWorker, size_t cleanerNum) :
 	m_cleanerNum(cleanerNum),
-	m_cleanePool(),
+	m_cleanerPool(),
 	m_isTerminated(false),
 	m_mainThreadWorker(mainThreadWorker)
 {
@@ -21,7 +21,7 @@ SingleTaskThreadPool::SingleTaskThreadPool(MainThreadAsynWorker & mainThreadWork
 			this->Cleaner();
 		});
 
-		m_cleanePool.push_back(std::move(thr));
+		m_cleanerPool.push_back(std::move(thr));
 	}
 }
 
@@ -57,7 +57,7 @@ void SingleTaskThreadPool::AddTaskSet(std::unique_ptr<TaskSet>& taskset)
 	}
 }
 
-void SingleTaskThreadPool::Terminate()
+void SingleTaskThreadPool::Terminate() noexcept
 {
 	if (m_isTerminated)
 	{
@@ -66,12 +66,21 @@ void SingleTaskThreadPool::Terminate()
 
 	m_isTerminated = true;
 
-	(m_cleanQueueSignal).notify_all();
+	try
+	{
+		(m_cleanQueueSignal).notify_all();
+		for (std::unique_ptr<std::thread>& thr : m_cleanerPool)
+		{
+			try { thr->join(); }
+			catch (const std::exception&) {}
+		}
+	} catch (const std::exception&) {}
 
+	try
 	{
 		std::unique_lock<std::mutex> workerMapLock(m_workerMapMutex);
 		m_workMap.clear();
-	}
+	} catch (const std::exception&) {}
 }
 
 bool SingleTaskThreadPool::IsTerminated() const noexcept
@@ -122,14 +131,14 @@ void SingleTaskThreadPool::Cleaner()
 		}
 
 		std::unique_lock<std::mutex> workerMapLock(m_workerMapMutex);
-		while (m_cleanQueue.size() > 0)
+		while (localCleanQueue.size() > 0)
 		{
-			auto it = m_workMap.find(m_cleanQueue.front());
+			auto it = m_workMap.find(localCleanQueue.front());
 			if (it != m_workMap.end())
 			{
 				m_workMap.erase(it);
 			}
-			m_cleanQueue.pop();
+			localCleanQueue.pop();
 		}
 	}
 }

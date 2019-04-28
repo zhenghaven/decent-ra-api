@@ -34,7 +34,7 @@ void ThreadPool::AddTaskSet(std::unique_ptr<TaskSet>& taskset)
 	AddTaskSetInternal(taskset, true);
 }
 
-void ThreadPool::Terminate()
+void ThreadPool::Terminate() noexcept
 {
 	if (m_isTerminated)
 	{
@@ -44,8 +44,12 @@ void ThreadPool::Terminate()
 	m_isTerminated = true;
 
 	m_taskQueueSignal.notify_all();
-	std::unique_lock<std::mutex> threadPoolLock(m_workerPoolMutex);
-	m_workerPool.clear();
+
+	try
+	{
+		std::unique_lock<std::mutex> threadPoolLock(m_workerPoolMutex);
+		m_workerPool.clear();
+	} catch (const std::exception&) {}
 }
 
 bool ThreadPool::IsTerminated() const noexcept
@@ -64,7 +68,7 @@ bool ThreadPool::AddTaskSetInternal(std::unique_ptr<TaskSet>& taskset, bool addA
 		throw Decent::RuntimeException("AddTask is called when the thread pool is already terminated!");
 	}
 
-	bool gotFreeSpace = GetFreeSpace();
+	bool gotFreeSpace = OccupyFreeSpace();
 
 	if (!gotFreeSpace && (!m_isWorkerPoolFull) && AddWorker(taskset))
 	{
@@ -88,7 +92,7 @@ bool ThreadPool::AddTaskSetInternal(std::unique_ptr<TaskSet>& taskset, bool addA
 	}
 }
 
-bool ThreadPool::GetFreeSpace()
+bool ThreadPool::OccupyFreeSpace()
 {
 	const std::int_fast64_t freeWorker = m_freeWorkerCount--;
 	if (freeWorker <= 0)

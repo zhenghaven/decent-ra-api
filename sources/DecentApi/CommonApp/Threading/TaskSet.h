@@ -35,6 +35,7 @@ namespace Decent
 			TaskSet(TaskType mainTask, TaskType mainTaskKiller, 
 			TaskType finalMainThreadTask = TaskType());
 
+			/** \brief	Destructor */
 			virtual ~TaskSet();
 
 			/**

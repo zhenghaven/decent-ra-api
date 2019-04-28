@@ -21,6 +21,14 @@ namespace Decent
 		class TaskSet;
 		class MainThreadAsynWorker;
 
+		/**
+		 * \brief	A thread pool. There are limited number of workers (i.e. threads) in this pool. All
+		 * 			the tasks will be put into a task pool, and workers will grab tasks from the pool
+		 * 			once they are free. Thus, please keep in mind that if the task is very long, it will
+		 * 			occupy the worker, and tasks in the pool will no be able to be executed. Moreover, an
+		 * 			attempt adding task function is given, so that, if all worker are busy at the moment,
+		 * 			the task will not be added to the pool.
+		 */
 		class ThreadPool
 		{
 		public:
@@ -72,7 +80,7 @@ namespace Decent
 			virtual void AddTaskSet(std::unique_ptr<TaskSet>& taskset);
 
 			/** \brief	Terminates this thread pool Note: thread-safe */
-			void Terminate();
+			void Terminate() noexcept;
 
 			/**
 			 * \brief	Query if this thread pool is terminated. Note: thread-safe
@@ -80,6 +88,13 @@ namespace Decent
 			 * \return	True if terminated, false if not.
 			 */
 			bool IsTerminated() const noexcept;
+
+			/**
+			 * \brief	Gets maximum pool size
+			 *
+			 * \return	The maximum pool size.
+			 */
+			size_t GetMaxPoolSize() const { return m_maxPoolSize; }
 
 		protected:
 			virtual bool AddTaskSetInternal(std::unique_ptr<TaskSet>& taskset, bool addAnyway);
@@ -89,7 +104,7 @@ namespace Decent
 			 *
 			 * \return	True if it succeeds, false if it fails.
 			 */
-			virtual bool GetFreeSpace();
+			virtual bool OccupyFreeSpace();
 
 			/**
 			 * \brief	Check if worker count approached the max number workers. If not, add a new worker and
