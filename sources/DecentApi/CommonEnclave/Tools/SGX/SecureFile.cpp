@@ -1,8 +1,10 @@
-#include "../Tools/SecureFile.h"
+//#if ENCLAVE_PLATFORM_SGX
+
+#include "../SecureFile.h"
 
 #include <sgx_tprotected_fs.h>
 
-#include "../../Common/make_unique.h"
+#include "../../../Common/make_unique.h"
 
 using namespace Decent;
 using namespace Decent::Tools;
@@ -137,3 +139,5 @@ size_t WritableSecureFile::WriteBlockRaw(const void * buffer, const size_t size)
 {
 	return IsOpen() ? sgx_fwrite(buffer, sizeof(uint8_t), size, static_cast<SGX_FILE*>(GetFilePtr())) : THROW_FILE_NOT_OPENED_EXCEPTION;
 }
+
+//#endif //ENCLAVE_PLATFORM_SGX
