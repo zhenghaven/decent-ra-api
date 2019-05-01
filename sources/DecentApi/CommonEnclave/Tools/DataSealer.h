@@ -37,7 +37,11 @@ namespace Decent
 				 */
 				std::vector<uint8_t> PlatformDeriveSealKey(KeyPolicy keyPolicy, const std::vector<uint8_t>& meta);
 
-				void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, void* outKey, size_t outKeySize, const std::vector<uint8_t>& salt, const std::vector<uint8_t>& meta);
+				void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, void* outKey, const size_t expectedKeySize, const std::vector<uint8_t>& salt, const std::vector<uint8_t>& meta);
+
+				std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize);
+
+				void UnsealData(KeyPolicy keyPolicy, const void* inEncData, const size_t inEncDataSize, std::vector<uint8_t>& meta, std::vector<uint8_t>& data);
 			}
 
 			/**
@@ -70,6 +74,38 @@ namespace Decent
 			void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, KeyT& outKey, const std::vector<uint8_t>& salt, const std::vector<uint8_t>& meta)
 			{
 				detail::DeriveSealKey(keyPolicy, label, ArrayPtrAndSize::GetPtr(outKey), ArrayPtrAndSize::GetSize(outKey), salt, meta);
+			}
+
+			/**
+			 * \brief	Seal data
+			 *
+			 * \tparam	MetaCtn	Container type that stores the metadata.
+			 * \tparam	DataCtn	Container type that stores the data.
+			 * \param	keyPolicy	The key policy.
+			 * \param	metadata 	The metadata.
+			 * \param	data	 	The data.
+			 *
+			 * \return	A std::vector&lt;uint8_t&gt;, the sealed data.
+			 */
+			template<typename MetaCtn, typename DataCtn>
+			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const MetaCtn& metadata, const DataCtn& data)
+			{
+				return detail::SealData(keyPolicy, ArrayPtrAndSize::GetPtr(metadata), ArrayPtrAndSize::GetSize(metadata), ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data));
+			}
+
+			/**
+			 * \brief	Unseal data
+			 *
+			 * \tparam	SealedDataCtn	Container type that stores the sealed data .
+			 * \param 	   	keyPolicy	The key policy.
+			 * \param 	   	inData   	Input, sealed data.
+			 * \param [out]	metadata 	The metadata.
+			 * \param [out]	data	 	The data.
+			 */
+			template<typename SealedDataCtn>
+			void UnsealData(KeyPolicy keyPolicy, const SealedDataCtn& inData, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data)
+			{
+				detail::UnsealData(keyPolicy, ArrayPtrAndSize::GetPtr(inData), ArrayPtrAndSize::GetSize(inData), metadata, data);
 			}
 		}
 	}
