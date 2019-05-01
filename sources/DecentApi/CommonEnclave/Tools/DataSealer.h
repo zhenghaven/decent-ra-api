@@ -39,9 +39,9 @@ namespace Decent
 
 				void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, void* outKey, const size_t expectedKeySize, const std::vector<uint8_t>& salt, const std::vector<uint8_t>& meta);
 
-				std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize);
+				std::vector<uint8_t> SealData(KeyPolicy keyPolicy, std::vector<uint8_t>& outMac, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize);
 
-				void UnsealData(KeyPolicy keyPolicy, const void* inEncData, const size_t inEncDataSize, std::vector<uint8_t>& meta, std::vector<uint8_t>& data);
+				void UnsealData(KeyPolicy keyPolicy, const void* inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& meta, std::vector<uint8_t>& data);
 			}
 
 			/**
@@ -81,16 +81,18 @@ namespace Decent
 			 *
 			 * \tparam	MetaCtn	Container type that stores the metadata.
 			 * \tparam	DataCtn	Container type that stores the data.
-			 * \param	keyPolicy	The key policy.
-			 * \param	metadata 	The metadata.
-			 * \param	data	 	The data.
+			 * \param 	   	keyPolicy	The key policy.
+			 * \param [out]	outMac   	The output MAC. The MAC generated when sealing the data. This can be
+			 * 							used to prevent replay attack during unseal process.
+			 * \param 	   	metadata 	The metadata.
+			 * \param 	   	data	 	The data.
 			 *
 			 * \return	A std::vector&lt;uint8_t&gt;, the sealed data.
 			 */
 			template<typename MetaCtn, typename DataCtn>
-			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const MetaCtn& metadata, const DataCtn& data)
+			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, std::vector<uint8_t>& outMac, const MetaCtn& metadata, const DataCtn& data)
 			{
-				return detail::SealData(keyPolicy, ArrayPtrAndSize::GetPtr(metadata), ArrayPtrAndSize::GetSize(metadata), ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data));
+				return detail::SealData(keyPolicy, outMac, ArrayPtrAndSize::GetPtr(metadata), ArrayPtrAndSize::GetSize(metadata), ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data));
 			}
 
 			/**
@@ -99,13 +101,16 @@ namespace Decent
 			 * \tparam	SealedDataCtn	Container type that stores the sealed data .
 			 * \param 	   	keyPolicy	The key policy.
 			 * \param 	   	inData   	Input, sealed data.
+			 * \param 	   	inMac	 	The input MAC. If the size of the container is greater than zero, the
+			 * 							MAC retrieved from the sealed data will be compared with the input
+			 * 							MAC.
 			 * \param [out]	metadata 	The metadata.
 			 * \param [out]	data	 	The data.
 			 */
 			template<typename SealedDataCtn>
-			void UnsealData(KeyPolicy keyPolicy, const SealedDataCtn& inData, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data)
+			void UnsealData(KeyPolicy keyPolicy, const SealedDataCtn& inData, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data)
 			{
-				detail::UnsealData(keyPolicy, ArrayPtrAndSize::GetPtr(inData), ArrayPtrAndSize::GetSize(inData), metadata, data);
+				detail::UnsealData(keyPolicy, ArrayPtrAndSize::GetPtr(inData), ArrayPtrAndSize::GetSize(inData), inMac, metadata, data);
 			}
 		}
 	}

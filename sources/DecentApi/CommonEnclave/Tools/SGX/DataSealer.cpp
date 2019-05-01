@@ -220,7 +220,7 @@ namespace
 	}
 }
 
-std::vector<uint8_t> DataSealer::detail::SealData(KeyPolicy keyPolicy, const void* inMetadata, const size_t inMetadataSize, const void * inData, const size_t inDataSize)
+std::vector<uint8_t> DataSealer::detail::SealData(KeyPolicy keyPolicy, std::vector<uint8_t>& outMac, const void* inMetadata, const size_t inMetadataSize, const void * inData, const size_t inDataSize)
 {
 	if ((inMetadataSize > 0 && !inMetadata) || (inDataSize > 0 && !inData))
 	{
@@ -264,19 +264,24 @@ std::vector<uint8_t> DataSealer::detail::SealData(KeyPolicy keyPolicy, const voi
 	std::memcpy(&res[0], gsk_sgxSealedDataLabel, sizeof(gsk_sgxSealedDataLabel));
 
 	uint8_t* outputpkgData = &res[sizeof(gsk_sgxSealedDataLabel)];
+	sgx_sealed_data_t& sealedDataRef = *reinterpret_cast<sgx_sealed_data_t*>(outputpkgData);
 
 	sgx_status_t sgxRet = sgx_seal_data_ex(key_policy, attribute_mask, misc_mask, 0, nullptr,
 		static_cast<uint32_t>(inputPkg.size()), inputPkg.data(),
-		encOutSize, reinterpret_cast<sgx_sealed_data_t*>(outputpkgData));
+		encOutSize, &sealedDataRef);
 	if (sgxRet != SGX_SUCCESS)
 	{
 		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_seal_data_ex"));
 	}
 
+	outMac.resize(0);
+	outMac.reserve(sizeof(sealedDataRef.aes_data.payload_tag));
+	outMac.insert(outMac.end(), std::begin(sealedDataRef.aes_data.payload_tag), std::end(sealedDataRef.aes_data.payload_tag));
+
 	return res;
 }
 
-void DataSealer::detail::UnsealData(KeyPolicy keyPolicy, const void * inEncData, const size_t inEncDataSize, std::vector<uint8_t>& meta, std::vector<uint8_t>& data)
+void DataSealer::detail::UnsealData(KeyPolicy keyPolicy, const void * inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& meta, std::vector<uint8_t>& data)
 {
 	if (!inEncData)
 	{
@@ -299,6 +304,16 @@ void DataSealer::detail::UnsealData(KeyPolicy keyPolicy, const void * inEncData,
 	if (pkgSize == UINT32_MAX)
 	{
 		throw RuntimeException("Invalid sealed data is given to function DataSealer::detail::UnsealData.");
+	}
+
+	if (inMac.size() > 0)
+	{
+		//We want to verify the MAC first.
+		if (inMac.size() != sizeof(sealedDataRef.aes_data.payload_tag) ||
+			!consttime_memequal(inMac.data(), sealedDataRef.aes_data.payload_tag, inMac.size()))
+		{
+			throw RuntimeException("Invalid sealed data is given to function DataSealer::detail::UnsealData.");
+		}
 	}
 
 	std::vector<uint8_t> pkg(pkgSize);
