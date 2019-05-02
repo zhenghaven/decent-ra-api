@@ -4,7 +4,7 @@
 
 #include "Crypto.h"
 #include "States.h"
-#include "WhiteList/Loaded.h"
+#include "WhiteList/LoadedList.h"
 
 using namespace Decent::Ra;
 
@@ -43,7 +43,7 @@ int TlsConfigWithName::VerifyDecentAppCert(const AppX509 & cert, int depth, uint
 	}
 
 	//Check Loaded Lists are equivalent
-	StaticTypeList peerLoadedList(Loaded::ParseWhiteListFromJson(cert.GetWhiteList()));
+	StaticList peerLoadedList(LoadedList::ParseWhiteListFromJson(cert.GetWhiteList()));
 	if (peerLoadedList != GetState().GetLoadedWhiteList())
 	{
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;

@@ -4,7 +4,7 @@
 
 #include "../../Common/Ra/Crypto.h"
 #include "../../Common/Ra/States.h"
-#include "../../Common/Ra/WhiteList/Loaded.h"
+#include "../../Common/Ra/WhiteList/LoadedList.h"
 
 #include "../Tools/Crypto.h"
 
@@ -30,7 +30,7 @@ int TlsConfigSameEnclave::VerifyDecentAppCert(const AppX509 & cert, int depth, u
 	}
 
 	//Check Loaded Lists are equivalent
-	StaticTypeList peerLoadedList(Loaded::ParseWhiteListFromJson(cert.GetWhiteList()));
+	StaticList peerLoadedList(LoadedList::ParseWhiteListFromJson(cert.GetWhiteList()));
 	if (peerLoadedList != GetState().GetLoadedWhiteList())
 	{
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;

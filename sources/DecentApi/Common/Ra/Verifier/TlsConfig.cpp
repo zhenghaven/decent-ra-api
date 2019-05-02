@@ -3,7 +3,7 @@
 #include <mbedtls/ssl.h>
 
 #include "../States.h"
-#include "../WhiteList/Loaded.h"
+#include "../WhiteList/LoadedList.h"
 
 #include "Crypto.h"
 
@@ -83,7 +83,7 @@ int TlsConfig::VerifyDecentAppCert(const Decent::Ra::AppX509 & cert, int depth, 
 	}
 
 	//Check Loaded Lists are equivalent
-	StaticTypeList peerLoadedList(Loaded::ParseWhiteListFromJson(cert.GetWhiteList()));
+	StaticList peerLoadedList(LoadedList::ParseWhiteListFromJson(cert.GetWhiteList()));
 	if (peerLoadedList <= GetState().GetLoadedWhiteList())
 	{
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
@@ -104,7 +104,7 @@ int TlsConfig::VerifyDecentVerifiedAppCert(const Decent::Ra::Verifier::AppX509& 
 	}
 
 	//Check Loaded Lists are equivalent
-	StaticTypeList peerLoadedList(Loaded::ParseWhiteListFromJson(cert.GetWhiteList()));
+	StaticList peerLoadedList(LoadedList::ParseWhiteListFromJson(cert.GetWhiteList()));
 	if (GetState().GetLoadedWhiteList() != peerLoadedList)
 	{
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;

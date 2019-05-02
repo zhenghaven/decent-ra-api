@@ -3,7 +3,7 @@
 
 #include "KeyContainer.h"
 #include "CertContainer.h"
-#include "WhiteList/Loaded.h"
+#include "WhiteList/LoadedList.h"
 #include "WhiteList/DecentServer.h"
 
 using namespace Decent::Ra;
@@ -28,9 +28,9 @@ namespace
 		return inst;
 	}
 
-	static const WhiteList::Loaded& GetLoadedWhiteListImpl(WhiteList::Loaded* instPtr)
+	static const WhiteList::LoadedList& GetLoadedWhiteListImpl(WhiteList::LoadedList* instPtr)
 	{
-		static const WhiteList::Loaded inst(instPtr);
+		static const WhiteList::LoadedList inst(instPtr);
 		return inst;
 	}
 }

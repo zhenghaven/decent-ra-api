@@ -16,7 +16,7 @@ namespace Decent
 	{
 		namespace WhiteList
 		{
-			class StaticTypeList;
+			class StaticList;
 		}
 	}
 
@@ -91,7 +91,7 @@ namespace Decent
 			const ConfigItem* GetItemPtr(const std::string name) const;
 			const ConfigItem& GetItem(const std::string name) const;
 
-			const Ra::WhiteList::StaticTypeList& GetLoadedWhiteList() const { return *m_loadedWhiteList; }
+			const Ra::WhiteList::StaticList& GetLoadedWhiteList() const { return *m_loadedWhiteList; }
 			std::string GetLoadedWhiteListStr() const;
 
 		protected:
@@ -99,7 +99,7 @@ namespace Decent
 
 		private:
 			std::map<std::string, std::unique_ptr<ConfigItem> > m_configMap;
-			std::unique_ptr<const Ra::WhiteList::StaticTypeList> m_loadedWhiteList;
+			std::unique_ptr<const Ra::WhiteList::StaticList> m_loadedWhiteList;
 		};
 	}
 }
