@@ -168,6 +168,16 @@ void DataSealer::detail::UnsealData(KeyPolicy keyPolicy, const Ra::States & dece
 		throw RuntimeException("Sealed data with invalid size is given to function DataSealer::detail::UnsealData.");
 	}
 
+	if (inMac.size() > 0)
+	{
+		//We want to verify the MAC first.
+		if (inMac.size() != sizeof(general_128bit_tag) ||
+			!consttime_memequal(inMac.data(), sealedMacPtr, inMac.size()))
+		{
+			throw RuntimeException("Invalid sealed data is given to function DataSealer::detail::UnsealData.");
+		}
+	}
+
 	std::vector<uint8_t> unsealedPkg(sealedPayloadSize);
 
 	General128BitKey sealKey;
