@@ -3,7 +3,6 @@
 #include "SecureConnectionPoolBase.h"
 
 #include <list>
-#include <queue>
 #include <map>
 #include <mutex>
 
@@ -22,7 +21,7 @@ namespace Decent
 		public: //static member:
 			//typedef uint64_t MapKeyType;
 			typedef std::list<std::pair<CntPair, typename MapKeyType> > CntPoolType;
-			typedef std::map<typename MapKeyType, std::queue<typename CntPoolType::iterator> > PoolIndexType;
+			typedef std::map<typename MapKeyType, std::list<typename CntPoolType::iterator> > PoolIndexType;
 
 		public:
 			SecureConnectionPool(size_t maxInCnt, size_t maxOutCnt) :
@@ -58,19 +57,22 @@ namespace Decent
 				auto idxIt = m_poolIndex.find(addr);
 				if (idxIt == m_poolIndex.end() || idxIt->second.size() == 0)
 				{
-					//No available connection in pool.
+					//No available connection in the pool.
 					cntPoolLock.unlock();
 					return GetNew(addr, state);
 				}
 				else
 				{
-					//Connection is available in pool.
+					//Connection is available in the pool.
 					auto poolIt = idxIt->second.front();
 					CntPair res = std::move(poolIt->first);
 
 					m_cntPool.erase(poolIt);
 					m_outCntCount--;
-					RemoveIndex(m_poolIndex, idxIt);
+					RemoveIndexFront(m_poolIndex, idxIt);
+
+					//!!!!! We done with the pool, unlock it.
+					cntPoolLock.unlock();
 
 					try
 					{
@@ -80,6 +82,49 @@ namespace Decent
 					{
 						//Peer closed the connection
 						return GetNew(addr, state);
+					}
+
+					return res;
+				}
+			}
+
+			virtual CntPair GetAny(const MapKeyType& fallbackAddr, Ra::States& state, MapKeyType& cntedAddr)
+			{
+				std::unique_lock<std::mutex> cntPoolLock(m_cntPoolMutex);
+				if (m_cntPool.size() == 0)
+				{
+					//No connection available, fallback to new connection.
+					cntPoolLock.unlock();
+					cntedAddr = fallbackAddr;
+					return GetNew(fallbackAddr, state);
+				}
+				else
+				{
+					//Some Connection is available in the pool.
+					
+					CntPair res = std::move(m_cntPool.back().first);  //Get newly added connection pair.
+					cntedAddr = m_cntPool.back().second;              //Get the address for this connectino pair.
+					auto idxIt = m_poolIndex.find(cntedAddr);         //Find its index.
+					if (idxIt != m_poolIndex.end())
+					{
+						RemoveIndexBack(m_poolIndex, idxIt); //Remove the index.
+					}
+					
+					m_cntPool.pop_back(); //Remove the item from the pool.
+					m_outCntCount--;
+
+					//!!!!! We done with the pool, unlock it.
+					cntPoolLock.unlock();
+
+					try
+					{
+						SecureConnectionPoolBase::ClientWakePeer(res);
+					}
+					catch (const std::exception&)
+					{
+						//Peer closed the connection
+						cntedAddr = fallbackAddr;
+						return GetNew(fallbackAddr, state);
 					}
 
 					return res;
@@ -110,7 +155,7 @@ namespace Decent
 				auto it = m_cntPool.end();
 				it--;
 
-				m_poolIndex[addr].push(it);
+				m_poolIndex[addr].push_back(it);
 			}
 
 			virtual void RemoveOldest()
@@ -120,7 +165,7 @@ namespace Decent
 				auto it = m_poolIndex.find(m_cntPool.front().second);
 				if (it != m_poolIndex.end())
 				{
-					RemoveIndex(m_poolIndex, it);
+					RemoveIndexFront(m_poolIndex, it);
 				}
 
 				m_cntPool.pop_front();
@@ -128,7 +173,7 @@ namespace Decent
 				m_outCntCount--;
 			}
 
-			static void RemoveIndex(PoolIndexType& poolIdx, typename PoolIndexType::iterator& idxIt)
+			static void RemoveIndexFront(PoolIndexType& poolIdx, typename PoolIndexType::iterator& idxIt)
 			{
 				if (idxIt->second.size() <= 1)
 				{
@@ -136,7 +181,19 @@ namespace Decent
 				}
 				else
 				{
-					idxIt->second.pop();
+					idxIt->second.pop_front();
+				}
+			}
+
+			static void RemoveIndexBack(PoolIndexType& poolIdx, typename PoolIndexType::iterator& idxIt)
+			{
+				if (idxIt->second.size() <= 1)
+				{
+					poolIdx.erase(idxIt);
+				}
+				else
+				{
+					idxIt->second.pop_back();
 				}
 			}
 
