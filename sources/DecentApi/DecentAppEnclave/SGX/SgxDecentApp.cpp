@@ -13,7 +13,7 @@
 #include "../../Common/Tools/DataCoding.h"
 #include "../../Common/Ra/Crypto.h"
 #include "../../Common/Ra/KeyContainer.h"
-#include "../../Common/Ra/WhiteList/Loaded.h"
+#include "../../Common/Ra/WhiteList/LoadedList.h"
 #include "../../Common/Ra/WhiteList/DecentServer.h"
 
 #include "../AppStatesSingleton.h"
@@ -81,7 +81,7 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		}
 
 		//Set loaded whitelist.
-		WhiteList::Loaded loadedList(*cert);
+		WhiteList::LoadedList loadedList(*cert);
 		gs_appStates.GetLoadedWhiteList(&loadedList);
 
 		gs_appStates.GetAppCertContainer().SetAppCert(cert);

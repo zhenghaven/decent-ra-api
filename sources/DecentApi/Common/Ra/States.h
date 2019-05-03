@@ -10,13 +10,13 @@ namespace Decent
 		namespace WhiteList
 		{
 			class DecentServer;
-			class Loaded;
+			class LoadedList;
 		}
 
 		class States
 		{
 		public:
-			typedef const WhiteList::Loaded& (*GetLoadedWlFunc)(WhiteList::Loaded*);
+			typedef const WhiteList::LoadedList& (*GetLoadedWlFunc)(WhiteList::LoadedList*);
 
 		public:
 			States(CertContainer & certCntnr, KeyContainer & keyCntnr, WhiteList::DecentServer & serverWl, GetLoadedWlFunc getLoadedFunc) :
@@ -55,7 +55,7 @@ namespace Decent
 				return m_serverWhiteList;
 			}
 
-			const WhiteList::Loaded& GetLoadedWhiteList(WhiteList::Loaded* loadedPtr = nullptr) const
+			const WhiteList::LoadedList& GetLoadedWhiteList(WhiteList::LoadedList* loadedPtr = nullptr) const
 			{
 				return (*m_getLoadedFunc)(loadedPtr);
 			}

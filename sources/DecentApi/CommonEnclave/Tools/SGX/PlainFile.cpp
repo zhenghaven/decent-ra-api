@@ -1,7 +1,9 @@
-#include "../Tools/PlainFile.h"
+//#if ENCLAVE_PLATFORM_SGX
 
-#include "../../Common/SGX/RuntimeError.h"
-#include "edl_decent_file_system.h"
+#include "../PlainFile.h"
+
+#include "../../../Common/SGX/RuntimeError.h"
+#include "../../SGX/edl_decent_file_system.h"
 
 using namespace Decent::Tools;
 
@@ -139,3 +141,5 @@ size_t WritablePlainFile::WriteBlockRaw(const void * buffer, const size_t size)
 {
 	return IsOpen() ? OcallFwrite(buffer, size, GetFilePtr()) : THROW_FILE_NOT_OPENED_EXCEPTION;
 }
+
+//#endif //ENCLAVE_PLATFORM_SGX

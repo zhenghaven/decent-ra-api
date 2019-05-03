@@ -3,7 +3,7 @@
 #include <json/json.h>
 
 #include "../../Common/Tools/JsonTools.h"
-#include "../../Common/Ra/WhiteList/StaticTypeList.h"
+#include "../../Common/Ra/WhiteList/StaticList.h"
 
 using namespace Decent::Tools;
 using namespace Decent::Ra::WhiteList;
@@ -110,7 +110,7 @@ namespace
 		return std::move(res);
 	}
 
-	static std::string ConstructLoadedWhiteListStr(const StaticTypeList& whiteList)
+	static std::string ConstructLoadedWhiteListStr(const StaticList& whiteList)
 	{
 		JsonDoc jsonDoc;
 		whiteList.ToJson(jsonDoc);
@@ -167,7 +167,7 @@ const ConfigItem & Decent::Tools::ConfigManager::GetItem(const std::string name)
 
 ConfigManager::ConfigManager(std::map<std::string, std::unique_ptr<ConfigItem> >&& configMap) :
 	m_configMap(std::forward<std::map<std::string, std::unique_ptr<ConfigItem> > >(configMap)),
-	m_loadedWhiteList(std::make_unique<StaticTypeList>(ConstructLoadedWhiteList(m_configMap)))
+	m_loadedWhiteList(std::make_unique<StaticList>(ConstructLoadedWhiteList(m_configMap)))
 {
 }
 
