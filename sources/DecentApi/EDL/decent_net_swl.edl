@@ -1,0 +1,18 @@
+enclave {
+	
+	untrusted {
+		int ocall_decent_net_cnet_send_pack([user_check] void* ptr, [in, size = size] const char* msg, size_t size) transition_using_threads;
+		
+		int ocall_decent_net_cnet_recv_pack([out] size_t* recv_size, [user_check] void* ptr, [out] char** msg) transition_using_threads;
+
+		int ocall_decent_net_cnet_send_and_recv_pack([user_check] void* ptr, [in, size = in_size] const char* in_msg, size_t in_size, 
+		[out] char** out_msg, [out] size_t* out_size) transition_using_threads;
+		
+		int ocall_decent_net_cnet_send_raw([out] size_t* sent_size, [user_check] void* ptr, [in, size = size] const char* msg, size_t size) transition_using_threads;
+		
+		int ocall_decent_net_cnet_recv_raw([out] size_t* recv_size, [user_check] void* ptr, [out, size = buf_size] char* buf, size_t buf_size) transition_using_threads;
+		
+		void ocall_decent_net_cnet_close([user_check] void* cnt_ptr) transition_using_threads;
+	};
+
+};
