@@ -25,7 +25,7 @@ namespace Decent
 			 * \param [in,out]	connectionPtr	The connection pointer that provides connection to the peer.
 			 * \param 		  	isInitiator  	True if is initiator, false if not.
 			 */
-			LocAttCommLayer(void* const connectionPtr, bool isInitiator);
+			LocAttCommLayer(Decent::Net::ConnectionBase& cnt, bool isInitiator);
 
 			LocAttCommLayer(const LocAttCommLayer& other) = delete;
 
@@ -74,31 +74,31 @@ namespace Decent
 			/**
 			 * \brief	Perform the handshakes procedure (i.e. local attestation).
 			 *
-			 * \param [in,out]	connectionPtr	The connection pointer that provides connection to the peer.
-			 * \param 		  	isInitiator  	True if is initiator, false if not.
+			 * \param [in,out]	cnt		   	The connection to the peer.
+			 * \param 		  	isInitiator	True if is initiator, false if not.
 			 *
 			 * \return	A std::pair&lt;std::unique_ptr&lt;General128BitKey&gt;,std::unique_ptr&lt;
 			 * 			sgx_dh_session_enclave_identity_t&gt; &gt;
 			 */
-			std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > Handshake(void* const connectionPtr, bool isInitiator);
+			std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > Handshake(Decent::Net::ConnectionBase& cnt, bool isInitiator);
 
 			/**
 			 * \brief	Perform the handshakes procedure in initiator side.
 			 *
-			 * \param [in,out]	connectionPtr	If non-null, the connection pointer.
+			 * \param [in,out]	cnt		   	The connection to the peer.
 			 * \param [in,out]	outKey		 	The out key.
 			 * \param [in,out]	outIdentity  	The out identity.
 			 */
-			static void InitiatorHandshake(void * const connectionPtr, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity);
+			static void InitiatorHandshake(Decent::Net::ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity);
 
 			/**
 			 * \brief	Perform the handshakes procedure in responder side.
 			 *
-			 * \param [in,out]	connectionPtr	If non-null, the connection pointer.
+			 * \param [in,out]	cnt		   	The connection to the peer.
 			 * \param [in,out]	outKey		 	The out key.
 			 * \param [in,out]	outIdentity  	The out identity.
 			 */
-			static void ResponderHandshake(void * const connectionPtr, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity);
+			static void ResponderHandshake(Decent::Net::ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity);
 
 			std::unique_ptr<sgx_dh_session_enclave_identity_t> m_identity;
 		};

@@ -31,5 +31,7 @@ namespace Decent
 		const char* GetErrorSolution(const sgx_status_t code);
 
 		std::string ConstructErrorMsg(sgx_status_t errCode, const std::string& funcName);
+
+		std::string ConstructSimpleErrorMsg(sgx_status_t errCode, const std::string& funcName);
 	}
 }

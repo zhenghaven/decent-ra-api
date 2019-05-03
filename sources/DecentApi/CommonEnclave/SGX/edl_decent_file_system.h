@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-	sgx_status_t SGX_CDECL ocall_decent_tools_fopen(void** retval, const char* filename, const char* mode);
+	sgx_status_t SGX_CDECL ocall_decent_tools_fopen(void** retval, const char* filename, const char* mode, int is_exclusive);
 	sgx_status_t SGX_CDECL ocall_decent_tools_fclose(int* retval, void* file);
 	sgx_status_t SGX_CDECL ocall_decent_tools_fflush(int* retval, void* file);
 	sgx_status_t SGX_CDECL ocall_decent_tools_fseek(int* retval, void* file, int64_t offset, int origin);

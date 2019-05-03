@@ -4,7 +4,7 @@ enclave
 
 	untrusted
 	{
-		void*  ocall_decent_tools_fopen([in, string] const char* filename, [in, string] const char* mode);
+		void*  ocall_decent_tools_fopen([in, string] const char* filename, [in, string] const char* mode, int is_exclusive);
 
 		int    ocall_decent_tools_fclose([user_check] void* file);
 

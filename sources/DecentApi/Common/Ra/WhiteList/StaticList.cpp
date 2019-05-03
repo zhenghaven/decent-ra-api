@@ -1,4 +1,4 @@
-#include "StaticTypeList.h"
+#include "StaticList.h"
 
 #include <algorithm>
 
@@ -14,7 +14,7 @@
 using namespace Decent::Ra::WhiteList;
 using namespace Decent::Tools;
 
-StaticTypeList::StaticTypeList(const WhiteListType & whiteList) :
+StaticList::StaticList(const WhiteListType & whiteList) :
 	m_listMap(whiteList)
 {
 //#ifdef DEBUG
@@ -27,7 +27,7 @@ StaticTypeList::StaticTypeList(const WhiteListType & whiteList) :
 //#endif // DEBUG
 }
 
-StaticTypeList::StaticTypeList(WhiteListType && whiteList) :
+StaticList::StaticList(WhiteListType && whiteList) :
 	m_listMap(std::forward<WhiteListType>(whiteList))
 {
 //#ifdef DEBUG
@@ -40,16 +40,24 @@ StaticTypeList::StaticTypeList(WhiteListType && whiteList) :
 //#endif // DEBUG
 }
 
-StaticTypeList::~StaticTypeList()
+StaticList::StaticList(const StaticList & rhs) :
+	m_listMap(rhs.m_listMap)
+{}
+
+StaticList::StaticList(StaticList && rhs) :
+	m_listMap(std::forward<WhiteListType>(rhs.m_listMap))
+{}
+
+StaticList::~StaticList()
 {
 }
 
-const WhiteListType & StaticTypeList::GetMap() const
+const WhiteListType & StaticList::GetMap() const
 {
 	return m_listMap;
 }
 
-bool StaticTypeList::CheckHash(const std::string & hashStr, std::string & outAppName) const
+bool StaticList::CheckHash(const std::string & hashStr, std::string & outAppName) const
 {
 #ifndef DEBUG
 	auto it = m_listMap.find(hashStr);
@@ -65,7 +73,7 @@ bool StaticTypeList::CheckHash(const std::string & hashStr, std::string & outApp
 #endif
 }
 
-bool StaticTypeList::CheckHashAndName(const std::string & hashStr, const std::string & appName) const
+bool StaticList::CheckHashAndName(const std::string & hashStr, const std::string & appName) const
 {
 #ifndef DEBUG
 	auto it = m_listMap.find(hashStr);
@@ -78,13 +86,13 @@ bool StaticTypeList::CheckHashAndName(const std::string & hashStr, const std::st
 
 }
 
-bool StaticTypeList::IsEquivalentSetOf(const WhiteListType & otherMap) const
+bool StaticList::IsEquivalentSetOf(const WhiteListType & otherMap) const
 {
 	return (m_listMap.size() == otherMap.size()) && //Quick pre-check: two sets must have the same size.
 		std::equal(m_listMap.begin(), m_listMap.end(), otherMap.begin());
 }
 
-bool StaticTypeList::IsSubsetOf(const WhiteListType & rhs) const
+bool StaticList::IsSubsetOf(const WhiteListType & rhs) const
 {//Check if 'this instance' is a subset of 'rhs'.
 
 	// Quick pre-check:
@@ -97,27 +105,27 @@ bool StaticTypeList::IsSubsetOf(const WhiteListType & rhs) const
 	return std::includes(rhs.begin(), rhs.end(), this->m_listMap.begin(), this->m_listMap.end());
 }
 
-bool StaticTypeList::operator==(const StaticTypeList & rhs) const
+bool StaticList::operator==(const StaticList & rhs) const
 {
 	return IsEquivalentSetOf(rhs);
 }
 
-bool StaticTypeList::operator!=(const StaticTypeList & rhs) const
+bool StaticList::operator!=(const StaticList & rhs) const
 {
 	return !(*this == rhs);
 }
 
-bool StaticTypeList::operator>=(const StaticTypeList & rhs) const
+bool StaticList::operator>=(const StaticList & rhs) const
 {
 	return (rhs <= *this);
 }
 
-bool StaticTypeList::operator<=(const StaticTypeList & rhs) const
+bool StaticList::operator<=(const StaticList & rhs) const
 {
 	return this->IsSubsetOf(rhs);
 }
 
-JsonValue & StaticTypeList::ToJson(JsonDoc & jsonDoc) const
+JsonValue & StaticList::ToJson(JsonDoc & jsonDoc) const
 {
 	for (auto it = m_listMap.begin(); it != m_listMap.end(); ++it)
 	{

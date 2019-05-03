@@ -16,7 +16,7 @@
 
 #include "../../Common/Common.h"
 #include "../../Common/Tools/DataCoding.h"
-#include "../../Common/Net/Connection.h"
+#include "../../Common/Net/ConnectionBase.h"
 #include "../../Common/SGX/sgx_structs.h"
 #include "../../Common/SGX/RuntimeError.h"
 #include "../Base/EnclaveException.h"
@@ -137,7 +137,7 @@ bool EnclaveBase::LoadToken(const fs::path& tokenPath, std::vector<uint8_t>& out
 	outToken.resize(sizeof(sgx_launch_token_t), 0);
 	try
 	{
-		DiskFile tokenFile(tokenPath, FileBase::Mode::Read);
+		DiskFile tokenFile(tokenPath, FileBase::Mode::Read, true);
 		tokenFile.ReadBlockExactSize(outToken);
 		return true;
 	}
@@ -152,7 +152,7 @@ bool EnclaveBase::UpdateToken(const fs::path& tokenPath, const std::vector<uint8
 {
 	try
 	{
-		WritableDiskFile tokenFile(tokenPath, WritableFileBase::WritableMode::Write);
+		WritableDiskFile tokenFile(tokenPath, WritableFileBase::WritableMode::Write, true);
 		tokenFile.WriteBlockExactSize(inToken);
 		return true;
 	}
@@ -220,7 +220,7 @@ extern "C" int ocall_decent_sgx_ra_send_msg0s(void* const connection_ptr)
 			return false;
 		}
 
-		StatConnection::SendPack(connection_ptr, &msg0s, sizeof(msg0s));
+		static_cast<ConnectionBase*>(connection_ptr)->SendPack(&msg0s, sizeof(msg0s));
 
 		return true;
 	}

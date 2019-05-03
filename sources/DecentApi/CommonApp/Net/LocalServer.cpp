@@ -116,7 +116,7 @@ LocalAcceptedResult LocalAcceptor::Accept()
 {
 	if (m_isTerminated)
 	{
-		return LocalAcceptedResult();
+		throw ConnectionClosedException();
 	}
 
 	std::shared_ptr<SharedObject<LocalConnectStruct> > obj = std::atomic_load(&m_sharedObj);
@@ -176,7 +176,7 @@ std::unique_ptr<Connection> LocalServer::AcceptConnection()
 {
 	if (m_isTerminated)
 	{
-		return nullptr;
+		throw ConnectionClosedException();
 	}
 
 	return std::make_unique<LocalConnection>(m_acceptor);

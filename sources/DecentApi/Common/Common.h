@@ -3,6 +3,7 @@
 #include <ctime>
 #include <memory>
 #include <string>
+#include <stdexcept>
 
 namespace Decent
 {
@@ -25,10 +26,14 @@ namespace Decent
 #define LOGI(...) PRINT_I(__VA_ARGS__)
 #define LOGW(...) PRINT_W(__VA_ARGS__)
 
+#define EXCEPTION_ASSERT(X, Msg) if(!X) { throw std::logic_error(Msg); }
+
 #else
 
 #define PRINT_W(...) Decent::Tools::LogWarning("", 0, __VA_ARGS__);
 #define LOGI(...) 
 #define LOGW(...) 
+
+#define EXCEPTION_ASSERT(X, Msg) 
 
 #endif // !NDEBUG

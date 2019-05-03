@@ -23,18 +23,22 @@ namespace Decent
 			typedef wchar_t* CharType;
 			typedef const wchar_t* ConstCharType;
 			static ConstCharType GenericInterpretMode(const Mode mode) { return FileBase::InterpretModeW(mode); }
+
+			static void* FopenExclusive(const wchar_t* filePath, const wchar_t* mode);
 #else
 			typedef char* CharType;
 			typedef const char* ConstCharType;
 			static ConstCharType GenericInterpretMode(const Mode mode) { return FileBase::InterpretMode(mode); }
 #endif
 
+			static void* FopenExclusive(const char* filePath, const char* mode);
+
 		public:
 			DiskFile() = delete;
 
-			DiskFile(const boost::filesystem::path& filePath, const Mode mode, DeferOpen);
+			DiskFile(const boost::filesystem::path& filePath, const Mode mode, bool isExclusive, DeferOpen);
 
-			DiskFile(const boost::filesystem::path& filePath, const Mode mode);
+			DiskFile(const boost::filesystem::path& filePath, const Mode mode, bool isExclusive);
 
 			DiskFile(const DiskFile& rhs) = delete;
 
@@ -52,7 +56,7 @@ namespace Decent
 			virtual operator bool() const { return IsOpen(); }
 
 		protected:
-			DiskFile(const boost::filesystem::path& filePath, ConstCharType modeStr);
+			DiskFile(const boost::filesystem::path& filePath, ConstCharType modeStr, bool isExclusive);
 
 			virtual size_t ReadBlockRaw(void* buffer, const size_t size) override;
 
@@ -64,6 +68,7 @@ namespace Decent
 			std::unique_ptr<boost::filesystem::path> m_filePath;
 			FILE* m_file;
 			ConstCharType m_fileModeStr;
+			bool m_isExclusive;
 		};
 
 		class WritableDiskFile : public DiskFile, virtual public WritableFileBase
@@ -76,9 +81,9 @@ namespace Decent
 #endif
 
 		public:
-			WritableDiskFile(const boost::filesystem::path& filePath, const WritableMode mode, DeferOpen);
+			WritableDiskFile(const boost::filesystem::path& filePath, const WritableMode mode, bool isExclusive, DeferOpen);
 
-			WritableDiskFile(const boost::filesystem::path& filePath, const WritableMode mode);
+			WritableDiskFile(const boost::filesystem::path& filePath, const WritableMode mode, bool isExclusive);
 
 			WritableDiskFile(const WritableDiskFile& rhs) = delete;
 

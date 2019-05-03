@@ -1,6 +1,7 @@
 #include "RaClientCommLayer.h"
 
-#include "../../Common/Net/Connection.h"
+#include "../Net/EnclaveCntTranslator.h"
+#include "../../Common/Net/NetworkException.h"
 #include "../../Common/SGX/sgx_structs.h"
 
 #include "RaProcessorClient.h"
@@ -9,18 +10,18 @@
 using namespace Decent::Sgx;
 using namespace Decent::Net;
 
-static std::unique_ptr<RaProcessorClient> DoHandShake(void* const connectionPtr, std::unique_ptr<RaProcessorClient>& raProcessor)
+static std::unique_ptr<RaProcessorClient> DoHandShake(EnclaveCntTranslator& connection, std::unique_ptr<RaProcessorClient>& raProcessor)
 {
-	if (!connectionPtr || !raProcessor)
+	if (!raProcessor)
 	{
-		return nullptr;
+		throw Exception("Null pointer is given to the Decent::Sgx::RaProcessorClient DoHandShake.");
 	}
 
 	int retVal = 0;
-	if (ocall_decent_sgx_ra_send_msg0s(&retVal, connectionPtr) != SGX_SUCCESS ||
+	if (ocall_decent_sgx_ra_send_msg0s(&retVal, connection.GetPointer()) != SGX_SUCCESS ||
 		!retVal)
 	{
-		return nullptr;
+		throw Exception("Decent::Sgx::RaProcessorClient DoHandShake Failed.");
 	}
 
 	std::string buf1;
@@ -29,39 +30,32 @@ static std::unique_ptr<RaProcessorClient> DoHandShake(void* const connectionPtr,
 	sgx_ra_msg1_t msg1;
 	std::vector<uint8_t> msg3;
 
-	try
+	connection.ReceivePack(buf1);
+	if (buf1.size() != sizeof(sgx_ra_msg0r_t) ||
+		!raProcessor->ProcessMsg0r(*reinterpret_cast<const sgx_ra_msg0r_t*>(buf1.data()), msg1))
 	{
-		StatConnection::ReceivePack(connectionPtr, buf1);
-		if (buf1.size() != sizeof(sgx_ra_msg0r_t) ||
-			!raProcessor->ProcessMsg0r(*reinterpret_cast<const sgx_ra_msg0r_t*>(buf1.data()), msg1))
-		{
-			return nullptr;
-		}
-
-		StatConnection::SendAndReceivePack(connectionPtr, &msg1, sizeof(msg1), buf1);
-		if (buf1.size() < sizeof(sgx_ra_msg2_t) ||
-			!raProcessor->ProcessMsg2(*reinterpret_cast<const sgx_ra_msg2_t*>(buf1.data()), buf1.size(), msg3))
-		{
-			return nullptr;
-		}
-
-		StatConnection::SendAndReceivePack(connectionPtr, msg3.data(), msg3.size(), buf1);
-		if (buf1.size() != sizeof(sgx_ra_msg4_t) ||
-			!raProcessor->ProcessMsg4(*reinterpret_cast<const sgx_ra_msg4_t*>(buf1.data())))
-		{
-			return nullptr;
-		}
+		throw Exception("Decent::Sgx::RaProcessorClient DoHandShake Failed.");
 	}
-	catch (const std::exception&)
+
+	connection.SendAndReceivePack(&msg1, sizeof(msg1), buf1);
+	if (buf1.size() < sizeof(sgx_ra_msg2_t) ||
+		!raProcessor->ProcessMsg2(*reinterpret_cast<const sgx_ra_msg2_t*>(buf1.data()), buf1.size(), msg3))
 	{
-		return nullptr;
+		throw Exception("Decent::Sgx::RaProcessorClient DoHandShake Failed.");
+	}
+
+	connection.SendAndReceivePack(msg3.data(), msg3.size(), buf1);
+	if (buf1.size() != sizeof(sgx_ra_msg4_t) ||
+		!raProcessor->ProcessMsg4(*reinterpret_cast<const sgx_ra_msg4_t*>(buf1.data())))
+	{
+		throw Exception("Decent::Sgx::RaProcessorClient DoHandShake Failed.");
 	}
 
 	return std::move(raProcessor);
 }
 
-RaClientCommLayer::RaClientCommLayer(void* const connectionPtr, std::unique_ptr<RaProcessorClient>& raProcessor) :
-	RaClientCommLayer(DoHandShake(connectionPtr, raProcessor))
+RaClientCommLayer::RaClientCommLayer(EnclaveCntTranslator& connection, std::unique_ptr<RaProcessorClient>& raProcessor) :
+	RaClientCommLayer(DoHandShake(connection, raProcessor))
 {
 }
 

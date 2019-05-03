@@ -20,7 +20,7 @@ int TlsConfigClient::VerifyCert(mbedtls_x509_crt & cert, int depth, uint32_t & f
 {
 	switch (depth)
 	{
-	case 0: //SocialNet Client Cert
+	case 0: //Client Cert
 	{
 		ClientX509 certObj(cert);
 		if (!certObj)

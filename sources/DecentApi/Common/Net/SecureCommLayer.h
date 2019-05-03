@@ -9,6 +9,8 @@ namespace Decent
 {
 	namespace Net
 	{
+		class ConnectionBase;
+
 		class SecureCommLayer
 		{
 		public:
@@ -37,7 +39,7 @@ namespace Decent
 			 * \param 		  	buf			 	The pointer to data buffer (must not null).
 			 * \param 		  	size		 	Size of the data.
 			 */
-			virtual void SendRaw(void* const connectionPtr, const void* buf, const size_t size)
+			virtual void SendRaw(ConnectionBase& connectionPtr, const void* buf, const size_t size)
 			{
 				SetConnectionPtr(connectionPtr);
 				SendRaw(buf, size);
@@ -66,7 +68,7 @@ namespace Decent
 			 * \param [in,out]	buf			 	The pointer to data buffer (must not null).
 			 * \param 		  	size		 	The size of data need to be received.
 			 */
-			virtual void ReceiveRaw(void* const connectionPtr, void* buf, const size_t size)
+			virtual void ReceiveRaw(ConnectionBase& connectionPtr, void* buf, const size_t size)
 			{
 				SetConnectionPtr(connectionPtr);
 				ReceiveRaw(buf, size);
@@ -104,7 +106,7 @@ namespace Decent
 			 * \param 		  	buf			 	The structure to be sent.
 			 */
 			template<typename T>
-			void SendStruct(void* const connectionPtr, const T& buf)
+			void SendStruct(ConnectionBase& connectionPtr, const T& buf)
 			{
 				SendRaw(connectionPtr, &buf, sizeof(T));
 			}
@@ -117,7 +119,7 @@ namespace Decent
 			 * \param [in,out]	buf			 	The structure buffer.
 			 */
 			template<typename T>
-			void ReceiveStruct(void* const connectionPtr, T& buf)
+			void ReceiveStruct(ConnectionBase& connectionPtr, T& buf)
 			{
 				ReceiveRaw(connectionPtr, &buf, sizeof(T));
 			}
@@ -135,7 +137,7 @@ namespace Decent
 			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
 			 * \param 		  	inMsg		 	Message to be sent.
 			 */
-			virtual void SendMsg(void* const connectionPtr, const std::string& inMsg)
+			virtual void SendMsg(ConnectionBase& connectionPtr, const std::string& inMsg)
 			{
 				SetConnectionPtr(connectionPtr);
 				SendMsg(inMsg);
@@ -156,7 +158,7 @@ namespace Decent
 			 * \param [in,out]	connectionPtr	The connection pointer.
 			 * \param [in,out]	outMsg		 	Received message.
 			 */
-			virtual void ReceiveMsg(void* const connectionPtr, std::string& outMsg)
+			virtual void ReceiveMsg(ConnectionBase& connectionPtr, std::string& outMsg)
 			{
 				SetConnectionPtr(connectionPtr);
 				ReceiveMsg(outMsg);
@@ -175,7 +177,7 @@ namespace Decent
 			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
 			 * \param 		  	inMsg		 	Message to be sent.
 			 */
-			virtual void SendMsg(void* const connectionPtr, const std::vector<uint8_t>& inMsg)
+			virtual void SendMsg(ConnectionBase& connectionPtr, const std::vector<uint8_t>& inMsg)
 			{
 				SetConnectionPtr(connectionPtr);
 				SendMsg(inMsg);
@@ -196,7 +198,7 @@ namespace Decent
 			 * \param [in,out]	connectionPtr	The connection pointer.
 			 * \param [in,out]	outMsg		 	Received message.
 			 */
-			virtual void ReceiveMsg(void* const connectionPtr, std::vector<uint8_t>& outMsg)
+			virtual void ReceiveMsg(ConnectionBase& connectionPtr, std::vector<uint8_t>& outMsg)
 			{
 				SetConnectionPtr(connectionPtr);
 				ReceiveMsg(outMsg);
@@ -209,7 +211,7 @@ namespace Decent
 			 */
 			virtual operator bool() const = 0;
 
-			virtual void SetConnectionPtr(void* const connectionPtr) = 0;
+			virtual void SetConnectionPtr(ConnectionBase& connectionPtr) = 0;
 		};
 	}
 }

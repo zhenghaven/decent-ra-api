@@ -12,43 +12,6 @@ namespace Decent
 {
 	namespace Tools
 	{
-		enum class KeyPolicy
-		{
-			ByMrEnclave,
-			ByMrSigner,
-			ByMrEnclaveAndMrSigner,
-		};
-
-		namespace detail
-		{
-			void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, void* outKey, size_t outKeySize, const std::vector<uint8_t>& meta);
-		}
-
-		/**
-		 * \brief	Derive seal key
-		 *
-		 * \exception	Decent::RuntimeException	Thrown when underlying function call failed.
-		 *
-		 * \tparam	KeyT	Data Type that holds the key.
-		 * \param 		  	keyPolicy	The key policy.
-		 * \param 		  	label	 	The label.
-		 * \param [in,out]	outKey   	The output key.
-		 * \param 		  	meta	 	The metadata used to derive the key.
-		 */
-		template<typename KeyT>
-		void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, KeyT& outKey, const std::vector<uint8_t>& meta)
-		{
-			detail::DeriveSealKey(keyPolicy, label, ArrayPtrAndSize::GetPtr(outKey), ArrayPtrAndSize::GetSize(outKey), meta);
-		}
-
-		/**
-		 * \brief	Generates a seal key recovery metadata
-		 *
-		 * \exception	Decent::RuntimeException	Thrown when underlying function call failed.
-		 *
-		 * \param [in,out]	outMeta	The output metadata.
-		 */
-		void GenSealKeyRecoverMeta(std::vector<uint8_t>& outMeta);
 
 		/**
 		 * \brief	Gets self hash in Base64 encoding.
@@ -67,5 +30,28 @@ namespace Decent
 		 * \return	A binary array.
 		 */
 		const std::vector<uint8_t>& GetSelfHash();
+
+		/**
+		 * \brief	Secure random number generator. Usually enclave platform will provide a secure source
+		 * 			to generate cryptographically secure random number.
+		 *
+		 * \exception	Decent::RuntimeException	Thrown when underlying function call failed.
+		 *
+		 * \param [out]	buf 	If non-null, the buffer to store the random number.
+		 * \param 	   	size	The size of the buffer.
+		 */
+		void SecureRand(void* buf, size_t size);
+
+		void PlatformAesGcmEncrypt(const void* keyPtr, const size_t keySize, const void* srcPtr, const size_t srcSize,
+			void* destPtr,
+			const void* ivPtr, const size_t ivSize,
+			const void* addPtr, const size_t addSize,
+			void* macPtr, const size_t macSize);
+
+		void PlatformAesGcmDecrypt(const void* keyPtr, const size_t keySize, const void* srcPtr, const size_t srcSize,
+			void* destPtr,
+			const void* ivPtr, const size_t ivSize,
+			const void* addPtr, const size_t addSize,
+			const void* macPtr, const size_t macSize);
 	}
 }

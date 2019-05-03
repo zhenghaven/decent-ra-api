@@ -3,9 +3,28 @@
 #include <cstdint>
 #include <cstdio>
 
-extern "C" void*  ocall_decent_tools_fopen(const char* filename, const char* mode)
+#include "../Tools/DiskFile.h"
+
+using namespace Decent::Tools;
+
+extern "C" void*  ocall_decent_tools_fopen(const char* filename, const char* mode, int is_exclusive)
 {
-	return std::fopen(filename, mode);
+	try
+	{
+		if (is_exclusive)
+		{
+			return DiskFile::FopenExclusive(filename, mode);
+
+		}
+		else
+		{
+			return std::fopen(filename, mode);
+		}
+	}
+	catch (const std::exception&)
+	{
+		return nullptr;
+	}
 }
 
 extern "C" int    ocall_decent_tools_fclose(void* file)

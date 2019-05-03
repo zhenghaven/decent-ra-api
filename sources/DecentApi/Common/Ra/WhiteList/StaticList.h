@@ -10,24 +10,20 @@ namespace Decent
 	{
 		namespace WhiteList
 		{
-			class StaticTypeList
+			class StaticList
 			{
 			public:
-				StaticTypeList() = delete;
+				StaticList() = delete;
 
-				StaticTypeList(const WhiteListType& whiteList);
+				StaticList(const WhiteListType& whiteList);
 
-				StaticTypeList(WhiteListType&& whiteList);
+				StaticList(WhiteListType&& whiteList);
 
-				StaticTypeList(const StaticTypeList& rhs) :
-					m_listMap(rhs.m_listMap)
-				{}
+				StaticList(const StaticList& rhs);
 
-				StaticTypeList(StaticTypeList&& rhs) :
-					m_listMap(std::forward<WhiteListType>(rhs.m_listMap))
-				{}
+				StaticList(StaticList&& rhs);
 
-				~StaticTypeList();
+				virtual ~StaticList();
 
 				/**
 				 * \brief	Gets the white list (map) as const reference.
@@ -74,7 +70,7 @@ namespace Decent
 				*
 				* \return	True 'this' is equivalent set of the 'rhs', false if not.
 				*/
-				virtual bool IsEquivalentSetOf(const StaticTypeList& rhs) const { return this->IsEquivalentSetOf(rhs.m_listMap); }
+				virtual bool IsEquivalentSetOf(const StaticList& rhs) const { return this->IsEquivalentSetOf(rhs.m_listMap); }
 
 				/**
 				 * \brief	Check if 'this instance' is a subset of the 'right hand side'. Note: For each
@@ -94,7 +90,7 @@ namespace Decent
 				*
 				* \return	True if 'this' is a subset of 'rhs', false if not.
 				*/
-				virtual bool IsSubsetOf(const StaticTypeList& rhs) const { return this->IsSubsetOf(rhs.m_listMap); }
+				virtual bool IsSubsetOf(const StaticList& rhs) const { return this->IsSubsetOf(rhs.m_listMap); }
 
 				/**
 				 * \brief	Equality operator
@@ -105,7 +101,7 @@ namespace Decent
 				 *
 				 * \return	True if the parameters are considered equivalent.
 				 */
-				virtual bool operator==(const StaticTypeList& rhs) const;
+				virtual bool operator==(const StaticList& rhs) const;
 
 				/**
 				 * \brief	Inequality operator. Basically, it is calling !operator==.
@@ -114,7 +110,7 @@ namespace Decent
 				 *
 				 * \return	True if the parameters are not considered equivalent.
 				 */
-				virtual bool operator!=(const StaticTypeList& rhs) const;
+				virtual bool operator!=(const StaticList& rhs) const;
 
 				/**
 				 * \brief	Greater-than-or-equal comparison operator. Check if 'right hand side' is a subset of the 'this instance'. Also see IsSubsetOf().
@@ -123,7 +119,7 @@ namespace Decent
 				 *
 				 * \return	True if 'rhs' is a subset of 'this', false if not.
 				 */
-				virtual bool operator>=(const StaticTypeList& rhs) const;
+				virtual bool operator>=(const StaticList& rhs) const;
 
 				/**
 				 * \brief	Less-than-or-equal comparison operator. Check if 'this instance' is a subset of the 'right hand side'. Also see IsSubsetOf().
@@ -132,7 +128,7 @@ namespace Decent
 				 *
 				 * \return	True if 'this' is a subset of 'rhs', false if not.
 				 */
-				virtual bool operator<=(const StaticTypeList& rhs) const;
+				virtual bool operator<=(const StaticList& rhs) const;
 
 				/**
 				 * \brief	Converts this white list to a JSON format.

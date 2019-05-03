@@ -16,7 +16,7 @@ namespace Decent
 		{
 		public:
 			RaSpCommLayer() = delete;
-			RaSpCommLayer(void* const connectionPtr, std::unique_ptr<RaProcessorSp>& raProcessor);
+			RaSpCommLayer(Decent::Net::ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor);
 			RaSpCommLayer(const RaSpCommLayer& other) = delete;
 			RaSpCommLayer(RaSpCommLayer&& other);
 

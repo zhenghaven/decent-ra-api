@@ -32,7 +32,6 @@ namespace Decent
 			enum class Mode
 			{
 				Read,
-				ReadUpdate,
 			};
 
 		public:
@@ -94,6 +93,7 @@ namespace Decent
 			{
 				Write,
 				Append,
+				ReadUpdate,
 				WriteUpdate,
 				AppendUpdate,
 			};
