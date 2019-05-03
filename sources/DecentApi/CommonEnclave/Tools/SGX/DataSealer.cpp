@@ -3,15 +3,17 @@
 #include "../DataSealer.h"
 
 #include <cstring>
-#include <cmath>
 
 #include <sgx_utils.h>
 #include <sgx_attributes.h>
-#include <sgx_tseal.h>
 
 #include "../../../Common/Common.h"
+#include "../../../Common/GeneralKeyTypes.h"
 #include "../../../Common/RuntimeException.h"
 #include "../../../Common/SGX/ErrorCode.h"
+#include "../../../Common/MbedTls/Kdf.h"
+#include "../../../Common/Ra/States.h"
+#include "../../../Common/Ra/WhiteList/LoadedList.h"
 
 #include "../Crypto.h"
 
@@ -23,6 +25,7 @@
 #define TSEAL_DEFAULT_MISCMASK      (~MISC_NON_SECURITY_BITS)
 
 using namespace Decent;
+using namespace Decent::MbedTlsObj;
 using namespace Decent::Tools;
 using namespace Decent::Tools::DataSealer;
 
@@ -122,22 +125,28 @@ namespace
 			throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_get_key"));
 		}
 	}
+
+	void SgxDeriveSealKey(KeyPolicy keyPolicy, General128BitKey& outKey, const void* inMeta, const size_t inMetaSize)
+	{
+		if (inMetaSize != sizeof(SgxSealKeyMeta))
+		{
+			throw RuntimeException("Invalid metadata is given to function DeriveSealKey.");
+		}
+		const SgxSealKeyMeta& metaRef = *static_cast<const SgxSealKeyMeta*>(inMeta);
+
+		general_128bit_key& keyRef = *reinterpret_cast<general_128bit_key*>(outKey.data());
+
+		SgxDeriveKey(SgxKeyType::Seal, keyPolicy, keyRef, metaRef);
+	}
 }
 
-std::vector<uint8_t> detail::PlatformDeriveSealKey(KeyPolicy keyPolicy, const std::vector<uint8_t>& meta)
+void DataSealer::detail::DeriveSealKey(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& label, 
+	void* outKey, const size_t expectedKeySize, const void* inMeta, const size_t inMetaSize, const std::vector<uint8_t>& salt)
 {
-	if (meta.size() != sizeof(SgxSealKeyMeta))
-	{
-		throw RuntimeException("Invalid metadata is given to function DeriveSealKey.");
-	}
-	const SgxSealKeyMeta& metaRef = reinterpret_cast<const SgxSealKeyMeta&>(*meta.data());
+	General128BitKey rootSealKey;
+	SgxDeriveSealKey(keyPolicy, rootSealKey, inMeta, inMetaSize);
 
-	std::vector<uint8_t> res(sizeof(general_128bit_key));
-	general_128bit_key& keyRef = reinterpret_cast<general_128bit_key&>(*res.data());
-
-	SgxDeriveKey(SgxKeyType::Seal, keyPolicy, keyRef, metaRef);
-
-	return res;
+	HKDF<HashType::SHA256>(rootSealKey, decentState.GetLoadedWhiteList().GetWhiteListHash() + label, salt, outKey, expectedKeySize);
 }
 
 std::vector<uint8_t> DataSealer::GenSealKeyRecoverMeta(bool isDefault)
@@ -160,6 +169,7 @@ std::vector<uint8_t> DataSealer::GenSealKeyRecoverMeta(bool isDefault)
 	return res;
 }
 
+#if 0
 
 ////////////////////////////
 //Data Sealing:
@@ -377,5 +387,7 @@ void DataSealer::detail::UnsealData(KeyPolicy keyPolicy, const void * inEncData,
 	EXCEPTION_ASSERT(meta.size() == pkgMetaSize, "In function DataSealer::detail::UnsealData, the final metadata size is different from the sealed value.");
 	EXCEPTION_ASSERT(data.size() == pkgDataSize, "In function DataSealer::detail::UnsealData, the final data size is different from the sealed value.");
 }
+
+#endif
 
 //#endif //ENCLAVE_PLATFORM_SGX

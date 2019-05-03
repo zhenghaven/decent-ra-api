@@ -10,6 +10,11 @@
 
 namespace Decent
 {
+	namespace Ra
+	{
+		class States;
+	}
+
 	namespace Tools
 	{
 		namespace DataSealer
@@ -35,13 +40,16 @@ namespace Decent
 				 *
 				 * \return	A std::vector&lt;uint8_t&gt;
 				 */
-				std::vector<uint8_t> PlatformDeriveSealKey(KeyPolicy keyPolicy, const std::vector<uint8_t>& meta);
+				//std::vector<uint8_t> PlatformDeriveSealKey(KeyPolicy keyPolicy, const std::vector<uint8_t>& meta);
 
-				void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, void* outKey, const size_t expectedKeySize, const std::vector<uint8_t>& salt, const std::vector<uint8_t>& meta);
+				void DeriveSealKey(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& label, 
+					void* outKey, const size_t expectedKeySize, const void* inMeta, const size_t inMetaSize, const std::vector<uint8_t>& salt);
 
-				std::vector<uint8_t> SealData(KeyPolicy keyPolicy, std::vector<uint8_t>& outMac, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize);
+				std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
+					std::vector<uint8_t>& outMac, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize);
 
-				void UnsealData(KeyPolicy keyPolicy, const void* inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& meta, std::vector<uint8_t>& data);
+				void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
+					const void* inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& outMeta, std::vector<uint8_t>& outData);
 			}
 
 			/**
@@ -60,20 +68,25 @@ namespace Decent
 			std::vector<uint8_t> GenSealKeyRecoverMeta(bool isDefault = false);
 
 			/**
-			* \brief	Derive seal key
-			*
-			* \exception	Decent::RuntimeException	Thrown when underlying function call failed.
-			*
-			* \tparam	KeyT	Data Type that holds the key.
-			* \param 		  	keyPolicy	The key policy.
-			* \param 		  	label	 	The label.
-			* \param [in,out]	outKey   	The output key.
-			* \param 		  	meta	 	The metadata used to derive the key.
-			*/
-			template<typename KeyT>
-			void DeriveSealKey(KeyPolicy keyPolicy, const std::string& label, KeyT& outKey, const std::vector<uint8_t>& salt, const std::vector<uint8_t>& meta)
+			 * \brief	Derive seal key
+			 *
+			 * \exception	Decent::RuntimeException	Thrown when underlying function call failed.
+			 *
+			 * \tparam	KeyType 	Data Type that holds the key.
+			 * \tparam	MetaType	Data Type that holds the metadata.
+			 * \param 		  	keyPolicy  	The key policy.
+			 * \param 		  	decentState	State of the decent.
+			 * \param 		  	label	   	The label.
+			 * \param [out]	outKey	   	The output key.
+			 * \param 		  	meta	   	The metadata used to derive the key.
+			 * \param 		  	salt	   	The salt.
+			 *
+			 */
+			template<typename KeyType, typename MetaType>
+			void DeriveSealKey(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& label, KeyType& outKey, const MetaType& meta, const std::vector<uint8_t>& salt)
 			{
-				detail::DeriveSealKey(keyPolicy, label, ArrayPtrAndSize::GetPtr(outKey), ArrayPtrAndSize::GetSize(outKey), salt, meta);
+				detail::DeriveSealKey(keyPolicy, decentState, label, ArrayPtrAndSize::GetPtr(outKey), ArrayPtrAndSize::GetSize(outKey), 
+					ArrayPtrAndSize::GetPtr(meta), ArrayPtrAndSize::GetSize(meta), salt);
 			}
 
 			/**
@@ -90,9 +103,12 @@ namespace Decent
 			 * \return	A std::vector&lt;uint8_t&gt;, the sealed data.
 			 */
 			template<typename MetaCtn, typename DataCtn>
-			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, std::vector<uint8_t>& outMac, const MetaCtn& metadata, const DataCtn& data)
+			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
+				std::vector<uint8_t>& outMac, const MetaCtn& metadata, const DataCtn& data)
 			{
-				return detail::SealData(keyPolicy, outMac, ArrayPtrAndSize::GetPtr(metadata), ArrayPtrAndSize::GetSize(metadata), ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data));
+				return detail::SealData(keyPolicy, decentState, keyLabel, outMac, 
+					ArrayPtrAndSize::GetPtr(metadata), ArrayPtrAndSize::GetSize(metadata),
+					ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data));
 			}
 
 			/**
@@ -108,9 +124,12 @@ namespace Decent
 			 * \param [out]	data	 	The data.
 			 */
 			template<typename SealedDataCtn>
-			void UnsealData(KeyPolicy keyPolicy, const SealedDataCtn& inData, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data)
+			void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
+				const SealedDataCtn& inData, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data)
 			{
-				detail::UnsealData(keyPolicy, ArrayPtrAndSize::GetPtr(inData), ArrayPtrAndSize::GetSize(inData), inMac, metadata, data);
+				detail::UnsealData(keyPolicy, decentState, keyLabel, 
+					ArrayPtrAndSize::GetPtr(inData), ArrayPtrAndSize::GetSize(inData), inMac, 
+					metadata, data);
 			}
 		}
 	}

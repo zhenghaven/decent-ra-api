@@ -19,7 +19,7 @@ namespace Decent
 			 * \param 		  	inKeyLen	  	Length of the input key.
 			 * \param 		  	label		  	The label.
 			 * \param 		  	labelLen	  	Length of the label.
-			 * \param 		  	inSalt		  	The input salt.
+			 * \param 		  	inSalt		  	The input salt (optional).
 			 * \param 		  	inSaltLen	  	Length of the input salt.
 			 * \param [in,out]	outKey		  	The output key.
 			 * \param 		  	expectedKeyLen	Length of the output key that is wanted.
@@ -37,7 +37,7 @@ namespace Decent
 		 * \tparam	KeyT		Data type of the key.
 		 * \param 		  	inKey 	The input key.
 		 * \param 		  	label 	The label.
-		 * \param 		  	salt  	The salt.
+		 * \param 		  	salt  	The salt (optional).
 		 * \param [in,out]	outKey	The output key. Note: size of the outKey is the size of the key you
 		 * 							want.
 		 */
@@ -55,7 +55,7 @@ namespace Decent
 		 * \tparam	SaltT   	Data type of the salt.
 		 * \param 		  	inKey		  	The input key.
 		 * \param 		  	label		  	The label.
-		 * \param 		  	salt		  	The salt.
+		 * \param 		  	salt		  	The salt (optional).
 		 * \param [in,out]	outKey		  	The output key.
 		 * \param 		  	expectedKeyLen	Length of the output key that is wanted.
 		 */
@@ -75,7 +75,7 @@ namespace Decent
 		 * \tparam	KeyT		Data type of the key.
 		 * \param 		  	inKey 	The input key.
 		 * \param 		  	label 	The label.
-		 * \param 		  	salt  	The salt.
+		 * \param 		  	salt  	The salt (optional).
 		 * \param [in,out]	outKey	The output key. Note: size of the outKey is the size of the key you
 		 * 							want.
 		 */
