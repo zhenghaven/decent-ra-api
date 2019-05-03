@@ -6,23 +6,32 @@
 #include "../../Common/SGX/RuntimeError.h"
 #include "../Base/EnclaveException.h"
 
+using namespace Decent::Ias;
 using namespace Decent::Sgx;
 using namespace Decent::Tools;
 
-EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Decent::Ias::Connector>& ias, const std::string & enclavePath, const std::string & tokenPath) :
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const std::string & enclavePath, const std::string & tokenPath) :
 	Sgx::EnclaveBase(enclavePath, tokenPath),
 	m_ias(ias)
 {
 }
 
-EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Decent::Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath) :
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath) :
 	Sgx::EnclaveBase(enclavePath, tokenPath),
 	m_ias(ias)
 {
 }
 
-EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Decent::Ias::Connector>& ias, const std::string & enclavePath, const KnownFolderType tokenLocType, const std::string & tokenFileName) :
-	Sgx::EnclaveBase(enclavePath, tokenLocType, tokenFileName),
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const std::string & enclavePath, const std::string & tokenPath, 
+	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
+	Sgx::EnclaveBase(enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep),
+	m_ias(ias)
+{
+}
+
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const fs::path & enclavePath, const fs::path & tokenPath, 
+	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
+	Sgx::EnclaveBase(enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep),
 	m_ias(ias)
 {
 }
