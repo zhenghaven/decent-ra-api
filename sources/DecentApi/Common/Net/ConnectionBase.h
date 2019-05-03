@@ -100,6 +100,10 @@ namespace Decent
 			* \return	Length of the data that has been received, or -1 when error.
 			*/
 			static int ReceiveRawCallback(void* const connection, void* const buf, const size_t bufLen) noexcept;
+
+
+			/** \brief	Terminates this connection */
+			virtual void Terminate() noexcept = 0;
 		};
 
 	}

@@ -67,6 +67,8 @@ namespace Decent
 
 			void* GetPointer() const { return m_cntPtr; }
 
+			virtual void Terminate() noexcept override;
+
 		protected:
 			void* m_cntPtr;
 		};

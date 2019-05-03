@@ -100,4 +100,9 @@ void EnclaveCntTranslator::SendAndReceivePack(const void * const inData, const s
 	std::memcpy(&outMsg[0], msg.m_ptr, size);
 }
 
+void EnclaveCntTranslator::Terminate() noexcept
+{
+	ocall_decent_net_cnet_terminate(m_cntPtr);
+}
+
 //#endif //ENCLAVE_PLATFORM_SGX

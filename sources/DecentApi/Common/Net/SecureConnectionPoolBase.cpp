@@ -76,15 +76,14 @@ SecureConnectionPoolBase::~SecureConnectionPoolBase()
 {
 }
 
-bool Decent::Net::SecureConnectionPoolBase::HoldInComingConnection(SecureCommLayer& secComm)
+bool SecureConnectionPoolBase::HoldInComingConnection(ConnectionBase& cnt, SecureCommLayer& secComm)
 {
 	uint64_t currentCount = m_inCntCount++;
 	//LOGI("InComing Cnt Count: %llu.", currentCount);
 	if (currentCount >= m_maxInCnt)
 	{
 		//There is no more space
-		m_inCntCount--;
-		return false;
+		TerminateOldestIdleConnection();
 	}
 
 	//Decent keep-alive protocol
@@ -92,19 +91,49 @@ bool Decent::Net::SecureConnectionPoolBase::HoldInComingConnection(SecureCommLay
 	{
 		char wakeMsg = 'W';
 		secComm.SendStruct('?');
+
+		{
+			std::unique_lock<std::mutex> serverQueueLock(m_serverQueueMutex);
+			m_serverQueue.push_back(&cnt);
+		}
+
 		secComm.ReceiveStruct(wakeMsg); //Waitting wake-up message.
 
 		// For simplicity, we assume peer correctly follows the protocol, 
 		// thus, we don't check the message content, for now.
+		
+		RemoveFromQueue(cnt);
 	}
 	catch (const std::exception&)
 	{
 		//Probably peer terminates the connection.
-		m_inCntCount--;
+		RemoveFromQueue(cnt);
 		return false;
 	}
 
 	//Successfully waken-up.
-	m_inCntCount--;
 	return true;
+}
+
+void SecureConnectionPoolBase::TerminateOldestIdleConnection()
+{
+	std::unique_lock<std::mutex> serverQueueLock(m_serverQueueMutex);
+	m_serverQueue.front()->Terminate();
+	m_serverQueue.pop_front();
+	serverQueueLock.unlock();
+	m_inCntCount--;
+}
+
+void SecureConnectionPoolBase::RemoveFromQueue(ConnectionBase & cnt)
+{
+	std::unique_lock<std::mutex> serverQueueLock(m_serverQueueMutex);
+	for (auto it = m_serverQueue.begin(); it != m_serverQueue.end(); ++it)
+	{
+		if (*it == &cnt)
+		{
+			m_serverQueue.erase(it);
+			m_inCntCount--;
+			return;
+		}
+	}
 }

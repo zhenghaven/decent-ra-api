@@ -1,8 +1,10 @@
 #pragma once
 
+#include <list>
 #include <utility>
 #include <memory>
 #include <atomic>
+#include <mutex>
 
 namespace Decent
 {
@@ -85,7 +87,10 @@ namespace Decent
 			 *
 			 * \return	True if the connection is still alive, false if it is not.
 			 */
-			virtual bool HoldInComingConnection(SecureCommLayer& secComm);
+			virtual bool HoldInComingConnection(ConnectionBase& cnt, SecureCommLayer& secComm);
+
+			/** \brief	Terminate oldest idle connection from the queue. */
+			virtual void TerminateOldestIdleConnection();
 
 			/**
 			 * \brief	Gets the maximum number of in-coming connection.
@@ -96,11 +101,22 @@ namespace Decent
 
 		protected:
 
+			/**
+			 * \brief	Removes the cnt from the queue. This is called when the connection is
+			 * 			finished/terminated.
+			 *
+			 * \param [in,out]	cnt	connection reference.
+			 */
+			virtual void RemoveFromQueue(ConnectionBase& cnt);
+
 		private:
 			const size_t m_maxInCnt;
 
 			//Count for number of in-coming connection
 			std::atomic<std::uint_fast64_t> m_inCntCount;
+
+			std::mutex m_serverQueueMutex;
+			std::list<ConnectionBase*> m_serverQueue;
 		};
 	}
 }

@@ -20,8 +20,6 @@ namespace Decent
 			virtual void SendSmartMsg(const SmartMessages& msg);
 
 			using ConnectionBase::SendPack;
-
-			virtual void Terminate() noexcept = 0;
 		};
 	}
 }
