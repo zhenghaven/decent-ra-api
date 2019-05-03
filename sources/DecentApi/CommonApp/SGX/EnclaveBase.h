@@ -25,14 +25,24 @@ namespace Decent
 	{
 		class EnclaveBase : virtual public Base::EnclaveBase
 		{
-		public:
+		public: //static member:
 			static constexpr char const sk_platformType[] = "SGX";
+			static bool InternalLoadToken(const fs::path& tokenPath, std::vector<uint8_t>& outToken);
+			static bool InternalUpdateToken(const fs::path& tokenPath, const std::vector<uint8_t>& inToken);
+			static void InternalInitSgxEnclave(const sgx_enclave_id_t& encId);
 
 		public:
 			EnclaveBase() = delete;
+
+			EnclaveBase(const std::string& enclavePath, const std::string& tokenPath, 
+				const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep);
+
+			EnclaveBase(const fs::path& enclavePath, const fs::path& tokenPath,
+				const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep);
+
 			EnclaveBase(const std::string& enclavePath, const std::string& tokenPath);
+
 			EnclaveBase(const fs::path& enclavePath, const fs::path& tokenPath);
-			EnclaveBase(const std::string& enclavePath, const Decent::Tools::KnownFolderType tokenLocType, const std::string& tokenFileName);
 
 			virtual ~EnclaveBase();
 
@@ -44,9 +54,6 @@ namespace Decent
 
 		protected:
 			const sgx_enclave_id_t GetEnclaveId() const;
-			static bool LoadToken(const fs::path& tokenPath, std::vector<uint8_t>& outToken);
-			static bool UpdateToken(const fs::path& tokenPath, const std::vector<uint8_t>& inToken);
-			static sgx_enclave_id_t LaunchEnclave(const fs::path& enclavePath, const fs::path& tokenPath);
 
 		private:
 			const sgx_enclave_id_t m_eid;

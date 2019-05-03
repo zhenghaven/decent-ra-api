@@ -21,8 +21,14 @@ namespace Decent
 			EnclaveServiceProvider() = delete;
 
 			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const std::string& tokenPath);
+
 			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
-			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const Decent::Tools::KnownFolderType tokenLocType, const std::string& tokenFileName);
+
+			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const std::string& tokenPath,
+				const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep);
+
+			EnclaveServiceProvider(const std::shared_ptr<Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath,
+				const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep);
 
 			virtual ~EnclaveServiceProvider();
 
