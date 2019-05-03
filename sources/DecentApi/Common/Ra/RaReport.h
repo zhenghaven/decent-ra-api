@@ -39,7 +39,7 @@ namespace Decent
 				SGX_QUOTE_LINKABLE_SIGNATURE,
 				SGX_DEFAULT_AES_CMAC_KDF_ID,
 #ifndef SIMULATING_ENCLAVE
-				1, //Enable PSE
+				0, //Enable PSE
 #else
 				0,
 #endif 
