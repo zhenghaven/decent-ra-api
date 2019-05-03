@@ -41,7 +41,7 @@ namespace
 			res = mbedtls_ssl_write(ssl, reinterpret_cast<const uint8_t*>(buf), len - sentSize); //Pure C function, assume throw();
 			if (res < 0 && res != MBEDTLS_ERR_SSL_WANT_WRITE)
 			{
-				throw Exception("TLS send data failed.");
+				throw MbedTlsException("mbedtls_ssl_write", res);
 			}
 			else if(res >= 0)
 			{
@@ -59,7 +59,7 @@ namespace
 			res = mbedtls_ssl_read(ssl, reinterpret_cast<uint8_t*>(buf), len - recvSize);
 			if (res < 0 && res != MBEDTLS_ERR_SSL_WANT_READ)
 			{
-				throw Exception("TLS read data failed.");
+				throw MbedTlsException("mbedtls_ssl_read", res);
 			}
 			else if (res >= 0)
 			{
