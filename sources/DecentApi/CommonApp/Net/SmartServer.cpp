@@ -4,6 +4,7 @@
 
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
+#include "../../Common/Net/ConnectionPoolBase.h"
 
 #include "../Threading/TaskSet.h"
 
@@ -16,7 +17,8 @@
 using namespace Decent::Net;
 using namespace Decent::Threading;
 
-void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler)
+void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler,
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	size_t retried = 0;
 	while (!server->IsTerminated() && retried < m_acceptRetry)
@@ -24,7 +26,7 @@ void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Se
 		try
 		{
 			std::unique_ptr<Connection> connection = server->AcceptConnection();
-			this->AddConnection(connection, handler);
+			this->AddConnection(connection, handler, cntPool, thrPool);
 			retried = 0;
 		}
 		catch (const Decent::Net::ConnectionClosedException&)
@@ -52,7 +54,6 @@ SmartServer::SmartServer(const size_t minThreadPoolSize, MainThreadAsynWorker & 
 	m_mainThreadWorker(mainThreadWorker),
 	m_cleanerPool(),
 	m_isTerminated(false),
-	m_threadPool(minThreadPoolSize, mainThreadWorker),
 	m_singleTaskPool(mainThreadWorker, 2)
 {
 	for (size_t i = 0; i < 1; ++i)
@@ -71,23 +72,28 @@ SmartServer::~SmartServer()
 	Terminate();
 }
 
-SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler)
+SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler, std::shared_ptr<ConnectionPoolBase> cntPool, size_t threadNum)
 {
 	std::shared_ptr<Server> sharedServer(std::move(server));
 	ServerHandle serverhandle = sharedServer.get();
 
-	std::unique_ptr<Threading::TaskSet> task = std::make_unique<Threading::TaskSet>(
-		[this, serverhandle, sharedServer, handler]() //Main task
+	std::shared_ptr<ThreadPool> thrPool = std::make_shared<ThreadPool>(threadNum, m_mainThreadWorker);
+
+	std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
+		[this, serverhandle, sharedServer, handler, cntPool, thrPool]() //Main task
 	{
-		this->AcceptConnectionWorker(serverhandle, sharedServer, handler);
+		this->AcceptConnectionWorker(serverhandle, sharedServer, handler, cntPool, thrPool);
 	},
-		[sharedServer]() //Main task killer
+		[sharedServer, thrPool]() //Main task killer
 	{
 		sharedServer->Terminate();
+		thrPool->Terminate();
 	}
 	);
 
 	m_singleTaskPool.AddTaskSet(task);
+
+	m_serverMap.insert(std::make_pair(serverhandle, sharedServer));
 
 	return serverhandle;
 }
@@ -102,26 +108,29 @@ void SmartServer::ShutdownServer(ServerHandle handle)
 	}
 }
 
-void SmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler)
+void SmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	std::shared_ptr<Connection> sharedCnt(std::move(connection));
 
-	std::unique_ptr<Threading::TaskSet> task = std::make_unique<Threading::TaskSet>(
-		[this, sharedCnt, handler]() //Main task
+	this->AddConnection(sharedCnt, handler, cntPool, thrPool);
+}
+
+void SmartServer::AddConnection(std::shared_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
+{
+	std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
+		[this, connection, handler, cntPool, thrPool]() //Main task
 	{
-		this->ConnectionProcesser(sharedCnt, handler);
+		this->ConnectionProcesser(connection, handler, cntPool, thrPool);
 	},
-		[sharedCnt]() //Main task killer
+		[connection]() //Main task killer
 	{
-		sharedCnt->Terminate();
+		connection->Terminate();
 	}
 	);
 
-	if (!m_threadPool.AttemptAddTaskSet(task))
-	{
-		//All workers are busy, so, add to the single task thread pool.
-		m_singleTaskPool.AddTaskSet(task);
-	}
+	thrPool->AddTaskSet(task);
 }
 
 bool SmartServer::IsTerminated() const noexcept
@@ -138,7 +147,6 @@ void SmartServer::Terminate() noexcept
 
 	m_isTerminated = true;
 
-	m_threadPool.Terminate();
 	m_singleTaskPool.Terminate();
 
 	try
@@ -184,46 +192,74 @@ void SmartServer::ServerCleaner()
 	}
 }
 
-void SmartServer::ConnectionProcesser(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler) noexcept
+void SmartServer::ConnectionProcesser(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool) noexcept
 {
-	bool isEnded = false;
-	do
+	try
 	{
-		try
-		{
-			Json::Value jsonRoot;
-			connection->ReceivePack(jsonRoot);
-			isEnded = !(handler->ProcessSmartMessage(SmartMessages::ParseCat(jsonRoot), jsonRoot, *connection));
-		}
-		catch (const Decent::Net::ConnectionClosedException&)
-		{
-			//Connection is closed.
-			isEnded = true;
-		}
-		catch (const Decent::Net::Exception& e)
-		{
-			const char* msg = e.what();
-			LOGI("SmartServer: Network Exception Caught:");
-			LOGI("%s", msg);
-			LOGI("Connection will be closed.");
-			isEnded = true;
-		}
-		catch (const std::exception& e)
-		{
-			const char* msg = e.what();
-			LOGI("SmartServer: Exception Caught:");
-			LOGI("%s", msg);
-			LOGI("Connection will be closed.");
-			isEnded = true;
-		}
-		catch (...)
-		{
-			LOGI("SmartServer: Unknown Exception Caught when process connection.");
-			LOGI("Connection will be closed.");
-			isEnded = true;
-		}
+		Json::Value jsonRoot;
+		connection->ReceivePack(jsonRoot);
+		handler->ProcessSmartMessage(SmartMessages::ParseCat(jsonRoot), jsonRoot, *connection);
 
-	} while (!isEnded);
+		//Msg processing is done.
+		
+		std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
+			[this, connection, handler, cntPool, thrPool]() //Main task
+		{
+			this->ConnectionPoolWorker(connection, handler, cntPool, thrPool);
+		},
+			[connection]() //Main task killer
+		{
+			connection->Terminate();
+		}
+		);
 
-	connection->Terminate();
+		m_singleTaskPool.AddTaskSet(task);
+	}
+	catch (const Decent::Net::ConnectionClosedException&)
+	{
+		//Connection is closed.
+		return;
+	}
+	catch (const Decent::Net::Exception& e)
+	{
+		const char* msg = e.what();
+		LOGI("SmartServer: Network Exception Caught:");
+		LOGI("%s", msg);
+		LOGI("Connection will be closed.");
+		return;
+	}
+	catch (const std::exception& e)
+	{
+		const char* msg = e.what();
+		LOGI("SmartServer: Exception Caught:");
+		LOGI("%s", msg);
+		LOGI("Connection will be closed.");
+		return;
+	}
+	catch (...)
+	{
+		LOGI("SmartServer: Unknown Exception Caught when process connection.");
+		LOGI("Connection will be closed.");
+		return;
+	}
+}
+
+void SmartServer::ConnectionPoolWorker(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
+{
+	try
+	{
+		if (!cntPool->HoldInComingConnection(*connection))
+		{
+			//connection is terminated
+			return;
+		}
+		//Connection has been waken up
+		this->AddConnection(connection, handler, cntPool, thrPool);
+	}
+	catch (const std::exception&)
+	{
+		return;
+	}
 }

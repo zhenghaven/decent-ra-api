@@ -107,10 +107,10 @@ TlsCommLayer::TlsCommLayer(TlsCommLayer && other) :
 
 TlsCommLayer::~TlsCommLayer()
 {
-	try
-	{
-		mbedtls_ssl_close_notify(m_sslCtx.get());
-	} catch (const std::exception&) { }
+	//try
+	//{
+	//	mbedtls_ssl_close_notify(m_sslCtx.get());
+	//} catch (const std::exception&) { }
 
 	mbedtls_ssl_free(m_sslCtx.get());
 }

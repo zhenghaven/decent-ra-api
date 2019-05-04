@@ -7,6 +7,7 @@
 
 #include "../Threading/ThreadPool.h"
 #include "../Threading/SingleTaskThreadPool.h"
+
 namespace Decent
 {
 	namespace Threading
@@ -19,6 +20,7 @@ namespace Decent
 		class Server;
 		class Connection;
 		class ConnectionHandler;
+		class ConnectionPoolBase;
 
 		class SmartServer
 		{
@@ -53,7 +55,7 @@ namespace Decent
 			 *
 			 * \return	A ServerHandle, which can be used to shutdown the server later.
 			 */
-			virtual ServerHandle AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler);
+			virtual ServerHandle AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler, std::shared_ptr<ConnectionPoolBase> cntPool, size_t threadNum);
 
 			/**
 			 * \brief	Shutdown the specified server. However, the connection that created by this server is
@@ -72,7 +74,8 @@ namespace Decent
 			 * \param [in,out]	connection	The connection. The ownership of the connection will be transferred to the worker.
 			 * \param 		  	handler   	The handler for the connection.
 			 */
-			virtual void AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler);
+			virtual void AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/**
 			 * \brief	Query if this smart server is terminated
@@ -91,21 +94,22 @@ namespace Decent
 			 */
 			size_t GetMaxAcceptRetry() const { return m_acceptRetry; }
 
-			/**
-			 * \brief	Gets minimum thread pool size. See constructor's brief for details.
-			 *
-			 * \return	The minimum thread pool size.
-			 */
-			size_t GetMinThreadPoolSize() const { return m_threadPool.GetMaxPoolSize(); }
-
 		protected:
+			virtual void AddConnection(std::shared_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
+
 			/** \brief	Worker that keeps accepting connection. */
-			virtual void AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler);
+			virtual void AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler, 
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/** \brief	Server cleaner, who cleans the server that has already been shutdown-ed. */
 			virtual void ServerCleaner();
 
-			virtual void ConnectionProcesser(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler) noexcept;
+			virtual void ConnectionProcesser(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool) noexcept;
+
+			virtual void ConnectionPoolWorker(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 		private:
 			const size_t m_acceptRetry;
@@ -116,7 +120,6 @@ namespace Decent
 
 			std::atomic<bool> m_isTerminated;
 
-			Threading::ThreadPool m_threadPool;
 			Threading::SingleTaskThreadPool m_singleTaskPool;
 
 			std::mutex m_serverMapMutex;

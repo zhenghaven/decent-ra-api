@@ -1,6 +1,6 @@
 //#if ENCLAVE_PLATFORM_SGX
 
-#include "../Net/Connection.h"
+#include "../../Common/Net/ConnectionBase.h"
 
 using namespace Decent::Net;
 
@@ -13,7 +13,7 @@ extern "C" int ocall_decent_net_cnet_send_pack(void* const ptr, const char* msg,
 
 	try
 	{
-		static_cast<Connection*>(ptr)->SendPack(msg, size);
+		static_cast<ConnectionBase*>(ptr)->SendPack(msg, size);
 		return true;
 	}
 	catch (const std::exception&)
@@ -31,7 +31,7 @@ extern "C" int ocall_decent_net_cnet_recv_pack(size_t* recv_size, void* const pt
 
 	try
 	{
-		*recv_size = static_cast<Connection*>(ptr)->ReceivePack(*msg);
+		*recv_size = static_cast<ConnectionBase*>(ptr)->ReceivePack(*msg);
 		return true;
 	}
 	catch (const std::exception&)
@@ -49,8 +49,8 @@ extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const c
 
 	try
 	{
-		static_cast<Connection*>(ptr)->SendPack(in_msg, in_size);
-		*out_size = static_cast<Connection*>(ptr)->ReceivePack(*out_msg);
+		static_cast<ConnectionBase*>(ptr)->SendPack(in_msg, in_size);
+		*out_size = static_cast<ConnectionBase*>(ptr)->ReceivePack(*out_msg);
 		return true;
 	}
 	catch (const std::exception&)
@@ -68,7 +68,7 @@ extern "C" int ocall_decent_net_cnet_send_raw(size_t* sent_size, void* const ptr
 
 	try
 	{
-		*sent_size = static_cast<Connection*>(ptr)->SendRaw(msg, size);
+		*sent_size = static_cast<ConnectionBase*>(ptr)->SendRaw(msg, size);
 		return true;
 	}
 	catch (const std::exception&)
@@ -86,7 +86,7 @@ extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr
 
 	try
 	{
-		*recv_size = static_cast<Connection*>(ptr)->ReceiveRaw(buf, buf_size);
+		*recv_size = static_cast<ConnectionBase*>(ptr)->ReceiveRaw(buf, buf_size);
 		return true;
 	}
 	catch (const std::exception&)
@@ -104,7 +104,7 @@ extern "C" void ocall_decent_net_cnet_terminate(void* cnt_ptr)
 
 	try
 	{
-		static_cast<Connection*>(cnt_ptr)->Terminate();
+		static_cast<ConnectionBase*>(cnt_ptr)->Terminate();
 	}
 	catch (const std::exception&)
 	{}
@@ -112,7 +112,7 @@ extern "C" void ocall_decent_net_cnet_terminate(void* cnt_ptr)
 
 extern "C" void ocall_decent_net_cnet_close(void* cnt_ptr)
 {
-	delete static_cast<Connection*>(cnt_ptr);
+	delete static_cast<ConnectionBase*>(cnt_ptr);
 }
 
 //#endif //ENCLAVE_PLATFORM_SGX
