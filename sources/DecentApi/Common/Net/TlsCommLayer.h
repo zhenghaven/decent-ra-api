@@ -14,6 +14,7 @@ namespace Decent
 		class TlsConfig;
 		class PKey;
 		class X509Cert;
+		class Session;
 	}
 
 	namespace Net
@@ -22,7 +23,7 @@ namespace Decent
 		{
 		public:
 			TlsCommLayer() = delete;
-			TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const MbedTlsObj::TlsConfig> tlsConfig, bool reqPeerCert);
+			TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const MbedTlsObj::TlsConfig> tlsConfig, bool reqPeerCert, std::shared_ptr<const MbedTlsObj::Session> session);
 
 			TlsCommLayer(const TlsCommLayer& other) = delete;
 			TlsCommLayer(TlsCommLayer&& other);
@@ -71,6 +72,8 @@ namespace Decent
 			}
 
 			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
+
+			std::shared_ptr<MbedTlsObj::Session> GetSessionCopy() const;
 
 			std::string GetPeerCertPem() const;
 			std::string GetPublicKeyPem() const;

@@ -9,6 +9,7 @@
 
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/TlsConfig.h"
+#include "../MbedTls/Session.h"
 #include "../MbedTls/MbedTlsException.h"
 
 #include "NetworkException.h"
@@ -69,7 +70,7 @@ namespace
 	}
 }
 
-TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig> tlsConfig, bool reqPeerCert) :
+TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig> tlsConfig, bool reqPeerCert, std::shared_ptr<const MbedTlsObj::Session> session) :
 	m_sslCtx(Tools::make_unique<mbedtls_ssl_context>()),
 	m_tlsConfig(tlsConfig)
 {
@@ -89,6 +90,16 @@ TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig>
 
 	mbedtls_ssl_set_bio(m_sslCtx.get(), &cnt, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 	mbedtls_ssl_set_hs_authmode(m_sslCtx.get(), reqPeerCert ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_NONE);
+
+	if (session)
+	{
+		mbedRet = mbedtls_ssl_set_session(m_sslCtx.get(), session->Get()); 
+		if (mbedRet != MBEDTLS_SUCCESS_RET)
+		{
+			mbedtls_ssl_free(m_sslCtx.get());
+			throw Decent::MbedTlsObj::MbedTlsException("TlsCommLayer::TlsCommLayer::mbedtls_ssl_set_session", mbedRet);
+		}
+	}
 
 	mbedRet = mbedtls_ssl_handshake(m_sslCtx.get());
 	if (mbedRet != MBEDTLS_SUCCESS_RET)
@@ -207,6 +218,18 @@ void TlsCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
 void TlsCommLayer::SetConnectionPtr(ConnectionBase& cnt)
 {
 	mbedtls_ssl_set_bio(m_sslCtx.get(), &cnt, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
+}
+
+std::shared_ptr<MbedTlsObj::Session> TlsCommLayer::GetSessionCopy() const
+{
+	std::shared_ptr<MbedTlsObj::Session> res = std::make_shared<MbedTlsObj::Session>();
+	int mbedRet = mbedtls_ssl_get_session(m_sslCtx.get(), res->Get());
+	if (mbedRet != MBEDTLS_SUCCESS_RET)
+	{
+		mbedtls_ssl_free(m_sslCtx.get());
+		throw Decent::MbedTlsObj::MbedTlsException("mbedtls_ssl_get_session", mbedRet);
+	}
+	return res;
 }
 
 std::string TlsCommLayer::GetPeerCertPem() const

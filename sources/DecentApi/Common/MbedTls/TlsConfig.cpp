@@ -40,11 +40,13 @@ TlsConfig::TlsConfig(TlsConfig&& other) :
 	if (Get())
 	{
 		mbedtls_ssl_conf_verify(Get(), &TlsConfig::CertVerifyCallBack, this);
-	}
 
-	if (m_ticketMgr)
-	{
-		mbedtls_ssl_conf_session_tickets_cb(Get(), &SessionTicketMgrBase::Write, &SessionTicketMgrBase::Parse, m_ticketMgr.get());
+		mbedtls_ssl_conf_session_tickets(Get(), MBEDTLS_SSL_SESSION_TICKETS_ENABLED);
+
+		if (m_ticketMgr)
+		{
+			mbedtls_ssl_conf_session_tickets_cb(Get(), &SessionTicketMgrBase::Write, &SessionTicketMgrBase::Parse, m_ticketMgr.get());
+		}
 	}
 }
 
@@ -56,6 +58,8 @@ TlsConfig::TlsConfig(std::shared_ptr<SessionTicketMgrBase> ticketMgr) :
 	mbedtls_ssl_config_init(Get());
 	mbedtls_ssl_conf_rng(Get(), &Drbg::CallBack, m_rng.get());
 	mbedtls_ssl_conf_verify(Get(), &TlsConfig::CertVerifyCallBack, this);
+
+	mbedtls_ssl_conf_session_tickets(Get(), MBEDTLS_SSL_SESSION_TICKETS_ENABLED);
 
 	if (m_ticketMgr)
 	{
