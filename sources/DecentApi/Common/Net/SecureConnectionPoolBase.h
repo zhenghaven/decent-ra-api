@@ -1,10 +1,6 @@
 #pragma once
 
-#include <list>
-#include <utility>
-#include <memory>
-#include <atomic>
-#include <mutex>
+#include "ConnectionPoolBase.h"
 
 namespace Decent
 {
@@ -42,7 +38,7 @@ namespace Decent
 			std::unique_ptr<SecureCommLayer> m_comm;
 		};
 
-		class SecureConnectionPoolBase
+		class SecureConnectionPoolBase : public ConnectionPoolBase
 		{
 		public: //static member:
 
@@ -50,30 +46,13 @@ namespace Decent
 
 			static void ClientWakePeer(CntPair& cntPair);
 
+			static void ServerAsk(SecureCommLayer& secComm);
+
+			static void ServerWaitWakeUpMsg(SecureCommLayer& secComm);
+
 		public:
-			SecureConnectionPoolBase() = delete;
 
-			/**
-			 * \brief	Constructor
-			 *
-			 * \param	maxInCnt 	Maximum number of in-coming connection from ALL peer.
-			 * \param	maxOutCnt	Maximum number of out-coming connection PER peer.
-			 */
-			SecureConnectionPoolBase(size_t maxInCnt);
-
-			//Copy is not allowed
-			SecureConnectionPoolBase(const SecureConnectionPoolBase&) = delete;
-
-			//Move is not allowed
-			SecureConnectionPoolBase(SecureConnectionPoolBase&&) = delete;
-
-			virtual ~SecureConnectionPoolBase();
-
-			//Copy is not allowed
-			SecureConnectionPoolBase& operator=(const SecureConnectionPoolBase&) = delete;
-
-			//Move is not allowed
-			SecureConnectionPoolBase& operator=(SecureConnectionPoolBase&&) = delete;
+			using ConnectionPoolBase::ConnectionPoolBase;
 
 			/**
 			 * \brief	Hold the in-coming connection. This function will check the count for incoming
@@ -89,34 +68,6 @@ namespace Decent
 			 */
 			virtual bool HoldInComingConnection(ConnectionBase& cnt, SecureCommLayer& secComm);
 
-			/** \brief	Terminate oldest idle connection from the queue. */
-			virtual void TerminateOldestIdleConnection();
-
-			/**
-			 * \brief	Gets the maximum number of in-coming connection.
-			 *
-			 * \return	The maximum number of in-coming connection.
-			 */
-			const size_t& GetMaxInConnection() const noexcept { return m_maxInCnt; }
-
-		protected:
-
-			/**
-			 * \brief	Removes the cnt from the queue. This is called when the connection is
-			 * 			finished/terminated.
-			 *
-			 * \param [in,out]	cnt	connection reference.
-			 */
-			virtual void RemoveFromQueue(ConnectionBase& cnt);
-
-		private:
-			const size_t m_maxInCnt;
-
-			//Count for number of in-coming connection
-			std::atomic<std::uint_fast64_t> m_inCntCount;
-
-			std::mutex m_serverQueueMutex;
-			std::list<ConnectionBase*> m_serverQueue;
 		};
 	}
 }

@@ -17,11 +17,6 @@ namespace Decent
 		template<typename MapKeyType>
 		class SecureConnectionPool : public SecureConnectionPoolBase
 		{
-		public: //static member:
-			//typedef uint64_t MapKeyType;
-			typedef std::list<std::pair<CntPair, typename MapKeyType> > CntPoolType;
-			typedef std::map<typename MapKeyType, std::list<typename CntPoolType::iterator> > PoolIndexType;
-
 		public:
 			SecureConnectionPool(size_t maxInCnt, size_t maxOutCnt) :
 				SecureConnectionPoolBase(maxInCnt),

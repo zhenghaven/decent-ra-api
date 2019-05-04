@@ -66,77 +66,45 @@ void SecureConnectionPoolBase::ClientWakePeer(CntPair & cntPair)
 	cntPair.GetCommLayer().SendStruct('W');
 }
 
-SecureConnectionPoolBase::SecureConnectionPoolBase(size_t maxInCnt) :
-	m_maxInCnt(maxInCnt),
-	m_inCntCount()
+void SecureConnectionPoolBase::ServerAsk(SecureCommLayer & secComm)
 {
+	secComm.SendStruct('?');
 }
 
-SecureConnectionPoolBase::~SecureConnectionPoolBase()
+void SecureConnectionPoolBase::ServerWaitWakeUpMsg(SecureCommLayer & secComm)
 {
+	char wakeMsg = 'W';
+	secComm.ReceiveStruct(wakeMsg); //Waitting wake-up message.
 }
 
 bool SecureConnectionPoolBase::HoldInComingConnection(ConnectionBase& cnt, SecureCommLayer& secComm)
 {
-	uint64_t currentCount = m_inCntCount++;
-	//LOGI("InComing Cnt Count: %llu.", currentCount);
-	if (currentCount >= m_maxInCnt)
+	if (GetMaxInConnection() == 0)
 	{
-		//There is no more space
-		TerminateOldestIdleConnection();
+		return false;
 	}
+
+	AddOneAndCheckCapacity();
 
 	//Decent keep-alive protocol
 	try
 	{
-		char wakeMsg = 'W';
-		secComm.SendStruct('?');
-
-		{
-			std::unique_lock<std::mutex> serverQueueLock(m_serverQueueMutex);
-			m_serverQueue.push_back(&cnt);
-		}
-
-		secComm.ReceiveStruct(wakeMsg); //Waitting wake-up message.
+		SecureConnectionPoolBase::ServerAsk(secComm);
+		AddConnection2Queue(cnt);
+		SecureConnectionPoolBase::ServerWaitWakeUpMsg(secComm);
 
 		// For simplicity, we assume peer correctly follows the protocol, 
 		// thus, we don't check the message content, for now.
 		
 		RemoveFromQueue(cnt);
+
+		//Successfully waken-up.
+		return true;
 	}
 	catch (const std::exception&)
 	{
 		//Probably peer terminates the connection.
 		RemoveFromQueue(cnt);
 		return false;
-	}
-
-	//Successfully waken-up.
-	return true;
-}
-
-void SecureConnectionPoolBase::TerminateOldestIdleConnection()
-{
-	std::unique_lock<std::mutex> serverQueueLock(m_serverQueueMutex);
-	if (m_serverQueue.size() > 0)
-	{
-		m_serverQueue.front()->Terminate();
-		m_serverQueue.pop_front();
-		serverQueueLock.unlock();
-		m_inCntCount--;
-	}
-}
-
-void SecureConnectionPoolBase::RemoveFromQueue(ConnectionBase & cnt)
-{
-	std::unique_lock<std::mutex> serverQueueLock(m_serverQueueMutex);
-	for (auto it = m_serverQueue.begin(); it != m_serverQueue.end(); ++it)
-	{
-		if (*it == &cnt)
-		{
-			m_serverQueue.erase(it);
-			m_inCntCount--;
-			return;
-		}
 	}
 }
