@@ -12,6 +12,7 @@ namespace Decent
 	namespace MbedTlsObj
 	{
 		class Drbg;
+		class SessionTicketMgrBase;
 
 		class TlsConfig : public ObjBase<mbedtls_ssl_config>
 		{
@@ -42,7 +43,7 @@ namespace Decent
 			 * \brief	Default constructor that will create and initialize an TLS configuration. Both DRBG
 			 * 			and verification callback function are set here.
 			 */
-			TlsConfig();
+			TlsConfig(std::shared_ptr<SessionTicketMgrBase> ticketMgr);
 
 			/**
 			 * \brief	Move constructor
@@ -93,6 +94,7 @@ namespace Decent
 
 		private:
 			std::unique_ptr<Decent::MbedTlsObj::Drbg> m_rng;
+			std::shared_ptr<SessionTicketMgrBase> m_ticketMgr;
 		};
 	}
 }

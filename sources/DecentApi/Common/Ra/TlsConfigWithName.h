@@ -13,7 +13,7 @@ namespace Decent
 		class TlsConfigWithName : public TlsConfig
 		{
 		public:
-			TlsConfigWithName(States& state, Mode cntMode, const std::string& expectedAppName);
+			TlsConfigWithName(States& state, Mode cntMode, const std::string& expectedAppName, std::shared_ptr<MbedTlsObj::SessionTicketMgrBase> ticketMgr);
 
 			TlsConfigWithName(const TlsConfigWithName&) = delete;
 

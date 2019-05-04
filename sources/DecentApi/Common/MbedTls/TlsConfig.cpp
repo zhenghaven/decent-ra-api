@@ -4,6 +4,7 @@
 
 #include "../make_unique.h"
 #include "Drbg.h"
+#include "SessionTicketMgr.h"
 
 using namespace Decent::MbedTlsObj;
 
@@ -33,21 +34,33 @@ int TlsConfig::CertVerifyCallBack(void * inst, mbedtls_x509_crt * cert, int dept
 
 TlsConfig::TlsConfig(TlsConfig&& other) :
 	ObjBase(std::forward<ObjBase>(other)),
-	m_rng(std::move(other.m_rng))
+	m_rng(std::move(other.m_rng)),
+	m_ticketMgr(std::move(other.m_ticketMgr))
 {
 	if (Get())
 	{
 		mbedtls_ssl_conf_verify(Get(), &TlsConfig::CertVerifyCallBack, this);
 	}
+
+	if (m_ticketMgr)
+	{
+		mbedtls_ssl_conf_session_tickets_cb(Get(), &SessionTicketMgrBase::Write, &SessionTicketMgrBase::Parse, m_ticketMgr.get());
+	}
 }
 
-TlsConfig::TlsConfig() :
+TlsConfig::TlsConfig(std::shared_ptr<SessionTicketMgrBase> ticketMgr) :
 	ObjBase(new mbedtls_ssl_config, &FreeObject),
-	m_rng(Tools::make_unique<Drbg>())
+	m_rng(Tools::make_unique<Drbg>()),
+	m_ticketMgr(ticketMgr)
 {
 	mbedtls_ssl_config_init(Get());
 	mbedtls_ssl_conf_rng(Get(), &Drbg::CallBack, m_rng.get());
 	mbedtls_ssl_conf_verify(Get(), &TlsConfig::CertVerifyCallBack, this);
+
+	if (m_ticketMgr)
+	{
+		mbedtls_ssl_conf_session_tickets_cb(Get(), &SessionTicketMgrBase::Write, &SessionTicketMgrBase::Parse, m_ticketMgr.get());
+	}
 }
 
 TlsConfig::~TlsConfig()
@@ -60,6 +73,7 @@ TlsConfig& TlsConfig::operator=(TlsConfig&& other) noexcept
 	if (this != &other)
 	{
 		m_rng.swap(other.m_rng);
+		m_ticketMgr.swap(other.m_ticketMgr);
 	}
 	return *this;
 }

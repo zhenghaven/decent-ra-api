@@ -14,8 +14,8 @@ using namespace Decent::Ra;
 
 #define CHECK_MBEDTLS_RET(VAL, FUNCSTR) {int retVal = VAL; if(retVal != Decent::MbedTlsObj::MBEDTLS_SUCCESS_RET) { throw Decent::MbedTlsObj::MbedTlsException(#FUNCSTR, retVal); } }
 
-TlsConfig::TlsConfig(States& state, Mode cntMode) :
-	MbedTlsObj::TlsConfig(),
+TlsConfig::TlsConfig(States& state, Mode cntMode, std::shared_ptr<Decent::MbedTlsObj::SessionTicketMgrBase> ticketMgr) :
+	MbedTlsObj::TlsConfig(ticketMgr),
 	m_state(state),
 	m_prvKey(m_state.GetKeyContainer().GetSignKeyPair()),
 	m_cert(m_state.GetCertContainer().GetCert())

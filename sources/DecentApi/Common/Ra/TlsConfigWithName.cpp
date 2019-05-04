@@ -6,10 +6,11 @@
 #include "States.h"
 #include "WhiteList/LoadedList.h"
 
+using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
 
-TlsConfigWithName::TlsConfigWithName(States & state, Mode cntMode, const std::string& expectedAppName) :
-	TlsConfig(state, cntMode),
+TlsConfigWithName::TlsConfigWithName(States & state, Mode cntMode, const std::string& expectedAppName, std::shared_ptr<SessionTicketMgrBase> ticketMgr) :
+	TlsConfig(state, cntMode, ticketMgr),
 	m_expectedAppName(expectedAppName)
 {
 }

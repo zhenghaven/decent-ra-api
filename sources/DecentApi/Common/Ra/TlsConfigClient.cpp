@@ -7,8 +7,8 @@
 using namespace Decent::Ra;
 using namespace Decent::MbedTlsObj;
 
-TlsConfigClient::TlsConfigClient(Decent::Ra::States & state, Mode cntMode, const std::string & expectedRegisterName) :
-	TlsConfigWithName(state, cntMode, expectedRegisterName)
+TlsConfigClient::TlsConfigClient(Decent::Ra::States & state, Mode cntMode, const std::string & expectedRegisterName, std::shared_ptr<SessionTicketMgrBase> ticketMgr) :
+	TlsConfigWithName(state, cntMode, expectedRegisterName, ticketMgr)
 {
 }
 

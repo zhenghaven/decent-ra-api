@@ -13,7 +13,7 @@ namespace Decent
 			class TlsConfig : public Decent::Ra::TlsConfigWithName
 			{
 			public:
-				TlsConfig(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName);
+				TlsConfig(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName, std::shared_ptr<MbedTlsObj::SessionTicketMgrBase> ticketMgr);
 
 				TlsConfig(Decent::Ra::Verifier::TlsConfig&& other);
 

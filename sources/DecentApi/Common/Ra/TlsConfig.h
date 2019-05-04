@@ -33,10 +33,11 @@ namespace Decent
 			/**
 			 * \brief	Constructor
 			 *
-			 * \param [in,out]	state  	The Decent's global state.
-			 * \param 		  	cntMode	The connection mode.
+			 * \param [in,out]	state	 	The Decent's global state.
+			 * \param 		  	cntMode  	The connection mode.
+			 * \param 		  	ticketMgr	Manager for session ticket.
 			 */
-			TlsConfig(States& state, Mode cntMode);
+			TlsConfig(States& state, Mode cntMode, std::shared_ptr<MbedTlsObj::SessionTicketMgrBase> ticketMgr);
 
 			TlsConfig(TlsConfig&& other);
 

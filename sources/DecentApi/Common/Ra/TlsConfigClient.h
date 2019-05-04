@@ -11,7 +11,7 @@ namespace Decent
 		class TlsConfigClient : public TlsConfigWithName
 		{
 		public:
-			TlsConfigClient(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName);
+			TlsConfigClient(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, std::shared_ptr<MbedTlsObj::SessionTicketMgrBase> ticketMgr);
 
 			TlsConfigClient(TlsConfigClient&& other) :
 				TlsConfigWithName(std::forward<TlsConfigWithName>(other))

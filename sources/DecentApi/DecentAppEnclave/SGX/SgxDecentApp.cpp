@@ -88,7 +88,7 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 		gs_appStates.GetAppCertContainer().SetAppCert(cert);
 
-		TlsConfigSameEnclave tlsCfg(gs_appStates, TlsConfig::Mode::ClientHasCert);
+		TlsConfigSameEnclave tlsCfg(gs_appStates, TlsConfig::Mode::ClientHasCert, nullptr);
 		//if (!cert->Verify(, nullptr, nullptr, &TlsConfigSameEnclave::CertVerifyCallBack, tlsCfg))
 		//{
 		//	PRINT_I("Could not verify the identity of the Decent Server.");

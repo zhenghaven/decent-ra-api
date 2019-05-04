@@ -9,8 +9,8 @@
 
 using namespace Decent::Ra::Verifier;
 
-TlsConfig::TlsConfig(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName) :
-	Decent::Ra::TlsConfigWithName(state, cntMode, expectedVerifierName),
+TlsConfig::TlsConfig(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName, std::shared_ptr<Decent::MbedTlsObj::SessionTicketMgrBase> ticketMgr) :
+	Decent::Ra::TlsConfigWithName(state, cntMode, expectedVerifierName, ticketMgr),
 	m_expectedVerifiedAppName(expectedAppName)
 {
 }
