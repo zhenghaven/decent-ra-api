@@ -118,10 +118,13 @@ bool SecureConnectionPoolBase::HoldInComingConnection(ConnectionBase& cnt, Secur
 void SecureConnectionPoolBase::TerminateOldestIdleConnection()
 {
 	std::unique_lock<std::mutex> serverQueueLock(m_serverQueueMutex);
-	m_serverQueue.front()->Terminate();
-	m_serverQueue.pop_front();
-	serverQueueLock.unlock();
-	m_inCntCount--;
+	if (m_serverQueue.size() > 0)
+	{
+		m_serverQueue.front()->Terminate();
+		m_serverQueue.pop_front();
+		serverQueueLock.unlock();
+		m_inCntCount--;
+	}
 }
 
 void SecureConnectionPoolBase::RemoveFromQueue(ConnectionBase & cnt)
