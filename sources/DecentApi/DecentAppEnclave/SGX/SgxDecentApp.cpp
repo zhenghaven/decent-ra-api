@@ -53,14 +53,16 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 	try
 	{
-		PRINT_I("Initializing Decent App with hash: %s\n", Tools::GetSelfHashBase64().c_str());
+		const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
+
+		PRINT_I("Initializing Decent App with hash:    %s\n", Tools::GetSelfHashBase64().c_str());
+		PRINT_I("                      & with pub key: %s\n", Tools::SerializeStruct(*keyContainer.GetSignPubKey()).c_str());
 
 		EnclaveCntTranslator cnt(connection);
 		Decent::Sgx::LocAttCommLayer commLayer(cnt, false);
 		commLayer.SetConnectionPtr(cnt);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
-		const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
 		std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
 		X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 		if (!certReq)
