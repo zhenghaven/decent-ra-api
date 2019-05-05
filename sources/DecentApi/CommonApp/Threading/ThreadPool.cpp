@@ -120,9 +120,9 @@ bool ThreadPool::AddWorker(std::unique_ptr<TaskSet>& taskset)
 			m_isWorkerPoolFull = true;
 		}
 		
-		std::shared_ptr<std::mutex> mutex = std::make_shared<std::mutex>();
+		const std::shared_ptr<std::mutex> mutex = std::make_shared<std::mutex>();
 		std::shared_ptr<std::unique_ptr<TaskSet> > taskPtr = std::make_shared<std::unique_ptr<TaskSet> >(std::move(taskset));
-		
+
 		//Create new thread/worker.
 		std::unique_ptr<std::thread> thr = Tools::make_unique<std::thread>(
 			[this, mutex, taskPtr]() {
@@ -136,7 +136,8 @@ bool ThreadPool::AddWorker(std::unique_ptr<TaskSet>& taskset)
 			{
 				return false;
 			}
-			m_workerPool.push_back(WorkerItem(std::move(thr), mutex, taskPtr));
+			std::unique_ptr<WorkerItem> workItem = Tools::make_unique<WorkerItem>(std::move(thr), mutex, taskPtr);
+			m_workerPool.push_back(std::move(workItem));
 		}
 
 		return true;
@@ -160,7 +161,10 @@ void ThreadPool::Worker(std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::
 			std::unique_lock<std::mutex> taskLock(*mutex);
 			if (!m_isTerminated) //One last check before execute.
 			{
-				task->ExecuteMainTask();
+				if (task)
+				{
+					task->ExecuteMainTask();
+				}
 			}
 			else
 			{
@@ -173,7 +177,7 @@ void ThreadPool::Worker(std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::
 			return; //the task probably has not been finished, so don't add to main thread task pool.
 		}
 
-		m_mainThreadWorker.AddTask(task);
+		m_mainThreadWorker.AddTask(std::move(task));
 
 		//Ask for new task.
 		{
@@ -186,12 +190,12 @@ void ThreadPool::Worker(std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::
 					[this]() -> bool {
 					return m_isTerminated || m_taskQueue.size() > 0;
 				});
+			}
 
-				if (m_taskQueue.size() > 0)
-				{
-					task = std::move(m_taskQueue.front());
-					m_taskQueue.pop();
-				}
+			if (m_taskQueue.size() > 0)
+			{
+				task.swap(m_taskQueue.front());
+				m_taskQueue.pop();
 			}
 		}
 	}

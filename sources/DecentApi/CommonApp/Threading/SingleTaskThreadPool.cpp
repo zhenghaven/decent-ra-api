@@ -49,7 +49,7 @@ void SingleTaskThreadPool::AddTaskSet(std::unique_ptr<TaskSet>& taskset)
 		this->Worker(mutex, taskPtr);
 	});
 
-	WorkerItem workerItem(std::move(thr), mutex, taskPtr);
+	std::unique_ptr<WorkerItem> workerItem = Tools::make_unique<WorkerItem>(std::move(thr), mutex, taskPtr);
 	std::unique_lock<std::mutex> workerMapLock(m_workerMapMutex);
 	if (!m_isTerminated)
 	{
@@ -97,7 +97,7 @@ void SingleTaskThreadPool::Worker(std::shared_ptr<std::mutex> mutex, std::shared
 
 	if (!m_isTerminated)
 	{
-		m_mainThreadWorker.AddTask(*taskPtr);
+		m_mainThreadWorker.AddTask(std::move(*taskPtr));
 	}
 
 	if (!m_isTerminated)

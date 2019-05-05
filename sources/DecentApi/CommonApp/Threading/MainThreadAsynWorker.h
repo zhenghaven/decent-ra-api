@@ -40,7 +40,7 @@ namespace Decent
 			 * \param [in,out]	task	The unique pointer points to the task set (But only the main thread
 			 * 							task will be executed).
 			 */
-			void AddTask(std::unique_ptr<TaskSet>& task);
+			void AddTask(std::unique_ptr<TaskSet> task);
 
 			/**
 			 * \brief	Execute tasks that are available in the queue. Note: The queue is not polled at once,

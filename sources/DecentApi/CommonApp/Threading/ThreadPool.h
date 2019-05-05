@@ -141,7 +141,7 @@ namespace Decent
 			std::condition_variable m_taskQueueSignal;
 
 			std::mutex m_workerPoolMutex;
-			std::vector<WorkerItem> m_workerPool;
+			std::vector<std::unique_ptr<WorkerItem> > m_workerPool;
 		};
 	}
 }

@@ -95,7 +95,7 @@ namespace Decent
 			size_t GetMaxAcceptRetry() const { return m_acceptRetry; }
 
 		protected:
-			virtual void AddConnection(std::shared_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+			virtual void AddConnection(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
 				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/** \brief	Worker that keeps accepting connection. */
