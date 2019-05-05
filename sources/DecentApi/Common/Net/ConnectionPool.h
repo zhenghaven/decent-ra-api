@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ConnectionPoolBase.h"
+#include "ConnectionBase.h"
 
 #include "../make_unique.h"
 #include "../Tools/CachingQueue.h"
