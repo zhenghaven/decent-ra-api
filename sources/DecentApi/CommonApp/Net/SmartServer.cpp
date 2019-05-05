@@ -198,8 +198,10 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<Connection> connection, st
 	try
 	{
 		Json::Value jsonRoot;
-		connection->ReceivePack(jsonRoot);
-		handler->ProcessSmartMessage(SmartMessages::ParseCat(jsonRoot), jsonRoot, *connection);
+		std::string categoryStr;
+		connection->ReceivePack(categoryStr);
+		categoryStr.erase(std::find(categoryStr.begin(), categoryStr.end(), '\0'), categoryStr.end());
+		handler->ProcessSmartMessage(categoryStr, jsonRoot, *connection);
 
 		//Msg processing is done.
 		
