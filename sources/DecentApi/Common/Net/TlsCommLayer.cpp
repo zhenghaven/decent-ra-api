@@ -93,6 +93,13 @@ TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig>
 
 	if (session)
 	{
+		mbedRet = mbedtls_ssl_session_reset(m_sslCtx.get());
+		if (mbedRet != MBEDTLS_SUCCESS_RET)
+		{
+			mbedtls_ssl_free(m_sslCtx.get());
+			throw Decent::MbedTlsObj::MbedTlsException("TlsCommLayer::TlsCommLayer::mbedtls_ssl_set_session", mbedRet);
+		}
+
 		mbedRet = mbedtls_ssl_set_session(m_sslCtx.get(), session->Get()); 
 		if (mbedRet != MBEDTLS_SUCCESS_RET)
 		{

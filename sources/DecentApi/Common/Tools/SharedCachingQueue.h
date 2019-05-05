@@ -44,7 +44,7 @@ namespace Decent
 				if (!duplicate)
 				{
 					auto idxIt = m_index.find(key);
-					if (idxIt != m_index.end() || idxIt->second.size() > 0)
+					if (idxIt != m_index.end() && idxIt->second.size() > 0)
 					{
 						//Don't make a duplication
 						return;
