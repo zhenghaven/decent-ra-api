@@ -9,22 +9,15 @@
 
 using namespace Decent::Threading;
 
-WorkerItem::WorkerItem(std::unique_ptr<std::thread>&& thread, std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::unique_ptr<TaskSet> > taskPtr) :
+WorkerItem::WorkerItem(std::unique_ptr<std::thread>&& thread, const std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::unique_ptr<TaskSet> > taskPtr) :
 	m_thread(std::forward<std::unique_ptr<std::thread> >(thread)),
-	m_mutex(std::forward<std::shared_ptr<std::mutex> >(mutex)), 
-	m_taskPtr(std::forward<std::shared_ptr<std::unique_ptr<TaskSet> > >(taskPtr))
+	m_mutex(mutex),
+	m_taskPtr(taskPtr)
 {
 	if (!m_thread || !m_mutex || !m_taskPtr)
 	{
 		throw RuntimeException("nullptr has been assigned to the WorkerItem.");
 	}
-}
-
-WorkerItem::WorkerItem(WorkerItem && other) :
-	m_thread(std::forward<std::unique_ptr<std::thread> >(other.m_thread)),
-	m_mutex(std::forward<std::shared_ptr<std::mutex> >(other.m_mutex)),
-	m_taskPtr(std::forward<std::shared_ptr<std::unique_ptr<TaskSet> > >(other.m_taskPtr))
-{
 }
 
 WorkerItem::~WorkerItem()

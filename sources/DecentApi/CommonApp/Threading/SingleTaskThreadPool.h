@@ -90,7 +90,7 @@ namespace Decent
 			MainThreadAsynWorker& m_mainThreadWorker;
 
 			std::mutex m_workerMapMutex;
-			std::map<std::unique_ptr<TaskSet>*, WorkerItem> m_workMap;
+			std::map<std::unique_ptr<TaskSet>*, std::unique_ptr<WorkerItem> > m_workMap;
 
 			std::mutex m_cleanQueueMutex;
 			std::queue<std::unique_ptr<TaskSet>* > m_cleanQueue;

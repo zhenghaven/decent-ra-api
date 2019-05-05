@@ -17,7 +17,7 @@ MainThreadAsynWorker::~MainThreadAsynWorker()
 {
 }
 
-void MainThreadAsynWorker::AddTask(std::unique_ptr<TaskSet>& task)
+void MainThreadAsynWorker::AddTask(std::unique_ptr<TaskSet> task)
 {
 	if (!task)
 	{

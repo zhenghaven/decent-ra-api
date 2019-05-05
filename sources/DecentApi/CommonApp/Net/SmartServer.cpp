@@ -116,7 +116,7 @@ void SmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::sh
 	this->AddConnection(sharedCnt, handler, cntPool, thrPool);
 }
 
-void SmartServer::AddConnection(std::shared_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+void SmartServer::AddConnection(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
 	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
