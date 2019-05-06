@@ -61,7 +61,8 @@ namespace Decent
 			 *
 			 * \param	resultPair	The result pair.
 			 */
-			LocAttCommLayer(std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > resultPair);
+			LocAttCommLayer(std::pair<std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> >,
+				Net::ConnectionBase*> resultPair);
 
 			/**
 			 * \brief	Constructor  that accept the result of the local attestation.
@@ -69,7 +70,7 @@ namespace Decent
 			 * \param	key			The key.
 			 * \param	identity	The identity.
 			 */
-			LocAttCommLayer(std::unique_ptr<General128BitKey> key, std::unique_ptr<sgx_dh_session_enclave_identity_t> identity);
+			LocAttCommLayer(std::unique_ptr<General128BitKey> key, std::unique_ptr<sgx_dh_session_enclave_identity_t> identity, Net::ConnectionBase* cnt);
 
 			/**
 			 * \brief	Perform the handshakes procedure (i.e. local attestation).
@@ -80,7 +81,8 @@ namespace Decent
 			 * \return	A std::pair&lt;std::unique_ptr&lt;General128BitKey&gt;,std::unique_ptr&lt;
 			 * 			sgx_dh_session_enclave_identity_t&gt; &gt;
 			 */
-			std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > Handshake(Decent::Net::ConnectionBase& cnt, bool isInitiator);
+			std::pair<std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> >,
+				Net::ConnectionBase*> Handshake(Decent::Net::ConnectionBase& cnt, bool isInitiator);
 
 			/**
 			 * \brief	Perform the handshakes procedure in initiator side.

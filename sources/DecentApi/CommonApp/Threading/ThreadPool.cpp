@@ -111,7 +111,7 @@ bool ThreadPool::OccupyFreeSpace()
 bool ThreadPool::AddWorker(std::unique_ptr<TaskSet>& taskset)
 {
 	const std::uint_fast64_t workerCount = m_workerCount++;
-	if (workerCount + 1 < m_maxPoolSize && !m_isTerminated)
+	if (workerCount + 1 <= m_maxPoolSize && !m_isTerminated)
 	{
 		//Yes, we can add one more.
 		if (workerCount + 1 == m_maxPoolSize)

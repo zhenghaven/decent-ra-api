@@ -32,13 +32,15 @@ struct EncryptedStruct
 #endif
 };
 
-AesGcmCommLayer::AesGcmCommLayer(const uint8_t (&sKey)[GENERAL_128BIT_16BYTE_SIZE]) :
-	m_gcm(sKey)
+AesGcmCommLayer::AesGcmCommLayer(const uint8_t (&sKey)[GENERAL_128BIT_16BYTE_SIZE], ConnectionBase* connection) :
+	m_gcm(sKey),
+	m_connection(connection)
 {
 }
 
-AesGcmCommLayer::AesGcmCommLayer(const AesGcm128bKeyType & sKey) :
-	m_gcm(sKey)
+AesGcmCommLayer::AesGcmCommLayer(const AesGcm128bKeyType & sKey, ConnectionBase* connection) :
+	m_gcm(sKey),
+	m_connection(connection)
 {
 }
 
