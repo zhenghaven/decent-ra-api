@@ -5,11 +5,6 @@
 
 namespace Decent
 {
-	namespace Net
-	{
-		class Connection;
-	}
-
 	namespace Ra
 	{
 		class DecentApp
