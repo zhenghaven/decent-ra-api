@@ -172,7 +172,7 @@ LocalServer & LocalServer::operator=(LocalServer && other)
 	return *this;
 }
 
-std::unique_ptr<Connection> LocalServer::AcceptConnection()
+std::unique_ptr<ConnectionBase> LocalServer::AcceptConnection()
 {
 	if (m_isTerminated)
 	{

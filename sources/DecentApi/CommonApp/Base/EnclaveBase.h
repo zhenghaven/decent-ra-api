@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "../Net/ConnectionHandler.h"
+#include "../../Common/Net/ConnectionHandler.h"
 
 namespace Decent
 {

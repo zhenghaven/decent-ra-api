@@ -24,7 +24,7 @@ namespace Decent
 {
 	namespace Net
 	{
-		class Connection;
+		class ConnectionBase;
 
 		/** \brief	A TCP server. */
 		class TCPServer : virtual public Server
@@ -60,7 +60,7 @@ namespace Decent
 			 *
 			 * \return	A std::unique_ptr&lt;Connection&gt;
 			 */			
-			virtual std::unique_ptr<Connection> AcceptConnection() override;
+			virtual std::unique_ptr<ConnectionBase> AcceptConnection() override;
 
 			/**
 			 * \brief	Query if this TCP Server is terminated

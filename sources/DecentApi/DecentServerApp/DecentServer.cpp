@@ -8,10 +8,12 @@
 #include <sgx_uae_service.h>
 
 #include "../Common/Tools/DataCoding.h"
+#include "../Common/Ra/RequestCategory.h"
+#include "../Common/SGX/RuntimeError.h"
+#include "../Common/Net/ConnectionBase.h"
 
 #include "../CommonApp/Ra/Messages.h"
 #include "../CommonApp/Base/EnclaveException.h"
-#include "../Common/SGX/RuntimeError.h"
 
 #include "edl_decent_ra_server.h"
 
@@ -80,7 +82,7 @@ void DecentServer::LoadConstWhiteList(const std::string & key, const std::string
 	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_load_const_loaded_list);
 }
 
-void DecentServer::ProcessAppCertReq(const std::string & wListKey, Connection& connection)
+void DecentServer::ProcessAppCertReq(const std::string & wListKey, ConnectionBase& connection)
 {
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;
@@ -89,20 +91,22 @@ void DecentServer::ProcessAppCertReq(const std::string & wListKey, Connection& c
 	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_proc_app_cert_req);
 }
 
-bool DecentServer::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
+bool DecentServer::ProcessSmartMessage(const std::string & category, ConnectionBase& connection)
 {
-	using namespace Decent::Ra::Message;
-
-	if (category == LoadWhiteList::sk_ValueCat)
+	if (category == Ra::RequestCategory::sk_loadWhiteList)
 	{
-		LoadWhiteList wlistMsg(jsonMsg);
-		LoadConstWhiteList(wlistMsg.GetKey(), wlistMsg.GetWhiteList());
+		std::string key;
+		std::string whiteList;
+		connection.ReceivePack(key);
+		connection.ReceivePack(whiteList);
+		LoadConstWhiteList(key, whiteList);
 		return false;
 	}
-	else if (category == RequestAppCert::sk_ValueCat)
+	else if (category == Ra::RequestCategory::sk_requestAppCert)
 	{
-		RequestAppCert certReqMsg(jsonMsg);
-		ProcessAppCertReq(certReqMsg.GetKey(), connection);
+		std::string key;
+		connection.ReceivePack(key);
+		ProcessAppCertReq(key, connection);
 		return false;
 	}
 	else

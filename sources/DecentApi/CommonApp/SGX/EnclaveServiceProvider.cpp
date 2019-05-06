@@ -54,7 +54,7 @@ void EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & out
 	DECENT_ASSERT_ENCLAVE_APP_RESULT(retval, "get service provider public key");
 }
 
-bool EnclaveServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Decent::Net::Connection& connection)
+bool EnclaveServiceProvider::ProcessSmartMessage(const std::string & category, Decent::Net::ConnectionBase& connection)
 {
-	return EnclaveBase::ProcessSmartMessage(category, jsonMsg, connection);
+	return EnclaveBase::ProcessSmartMessage(category, connection);
 }

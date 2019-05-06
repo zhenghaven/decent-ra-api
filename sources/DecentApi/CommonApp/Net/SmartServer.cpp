@@ -5,14 +5,13 @@
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/Net/ConnectionPoolBase.h"
+#include "../../Common/Net/ConnectionBase.h"
+#include "../../Common/Net/ConnectionHandler.h"
 
 #include "../Threading/TaskSet.h"
 
 #include "NetworkException.h"
 #include "Server.h"
-#include "Connection.h"
-#include "SmartMessages.h"
-#include "ConnectionHandler.h"
 
 using namespace Decent::Net;
 using namespace Decent::Threading;
@@ -21,11 +20,11 @@ void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Se
 	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	size_t retried = 0;
-	while (!server->IsTerminated() && retried < m_acceptRetry)
+	while (!m_isTerminated && !server->IsTerminated() && retried < m_acceptRetry)
 	{
 		try
 		{
-			std::unique_ptr<Connection> connection = server->AcceptConnection();
+			std::unique_ptr<ConnectionBase> connection = server->AcceptConnection();
 			this->AddConnection(connection, handler, cntPool, thrPool);
 			retried = 0;
 		}
@@ -108,17 +107,22 @@ void SmartServer::ShutdownServer(ServerHandle handle)
 	}
 }
 
-void SmartServer::AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+void SmartServer::AddConnection(std::unique_ptr<ConnectionBase>& connection, std::shared_ptr<ConnectionHandler> handler,
 	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
 {
-	std::shared_ptr<Connection> sharedCnt(std::move(connection));
+	std::shared_ptr<ConnectionBase> sharedCnt(std::move(connection));
 
 	this->AddConnection(sharedCnt, handler, cntPool, thrPool);
 }
 
-void SmartServer::AddConnection(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+void SmartServer::AddConnection(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
 	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
 {
+	if (m_isTerminated)
+	{
+		return;
+	}
+
 	std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
 		[this, connection, handler, cntPool, thrPool]() //Main task
 	{
@@ -192,16 +196,15 @@ void SmartServer::ServerCleaner()
 	}
 }
 
-void SmartServer::ConnectionProcesser(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
 	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool) noexcept
 {
 	try
 	{
-		Json::Value jsonRoot;
 		std::string categoryStr;
 		connection->ReceivePack(categoryStr);
 		categoryStr.erase(std::find(categoryStr.begin(), categoryStr.end(), '\0'), categoryStr.end());
-		handler->ProcessSmartMessage(categoryStr, jsonRoot, *connection);
+		handler->ProcessSmartMessage(categoryStr, *connection);
 
 		//Msg processing is done.
 		
@@ -247,7 +250,7 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<Connection> connection, st
 	}
 }
 
-void SmartServer::ConnectionPoolWorker(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+void SmartServer::ConnectionPoolWorker(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
 	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	try

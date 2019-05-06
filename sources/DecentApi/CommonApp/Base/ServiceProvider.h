@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "../Net/ConnectionHandler.h"
+#include "../../Common/Net/ConnectionHandler.h"
 
 typedef struct _general_secp256r1_public_t general_secp256r1_public_t;
 

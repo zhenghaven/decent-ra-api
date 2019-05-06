@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Connection.h"
+#include "../../Common/Net/ConnectionBase.h"
 
 #include <string>
 #include <vector>
@@ -37,7 +37,7 @@ namespace Decent
 	{
 		class SmartMessages;
 
-		class TCPConnection : public Connection
+		class TCPConnection : public ConnectionBase
 		{
 		public: //static members:
 			typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp> TcpSocketType;

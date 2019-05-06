@@ -27,9 +27,9 @@ namespace Decent
 			//DecentEnclave methods:
 			virtual std::string GetDecentSelfRAReport() const override;
 			virtual void LoadConstWhiteList(const std::string& key, const std::string& whiteList) override;
-			virtual void ProcessAppCertReq(const std::string& wListKey, Net::Connection& connection) override;
+			virtual void ProcessAppCertReq(const std::string& wListKey, Net::ConnectionBase& connection) override;
 
-			virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Net::Connection& connection) override;
+			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection) override;
 
 		protected:
 			virtual std::string GenerateDecentSelfRAReport() override;

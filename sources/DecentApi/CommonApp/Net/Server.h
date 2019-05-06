@@ -6,7 +6,7 @@ namespace Decent
 {
 	namespace Net
 	{
-		class Connection;
+		class ConnectionBase;
 
 		class Server
 		{
@@ -20,7 +20,7 @@ namespace Decent
 			 *
 			 * \return	A std::unique_ptr&lt;Connection&gt;
 			 */
-			virtual std::unique_ptr<Connection> AcceptConnection() = 0;
+			virtual std::unique_ptr<ConnectionBase> AcceptConnection() = 0;
 
 			/**
 			 * \brief	Query if this server is terminated

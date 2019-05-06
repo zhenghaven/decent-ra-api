@@ -25,7 +25,7 @@ void ServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) co
 	outKey = (*gs_states.GetKeyContainer().GetSignPubKey());
 }
 
-bool ServiceProvider::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Decent::Net::Connection& connection)
+bool ServiceProvider::ProcessSmartMessage(const std::string & category, Decent::Net::ConnectionBase& connection)
 {
 	return false;
 }

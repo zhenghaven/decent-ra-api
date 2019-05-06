@@ -6,7 +6,7 @@ namespace Decent
 {
 	namespace Net
 	{
-		class Connection;
+		class ConnectionBase;
 	}
 
 	namespace Ra
@@ -16,7 +16,7 @@ namespace Decent
 		public:
 			virtual std::string GetDecentSelfRAReport() const = 0;
 			virtual void LoadConstWhiteList(const std::string& key, const std::string& whiteList) = 0;
-			virtual void ProcessAppCertReq(const std::string& wListKey, Net::Connection& connection) = 0;
+			virtual void ProcessAppCertReq(const std::string& wListKey, Net::ConnectionBase& connection) = 0;
 
 		protected:
 			virtual std::string GenerateDecentSelfRAReport() = 0;

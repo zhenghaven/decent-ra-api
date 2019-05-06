@@ -46,7 +46,7 @@ TCPServer::~TCPServer()
 {
 }
 
-std::unique_ptr<Connection> TCPServer::AcceptConnection()
+std::unique_ptr<ConnectionBase> TCPServer::AcceptConnection()
 {
 	if (m_isTerminated)
 	{

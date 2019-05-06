@@ -1,4 +1,4 @@
-#include "Connection.h"
+#include "../../Common/Net/ConnectionBase.h"
 
 #include <memory>
 #include <utility>
@@ -25,7 +25,7 @@ namespace Decent
 
 		struct LocalAcceptedResult;
 
-		class LocalConnection : public Connection
+		class LocalConnection : public ConnectionBase
 		{
 		public:
 			static LocalConnection Connect(const std::string& serverName);

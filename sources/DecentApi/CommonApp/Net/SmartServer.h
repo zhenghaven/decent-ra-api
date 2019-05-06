@@ -18,7 +18,7 @@ namespace Decent
 	namespace Net
 	{
 		class Server;
-		class Connection;
+		class ConnectionBase;
 		class ConnectionHandler;
 		class ConnectionPoolBase;
 
@@ -77,7 +77,7 @@ namespace Decent
 			 * \param [in,out]	connection	The connection. The ownership of the connection will be transferred to the worker.
 			 * \param 		  	handler   	The handler for the connection.
 			 */
-			virtual void AddConnection(std::unique_ptr<Connection>& connection, std::shared_ptr<ConnectionHandler> handler,
+			virtual void AddConnection(std::unique_ptr<ConnectionBase>& connection, std::shared_ptr<ConnectionHandler> handler,
 				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/**
@@ -98,7 +98,7 @@ namespace Decent
 			size_t GetMaxAcceptRetry() const { return m_acceptRetry; }
 
 		protected:
-			virtual void AddConnection(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+			virtual void AddConnection(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
 				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/** \brief	Worker that keeps accepting connection. */
@@ -108,10 +108,10 @@ namespace Decent
 			/** \brief	Server cleaner, who cleans the server that has already been shutdown-ed. */
 			virtual void ServerCleaner();
 
-			virtual void ConnectionProcesser(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+			virtual void ConnectionProcesser(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
 				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool) noexcept;
 
-			virtual void ConnectionPoolWorker(std::shared_ptr<Connection> connection, std::shared_ptr<ConnectionHandler> handler,
+			virtual void ConnectionPoolWorker(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
 				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 		private:

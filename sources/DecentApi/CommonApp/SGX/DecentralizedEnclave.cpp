@@ -44,7 +44,7 @@ DecentralizedEnclave::~DecentralizedEnclave()
 {
 }
 
-bool DecentralizedEnclave::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Decent::Net::Connection& connection)
+bool DecentralizedEnclave::ProcessSmartMessage(const std::string & category, Decent::Net::ConnectionBase& connection)
 {
 	return false;
 }

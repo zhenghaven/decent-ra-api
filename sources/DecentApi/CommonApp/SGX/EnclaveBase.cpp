@@ -185,7 +185,7 @@ uint32_t EnclaveBase::GetExGroupID()
 	return res;
 }
 
-bool EnclaveBase::ProcessSmartMessage(const std::string & category, const Json::Value & jsonMsg, Connection& connection)
+bool EnclaveBase::ProcessSmartMessage(const std::string & category, ConnectionBase& connection)
 {
 	return false;
 }

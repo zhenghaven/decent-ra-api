@@ -24,7 +24,7 @@ namespace Decent
 
 			virtual void GetSpPublicSignKey(general_secp256r1_public_t& outKey) const override;
 
-			virtual bool ProcessSmartMessage(const std::string& category, const Json::Value& jsonMsg, Net::Connection& connection) override;
+			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection) override;
 
 		protected:
 			std::shared_ptr<const Ias::Connector> m_ias;
