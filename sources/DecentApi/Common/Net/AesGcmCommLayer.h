@@ -26,14 +26,14 @@ namespace Decent
 			 *
 			 * \param	sKey	128-bit key used for AES-GCM encryption.
 			 */
-			AesGcmCommLayer(const uint8_t(&sKey)[GENERAL_128BIT_16BYTE_SIZE]);
+			AesGcmCommLayer(const uint8_t(&sKey)[GENERAL_128BIT_16BYTE_SIZE], ConnectionBase* connection);
 
 			/**
 			 * \brief	Constructor
 			 *
 			 * \param	sKey	128-bit key used for AES-GCM encryption.
 			 */
-			AesGcmCommLayer(const AesGcm128bKeyType& sKey);
+			AesGcmCommLayer(const AesGcm128bKeyType& sKey, ConnectionBase* connection);
 
 			//Copy is prohibited. 
 			AesGcmCommLayer(const AesGcmCommLayer& other) = delete;

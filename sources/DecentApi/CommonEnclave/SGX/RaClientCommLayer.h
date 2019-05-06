@@ -32,7 +32,7 @@ namespace Decent
 			virtual operator bool() const override;
 
 		private:
-			RaClientCommLayer(std::unique_ptr<Sgx::RaProcessorClient> raProcessor);
+			RaClientCommLayer(std::pair<std::unique_ptr<RaProcessorClient>, Net::ConnectionBase*> raProcessor);
 
 			bool m_isHandShaked;
 			//std::unique_ptr<SgxRaProcessorClient> m_raProcessor;

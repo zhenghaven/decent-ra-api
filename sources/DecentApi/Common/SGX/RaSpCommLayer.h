@@ -16,7 +16,7 @@ namespace Decent
 		{
 		public:
 			RaSpCommLayer() = delete;
-			RaSpCommLayer(Decent::Net::ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor);
+			RaSpCommLayer(Net::ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor);
 			RaSpCommLayer(const RaSpCommLayer& other) = delete;
 			RaSpCommLayer(RaSpCommLayer&& other);
 
@@ -27,7 +27,7 @@ namespace Decent
 			virtual operator bool() const override;
 
 		private:
-			RaSpCommLayer(std::unique_ptr<RaProcessorSp> raProcessor);
+			RaSpCommLayer(std::pair<std::unique_ptr<RaProcessorSp>, Net::ConnectionBase*> raProcessor);
 
 			bool m_isHandShaked;
 			std::unique_ptr<sgx_ias_report_t> m_iasReport;

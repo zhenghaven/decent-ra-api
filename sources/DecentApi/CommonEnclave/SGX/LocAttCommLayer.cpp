@@ -54,13 +54,14 @@ const sgx_dh_session_enclave_identity_t& LocAttCommLayer::GetIdentity() const
 	return *m_identity;
 }
 
-LocAttCommLayer::LocAttCommLayer(std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > resultPair) :
-	LocAttCommLayer(std::move(resultPair.first), std::move(resultPair.second))
+LocAttCommLayer::LocAttCommLayer(std::pair<std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> >,
+	Net::ConnectionBase*> resultPair) :
+	LocAttCommLayer(std::move(resultPair.first.first), std::move(resultPair.first.second), resultPair.second)
 {
 }
 
-LocAttCommLayer::LocAttCommLayer(std::unique_ptr<General128BitKey> key, std::unique_ptr<sgx_dh_session_enclave_identity_t> identity) :
-	AesGcmCommLayer(*key),
+LocAttCommLayer::LocAttCommLayer(std::unique_ptr<General128BitKey> key, std::unique_ptr<sgx_dh_session_enclave_identity_t> identity, Net::ConnectionBase* cnt) :
+	AesGcmCommLayer(*key, cnt),
 	m_identity(std::move(identity))
 {
 }
@@ -110,7 +111,8 @@ void LocAttCommLayer::ResponderHandshake(ConnectionBase& cnt, General128BitKey& 
 	cnt.SendPack(&msg3, sizeof(msg3));
 }
 
-std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > LocAttCommLayer::Handshake(ConnectionBase& cnt, bool isInitiator)
+std::pair<std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> >,
+	Net::ConnectionBase*> LocAttCommLayer::Handshake(ConnectionBase& cnt, bool isInitiator)
 {
 	std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> > retValue =
 		std::make_pair(Tools::make_unique<General128BitKey>(), Tools::make_unique<sgx_dh_session_enclave_identity_t>());
@@ -124,5 +126,5 @@ std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_encl
 		ResponderHandshake(cnt, *retValue.first, *retValue.second);
 	}
 
-	return std::move(retValue);
+	return std::make_pair(std::move(retValue), &cnt);
 }

@@ -12,7 +12,6 @@
 #include "../Common/SGX/RuntimeError.h"
 #include "../Common/Net/ConnectionBase.h"
 
-#include "../CommonApp/Ra/Messages.h"
 #include "../CommonApp/Base/EnclaveException.h"
 
 #include "edl_decent_ra_server.h"
@@ -95,11 +94,15 @@ bool DecentServer::ProcessSmartMessage(const std::string & category, ConnectionB
 {
 	if (category == Ra::RequestCategory::sk_loadWhiteList)
 	{
+		static const char ackMsg[] = "ACK";
 		std::string key;
 		std::string whiteList;
 		connection.ReceivePack(key);
 		connection.ReceivePack(whiteList);
 		LoadConstWhiteList(key, whiteList);
+		
+		connection.SendRawGuarantee(&ackMsg, sizeof(ackMsg));
+
 		return false;
 	}
 	else if (category == Ra::RequestCategory::sk_requestAppCert)

@@ -11,7 +11,7 @@
 using namespace Decent::Net;
 using namespace Decent::Sgx;
 
-static std::unique_ptr<RaProcessorSp> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor)
+static std::pair<std::unique_ptr<RaProcessorSp>, ConnectionBase*> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor)
 {
 	if (!raProcessor ||
 		!raProcessor->Init())
@@ -48,7 +48,7 @@ static std::unique_ptr<RaProcessorSp> DoHandShake(ConnectionBase& cnt, std::uniq
 
 	cnt.SendPack(&msg4, sizeof(msg4));
 
-	return std::move(raProcessor);
+	return std::make_pair(std::move(raProcessor), &cnt);
 }
 
 RaSpCommLayer::RaSpCommLayer(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor) :
@@ -78,9 +78,9 @@ RaSpCommLayer::operator bool() const
 	return AesGcmCommLayer::operator bool() && m_isHandShaked;
 }
 
-RaSpCommLayer::RaSpCommLayer(std::unique_ptr<RaProcessorSp> raProcessor) :
-	AesGcmCommLayer(raProcessor && raProcessor->IsAttested() ? raProcessor->GetSK() : General128BitKey()),
-	m_isHandShaked(raProcessor && raProcessor->IsAttested()),
-	m_iasReport(m_isHandShaked ? raProcessor->ReleaseIasReport() : new sgx_ias_report_t)
+RaSpCommLayer::RaSpCommLayer(std::pair<std::unique_ptr<RaProcessorSp>, ConnectionBase*> raProcessor) :
+	AesGcmCommLayer(raProcessor.first && raProcessor.first->IsAttested() ? raProcessor.first->GetSK() : General128BitKey(), raProcessor.second),
+	m_isHandShaked(raProcessor.first && raProcessor.first->IsAttested()),
+	m_iasReport(m_isHandShaked ? raProcessor.first->ReleaseIasReport() : new sgx_ias_report_t)
 {
 }

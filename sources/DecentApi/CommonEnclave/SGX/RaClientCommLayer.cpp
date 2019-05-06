@@ -10,7 +10,7 @@
 using namespace Decent::Sgx;
 using namespace Decent::Net;
 
-static std::unique_ptr<RaProcessorClient> DoHandShake(EnclaveCntTranslator& connection, std::unique_ptr<RaProcessorClient>& raProcessor)
+static std::pair<std::unique_ptr<RaProcessorClient>, ConnectionBase*> DoHandShake(EnclaveCntTranslator& connection, std::unique_ptr<RaProcessorClient>& raProcessor)
 {
 	if (!raProcessor)
 	{
@@ -51,7 +51,7 @@ static std::unique_ptr<RaProcessorClient> DoHandShake(EnclaveCntTranslator& conn
 		throw Exception("Decent::Sgx::RaProcessorClient DoHandShake Failed.");
 	}
 
-	return std::move(raProcessor);
+	return std::make_pair(std::move(raProcessor), &connection);
 }
 
 RaClientCommLayer::RaClientCommLayer(EnclaveCntTranslator& connection, std::unique_ptr<RaProcessorClient>& raProcessor) :
@@ -81,9 +81,9 @@ RaClientCommLayer::operator bool() const
 	return AesGcmCommLayer::operator bool() && m_isHandShaked;
 }
 
-RaClientCommLayer::RaClientCommLayer(std::unique_ptr<RaProcessorClient> raProcessor) :
-	AesGcmCommLayer(raProcessor && raProcessor->IsAttested() ? raProcessor->GetSK() : General128BitKey()),
-	m_isHandShaked(raProcessor && raProcessor->IsAttested()),
-	m_iasReport(m_isHandShaked ? raProcessor->ReleaseIasReport() : new sgx_ias_report_t)
+RaClientCommLayer::RaClientCommLayer(std::pair<std::unique_ptr<RaProcessorClient>, ConnectionBase*> raProcessor) :
+	AesGcmCommLayer(raProcessor.first && raProcessor.first->IsAttested() ? raProcessor.first->GetSK() : General128BitKey(), raProcessor.second),
+	m_isHandShaked(raProcessor.first && raProcessor.first->IsAttested()),
+	m_iasReport(m_isHandShaked ? raProcessor.first->ReleaseIasReport() : new sgx_ias_report_t)
 {
 }
