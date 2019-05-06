@@ -15,6 +15,7 @@
 
 #include "../../CommonEnclave/Tools/Crypto.h"
 #include "../../CommonEnclave/SGX/LocAttCommLayer.h"
+#include "../../CommonEnclave/Net/EnclaveCntTranslator.h"
 
 #include "RaProcessor.h"
 #include "SelfRaReportGenerator.h"
@@ -23,6 +24,7 @@
 
 using namespace Decent;
 using namespace Decent::Ra;
+using namespace Decent::Net;
 using namespace Decent::Tools;
 using namespace Decent::RaSgx;
 
@@ -119,11 +121,12 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 	
 	try
 	{
-		std::string plainMsg;
-		Decent::Sgx::LocAttCommLayer commLayer(connection, true);
+		EnclaveCntTranslator cnt(connection);
+		Decent::Sgx::LocAttCommLayer commLayer(cnt, true);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
-		commLayer.ReceiveMsg(connection, plainMsg);
+		std::string plainMsg;
+		commLayer.ReceiveMsg(plainMsg);
 		X509Req appX509Req(plainMsg);
 		if (!appX509Req || !appX509Req.VerifySignature())
 		{
@@ -147,7 +150,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 			return SGX_ERROR_UNEXPECTED;
 		}
 
-		commLayer.SendMsg(connection, appX509.ToPemString());
+		commLayer.SendMsg(appX509.ToPemString());
 	}
 	catch (const std::exception&)
 	{

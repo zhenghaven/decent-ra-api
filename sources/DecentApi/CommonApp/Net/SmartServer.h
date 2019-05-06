@@ -33,16 +33,19 @@ namespace Decent
 			/**
 			 * \brief	Constructor
 			 *
-			 * \param	minThreadPoolSize	The minimum size of the thread pool. All workers in thread pool
-			 * 								will poll connection to process when free. when all workers in
-			 * 								the thread pool are busy, single task worker will be created to
-			 * 								process the connection. There is no number limit for the single
-			 * 								task worker.
-			 * \param	acceptRetry		 	(Optional) number of retries before shutdown the server. If the
-			 * 								server *continuously* failed to accept connection for
-			 * 								'acceptRetry' times, the server will be automatically shutdown.
+			 * \param [in,out]	mainThreadWorker	The main thread worker. The main thread worker should be
+			 * 										declared in main() function, and stay alive until the program
+			 * 										is terminated.
+			 * \param 		  	acceptRetry			(Optional) number of retries before shutdown the server.
+			 * 										If the server *continuously* failed to accept connection for
+			 * 										'acceptRetry' times, the server will be automatically
+			 * 										shutdown.
 			 */
-			SmartServer(const size_t minThreadPoolSize, Threading::MainThreadAsynWorker& mainThreadWorker, const size_t acceptRetry = 10);
+			SmartServer(Threading::MainThreadAsynWorker& mainThreadWorker, const size_t acceptRetry = 10);
+
+			SmartServer(const SmartServer&) = delete;
+
+			SmartServer(SmartServer&&) = delete;
 			
 			/** \brief	Destructor. Terminate will be called here. */
 			virtual ~SmartServer();

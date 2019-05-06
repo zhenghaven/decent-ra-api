@@ -49,7 +49,7 @@ void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Se
 	m_serverCleanSignal.notify_one();
 }
 
-SmartServer::SmartServer(const size_t minThreadPoolSize, MainThreadAsynWorker & mainThreadWorker, const size_t acceptRetry) :
+SmartServer::SmartServer(MainThreadAsynWorker & mainThreadWorker, const size_t acceptRetry) :
 	m_acceptRetry(acceptRetry),
 	m_mainThreadWorker(mainThreadWorker),
 	m_cleanerPool(),
@@ -252,9 +252,9 @@ void SmartServer::ConnectionPoolWorker(std::shared_ptr<Connection> connection, s
 {
 	try
 	{
-		if (!cntPool->HoldInComingConnection(*connection))
+		if (!cntPool || !cntPool->HoldInComingConnection(*connection))
 		{
-			//connection is terminated
+			//Connection pool is not given, or, connection is terminated by peer.
 			return;
 		}
 		//Connection has been waken up

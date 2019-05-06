@@ -45,8 +45,17 @@ DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Connect
 	m_selfRaReport = GenerateDecentSelfRAReport();
 }
 
-DecentServer::DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Connector>& ias, const std::string& enclavePath, const KnownFolderType tokenLocType, const std::string& tokenFileName) :
-	Sgx::EnclaveServiceProvider(ias, enclavePath, tokenLocType, tokenFileName)
+DecentServer::DecentServer(const sgx_spid_t & spid, const std::shared_ptr<Connector>& ias, const std::string & enclavePath, const std::string & tokenPath, 
+	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
+	Sgx::EnclaveServiceProvider(ias, enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep)
+{
+	InitDecent(GetEnclaveId(), spid);
+	m_selfRaReport = GenerateDecentSelfRAReport();
+}
+
+DecentServer::DecentServer(const sgx_spid_t & spid, const std::shared_ptr<Connector>& ias, const fs::path & enclavePath, const fs::path & tokenPath, 
+	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
+	Sgx::EnclaveServiceProvider(ias, enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep)
 {
 	InitDecent(GetEnclaveId(), spid);
 	m_selfRaReport = GenerateDecentSelfRAReport();

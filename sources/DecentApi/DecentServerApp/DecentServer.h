@@ -13,8 +13,14 @@ namespace Decent
 		{
 		public:
 			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const std::string& tokenPath);
+
 			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath);
-			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const Decent::Tools::KnownFolderType tokenLocType, const std::string& tokenFileName);
+
+			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const std::string& enclavePath, const std::string& tokenPath,
+				const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep);
+
+			DecentServer(const sgx_spid_t& spid, const std::shared_ptr<Ias::Connector>& ias, const fs::path& enclavePath, const fs::path& tokenPath,
+				const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep);
 
 			virtual ~DecentServer();
 
