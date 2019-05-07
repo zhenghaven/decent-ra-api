@@ -185,7 +185,7 @@ uint32_t EnclaveBase::GetExGroupID()
 	return res;
 }
 
-bool EnclaveBase::ProcessSmartMessage(const std::string & category, ConnectionBase& connection)
+bool EnclaveBase::ProcessSmartMessage(const std::string & category, ConnectionBase& connection, ConnectionBase*& freeHeldCnt)
 {
 	return false;
 }

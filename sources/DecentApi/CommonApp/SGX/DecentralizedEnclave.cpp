@@ -5,6 +5,7 @@
 
 using namespace Decent::Ias;
 using namespace Decent::Sgx;
+using namespace Decent::Net;
 using namespace Decent::Tools;
 
 static void InitDecent(sgx_enclave_id_t id, const sgx_spid_t& spid)
@@ -44,7 +45,7 @@ DecentralizedEnclave::~DecentralizedEnclave()
 {
 }
 
-bool DecentralizedEnclave::ProcessSmartMessage(const std::string & category, Decent::Net::ConnectionBase& connection)
+bool DecentralizedEnclave::ProcessSmartMessage(const std::string & category, ConnectionBase& connection, ConnectionBase*& freeHeldCnt)
 {
 	return false;
 }

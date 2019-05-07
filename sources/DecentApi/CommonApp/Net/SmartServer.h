@@ -131,6 +131,9 @@ namespace Decent
 			std::mutex m_serverCleanQueueMutex;
 			std::queue<ServerHandle> m_serverCleanQueue;
 			std::condition_variable m_serverCleanSignal;
+
+			std::mutex m_heldCntListMutex;
+			std::map<ConnectionBase*, std::shared_ptr<ConnectionBase> > m_heldCntList;
 		};
 	}
 }

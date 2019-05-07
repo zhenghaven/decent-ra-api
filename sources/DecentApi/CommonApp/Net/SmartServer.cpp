@@ -151,6 +151,14 @@ void SmartServer::Terminate() noexcept
 
 	m_isTerminated = true;
 
+	try
+	{
+
+		std::unique_lock<std::mutex> heldCntListLock(m_heldCntListMutex);
+		m_heldCntList.clear();
+	}
+	catch (...) {}
+
 	m_singleTaskPool.Terminate();
 
 	try
@@ -204,22 +212,70 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 		std::string categoryStr;
 		connection->ReceivePack(categoryStr);
 		categoryStr.erase(std::find(categoryStr.begin(), categoryStr.end(), '\0'), categoryStr.end());
-		handler->ProcessSmartMessage(categoryStr, *connection);
+
+		ConnectionBase* prevHeldCnt = nullptr;
+
+		bool holdConnection = handler->ProcessSmartMessage(categoryStr, *connection, prevHeldCnt);
 
 		//Msg processing is done.
 		
-		std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
-			[this, connection, handler, cntPool, thrPool]() //Main task
+		if (holdConnection)
 		{
-			this->ConnectionPoolWorker(connection, handler, cntPool, thrPool);
-		},
-			[connection]() //Main task killer
-		{
-			connection->Terminate();
+			//Client connection need to be held.
+			if (!m_isTerminated)
+			{
+				std::unique_lock<std::mutex> heldCntListLock(m_heldCntListMutex);
+				m_heldCntList[connection.get()] = std::move(connection);
+			}
 		}
-		);
+		else
+		{
+			//Client connection is now free.
+			std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
+				[this, connection, handler, cntPool, thrPool]() //Main task
+			{
+				this->ConnectionPoolWorker(connection, handler, cntPool, thrPool);
+			},
+				[connection]() //Main task killer
+			{
+				connection->Terminate();
+			}
+			);
 
-		m_singleTaskPool.AddTaskSet(task);
+			m_singleTaskPool.AddTaskSet(task);
+		}
+
+		if (prevHeldCnt)
+		{
+			//previous held connection need to be freed.
+			
+			std::shared_ptr<ConnectionBase> freeCnt;
+			{
+				std::unique_lock<std::mutex> heldCntListLock(m_heldCntListMutex);
+				auto it = m_heldCntList.find(prevHeldCnt);
+				if (it != m_heldCntList.end())
+				{
+					freeCnt = it->second;
+				}
+			}
+
+			if (freeCnt)
+			{
+				std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
+					[this, freeCnt, handler, cntPool, thrPool]() //Main task
+				{
+					this->ConnectionPoolWorker(freeCnt, handler, cntPool, thrPool);
+				},
+					[freeCnt]() //Main task killer
+				{
+					freeCnt->Terminate();
+				}
+				);
+
+				m_singleTaskPool.AddTaskSet(task);
+			}
+		}
+		
 	}
 	catch (const Decent::Net::ConnectionClosedException&)
 	{

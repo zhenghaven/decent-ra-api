@@ -8,6 +8,7 @@
 
 using namespace Decent::Ias;
 using namespace Decent::Sgx;
+using namespace Decent::Net;
 using namespace Decent::Tools;
 
 EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const std::string & enclavePath, const std::string & tokenPath) :
@@ -54,7 +55,7 @@ void EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & out
 	DECENT_ASSERT_ENCLAVE_APP_RESULT(retval, "get service provider public key");
 }
 
-bool EnclaveServiceProvider::ProcessSmartMessage(const std::string & category, Decent::Net::ConnectionBase& connection)
+bool EnclaveServiceProvider::ProcessSmartMessage(const std::string & category, ConnectionBase& connection, ConnectionBase*& freeHeldCnt)
 {
-	return EnclaveBase::ProcessSmartMessage(category, connection);
+	return EnclaveBase::ProcessSmartMessage(category, connection, freeHeldCnt);
 }
