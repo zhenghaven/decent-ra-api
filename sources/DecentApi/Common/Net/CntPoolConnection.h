@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Common/Net/ConnectionBase.h"
+#include "ConnectionBase.h"
 
 #include <memory>
 
@@ -24,7 +24,7 @@ namespace Decent
 
 			virtual ~CntPoolConnection()
 			{
-				m_cntPool->AsycPut(m_addr, std::move(m_cntPtr));
+				m_cntPool->Put(m_addr, std::move(m_cntPtr));
 			}
 
 			virtual size_t SendRaw(const void* const dataPtr, const size_t size)
