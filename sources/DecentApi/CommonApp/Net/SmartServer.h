@@ -41,7 +41,7 @@ namespace Decent
 			 * 										'acceptRetry' times, the server will be automatically
 			 * 										shutdown.
 			 */
-			SmartServer(Threading::MainThreadAsynWorker& mainThreadWorker, const size_t acceptRetry = 10);
+			SmartServer(std::shared_ptr<Threading::MainThreadAsynWorker> mainThreadWorker, const size_t acceptRetry = 10);
 
 			SmartServer(const SmartServer&) = delete;
 
@@ -117,7 +117,7 @@ namespace Decent
 		private:
 			const size_t m_acceptRetry;
 
-			Threading::MainThreadAsynWorker& m_mainThreadWorker;
+			std::weak_ptr<Threading::MainThreadAsynWorker> m_mainThreadWorker;
 
 			std::vector<std::unique_ptr<std::thread> > m_cleanerPool;
 

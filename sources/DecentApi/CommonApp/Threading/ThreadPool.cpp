@@ -9,7 +9,7 @@
 
 using namespace Decent::Threading;
 
-ThreadPool::ThreadPool(size_t maxPoolSize, MainThreadAsynWorker & mainThreadWorker) :
+ThreadPool::ThreadPool(size_t maxPoolSize, std::shared_ptr<MainThreadAsynWorker> mainThreadWorker) :
 	m_maxPoolSize(maxPoolSize),
 	m_isTerminated(false),
 	m_mainThreadWorker(mainThreadWorker),
@@ -177,7 +177,10 @@ void ThreadPool::Worker(std::shared_ptr<std::mutex> mutex, std::shared_ptr<std::
 			return; //the task probably has not been finished, so don't add to main thread task pool.
 		}
 
-		m_mainThreadWorker.AddTask(std::move(task));
+		if (!m_mainThreadWorker.expired())
+		{
+			m_mainThreadWorker.lock()->AddTask(std::move(task));
+		}
 
 		//Ask for new task.
 		{

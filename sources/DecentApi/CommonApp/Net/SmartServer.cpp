@@ -48,7 +48,7 @@ void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Se
 	m_serverCleanSignal.notify_one();
 }
 
-SmartServer::SmartServer(MainThreadAsynWorker & mainThreadWorker, const size_t acceptRetry) :
+SmartServer::SmartServer(std::shared_ptr<MainThreadAsynWorker> mainThreadWorker, const size_t acceptRetry) :
 	m_acceptRetry(acceptRetry),
 	m_mainThreadWorker(mainThreadWorker),
 	m_cleanerPool(),
@@ -76,7 +76,7 @@ SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server
 	std::shared_ptr<Server> sharedServer(std::move(server));
 	ServerHandle serverhandle = sharedServer.get();
 
-	std::shared_ptr<ThreadPool> thrPool = std::make_shared<ThreadPool>(threadNum, m_mainThreadWorker);
+	std::shared_ptr<ThreadPool> thrPool = std::make_shared<ThreadPool>(threadNum, m_mainThreadWorker.expired() ? nullptr : m_mainThreadWorker.lock());
 
 	std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
 		[this, serverhandle, sharedServer, handler, cntPool, thrPool]() //Main task
@@ -229,22 +229,20 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 	catch (const Decent::Net::Exception& e)
 	{
 		const char* msg = e.what();
-		LOGI("SmartServer: Network Exception Caught:");
-		LOGI("%s", msg);
+		PRINT_I("Exception Caught in SmartServer::ConnectionProcesser. Error Msg %s.", e.what());
 		LOGI("Connection will be closed.");
 		return;
 	}
 	catch (const std::exception& e)
 	{
 		const char* msg = e.what();
-		LOGI("SmartServer: Exception Caught:");
-		LOGI("%s", msg);
+		PRINT_I("Exception Caught in SmartServer::ConnectionProcesser. Error Msg %s.", e.what());
 		LOGI("Connection will be closed.");
 		return;
 	}
 	catch (...)
 	{
-		LOGI("SmartServer: Unknown Exception Caught when process connection.");
+		PRINT_I("Unknown Exception Caught in SmartServer::ConnectionProcesser.");
 		LOGI("Connection will be closed.");
 		return;
 	}
