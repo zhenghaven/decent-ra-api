@@ -117,7 +117,7 @@ extern "C" void ocall_decent_net_cnet_terminate(void* cnt_ptr)
 	{
 		static_cast<ConnectionBase*>(cnt_ptr)->Terminate();
 	}
-	catch (const std::exception& e)
+	catch (const std::exception&)
 	{}
 }
 
