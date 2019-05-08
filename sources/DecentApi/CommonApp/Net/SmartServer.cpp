@@ -225,10 +225,20 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 			if (!m_isTerminated)
 			{
 				std::unique_lock<std::mutex> heldCntListLock(m_heldCntListMutex);
-				m_heldCntList[connection.get()] = std::move(connection);
+				auto earlyIt = m_earlyFreedCnt.find(connection.get());
+				if (earlyIt != m_earlyFreedCnt.end())
+				{
+					m_earlyFreedCnt.erase(earlyIt);
+					holdConnection = false;
+				}
+				else
+				{
+					m_heldCntList[connection.get()] = std::move(connection);
+				}
 			}
 		}
-		else
+
+		if(!holdConnection)
 		{
 			//Client connection is now free.
 			std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
@@ -256,6 +266,10 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 				if (it != m_heldCntList.end())
 				{
 					freeCnt = it->second;
+				}
+				else
+				{
+					m_earlyFreedCnt.insert(prevHeldCnt);
 				}
 			}
 

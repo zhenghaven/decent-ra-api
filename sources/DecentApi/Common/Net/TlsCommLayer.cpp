@@ -120,7 +120,8 @@ TlsCommLayer::TlsCommLayer(TlsCommLayer && other) :
 	m_sslCtx(std::move(other.m_sslCtx)),
 	m_tlsConfig(std::move(other.m_tlsConfig))
 {
-	other.m_sslCtx = nullptr;
+	other.m_sslCtx.reset();
+	other.m_tlsConfig.reset();
 }
 
 TlsCommLayer::~TlsCommLayer()

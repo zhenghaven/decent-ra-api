@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <memory>
 #include <tuple>
 #include <queue>
@@ -134,6 +135,7 @@ namespace Decent
 
 			std::mutex m_heldCntListMutex;
 			std::map<ConnectionBase*, std::shared_ptr<ConnectionBase> > m_heldCntList;
+			std::set<ConnectionBase*> m_earlyFreedCnt;
 		};
 	}
 }
