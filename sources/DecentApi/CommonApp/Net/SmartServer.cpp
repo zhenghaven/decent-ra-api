@@ -17,7 +17,7 @@ using namespace Decent::Net;
 using namespace Decent::Threading;
 
 void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler,
-	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> cntPoolWorkerPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	size_t retried = 0;
 	while (!m_isTerminated && !server->IsTerminated() && retried < m_acceptRetry)
@@ -25,7 +25,7 @@ void SmartServer::AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Se
 		try
 		{
 			std::unique_ptr<ConnectionBase> connection = server->AcceptConnection();
-			this->AddConnection(connection, handler, cntPool, thrPool);
+			this->AddConnection(connection, handler, cntPool, cntPoolWorkerPool, thrPool);
 			retried = 0;
 		}
 		catch (const Decent::Net::ConnectionClosedException&)
@@ -71,21 +71,23 @@ SmartServer::~SmartServer()
 	Terminate();
 }
 
-SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler, std::shared_ptr<ConnectionPoolBase> cntPool, size_t threadNum)
+SmartServer::ServerHandle SmartServer::AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler, std::shared_ptr<ConnectionPoolBase> cntPool, size_t threadNum, size_t cntPoolWorkerSize)
 {
 	std::shared_ptr<Server> sharedServer(std::move(server));
 	ServerHandle serverhandle = sharedServer.get();
 
 	std::shared_ptr<ThreadPool> thrPool = std::make_shared<ThreadPool>(threadNum, m_mainThreadWorker.expired() ? nullptr : m_mainThreadWorker.lock());
+	std::shared_ptr<ThreadPool> cntPoolWorkerPool = std::make_shared<ThreadPool>(cntPoolWorkerSize, m_mainThreadWorker.expired() ? nullptr : m_mainThreadWorker.lock());
 
 	std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
-		[this, serverhandle, sharedServer, handler, cntPool, thrPool]() //Main task
+		[this, serverhandle, sharedServer, handler, cntPool, cntPoolWorkerPool, thrPool]() //Main task
 	{
-		this->AcceptConnectionWorker(serverhandle, sharedServer, handler, cntPool, thrPool);
+		this->AcceptConnectionWorker(serverhandle, sharedServer, handler, cntPool, cntPoolWorkerPool, thrPool);
 	},
-		[sharedServer, thrPool]() //Main task killer
+		[sharedServer, cntPoolWorkerPool, thrPool]() //Main task killer
 	{
 		sharedServer->Terminate();
+		cntPoolWorkerPool->Terminate();
 		thrPool->Terminate();
 	}
 	);
@@ -108,15 +110,15 @@ void SmartServer::ShutdownServer(ServerHandle handle)
 }
 
 void SmartServer::AddConnection(std::unique_ptr<ConnectionBase>& connection, std::shared_ptr<ConnectionHandler> handler,
-	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> cntPoolWorkerPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	std::shared_ptr<ConnectionBase> sharedCnt(std::move(connection));
 
-	this->AddConnection(sharedCnt, handler, cntPool, thrPool);
+	this->AddConnection(sharedCnt, handler, cntPool, cntPoolWorkerPool, thrPool);
 }
 
 void SmartServer::AddConnection(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
-	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> cntPoolWorkerPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	if (m_isTerminated)
 	{
@@ -124,9 +126,9 @@ void SmartServer::AddConnection(std::shared_ptr<ConnectionBase> connection, std:
 	}
 
 	std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
-		[this, connection, handler, cntPool, thrPool]() //Main task
+		[this, connection, handler, cntPool, cntPoolWorkerPool, thrPool]() //Main task
 	{
-		this->ConnectionProcesser(connection, handler, cntPool, thrPool);
+		this->ConnectionProcesser(connection, handler, cntPool, cntPoolWorkerPool, thrPool);
 	},
 		[connection]() //Main task killer
 	{
@@ -205,7 +207,7 @@ void SmartServer::ServerCleaner()
 }
 
 void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
-	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool) noexcept
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> cntPoolWorkerPool, std::shared_ptr<ThreadPool> thrPool) noexcept
 {
 	try
 	{
@@ -242,9 +244,9 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 		{
 			//Client connection is now free.
 			std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
-				[this, connection, handler, cntPool, thrPool]() //Main task
+				[this, connection, handler, cntPool, cntPoolWorkerPool, thrPool]() //Main task
 			{
-				this->ConnectionPoolWorker(connection, handler, cntPool, thrPool);
+				this->ConnectionPoolWorker(connection, handler, cntPool, cntPoolWorkerPool, thrPool);
 			},
 				[connection]() //Main task killer
 			{
@@ -252,7 +254,7 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 			}
 			);
 
-			m_singleTaskPool.AddTaskSet(task);
+			cntPoolWorkerPool->AddTaskSet(task);
 		}
 
 		if (prevHeldCnt)
@@ -276,9 +278,9 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 			if (freeCnt)
 			{
 				std::unique_ptr<TaskSet> task = std::make_unique<TaskSet>(
-					[this, freeCnt, handler, cntPool, thrPool]() //Main task
+					[this, freeCnt, handler, cntPool, cntPoolWorkerPool, thrPool]() //Main task
 				{
-					this->ConnectionPoolWorker(freeCnt, handler, cntPool, thrPool);
+					this->ConnectionPoolWorker(freeCnt, handler, cntPool, cntPoolWorkerPool, thrPool);
 				},
 					[freeCnt]() //Main task killer
 				{
@@ -286,7 +288,7 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 				}
 				);
 
-				m_singleTaskPool.AddTaskSet(task);
+				cntPoolWorkerPool->AddTaskSet(task);
 			}
 		}
 		
@@ -319,7 +321,7 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 }
 
 void SmartServer::ConnectionPoolWorker(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
-	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> thrPool)
+	std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<ThreadPool> cntPoolWorkerPool, std::shared_ptr<ThreadPool> thrPool)
 {
 	try
 	{
@@ -329,7 +331,7 @@ void SmartServer::ConnectionPoolWorker(std::shared_ptr<ConnectionBase> connectio
 			return;
 		}
 		//Connection has been waken up
-		this->AddConnection(connection, handler, cntPool, thrPool);
+		this->AddConnection(connection, handler, cntPool, cntPoolWorkerPool, thrPool);
 	}
 	catch (const std::exception&)
 	{
