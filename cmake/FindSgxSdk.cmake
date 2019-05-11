@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
+include_guard()
+
 message(STATUS "")
 message(STATUS "Setting Intel SGX Variables...")
 
