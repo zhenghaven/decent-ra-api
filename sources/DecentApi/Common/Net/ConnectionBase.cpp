@@ -1,11 +1,8 @@
 #include "ConnectionBase.h"
 
-#include "../Tools/JsonTools.h"
-
 #include "NetworkException.h"
 
 using namespace Decent::Net;
-using namespace Decent::Tools;
 
 #define CHECK_CONNECTION_PTR(X) if (!X) { throw Decent::Net::Exception("Connection pointer is null!"); }
 
@@ -25,11 +22,6 @@ void ConnectionBase::SendPack(const void * const dataPtr, const size_t size)
 	SendRawGuarantee(dataPtr, packSize);
 }
 
-void ConnectionBase::SendPack(const JsonValue & json)
-{
-	SendPack(Json2String(json));
-}
-
 void ConnectionBase::ReceiveRawGuarantee(void * const bufPtr, const size_t size)
 {
 	size_t recvSize = 0;
@@ -47,13 +39,6 @@ size_t ConnectionBase::ReceivePack(char *& dest)
 	dest = new char[static_cast<size_t>(packSize)];
 	ReceiveRawGuarantee(dest, static_cast<size_t>(packSize));
 	return static_cast<size_t>(packSize);
-}
-
-void ConnectionBase::ReceivePack(JsonDoc & msg)
-{
-	std::string buffer;
-	ReceivePack(buffer);
-	ParseStr2Json(msg, buffer);
 }
 
 void Decent::Net::ConnectionBase::ReceivePack(std::string & outMsg)

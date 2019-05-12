@@ -112,9 +112,7 @@ namespace
 
 	static std::string ConstructLoadedWhiteListStr(const StaticList& whiteList)
 	{
-		JsonDoc jsonDoc;
-		whiteList.ToJson(jsonDoc);
-		return Json2String(jsonDoc);
+		return whiteList.ToJsonString();
 	}
 }
 

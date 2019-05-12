@@ -125,11 +125,14 @@ bool StaticList::operator<=(const StaticList & rhs) const
 	return this->IsSubsetOf(rhs);
 }
 
-JsonValue & StaticList::ToJson(JsonDoc & jsonDoc) const
+std::string StaticList::ToJsonString() const
 {
+	JsonDoc jsonDoc;
+
 	for (auto it = m_listMap.begin(); it != m_listMap.end(); ++it)
 	{
 		JsonSetVal(jsonDoc, it->first, it->second);
 	}
-	return jsonDoc;
+
+	return Tools::Json2String(jsonDoc);
 }

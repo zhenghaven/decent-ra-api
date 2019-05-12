@@ -16,6 +16,8 @@ namespace Decent
 			using TlsConfig::TlsConfig;
 
 		protected:
+			virtual int VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const override;
+
 			virtual int VerifyDecentAppCert(const AppX509& cert, int depth, uint32_t& flag) const override;
 
 		private:

@@ -42,11 +42,6 @@ namespace Decent
 				m_cntPtr->SendPack(dataPtr, size);
 			}
 
-			virtual void SendPack(const Tools::JsonValue& json)
-			{
-				m_cntPtr->SendPack(json);
-			}
-
 
 			virtual size_t ReceiveRaw(void* const bufPtr, const size_t size)
 			{
@@ -61,11 +56,6 @@ namespace Decent
 			virtual size_t ReceivePack(char*& dest)
 			{
 				return m_cntPtr->ReceivePack(dest);
-			}
-
-			virtual void ReceivePack(Tools::JsonDoc& msg)
-			{
-				m_cntPtr->ReceivePack(msg);
 			}
 
 			virtual void ReceivePack(std::string& outMsg)
