@@ -301,14 +301,14 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 	catch (const Decent::Net::Exception& e)
 	{
 		const char* msg = e.what();
-		PRINT_I("Exception Caught in SmartServer::ConnectionProcesser. Error Msg %s.", e.what());
+		PRINT_I("Exception Caught in SmartServer::ConnectionProcesser. Error Msg %s", e.what());
 		LOGI("Connection will be closed.");
 		return;
 	}
 	catch (const std::exception& e)
 	{
 		const char* msg = e.what();
-		PRINT_I("Exception Caught in SmartServer::ConnectionProcesser. Error Msg %s.", e.what());
+		PRINT_I("Exception Caught in SmartServer::ConnectionProcesser. Error Msg %s", e.what());
 		LOGI("Connection will be closed.");
 		return;
 	}
