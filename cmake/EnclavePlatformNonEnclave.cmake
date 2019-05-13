@@ -17,9 +17,7 @@ macro(setup_non_enclave_enclave_project PROJECT_NAME)
 
 	target_link_libraries(${PROJECT_NAME}_Enclave 
 		DecentRa_App_App 
-		mbedcrypto_enclave 
-		mbedx509_enclave 
-		mbedtls_enclave 
+		mbedtls 
 	)
 
 endmacro()
