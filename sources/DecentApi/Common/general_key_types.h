@@ -42,11 +42,24 @@ extern "C" {
 		uint8_t y[GENERAL_256BIT_32BYTE_SIZE];
 	} general_secp256r1_signature_t;
 
-	typedef uint8_t general_128bit_key[GENERAL_128BIT_16BYTE_SIZE];
+	//General binary types:
+
+	typedef uint8_t general_128bit_binary[GENERAL_128BIT_16BYTE_SIZE];
+	typedef uint8_t general_256bit_binary[GENERAL_256BIT_32BYTE_SIZE];
+
+	//128-bit types:
+
+	typedef general_128bit_binary general_128bit_key;
+
+	typedef general_128bit_binary general_128bit_tag;
+
+	//256-bit types:
+
+	typedef general_256bit_binary general_256bit_hash;
+
+	//Other special types:
 
 	typedef uint8_t suggested_aesgcm_iv[SUGGESTED_AESGCM_IV_SIZE];
-
-	typedef general_128bit_key general_128bit_tag;
 
 #pragma pack(pop)
 
