@@ -212,6 +212,8 @@ namespace Decent
 			/**
 			 * \brief	Adds primitive argument
 			 *
+			 * \exception	RuntimeException	Thrown when the allocated space is not big enough.
+			 *
 			 * \tparam	ArgType	Type of the argument type.
 			 *
 			 * \return	A RpcArgRefCountinousBinPrimitive&lt;ArgType&gt;
@@ -234,6 +236,8 @@ namespace Decent
 			/**
 			 * \brief	Adds a string argument
 			 *
+			 * \exception	RuntimeException	Thrown when the allocated space is not big enough.
+			 *
 			 * \param	strLen	The length of the string, which doesn't count the null-terminator.
 			 *
 			 * \return	A RpcArgRefCountinousBinString.
@@ -254,6 +258,8 @@ namespace Decent
 
 			/**
 			 * \brief	Adds a binary argument
+			 *
+			 * \exception	RuntimeException	Thrown when the allocated space is not big enough.
 			 *
 			 * \return	A RpcArgRefCountinousBinVariable.
 			 */
