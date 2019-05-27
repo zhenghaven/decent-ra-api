@@ -303,8 +303,8 @@ bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const
 	{
 		return false;
 	}
-	const ConstBigNumber r(inSign.x, sk_struct);
-	const ConstBigNumber s(inSign.y, sk_struct);
+	const ConstBigNumber r(inSign.x);
+	const ConstBigNumber s(inSign.y);
 	EcGroupWarp grp;
 
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();

@@ -25,7 +25,8 @@ namespace Decent
 			RpcParser(std::vector<uint8_t>&& binary) :
 				m_binary(std::forward<std::vector<uint8_t> >(binary)),
 				m_currPos(m_binary.begin()),
-				m_argCount(InternalGetPrimArg<uint32_t>())
+				m_argCount(InternalGetPrimArg<uint32_t>()),
+				m_currArgCount(0)
 			{}
 
 			/** \brief	Destructor */
@@ -44,6 +45,11 @@ namespace Decent
 			template<typename ArgType>
 			ArgType& GetPrimitiveArg()
 			{
+				if (m_currArgCount + 1 > m_argCount)
+				{
+					throw RuntimeException("RPC received less number of arguments as requested.");
+				}
+
 				auto argType = InternalGetPrimArg<uint8_t>();
 				auto argSize = InternalGetPrimArg<uint64_t>();
 
@@ -57,6 +63,8 @@ namespace Decent
 					throw RuntimeException("Failed to parse RPC binary block, because the size of the primitive type doesn't match.");
 				}
 
+				m_currArgCount++;
+
 				return InternalGetPrimArg<ArgType>();
 			}
 
@@ -69,6 +77,11 @@ namespace Decent
 			 */
 			const char* GetCStringArg()
 			{
+				if (m_currArgCount + 1 > m_argCount)
+				{
+					throw RuntimeException("RPC received less number of arguments as requested.");
+				}
+
 				auto argType = InternalGetPrimArg<uint8_t>();
 				auto argSize = InternalGetPrimArg<uint64_t>();
 
@@ -78,6 +91,8 @@ namespace Decent
 				}
 
 				auto it = InternalGetNext(argSize);
+
+				m_currArgCount++;
 
 				return reinterpret_cast<const char*>(&(*it));
 			}
@@ -103,6 +118,11 @@ namespace Decent
 			 */
 			std::pair<std::vector<uint8_t>::const_iterator, std::vector<uint8_t>::const_iterator> GetBinaryArg()
 			{
+				if (m_currArgCount + 1 > m_argCount)
+				{
+					throw RuntimeException("RPC received less number of arguments as requested.");
+				}
+
 				auto argType = InternalGetPrimArg<uint8_t>();
 				auto argSize = InternalGetPrimArg<uint64_t>();
 
@@ -113,7 +133,19 @@ namespace Decent
 
 				auto itBegin = InternalGetNext(argSize);
 
+				m_currArgCount++;
+
 				return std::make_pair(itBegin, itBegin + argSize);
+			}
+
+			/**
+			 * \brief	Gets argument count
+			 *
+			 * \return	The argument count.
+			 */
+			uint32_t GetArgCount() const
+			{
+				return m_argCount;
 			}
 
 		protected:
@@ -143,7 +175,8 @@ namespace Decent
 
 			std::vector<uint8_t>::iterator m_currPos;
 
-			uint32_t m_argCount;
+			const uint32_t m_argCount;
+			uint32_t m_currArgCount;
 		};
 	}
 }

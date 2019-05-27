@@ -975,18 +975,19 @@ namespace Decent
 			{}
 
 			/**
-			 * \brief	Construct a big number by referencing an existing binary data in little-endian.
-			 * 			NOTE: REFERENCE ONLY, there is no copy operation, so make sure the referenced data's life time!
+			 * \brief	Construct a big number by referencing an existing binary data in little-endian. NOTE:
+			 * 			REFERENCE ONLY, there is no copy operation, so make sure the referenced data's life
+			 * 			time!
 			 *
-			 * \tparam	T	Generic type parameter.
-			 * \param	in		  	The input.
-			 * \param	parameter2	Indicate the input is a struct.
+			 * \tparam	ArrayType	Generic type parameter.
+			 * \tparam	size	 	Size of the array.
+			 * \param	in	The input.
 			 */
-			template<typename T>
-			ConstBigNumber(const T& in, const StructIn&)  noexcept :
-				ConstBigNumber(&in, sizeof(T), sk_gen)
+			template<typename ArrayType, size_t size>
+			ConstBigNumber(const ArrayType(&in)[size])  noexcept :
+				ConstBigNumber(in, size * sizeof(ArrayType), sk_gen)
 			{
-				static_assert(!(sizeof(T) % sizeof(mbedtls_mpi_uint)), "The size of the given big number must be a factor of 8-Byte (64-bit). ");
+				static_assert(!((size * sizeof(ArrayType)) % sizeof(mbedtls_mpi_uint)), "The size of the given big number must be a factor of 8-Byte (64-bit). ");
 			}
 
 			/**

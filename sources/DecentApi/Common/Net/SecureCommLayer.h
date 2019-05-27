@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "RpcWriter.h"
+
 namespace Decent
 {
 	namespace Net
@@ -72,6 +74,24 @@ namespace Decent
 			{
 				SetConnectionPtr(connectionPtr);
 				ReceiveRaw(buf, size);
+			}
+
+			/**
+			 * \brief	Sends a RPC
+			 *
+			 * \param	rpc	The RPC.
+			 */
+			virtual void SendRpc(const RpcWriter& rpc)
+			{
+				if (rpc.HasSizeAtFront())
+				{
+					const auto& bin = rpc.GetBinaryArray();
+					SendRaw(bin.data(), bin.size());
+				}
+				else
+				{
+					SendMsg(rpc.GetBinaryArray());
+				}
 			}
 
 			/**
@@ -184,24 +204,23 @@ namespace Decent
 			}
 
 			/**
-			 * \brief	Receives a message. Output message size will be automatically adjusted to fit the
-			 * 			message received.
+			 * \brief	Receives a binary block.
 			 *
-			 * \param [in,out]	outMsg	Received message.
+			 * \return	A std::vector&lt;uint8_t&gt;
 			 */
-			virtual void ReceiveMsg(std::vector<uint8_t>& outMsg) = 0;
+			virtual std::vector<uint8_t> ReceiveBinary() = 0;
 
 			/**
-			 * \brief	Receives a message. Output message size will be automatically adjusted to fit the
-			 * 			message received.
+			 * \brief	Receives a binary block. 
 			 *
 			 * \param [in,out]	connectionPtr	The connection pointer.
-			 * \param [in,out]	outMsg		 	Received message.
+			 *
+			 * \return	A std::vector&lt;uint8_t&gt;
 			 */
-			virtual void ReceiveMsg(ConnectionBase& connectionPtr, std::vector<uint8_t>& outMsg)
+			virtual std::vector<uint8_t> ReceiveBinary(ConnectionBase& connectionPtr)
 			{
 				SetConnectionPtr(connectionPtr);
-				ReceiveMsg(outMsg);
+				return ReceiveBinary();
 			}
 
 			/**

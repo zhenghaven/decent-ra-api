@@ -44,6 +44,18 @@ namespace Decent
 				return Get();
 			}
 
+			RpcArgRefCountinousBinPrimitive& operator=(const DataType& rhs)
+			{
+				Get() = rhs;
+				return *this;
+			}
+
+			RpcArgRefCountinousBinPrimitive& operator=(DataType&& rhs)
+			{
+				Get() = std::forward<DataType>(rhs);
+				return *this;
+			}
+
 		private:
 			std::vector<uint8_t>& m_binRef;
 			const size_t m_startPos;
@@ -150,6 +162,34 @@ namespace Decent
 
 		class RpcWriter
 		{
+		public://static member:
+
+			template<typename ArgType>
+			static inline constexpr size_t CalcSizePrim()
+			{
+				return sizeof(ArgType);
+			}
+
+			static inline size_t CalcSizeStr(const char* str)
+			{
+				return std::strlen(str) + 1;
+			}
+
+			static inline size_t CalcSizeStr(const std::string& str)
+			{
+				return CalcSizeStr(str.c_str());
+			}
+
+			static inline size_t CalcSizeStr(size_t size)
+			{
+				return size + 1;
+			}
+
+			static inline size_t CalcSizeBin(size_t size)
+			{
+				return size;
+			}
+
 		private://static member:
 			static inline constexpr size_t CalcInitSize(bool writeSize, size_t size, uint32_t argCount)
 			{
@@ -185,17 +225,17 @@ namespace Decent
 			/**
 			 * \brief	Constructor
 			 *
-			 * \param	size	   	(Optional) Size of the entire binary block to be allocated. It is used to
-			 * 						reduce the need for memory reallocation when adding more arguments to
-			 * 						this object. The actual reserved size will be this added with the size of
-			 * 						the 'totalLen' variable (if it is required by turning on the next
-			 * 						argument), and the space needed for the metadata per argument.
-			 * \param	argCount   	(Optional) Number of arguments.
+			 * \param	size	   	Size of the entire binary block to be allocated. It is used to reduce the
+			 * 						need for memory reallocation when adding more arguments to this object.
+			 * 						The actual reserved size will be this added with the size of the
+			 * 						'totalLen' variable (if it is required by turning on the next argument),
+			 * 						and the space needed for the metadata per argument.
+			 * \param	argCount   	Number of arguments.
 			 * \param	sizeAtFront	(Optional) True to write size at the beginning. The size of the entire
 			 * 						binary block is written to the beginning of this block, so that the
 			 * 						entire binary block can be sent at one function call.
 			 */
-			RpcWriter(size_t size = 0, uint32_t argCount = 0, bool sizeAtFront = true) :
+			explicit RpcWriter(size_t size, uint32_t argCount, bool sizeAtFront = true) :
 				m_sizeAtFront(sizeAtFront),
 				m_binary(CalcInitSize(m_sizeAtFront, size, argCount)),
 				m_totalLen(InitTotalLenPtr(m_sizeAtFront, m_binary)),

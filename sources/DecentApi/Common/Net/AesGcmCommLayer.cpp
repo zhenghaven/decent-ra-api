@@ -201,7 +201,7 @@ void AesGcmCommLayer::ReceiveMsg(std::string & outMsg)
 	outMsg = DecryptMsg(encrypted);
 }
 
-void AesGcmCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
+std::vector<uint8_t> AesGcmCommLayer::ReceiveBinary()
 {
 	if (!*this)
 	{
@@ -211,7 +211,7 @@ void AesGcmCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
 	std::vector<uint8_t> encrypted;
 	m_connection->ReceivePack(encrypted);
 
-	outMsg = DecryptMsg(encrypted);
+	return DecryptMsg(encrypted);
 }
 
 void AesGcmCommLayer::SendRaw(const void * buf, const size_t size)
