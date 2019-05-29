@@ -22,8 +22,8 @@ namespace Decent
 			 *
 			 * \param [in,out]	binary	The binary.
 			 */
-			RpcParser(std::vector<uint8_t>&& binary) :
-				m_binary(std::forward<std::vector<uint8_t> >(binary)),
+			RpcParser(std::vector<uint8_t> binary) :
+				m_binary(std::move(binary)),
 				m_currPos(m_binary.begin()),
 				m_argCount(InternalGetPrimArg<uint32_t>()),
 				m_currArgCount(0)
