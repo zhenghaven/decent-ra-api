@@ -50,7 +50,7 @@ namespace Decent
 
 			virtual uint32_t GetExGroupID();
 
-			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection) override;
+			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection, Net::ConnectionBase*& freeHeldCnt) override;
 
 		protected:
 			const sgx_enclave_id_t GetEnclaveId() const;

@@ -11,6 +11,11 @@
 using namespace Decent::Ra;
 using namespace Decent::Tools;
 
+int TlsConfigSameEnclave::VerifyCert(mbedtls_x509_crt & cert, int depth, uint32_t & flag) const
+{
+	return TlsConfig::VerifyCert(cert, depth, flag);
+}
+
 int TlsConfigSameEnclave::VerifyDecentAppCert(const AppX509 & cert, int depth, uint32_t & flag) const
 {
 	using namespace Decent::Ra::WhiteList;

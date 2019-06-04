@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <memory>
 #include <tuple>
 #include <queue>
@@ -41,7 +42,7 @@ namespace Decent
 			 * 										'acceptRetry' times, the server will be automatically
 			 * 										shutdown.
 			 */
-			SmartServer(Threading::MainThreadAsynWorker& mainThreadWorker, const size_t acceptRetry = 10);
+			SmartServer(std::shared_ptr<Threading::MainThreadAsynWorker> mainThreadWorker, const size_t acceptRetry = 10);
 
 			SmartServer(const SmartServer&) = delete;
 
@@ -53,12 +54,15 @@ namespace Decent
 			/**
 			 * \brief	Adds a server. A new thread will be created to accept the connection.
 			 *
-			 * \param [in,out]	server 	The server.
-			 * \param 		  	handler	The handler for the incoming connections.
+			 * \param [in,out]	server			 	The server.
+			 * \param 		  	handler			 	The handler for the incoming connections.
+			 * \param 		  	cntPool			 	The count pool.
+			 * \param 		  	threadNum		 	The number of threads for this server.
+			 * \param 		  	cntPoolWorkerSize	The number of connection pool workers.
 			 *
 			 * \return	A ServerHandle, which can be used to shutdown the server later.
 			 */
-			virtual ServerHandle AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler, std::shared_ptr<ConnectionPoolBase> cntPool, size_t threadNum);
+			virtual ServerHandle AddServer(std::unique_ptr<Server>& server, std::shared_ptr<ConnectionHandler> handler, std::shared_ptr<ConnectionPoolBase> cntPool, size_t threadNum, size_t cntPoolWorkerSize);
 
 			/**
 			 * \brief	Shutdown the specified server. However, the connection that created by this server is
@@ -78,7 +82,7 @@ namespace Decent
 			 * \param 		  	handler   	The handler for the connection.
 			 */
 			virtual void AddConnection(std::unique_ptr<ConnectionBase>& connection, std::shared_ptr<ConnectionHandler> handler,
-				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> cntPoolWorkerPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/**
 			 * \brief	Query if this smart server is terminated
@@ -99,25 +103,25 @@ namespace Decent
 
 		protected:
 			virtual void AddConnection(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
-				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> cntPoolWorkerPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/** \brief	Worker that keeps accepting connection. */
 			virtual void AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler, 
-				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> cntPoolWorkerPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/** \brief	Server cleaner, who cleans the server that has already been shutdown-ed. */
 			virtual void ServerCleaner();
 
 			virtual void ConnectionProcesser(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
-				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool) noexcept;
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> cntPoolWorkerPool, std::shared_ptr<Threading::ThreadPool> thrPool) noexcept;
 
 			virtual void ConnectionPoolWorker(std::shared_ptr<ConnectionBase> connection, std::shared_ptr<ConnectionHandler> handler,
-				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> thrPool);
+				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> cntPoolWorkerPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 		private:
 			const size_t m_acceptRetry;
 
-			Threading::MainThreadAsynWorker& m_mainThreadWorker;
+			std::weak_ptr<Threading::MainThreadAsynWorker> m_mainThreadWorker;
 
 			std::vector<std::unique_ptr<std::thread> > m_cleanerPool;
 
@@ -131,6 +135,10 @@ namespace Decent
 			std::mutex m_serverCleanQueueMutex;
 			std::queue<ServerHandle> m_serverCleanQueue;
 			std::condition_variable m_serverCleanSignal;
+
+			std::mutex m_heldCntListMutex;
+			std::map<ConnectionBase*, std::shared_ptr<ConnectionBase> > m_heldCntList;
+			std::set<ConnectionBase*> m_earlyFreedCnt;
 		};
 	}
 }

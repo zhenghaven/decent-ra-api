@@ -26,7 +26,7 @@ namespace Decent
 
 			virtual ~DecentralizedEnclave();
 
-			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection) override;
+			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection, Net::ConnectionBase*& freeHeldCnt) override;
 		};
 	}
 }

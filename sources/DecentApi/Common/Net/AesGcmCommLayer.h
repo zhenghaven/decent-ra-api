@@ -205,11 +205,8 @@ namespace Decent
 				SecureCommLayer::SendMsg(cnt, inMsg);
 			}
 
-			virtual void ReceiveMsg(std::vector<uint8_t>& outMsg) override;
-			virtual void ReceiveMsg(ConnectionBase& cnt, std::vector<uint8_t>& outMsg) override
-			{
-				SecureCommLayer::ReceiveMsg(cnt, outMsg);
-			}
+			using SecureCommLayer::ReceiveBinary;
+			virtual std::vector<uint8_t> ReceiveBinary() override;
 
 			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 

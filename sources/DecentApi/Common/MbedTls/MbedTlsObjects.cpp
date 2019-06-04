@@ -32,6 +32,9 @@
 
 //#include "BigNumber.h"
 #include "Drbg.h"
+#include "MbedTlsException.h"
+
+#define CHECK_MBEDTLS_RET(VAL, FUNCSTR) {int retVal = VAL; if(retVal != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(#FUNCSTR, retVal); } }
 
 using namespace Decent::MbedTlsObj;
 using namespace Decent;
@@ -300,8 +303,8 @@ bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const
 	{
 		return false;
 	}
-	const ConstBigNumber r(inSign.x, sk_struct);
-	const ConstBigNumber s(inSign.y, sk_struct);
+	const ConstBigNumber r(inSign.x);
+	const ConstBigNumber s(inSign.y);
 	EcGroupWarp grp;
 
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
@@ -419,19 +422,18 @@ ECKeyPair ECKeyPair::FromGeneral(const general_secp256r1_private_t & prv, const 
 ECKeyPair ECKeyPair::GenerateNewKey()
 {
 	ECKeyPair res;
-	ECKeyPair fail(nullptr, ObjBase::DoNotFree);
 
-	mbedtls_ecp_keypair* ecPtr = nullptr;
 	Drbg drbg;
 
-	if (mbedtls_pk_setup(res.Get(), mbedtls_pk_info_from_type(mbedtls_pk_type_t::MBEDTLS_PK_ECKEY))
-		!= MBEDTLS_SUCCESS_RET ||
-		!(ecPtr = mbedtls_pk_ec(*res.Get())) ||
-		mbedtls_ecp_gen_key(SECP256R1_CURVE_ID, ecPtr, &Drbg::CallBack, &drbg)
-		!= MBEDTLS_SUCCESS_RET)
+	CHECK_MBEDTLS_RET(mbedtls_pk_setup(res.Get(), mbedtls_pk_info_from_type(mbedtls_pk_type_t::MBEDTLS_PK_ECKEY)), ECKeyPair::GenerateNewKey);
+
+	mbedtls_ecp_keypair* ecPtr = mbedtls_pk_ec(*res.Get());
+	if (!ecPtr)
 	{
-		return fail;
+		throw RuntimeException("In ECKeyPair::GenerateNewKey, failed to retrieve EC key pointer.");
 	}
+
+	CHECK_MBEDTLS_RET(mbedtls_ecp_gen_key(SECP256R1_CURVE_ID, ecPtr, &Drbg::CallBack, &drbg), ECKeyPair::GenerateNewKey);
 	
 	return res;
 }

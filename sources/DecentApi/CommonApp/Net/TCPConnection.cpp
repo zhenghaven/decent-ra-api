@@ -49,6 +49,11 @@ TCPConnection::TCPConnection(std::shared_ptr<boost::asio::io_service> ioService,
 	m_ioService(ioService),
 	m_socket(AcceptConnection(*acceptor))
 {
+	try
+	{
+		m_socket->set_option(ip::tcp::no_delay(true));
+	}
+	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP connect.")
 }
 
 TCPConnection::TCPConnection(uint32_t ipAddr, uint16_t portNum) :
@@ -58,6 +63,7 @@ TCPConnection::TCPConnection(uint32_t ipAddr, uint16_t portNum) :
 	try
 	{
 		m_socket->connect(ip::tcp::endpoint(ip::address_v4(ipAddr), portNum));
+		m_socket->set_option(ip::tcp::no_delay(true));
 	}
 	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP connect.")
 }

@@ -120,7 +120,8 @@ TlsCommLayer::TlsCommLayer(TlsCommLayer && other) :
 	m_sslCtx(std::move(other.m_sslCtx)),
 	m_tlsConfig(std::move(other.m_tlsConfig))
 {
-	other.m_sslCtx = nullptr;
+	other.m_sslCtx.reset();
+	other.m_tlsConfig.reset();
 }
 
 TlsCommLayer::~TlsCommLayer()
@@ -207,7 +208,7 @@ void TlsCommLayer::SendMsg(const std::vector<uint8_t>& inMsg)
 	MbedTlsSslWriteWrap(m_sslCtx.get(), inMsg.data(), inMsg.size());
 }
 
-void TlsCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
+std::vector<uint8_t> TlsCommLayer::ReceiveBinary()
 {
 	if (!*this)
 	{
@@ -217,9 +218,11 @@ void TlsCommLayer::ReceiveMsg(std::vector<uint8_t>& outMsg)
 	uint64_t msgSize = 0;
 	MbedTlsSslReadWrap(m_sslCtx.get(), &msgSize, sizeof(uint64_t));
 
-	outMsg.resize(msgSize);
+	std::vector<uint8_t> bin(msgSize);
 
-	MbedTlsSslReadWrap(m_sslCtx.get(), outMsg.data(), outMsg.size());
+	MbedTlsSslReadWrap(m_sslCtx.get(), bin.data(), bin.size());
+
+	return bin;
 }
 
 void TlsCommLayer::SetConnectionPtr(ConnectionBase& cnt)

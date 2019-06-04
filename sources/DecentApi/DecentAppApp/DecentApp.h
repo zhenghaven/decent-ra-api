@@ -35,7 +35,7 @@ namespace Decent
 
 			virtual std::string GetAppX509Cert() override;
 
-			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection) override;
+			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection, Net::ConnectionBase*& freeHeldCnt) override;
 
 		private:
 			bool InitEnclave(const std::string& wListKey, Net::ConnectionBase& serverConn);

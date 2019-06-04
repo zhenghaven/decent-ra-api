@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
+
+include(${CMAKE_CURRENT_LIST_DIR}/DownloadSgxSdk.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/FindSgxSdk.cmake)
 
 message(STATUS "")
 message(STATUS "Adding Intel SGX Targets...")
-
-include(${CMAKE_CURRENT_LIST_DIR}/FindSgxSdk.cmake)
 
 ############################
 # SGX Lib Path

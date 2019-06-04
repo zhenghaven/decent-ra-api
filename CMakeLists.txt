@@ -12,6 +12,8 @@ if(APPLE)
 	set(CMAKE_BUILD_TYPE DebugSimulation)
 endif()
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+
 #==========================================================
 #   Start Decent Project
 #==========================================================
@@ -167,8 +169,7 @@ set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF CACHE BOOL "Set to ON to build JsonCpp 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/jsoncpp)
 
 ##Intel SGX SDK
-include(${CMAKE_CURRENT_LIST_DIR}/cmake/DownloadSgxSdk.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/cmake/SetupSgxSdkLib.cmake)
+include(SetupSgxSdkLibs)
 
 ##Header only libraries
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)

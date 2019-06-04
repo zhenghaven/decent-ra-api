@@ -4,7 +4,6 @@
 #include <vector>
 #include <cstdint>
 
-#include "../Tools/JsonForwardDeclare.h"
 #include "../ArrayPtrAndSize.h"
 
 namespace Decent
@@ -32,8 +31,6 @@ namespace Decent
 
 			virtual void SendPack(const void* const dataPtr, const size_t size);
 
-			virtual void SendPack(const Tools::JsonValue& json);
-
 			template<typename Container>
 			void SendPack(const Container& msg)
 			{
@@ -55,8 +52,6 @@ namespace Decent
 			virtual void ReceiveRawGuarantee(void* const bufPtr, const size_t size);
 
 			virtual size_t ReceivePack(char*& dest);
-
-			virtual void ReceivePack(Tools::JsonDoc& msg);
 
 			virtual void ReceivePack(std::string& outMsg);
 

@@ -9,11 +9,20 @@
 
 namespace Decent
 {
-	typedef std::array<uint8_t, GENERAL_128BIT_16BYTE_SIZE> General128BitKey;
-	typedef std::array<uint8_t, GENERAL_256BIT_32BYTE_SIZE> General256BitKey;
+	//General binary types:
 
-	typedef General128BitKey General128Tag;
-	typedef General256BitKey General256Hash;
+	typedef std::array<uint8_t, GENERAL_128BIT_16BYTE_SIZE> General128BitBinary;
+	typedef std::array<uint8_t, GENERAL_256BIT_32BYTE_SIZE> General256BitBinary;
+
+	//128-bit types:
+
+	typedef General128BitBinary General128BitKey;
+	typedef General128BitBinary General128Tag;
+
+	//256-bit types:
+
+	typedef General256BitBinary General256BitKey;
+	typedef General256BitBinary General256Hash;
 
 	struct PrivateKeyWrap
 	{

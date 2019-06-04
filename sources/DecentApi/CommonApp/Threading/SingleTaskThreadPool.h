@@ -35,12 +35,12 @@ namespace Decent
 			/**
 			 * \brief	Constructor
 			 *
-			 * \param [in,out]	mainThreadWorker	The reference to the main thread asynchronous worker.
-			 * 										Please make sure this worker will stay alive as long as the
-			 * 										main thread is alive.
-			 * \param 		  	cleanerNum			(Optional) The number of cleaner.
+			 * \param	mainThreadWorker	The reference to the main thread asynchronous worker. Please make
+			 * 								sure this worker will stay alive as long as the main thread is alive.
+			 * 								This can be null if there is no main thread job to do.
+			 * \param	cleanerNum			(Optional) The number of cleaner.
 			 */
-			SingleTaskThreadPool(MainThreadAsynWorker& mainThreadWorker, size_t cleanerNum = 1);
+			SingleTaskThreadPool(std::shared_ptr<MainThreadAsynWorker> mainThreadWorker, size_t cleanerNum = 1);
 
 			/** \brief	Destructor. Terminate will be called here. */
 			virtual ~SingleTaskThreadPool();
@@ -87,7 +87,7 @@ namespace Decent
 
 			std::atomic<bool> m_isTerminated;
 
-			MainThreadAsynWorker& m_mainThreadWorker;
+			std::weak_ptr<MainThreadAsynWorker> m_mainThreadWorker;
 
 			std::mutex m_workerMapMutex;
 			std::map<std::unique_ptr<TaskSet>*, std::unique_ptr<WorkerItem> > m_workMap;

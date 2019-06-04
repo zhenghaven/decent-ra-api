@@ -1,5 +1,6 @@
 //#if ENCLAVE_PLATFORM_SGX
 
+#include "../../Common/Common.h"
 #include "../../Common/Net/ConnectionBase.h"
 
 using namespace Decent::Net;
@@ -8,6 +9,7 @@ extern "C" int ocall_decent_net_cnet_send_pack(void* const ptr, const char* msg,
 {
 	if (!ptr || !msg)
 	{
+		PRINT_W("Nullptr is given to the ocall_decent_net_cnet_send_pack");
 		return false;
 	}
 
@@ -16,8 +18,9 @@ extern "C" int ocall_decent_net_cnet_send_pack(void* const ptr, const char* msg,
 		static_cast<ConnectionBase*>(ptr)->SendPack(msg, size);
 		return true;
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e)
 	{
+		PRINT_W("ocall_decent_net_cnet_send_pack failed. Error msg: %s", e.what());
 		return false;
 	}
 }
@@ -26,6 +29,7 @@ extern "C" int ocall_decent_net_cnet_recv_pack(size_t* recv_size, void* const pt
 {
 	if (!recv_size || !ptr || !msg)
 	{
+		PRINT_W("Nullptr is given to the ocall_decent_net_cnet_recv_pack");
 		return false;
 	}
 
@@ -34,8 +38,9 @@ extern "C" int ocall_decent_net_cnet_recv_pack(size_t* recv_size, void* const pt
 		*recv_size = static_cast<ConnectionBase*>(ptr)->ReceivePack(*msg);
 		return true;
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e)
 	{
+		PRINT_W("ocall_decent_net_cnet_recv_pack failed. Error msg: %s", e.what());
 		return false;
 	}
 }
@@ -44,6 +49,7 @@ extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const c
 {
 	if (!ptr || !in_msg || !out_msg || !out_size)
 	{
+		PRINT_W("Nullptr is given to the ocall_decent_net_cnet_send_and_recv_pack");
 		return false;
 	}
 
@@ -53,8 +59,9 @@ extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const c
 		*out_size = static_cast<ConnectionBase*>(ptr)->ReceivePack(*out_msg);
 		return true;
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e)
 	{
+		PRINT_W("ocall_decent_net_cnet_send_and_recv_pack failed. Error msg: %s", e.what());
 		return false;
 	}
 }
@@ -63,6 +70,7 @@ extern "C" int ocall_decent_net_cnet_send_raw(size_t* sent_size, void* const ptr
 {
 	if (!sent_size || !ptr || !msg)
 	{
+		PRINT_W("Nullptr is given to the ocall_decent_net_cnet_send_raw");
 		return false;
 	}
 
@@ -71,8 +79,9 @@ extern "C" int ocall_decent_net_cnet_send_raw(size_t* sent_size, void* const ptr
 		*sent_size = static_cast<ConnectionBase*>(ptr)->SendRaw(msg, size);
 		return true;
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e)
 	{
+		PRINT_W("ocall_decent_net_cnet_send_raw failed. Error msg: %s", e.what());
 		return false;
 	}
 }
@@ -81,6 +90,7 @@ extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr
 {
 	if (!recv_size || !ptr || !buf)
 	{
+		PRINT_W("Nullptr is given to the ocall_decent_net_cnet_recv_raw");
 		return false;
 	}
 
@@ -89,8 +99,9 @@ extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr
 		*recv_size = static_cast<ConnectionBase*>(ptr)->ReceiveRaw(buf, buf_size);
 		return true;
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e)
 	{
+		PRINT_W("ocall_decent_net_cnet_recv_raw failed. Error msg: %s", e.what());
 		return false;
 	}
 }

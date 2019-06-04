@@ -2,8 +2,6 @@
 
 #include "WhiteList.h"
 
-#include "../../Tools/JsonForwardDeclare.h"
-
 namespace Decent
 {
 	namespace Ra
@@ -131,13 +129,11 @@ namespace Decent
 				virtual bool operator<=(const StaticList& rhs) const;
 
 				/**
-				 * \brief	Converts this white list to a JSON format.
+				 * \brief	Converts this white list to a string in JSON format.
 				 *
-				 * \param [in,out]	jsonDoc	The JSON document.
-				 *
-				 * \return	JsonDoc as a Tools::JsonValue&amp;
+				 * \return	a string in JSON format
 				 */
-				virtual Tools::JsonValue& ToJson(Tools::JsonDoc& jsonDoc) const;
+				virtual std::string ToJsonString() const;
 
 			private:
 				WhiteListType m_listMap;

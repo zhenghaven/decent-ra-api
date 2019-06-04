@@ -37,12 +37,12 @@ namespace Decent
 			/**
 			 * \brief	Constructor
 			 *
-			 * \param 		  	maxPoolSize			The maximum size of the pool.
-			 * \param [in,out]	mainThreadWorker	The reference to the main thread asynchronous worker.
-			 * 										Please make sure this worker will stay alive as long as the
-			 * 										main thread is alive.
+			 * \param	maxPoolSize			The maximum size of the pool.
+			 * \param	mainThreadWorker	The reference to the main thread asynchronous worker. Please make
+			 * 								sure this worker will stay alive as long as the main thread is alive.
+			 * 								This can be null if there is no main thread task to do.
 			 */
-			ThreadPool(size_t maxPoolSize, MainThreadAsynWorker& mainThreadWorker);
+			ThreadPool(size_t maxPoolSize, std::shared_ptr<MainThreadAsynWorker> mainThreadWorker);
 
 			/** \brief	Destructor. Terminate will be called here. */
 			virtual ~ThreadPool();
@@ -130,7 +130,7 @@ namespace Decent
 
 			std::atomic<bool> m_isTerminated;
 
-			MainThreadAsynWorker& m_mainThreadWorker;
+			std::weak_ptr<MainThreadAsynWorker> m_mainThreadWorker;
 
 			std::atomic<std::int_fast64_t> m_freeWorkerCount;
 			std::atomic<std::uint_fast64_t> m_workerCount;

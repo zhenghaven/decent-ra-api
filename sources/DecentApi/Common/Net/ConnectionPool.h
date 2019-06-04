@@ -3,6 +3,7 @@
 #include "ConnectionPoolBase.h"
 #include "ConnectionBase.h"
 
+#include "../Common.h"
 #include "../make_unique.h"
 #include "../Tools/CachingQueue.h"
 

@@ -5,6 +5,7 @@
 
 using namespace Decent::Sgx;
 using namespace Decent::Ias;
+using namespace Decent::Net;
 
 namespace
 {
@@ -25,7 +26,7 @@ void ServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) co
 	outKey = (*gs_states.GetKeyContainer().GetSignPubKey());
 }
 
-bool ServiceProvider::ProcessSmartMessage(const std::string & category, Decent::Net::ConnectionBase& connection)
+bool ServiceProvider::ProcessSmartMessage(const std::string & category, ConnectionBase& connection, ConnectionBase*& freeHeldCnt)
 {
 	return false;
 }

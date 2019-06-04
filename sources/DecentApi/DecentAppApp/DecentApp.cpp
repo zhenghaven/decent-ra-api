@@ -72,7 +72,7 @@ std::string DecentApp::GetAppX509Cert()
 	return retReport;
 }
 
-bool DecentApp::ProcessSmartMessage(const std::string & category, ConnectionBase& connection)
+bool DecentApp::ProcessSmartMessage(const std::string & category, ConnectionBase& connection, ConnectionBase*& freeHeldCnt)
 {
 	return false;
 }

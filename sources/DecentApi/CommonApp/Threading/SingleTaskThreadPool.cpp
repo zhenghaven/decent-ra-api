@@ -8,7 +8,7 @@
 
 using namespace Decent::Threading;
 
-SingleTaskThreadPool::SingleTaskThreadPool(MainThreadAsynWorker & mainThreadWorker, size_t cleanerNum) :
+SingleTaskThreadPool::SingleTaskThreadPool(std::shared_ptr<MainThreadAsynWorker> mainThreadWorker, size_t cleanerNum) :
 	m_cleanerNum(cleanerNum),
 	m_cleanerPool(),
 	m_isTerminated(false),
@@ -95,9 +95,9 @@ void SingleTaskThreadPool::Worker(std::shared_ptr<std::mutex> mutex, std::shared
 		(*taskPtr)->ExecuteMainTask();
 	}
 
-	if (!m_isTerminated)
+	if (!m_isTerminated && !m_mainThreadWorker.expired())
 	{
-		m_mainThreadWorker.AddTask(std::move(*taskPtr));
+		m_mainThreadWorker.lock()->AddTask(std::move(*taskPtr));
 	}
 
 	if (!m_isTerminated)
