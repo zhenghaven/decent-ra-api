@@ -1,14 +1,9 @@
 #pragma once
 
 #include <map>
-#include <memory>
 #include <string>
-#include "../../Common/RuntimeException.h"
 
-namespace Json
-{
-	class Value;
-}
+#include "../../Common/Tools/JsonForwardDeclare.h"
 
 namespace Decent
 {
@@ -20,85 +15,84 @@ namespace Decent
 		}
 	}
 
-	namespace Tools
+	namespace AppConfig
 	{
-		class ConfigParseException : public RuntimeException
+		class EnclaveListItem
 		{
-		public:
-			ConfigParseException() :
-				RuntimeException("Configuration File Parse Error!")
-			{}
-		};
-
-		class ConfigItem
-		{
-		public:
+		public: //static members:
 			static constexpr char const sk_labelAddr[] = "Address";
 			static constexpr char const sk_labelPort[] = "Port";
 			static constexpr char const sk_labelIsLoadWl[] = "LoadedWhiteList";
 			static constexpr char const sk_labelHash[] = "Hash";
 
-			ConfigItem(const Json::Value& json);
+		public:
+			EnclaveListItem(const Tools::JsonValue& json);
 
-			ConfigItem(const std::string& addr, const uint16_t port, const bool isLoaddedList, const std::string& hashStr) :
+			EnclaveListItem(const std::string& addr, const uint16_t port, const bool isLoaddedList, const std::string& hashStr) :
 				m_addr(addr),
 				m_port(port),
 				m_loaddedWhiteList(isLoaddedList),
 				m_hashStr(hashStr)
 			{}
 
-			ConfigItem(std::string&& addr, const uint16_t port, const bool isLoaddedList, std::string&& hashStr) :
+			EnclaveListItem(std::string&& addr, const uint16_t port, const bool isLoaddedList, std::string&& hashStr) :
 				m_addr(std::forward<std::string>(addr)),
 				m_port(port),
 				m_loaddedWhiteList(isLoaddedList),
 				m_hashStr(std::forward<std::string>(hashStr))
 			{}
 
-			ConfigItem(ConfigItem&& rhs) :
-				ConfigItem(std::forward<std::string>(rhs.m_addr),
+			EnclaveListItem(EnclaveListItem&& rhs) :
+				EnclaveListItem(std::forward<std::string>(rhs.m_addr),
 					rhs.m_port, rhs.m_loaddedWhiteList, std::forward<std::string>(rhs.m_hashStr))
 			{}
 
-			ConfigItem(const ConfigItem& rhs) :
-				ConfigItem(rhs.m_addr, rhs.m_port, rhs.m_loaddedWhiteList, rhs.m_hashStr)
+			EnclaveListItem(const EnclaveListItem& rhs) :
+				EnclaveListItem(rhs.m_addr, rhs.m_port, rhs.m_loaddedWhiteList, rhs.m_hashStr)
 			{}
 
+			virtual ~EnclaveListItem();
+
 			const std::string& GetAddr() const { return m_addr; }
+
 			uint16_t GetPort() const { return m_port; }
+
 			bool GetIsLoaddedWhiteList() const { return m_loaddedWhiteList; }
+
 			const std::string& GetHashStr() const { return m_hashStr; }
 
 		private:
-			ConfigItem(std::string&& addr, const uint16_t port, const bool isLoaddedList, const Json::Value& json);
-
 			std::string m_addr;
 			uint16_t m_port;
 			bool m_loaddedWhiteList;
 			std::string m_hashStr;
 		};
 
-		class ConfigManager
+		class EnclaveList
 		{
 		public: //static members:
-			static constexpr char const sk_labelEnclaves[] = "Enclaves";
+			static constexpr char const sk_defaultLabel[] = "Enclaves";
 
 		public:
-			ConfigManager() = delete;
-			ConfigManager(const std::string& jsonStr);
-			ConfigManager(const Json::Value& json);
-			virtual ~ConfigManager();
+			EnclaveList() = delete;
 
-			const ConfigItem* GetItemPtr(const std::string name) const;
-			const ConfigItem& GetItem(const std::string name) const;
+			EnclaveList(const Json::Value& json);
+
+			virtual ~EnclaveList();
+
+			const EnclaveListItem* GetItemPtr(const std::string name) const;
+
+			const EnclaveListItem& GetItem(const std::string name) const;
 
 			const Ra::WhiteList::StaticList& GetLoadedWhiteList() const { return *m_loadedWhiteList; }
+
 			std::string GetLoadedWhiteListStr() const;
 
 		protected:
-			ConfigManager(std::map<std::string, std::unique_ptr<ConfigItem> >&& configMap);
+			EnclaveList(std::map<std::string, std::unique_ptr<EnclaveListItem> > configMap);
 
 		private:
-			std::map<std::string, std::unique_ptr<ConfigItem> > m_configMap;
+			std::map<std::string, std::unique_ptr<EnclaveListItem> > m_configMap;
 			std::unique_ptr<const Ra::WhiteList::StaticList> m_loadedWhiteList;
 		};
 	}

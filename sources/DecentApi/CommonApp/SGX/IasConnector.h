@@ -13,33 +13,37 @@ namespace Decent
 	{
 		class Connector
 		{
-		public:
+		public: //static members:
+
 #if !defined(NDEBUG) || defined(EDEBUG)
-			static constexpr char const sk_iasUrl[] = "https://test-as.sgx.trustedservices.intel.com:443";
+			static constexpr char const sk_iasUrl[] = "https://api.trustedservices.intel.com/sgx/dev";
 #else
-			static constexpr char const sk_iasUrl[] = "https://as.sgx.trustedservices.intel.com:443";
+			static constexpr char const sk_iasUrl[] = "https://api.trustedservices.intel.com/sgx";
 #endif
-			static constexpr char const sk_iasSigRlPath[] = "/attestation/sgx/v3/sigrl/";
-			static constexpr char const sk_iasReportPath[] = "/attestation/sgx/v3/report";
+			static constexpr char const sk_pathSigRl[] = "/attestation/v3/sigrl/";
+			static constexpr char const sk_pathReport[] = "/attestation/v3/report";
 
-			/** \brief	Default path to the Service Provider's cert file, which is %HOME%/SGX_IAS/client.crt */
-			static const std::string sk_defaultCertPath;
+			static constexpr char const sk_headerLabelSubKey[] = "Ocp-Apim-Subscription-Key";
+			static constexpr char const sk_headerLabelReqId[] = "Request-ID";
+			static constexpr char const sk_headerLabelSign[] = "X-IASReport-Signature";
+			static constexpr char const sk_headerLabelCert[] = "X-IASReport-Signing-Certificate";
 
-			/** \brief	Default path to the Service Provider's private key file, which is %HOME%/SGX_IAS/client.pem */
-			static const std::string sk_defaultKeyPath;
+			static bool GetRevocationList(const sgx_epid_group_id_t& gid, const std::string& subscriptionKey, std::string & outRevcList);
 
-			/** \brief	Default path to the Service Provider's private RSA key file, which is %HOME%/SGX_IAS/client.key */
-			//static const std::string sk_defaultRsaKeyPath;
-
-			static bool GetRevocationList(const sgx_epid_group_id_t& gid, const std::string& certPath, const std::string& keyPath,
-				std::string & outRevcList);
-
-			static bool GetQuoteReport(const std::string& jsonReqBody, const std::string& certPath, const std::string& keyPath,
+			static bool GetQuoteReport(const std::string& jsonReqBody, const std::string& subscriptionKey,
 				std::string& outReport, std::string& outSign, std::string& outCert);
 
 		public:
-			Connector();
-			Connector(const std::string& certPath, const std::string& keyPath);
+			Connector() = delete;
+
+			/**
+			 * \brief	Constructor
+			 *
+			 * \param	subscriptionKey	The subscription key.
+			 */
+			Connector(const std::string& subscriptionKey);
+
+			/** \brief	Destructor */
 			virtual ~Connector();
 
 			virtual bool GetRevocationList(const sgx_epid_group_id_t& gid, std::string& outRevcList) const;
@@ -47,8 +51,7 @@ namespace Decent
 			virtual bool GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, std::string& outReport, std::string& outSign, std::string& outCert) const;
 
 		private:
-			const std::string m_certPath;
-			const std::string m_keyPath;
+			const std::string m_subscriptionKey;
 		};
 	}
 }

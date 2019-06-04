@@ -18,10 +18,7 @@
 #include <cppcodec/hex_lower.hpp>
 
 #include "../../Common/Tools/DataCoding.h"
-#include "../../CommonApp/Tools/DiskFile.h"
 #include "../../Common/SGX/IasConnector.h"
-
-#include "../Tools/FileSystemUtil.h"
 
 #ifdef SIMULATING_ENCLAVE
 #include <json/json.h>
@@ -30,12 +27,9 @@
 
 using namespace Decent::Ias;
 using namespace Decent::Tools;
-namespace fs = boost::filesystem;
 
 namespace
 {
-	static const fs::path gsk_defaultIasPath = GetKnownFolderPath(KnownFolderType::Home).append("SGX_IAS");
-
 	typedef std::function<size_t(char*, size_t, size_t, void*)> cUrlContentCallBackFunc;
 	typedef std::function<size_t(char*, size_t, size_t, void*)> cUrlHeaderCallBackFunc;
 
@@ -98,16 +92,18 @@ namespace
 }
 
 constexpr char const Connector::sk_iasUrl[];
-constexpr char const Connector::sk_iasSigRlPath[];
-constexpr char const Connector::sk_iasReportPath[];
-const std::string Connector::sk_defaultCertPath = fs::path(gsk_defaultIasPath).append("client.crt").string();
-const std::string Connector::sk_defaultKeyPath = fs::path(gsk_defaultIasPath).append("client.pem").string();
-//const std::string Connector::sk_defaultRsaKeyPath = fs::path(gsk_defaultIasPath).append("client.key").string();
+constexpr char const Connector::sk_pathSigRl[];
+constexpr char const Connector::sk_pathReport[];
 
-bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::string & certPath, const std::string & keyPath, 
-	std::string & outRevcList)
+constexpr char const Connector::sk_headerLabelSubKey[];
+constexpr char const Connector::sk_headerLabelReqId[];
+constexpr char const Connector::sk_headerLabelSign[];
+constexpr char const Connector::sk_headerLabelCert[];
+
+bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::string& subscriptionKey, std::string & outRevcList)
 {
-	static const std::string s_iasSigRlRootPath = std::string(sk_iasUrl) + sk_iasSigRlPath;
+	static const std::string s_iasSigRlRootPath = std::string(sk_iasUrl) + sk_pathSigRl;
+
 	const std::string iasSigRlFullPath = s_iasSigRlRootPath + GetGIDBigEndianStr(gid);
 
 	outRevcList.resize(0);
@@ -124,12 +120,14 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 	{
 		static std::string tmp;
 		tmp = std::string(ptr, size * nitems);
-		if (tmp.find("request-id") == 0)
+		if (tmp.find(sk_headerLabelReqId) == 0)
 		{
 			requestId = ParseHeaderLine(tmp);
 		}
 		return size * nitems;
 	};
+
+	std::string headerSubKey = std::string(sk_headerLabelSubKey) + ": " + subscriptionKey;
 
 	CURL *hnd = curl_easy_init();
 	curl_slist *headers = curl_slist_append(nullptr, "Cache-Control: no-cache");
@@ -137,14 +135,11 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 
 	if (hnd == nullptr ||
 		headers == nullptr ||
+		(headers = curl_slist_append(headers, headerSubKey.c_str() )) == nullptr ||
 		curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "GET") != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_URL, iasSigRlFullPath.c_str()) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str()) != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM") != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str()) != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM") != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, &HeaderCallbackStatic) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, &ContentCallbackStatic) != CURLE_OK ||
@@ -167,10 +162,10 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 #endif // !SIMULATING_ENCLAVE
 }
 
-bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::string & certPath, const std::string & keyPath, 
+bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::string& subscriptionKey,
 	std::string & outReport, std::string & outSign, std::string & outCert)
 {
-	static const std::string s_iasReportFullPath = std::string(sk_iasUrl) + sk_iasReportPath;
+	static const std::string s_iasReportFullPath = std::string(sk_iasUrl) + sk_pathReport;
 
 	outReport.resize(0);
 	outSign.resize(0);
@@ -188,20 +183,22 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 	{
 		static std::string tmp;
 		tmp = std::string(ptr, size * nitems);
-		if (tmp.find("request-id") == 0)
+		if (tmp.find(sk_headerLabelReqId) == 0)
 		{
 			requestId = ParseHeaderLine(tmp);
 		}
-		if (tmp.find("x-iasreport-signature") == 0)
+		if (tmp.find(sk_headerLabelSign) == 0)
 		{
 			outSign = ParseHeaderLine(tmp);
 		}
-		if (tmp.find("x-iasreport-signing-certificate") == 0)
+		if (tmp.find(sk_headerLabelCert) == 0)
 		{
 			outCert = ParseHeaderLine(tmp);
 		}
 		return size * nitems;
 	};
+
+	std::string headerSubKey = std::string(sk_headerLabelSubKey) + ": " + subscriptionKey;
 
 	CURL *hnd = curl_easy_init();
 	curl_slist *headers = curl_slist_append(nullptr, "Cache-Control: no-cache");
@@ -210,14 +207,11 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 	if (hnd == nullptr ||
 		headers == nullptr ||
 		(headers = curl_slist_append(headers, "Content-Type: application/json")) == nullptr ||
+		(headers = curl_slist_append(headers, headerSubKey.c_str() )) == nullptr ||
 		curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST") != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_URL, s_iasReportFullPath.c_str()) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLCERT, certPath.c_str()) != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM") != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLKEY, keyPath.c_str()) != CURLE_OK ||
-		curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM") != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, &HeaderCallbackStatic) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_HEADERDATA, &headerCallback) != CURLE_OK ||
 		curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, &ContentCallbackStatic) != CURLE_OK ||
@@ -274,27 +268,9 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 #endif // !SIMULATING_ENCLAVE
 }
 
-namespace
+Connector::Connector(const std::string& subscriptionKey) :
+	m_subscriptionKey(subscriptionKey)
 {
-	static void ValidateFilePath(const std::string& filePath)
-	{
-		DiskFile testFile(filePath, FileBase::Mode::Read, false);
-	}
-}
-
-Connector::Connector() :
-	Connector(sk_defaultCertPath, sk_defaultKeyPath)
-{
-}
-
-Connector::Connector(const std::string & certPath, const std::string & keyPath) :
-	m_certPath(certPath.size() ? certPath : sk_defaultCertPath),
-	m_keyPath(keyPath.size() ? keyPath : sk_defaultKeyPath)
-{
-#ifndef SIMULATING_ENCLAVE
-	ValidateFilePath(m_certPath);
-	ValidateFilePath(m_keyPath);
-#endif // SIMULATING_ENCLAVE
 }
 
 Connector::~Connector()
@@ -303,7 +279,7 @@ Connector::~Connector()
 
 bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, std::string & outRevcList) const
 {
-	return Connector::GetRevocationList(gid, m_certPath, m_keyPath, outRevcList);
+	return Connector::GetRevocationList(gid, m_subscriptionKey, outRevcList);
 }
 
 bool Connector::GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, 
@@ -317,7 +293,7 @@ bool Connector::GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size,
 	{
 		iasReqRoot["pseManifest"] = SerializeStruct(msg3.ps_sec_prop);
 	}
-	return GetQuoteReport(iasReqRoot.toStyledString(), m_certPath, m_keyPath, outReport, outSign, outCert);
+	return GetQuoteReport(iasReqRoot.toStyledString(), m_subscriptionKey, outReport, outSign, outCert);
 }
 
 bool StatConnector::GetRevocationList(const void* const connectorPtr, const sgx_epid_group_id_t& gid, std::string& outRevcList)
