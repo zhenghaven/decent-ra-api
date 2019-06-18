@@ -80,13 +80,6 @@ namespace
 		}
 		return res;
 	}
-
-	static std::string ConstructLoadedWhiteListStr(const Decent::Ra::WhiteList::StaticList& whiteList)
-	{
-		JsonDoc jsonDoc;
-		whiteList.ToJson(jsonDoc);
-		return Json2String(jsonDoc);
-	}
 }
 
 constexpr char const EnclaveList::sk_defaultLabel[];
@@ -118,7 +111,7 @@ const EnclaveListItem & EnclaveList::GetItem(const std::string name) const
 
 std::string EnclaveList::GetLoadedWhiteListStr() const
 {
-	return ConstructLoadedWhiteListStr(*m_loadedWhiteList);
+	return m_loadedWhiteList->ToJsonString();
 }
 
 EnclaveList::EnclaveList(std::map<std::string, std::unique_ptr<EnclaveListItem> > configMap) :
