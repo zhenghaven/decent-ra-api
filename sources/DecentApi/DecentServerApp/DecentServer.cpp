@@ -90,7 +90,7 @@ void DecentServer::ProcessAppCertReq(const std::string & wListKey, ConnectionBas
 	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_ra_server_proc_app_cert_req);
 }
 
-bool DecentServer::ProcessSmartMessage(const std::string & category, ConnectionBase& connection)
+bool DecentServer::ProcessSmartMessage(const std::string& category, ConnectionBase& connection, ConnectionBase*& freeHeldCnt)
 {
 	if (category == Ra::RequestCategory::sk_loadWhiteList)
 	{

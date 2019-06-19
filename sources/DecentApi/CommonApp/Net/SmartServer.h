@@ -56,9 +56,9 @@ namespace Decent
 			 *
 			 * \param [in,out]	server			 	The server.
 			 * \param 		  	handler			 	The handler for the incoming connections.
-			 * \param 		  	cntPool			 	The count pool.
+			 * \param 		  	cntPool			 	(Optional) The connection pool. If null, connection will be closed once it is done.
 			 * \param 		  	threadNum		 	The number of threads for this server.
-			 * \param 		  	cntPoolWorkerSize	The number of connection pool workers.
+			 * \param 		  	cntPoolWorkerSize	The number of workers to hold the idle connections.
 			 *
 			 * \return	A ServerHandle, which can be used to shutdown the server later.
 			 */

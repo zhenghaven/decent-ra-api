@@ -29,7 +29,7 @@ namespace Decent
 			virtual void LoadConstWhiteList(const std::string& key, const std::string& whiteList) override;
 			virtual void ProcessAppCertReq(const std::string& wListKey, Net::ConnectionBase& connection) override;
 
-			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection) override;
+			virtual bool ProcessSmartMessage(const std::string& category, Net::ConnectionBase& connection, Net::ConnectionBase*& freeHeldCnt) override;
 
 		protected:
 			virtual std::string GenerateDecentSelfRAReport() override;
