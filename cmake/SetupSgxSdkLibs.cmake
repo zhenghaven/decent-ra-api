@@ -62,6 +62,18 @@ if(WIN32) ## Windows OS
 			IMPORTED_LOCATION_DEBUGSIMULATION "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_uprotected_fs.lib"
 		)
 	endif()
+	if(NOT TARGET IntelSGX::Untrusted::capable)
+		add_library(IntelSGX::Untrusted::capable STATIC IMPORTED GLOBAL)
+		set_target_properties(IntelSGX::Untrusted::capable PROPERTIES
+			IMPORTED_CONFIGURATIONS Release Debug DebugSimulation)
+		target_include_directories(IntelSGX::Untrusted::capable BEFORE INTERFACE ${INTEL_SGX_SDK_INCLUDE_DIR})
+		set_target_properties(IntelSGX::Untrusted::capable PROPERTIES
+			IMPORTED_LOCATION                 "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_capable.lib"
+			IMPORTED_LOCATION_DEBUG           "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_capable.lib"
+			IMPORTED_LOCATION_RELEASE         "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Release/sgx_capable.lib"
+			IMPORTED_LOCATION_DEBUGSIMULATION "${INTEL_SGX_SDK_PATH}/bin/${WIN_ARCHI_STR}/Debug/sgx_capable.lib"
+		)
+	endif()
 	
 	#######
 	# Trusted
