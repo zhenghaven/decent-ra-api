@@ -13,40 +13,37 @@ using namespace Decent::Sgx;
 
 static std::pair<std::unique_ptr<RaProcessorSp>, ConnectionBase*> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor)
 {
-	if (!raProcessor ||
-		!raProcessor->Init())
+	if (!raProcessor)
 	{
 		throw Exception("Null pointer is given to the RA Processor SP DoHandShake.");
 	}
+	
+	raProcessor->Init();
 
-	std::string buf1;
-
+	sgx_ra_msg0s_t msg0s;
 	sgx_ra_msg0r_t msg0r;
+	sgx_ra_msg1_t msg1;
 	std::vector<uint8_t> msg2;
+	std::string msg3;
 	sgx_ra_msg4_t msg4;
 
-	cnt.ReceivePack(buf1);
-	if (buf1.size() != sizeof(sgx_ra_msg0s_t) ||
-		!raProcessor->ProcessMsg0(*reinterpret_cast<const sgx_ra_msg0s_t*>(buf1.data()), msg0r))
+	cnt.ReceiveRawGuarantee(&msg0s, sizeof(msg0s));
+
+	raProcessor->ProcessMsg0(msg0s, msg0r);
+
+	cnt.SendRawGuarantee(&msg0r, sizeof(msg0r));
+	cnt.ReceiveRawGuarantee(&msg1, sizeof(msg1));
+
+	raProcessor->ProcessMsg1(msg1, msg2);
+
+	cnt.SendAndReceivePack(msg2.data(), msg2.size(), msg3);
+	if (msg3.size() < sizeof(sgx_ra_msg3_t))
 	{
 		throw Exception("Decent::Sgx::RaProcessorSp DoHandShake Failed.");
 	}
+	raProcessor->ProcessMsg3(*reinterpret_cast<const sgx_ra_msg3_t*>(msg3.data()), msg3.size(), msg4, nullptr);
 
-	cnt.SendAndReceivePack(&msg0r, sizeof(msg0r), buf1);
-	if (buf1.size() != sizeof(sgx_ra_msg1_t) ||
-		!raProcessor->ProcessMsg1(*reinterpret_cast<const sgx_ra_msg1_t*>(buf1.data()), msg2))
-	{
-		throw Exception("Decent::Sgx::RaProcessorSp DoHandShake Failed.");
-	}
-
-	cnt.SendAndReceivePack(msg2.data(), msg2.size(), buf1);
-	if (buf1.size() < sizeof(sgx_ra_msg3_t) ||
-		!raProcessor->ProcessMsg3(*reinterpret_cast<const sgx_ra_msg3_t*>(buf1.data()), buf1.size(), msg4, nullptr))
-	{
-		throw Exception("Decent::Sgx::RaProcessorSp DoHandShake Failed.");
-	}
-
-	cnt.SendPack(&msg4, sizeof(msg4));
+	cnt.SendRawGuarantee(&msg4, sizeof(msg4));
 
 	return std::make_pair(std::move(raProcessor), &cnt);
 }

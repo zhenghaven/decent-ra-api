@@ -4,8 +4,15 @@
 
 #include "ErrorCode.h"
 
-#define DECENT_CHECK_SGX_STATUS_ERROR(X, Y) if(X != SGX_SUCCESS) {\
-                                                  throw Decent::Sgx::RuntimeError(X, #Y);}
+#define DECENT_CHECK_SGX_STATUS_ERROR(X, Y) {\
+                                                const auto val = X; \
+                                                if(val != SGX_SUCCESS) {\
+                                                    throw Decent::Sgx::RuntimeError(val, #Y);\
+                                                }\
+                                            }
+
+#define DECENT_CHECK_SGX_FUNC_CALL_ERROR(FUNC, ...) \
+            DECENT_CHECK_SGX_STATUS_ERROR(FUNC(__VA_ARGS__), FUNC)
 
 namespace Decent
 {

@@ -6,7 +6,7 @@ enclave {
 	
 	untrusted 
 	{
-		int ocall_decent_sgx_ra_send_msg0s([user_check] void* connection_ptr);
+		int ocall_decent_sgx_ra_get_msg0s([out] sgx_ra_msg0s_t* msg0s);
 
 		int ocall_decent_sgx_ra_get_msg1(uint64_t enclave_id, uint32_t ra_ctx, [out] sgx_ra_msg1_t* msg1);
 

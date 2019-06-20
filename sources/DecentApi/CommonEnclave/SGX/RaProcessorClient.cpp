@@ -2,10 +2,14 @@
 
 #include <sgx_tkey_exchange.h>
 
+#include "../../Common/Common.h"
+#include "../../Common/make_unique.h"
 #include "../../Common/SGX/sgx_structs.h"
 #include "../../Common/SGX/IasReport.h"
-#include "../../Common/Common.h"
+#include "../../Common/SGX/RuntimeError.h"
 #include "../../Common/Ra/KeyContainer.h"
+
+#include "../Tools/UntrustedBuffer.h"
 
 #include "edl_decent_sgx_client.h"
 #include "edl_decent_tools.h"
@@ -69,88 +73,84 @@ RaProcessorClient::RaProcessorClient(RaProcessorClient && other) :
 	other.m_isAttested = false;
 }
 
-bool RaProcessorClient::ProcessMsg0r(const sgx_ra_msg0r_t & msg0r, sgx_ra_msg1_t & msg1)
+void RaProcessorClient::GetMsg0s(sgx_ra_msg0s_t & msg0s)
+{
+	int retVal = 0;
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(ocall_decent_sgx_ra_get_msg0s, &retVal, &msg0s);
+
+	if (!retVal)
+	{
+		throw RuntimeException("Failed to get SGX RA MSG 0 SEND.");
+	}
+}
+
+void RaProcessorClient::ProcessMsg0r(const sgx_ra_msg0r_t & msg0r, sgx_ra_msg1_t & msg1)
 {
 	if (!m_configChecker(msg0r.ra_config) ||
 		!CheckKeyDerivationFuncId(msg0r.ra_config.ckdf_id) ||
 		!m_signKeyVerifier(msg0r.sp_pub_key))
 	{
-		return false;
+		throw RuntimeException("Failed to verify RA initiator's MSG 0.");
 	}
 
-	m_raConfig.reset(new sgx_ra_config(msg0r.ra_config));
-	m_peerSignKey.reset(new sgx_ec256_public_t(msg0r.sp_pub_key));
+	m_raConfig = Tools::make_unique<sgx_ra_config>(msg0r.ra_config);
+	m_peerSignKey = Tools::make_unique<sgx_ec256_public_t>(msg0r.sp_pub_key);
 
-	if (!InitRaContext(msg0r.ra_config, msg0r.sp_pub_key))
-	{
-		return false;
-	}
+	InitRaContext(msg0r.ra_config, msg0r.sp_pub_key);
 
-	if (!GetMsg1(msg1))
-	{
-		return false;
-	}
-
-	return true;
+	GetMsg1(msg1);
 }
 
-bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
+void RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
 {
 	size_t retVal = 0;
 	uint8_t* tmpMsg3 = nullptr;
-	if (ocall_decent_sgx_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
-		!retVal)
+
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(ocall_decent_sgx_ra_proc_msg2, &retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3);
+
+	if (!retVal)
 	{
-		return false;
+		throw RuntimeException("Function call to " "ocall_decent_sgx_ra_proc_msg2" " Failed.");
 	}
 
-	msg3.resize(retVal);
-	std::copy(tmpMsg3, tmpMsg3 + retVal, msg3.begin());
+	Tools::UntrustedBuffer msg3Buf(tmpMsg3, retVal);
 
-	ocall_decent_tools_del_buf_uint8(tmpMsg3);
-
-	return true;
+	msg3 = msg3Buf.Read();
 }
 
-bool RaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
+void RaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
 {
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-
 	{
 		sgx_ecc_state_handle_t eccState;
-		enclaveRet = sgx_ecc256_open_context(&eccState);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return false;
-		}
+
+		DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ecc256_open_context, &eccState);
 
 		uint8_t signVerifyRes = SGX_EC_INVALID_SIGNATURE;
-		enclaveRet = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(&msg4.is_accepted), 
+
+		sgx_status_t enclaveRet = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(&msg4.is_accepted), 
 			sizeof(msg4) - sizeof(sgx_ec256_signature_t), 
 			m_peerSignKey.get(),
 			const_cast<sgx_ec256_signature_t*>(&msg4.signature),
 			&signVerifyRes, eccState);
+
 		sgx_ecc256_close_context(eccState);
 
-		if (enclaveRet != SGX_SUCCESS ||
-			signVerifyRes != SGX_EC_VALID)
+		DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, sgx_ecdsa_verify);
+
+		if (signVerifyRes != SGX_EC_VALID)
 		{
-			return false;
+			throw RuntimeException("Failed to verify the signature in SGX RA MSG 4.");
 		}
 	}
 
 	if (!msg4.is_accepted)
 	{
-		return false;
+		throw RuntimeException("Initiator rejected the SGX RA quote.");
 	}
 
-	if (!DeriveSharedKeys(m_mk, m_sk))
-	{
-		return false;
-	}
+	DeriveSharedKeys(m_mk, m_sk);
 
 	m_isAttested = true;
-	return m_isAttested;
 }
 
 bool RaProcessorClient::IsAttested() const
@@ -173,25 +173,24 @@ sgx_ias_report_t * RaProcessorClient::ReleaseIasReport()
 	return m_iasReport.release();
 }
 
-bool RaProcessorClient::InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey)
+void RaProcessorClient::InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey)
 {
-	sgx_status_t ret;
 	if (raConfig.enable_pse)
 	{
 		//int busy_retry_times = 2; do {} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
-		ret = sgx_create_pse_session();
-		if (ret != SGX_SUCCESS)
-			return false;
+		DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_create_pse_session);
 	}
-	ret = sgx_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, &m_raCtxId);
+
+	sgx_status_t ret = sgx_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, &m_raCtxId);
 
 	if (raConfig.enable_pse)
 	{
 		sgx_close_pse_session();
 	}
 
-	m_ctxInited = (ret == SGX_SUCCESS);
-	return m_ctxInited;
+	DECENT_CHECK_SGX_STATUS_ERROR(ret, sgx_ra_init_ex);
+
+	m_ctxInited = true;
 }
 
 void RaProcessorClient::CloseRaContext()
@@ -207,31 +206,21 @@ bool RaProcessorClient::CheckKeyDerivationFuncId(const uint16_t id) const
 	return id == SGX_DEFAULT_AES_CMAC_KDF_ID;
 }
 
-bool RaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128BitKey & sk)
+void RaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128BitKey & sk)
 {
-	sgx_status_t enclaveRet = SGX_SUCCESS;
-	enclaveRet = sgx_ra_get_keys(m_raCtxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(sk.data()));
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return false;
-	}
-	enclaveRet = sgx_ra_get_keys(m_raCtxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(mk.data()));
-	if (enclaveRet != SGX_SUCCESS)
-	{
-		return false;
-	}
-	return true;
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(sk.data()));
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(mk.data()));
 }
 
-bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
+void RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 {
 	int retVal = 0;
-	if (ocall_decent_sgx_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
-		!retVal)
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(ocall_decent_sgx_ra_get_msg1, &retVal, m_enclaveId, m_raCtxId, &msg1);
+	
+	if (!retVal)
 	{
-		return false;
+		throw RuntimeException("Function call to " "ocall_decent_sgx_ra_get_msg1" " Failed.");
 	}
-	return true;
 }
 
 extern "C" sgx_status_t ecall_decent_sgx_client_enclave_init()

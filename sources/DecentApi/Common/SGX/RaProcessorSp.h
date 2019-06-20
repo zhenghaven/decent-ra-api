@@ -31,8 +31,8 @@ namespace Decent
 		class RaProcessorSp
 		{
 		public:
-			typedef std::function<bool(const sgx_report_data_t& initData, const sgx_report_data_t& expected)> SgxReportDataVerifier;
-			typedef std::function<bool(const sgx_quote_t& quote)> SgxQuoteVerifier;
+			typedef std::function<bool(const sgx_report_data_t&, const sgx_report_data_t&)> SgxReportDataVerifier;
+			typedef std::function<bool(const sgx_quote_t&)> SgxQuoteVerifier;
 			static void SetSpid(const sgx_spid_t & spid);
 			static const SgxReportDataVerifier sk_defaultRpDataVrfy;
 
@@ -41,7 +41,7 @@ namespace Decent
 				SGX_QUOTE_LINKABLE_SIGNATURE,
 				SGX_DEFAULT_AES_CMAC_KDF_ID,
 #ifndef SIMULATING_ENCLAVE
-				1, //Enable PSE
+				0, //Enable PSE
 #else
 				0,
 #endif 
@@ -51,7 +51,7 @@ namespace Decent
 			};
 
 		public:
-			RaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey,
+			RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::ECKeyPair> mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
 				SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig = sk_defaultRaConfig);
 
 			virtual ~RaProcessorSp();
@@ -59,10 +59,10 @@ namespace Decent
 			RaProcessorSp(const RaProcessorSp& other) = delete;
 			RaProcessorSp(RaProcessorSp&& other);
 
-			virtual bool Init();
-			virtual bool ProcessMsg0(const sgx_ra_msg0s_t& msg0s, sgx_ra_msg0r_t& msg0r);
-			virtual bool ProcessMsg1(const sgx_ra_msg1_t& msg1, std::vector<uint8_t>& msg2);
-			virtual bool ProcessMsg3(const sgx_ra_msg3_t& msg3, size_t msg3Len, sgx_ra_msg4_t& msg4, sgx_report_data_t* outOriRD);
+			virtual void Init();
+			virtual void ProcessMsg0(const sgx_ra_msg0s_t& msg0s, sgx_ra_msg0r_t& msg0r);
+			virtual void ProcessMsg1(const sgx_ra_msg1_t& msg1, std::vector<uint8_t>& msg2);
+			virtual void ProcessMsg3(const sgx_ra_msg3_t& msg3, size_t msg3Len, sgx_ra_msg4_t& msg4, sgx_report_data_t* outOriRD);
 
 			const sgx_ra_config& GetRaConfig() const;
 			bool IsAttested() const;
@@ -70,7 +70,7 @@ namespace Decent
 			const General128BitKey& GetSK() const;
 			const General128BitKey& GetMK() const;
 
-			virtual bool GetMsg0r(sgx_ra_msg0r_t& msg0r);
+			virtual void GetMsg0r(sgx_ra_msg0r_t& msg0r);
 			const std::string& GetIasReportStr() const;
 			const std::string& GetIasReportCert() const;
 			const std::string& GetIasReportSign() const;
@@ -82,7 +82,7 @@ namespace Decent
 				const std::string& iasReportStr, const std::string& reportCert, const std::string& reportSign,
 				const sgx_report_data_t& oriRD) const;
 
-			virtual bool SetPeerEncrPubKey(const general_secp256r1_public_t& inEncrPubKey);
+			virtual void SetPeerEncrPubKey(const general_secp256r1_public_t& inEncrPubKey);
 
 			sgx_ra_config m_raConfig;
 

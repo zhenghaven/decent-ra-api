@@ -272,23 +272,17 @@ extern "C" size_t ocall_decent_sgx_ra_proc_msg2(const uint64_t enclave_id, const
 	return tmpMsg3Size;
 }
 
-extern "C" int ocall_decent_sgx_ra_send_msg0s(void* const connection_ptr)
+extern "C" int ocall_decent_sgx_ra_get_msg0s(sgx_ra_msg0s_t* msg0s)
 {
-	try
-	{
-		sgx_ra_msg0s_t msg0s;
-		sgx_status_t enclaveRet = sgx_get_extended_epid_group_id(&msg0s.extended_grp_id);
-		if (enclaveRet != SGX_SUCCESS)
-		{
-			return false;
-		}
-
-		static_cast<ConnectionBase*>(connection_ptr)->SendPack(&msg0s, sizeof(msg0s));
-
-		return true;
-	}
-	catch (const std::exception&)
+	if (!msg0s)
 	{
 		return false;
 	}
+
+	if (sgx_get_extended_epid_group_id(&(msg0s->extended_grp_id)) != SGX_SUCCESS)
+	{
+		return false;
+	}
+
+	return true;
 }

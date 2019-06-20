@@ -3,9 +3,6 @@
 #include <cstdint>
 #include <cstring>
 
-#ifdef DECENT_THREAD_SAFETY_HIGH
-#include <atomic>
-#endif // DECENT_THREAD_SAFETY_HIGH
 #include <vector>
 #include <map>
 
@@ -26,6 +23,7 @@
 #include "IasReport.h"
 #include "IasConnector.h"
 #include "SgxCryptoConversions.h"
+#include "RuntimeError.h"
 
 using namespace Decent;
 using namespace Decent::Sgx;
@@ -35,8 +33,6 @@ using namespace Decent::MbedTlsObj;
 
 namespace
 {
-	static std::shared_ptr<const sgx_spid_t> g_sgxSpid = std::make_shared<const sgx_spid_t>();
-
 	static std::string ConstructNonce(size_t size)
 	{
 		size_t dataSize = (size / 4) * 3;
@@ -55,25 +51,10 @@ const RaProcessorSp::SgxReportDataVerifier RaProcessorSp::sk_defaultRpDataVrfy([
 	return consttime_memequal(&initData, &expected, sizeof(sgx_report_data_t)) == 1;
 });
 
-void RaProcessorSp::SetSpid(const sgx_spid_t & spid)
-{
-	std::shared_ptr<const sgx_spid_t> tmpSPID = std::make_shared<const sgx_spid_t>(spid);
-
-#ifdef DECENT_THREAD_SAFETY_HIGH
-	std::atomic_store(&g_sgxSPID, tmpSPID);
-#else
-	g_sgxSpid = tmpSPID;
-#endif // DECENT_THREAD_SAFETY_HIGH
-}
-
-RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, const std::shared_ptr<const MbedTlsObj::ECKeyPair>& mySignKey, 
+RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::ECKeyPair> mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
 	SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig) :
 	m_raConfig(raConfig),
-#ifdef DECENT_THREAD_SAFETY_HIGH
-	m_spid(std::atomic_load(&g_sgxSpid)),
-#else
-	m_spid(g_sgxSpid),
-#endif // DECENT_THREAD_SAFETY_HIGH
+	m_spid(spidPtr),
 	m_iasConnectorPtr(iasConnectorPtr),
 	m_mySignKey(mySignKey),
 	m_encrKeyPair(new MbedTlsObj::ECKeyPair(MbedTlsObj::ECKeyPair::GenerateNewKey())),
@@ -131,46 +112,38 @@ RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
 	other.m_isAttested = false;
 }
 
-bool RaProcessorSp::Init()
+void RaProcessorSp::Init()
 {
 	if (!m_encrKeyPair || !*m_encrKeyPair || !m_mySignKey || !*m_mySignKey ||
 		!m_encrKeyPair->ToGeneralPubKey(m_myEncrKey))
 	{
-		return false;
+		throw RuntimeException("Failed to init RaProcessorSp, because keys are invalid.");
 	}
 
-	if ((m_raConfig.linkable_sign != SGX_QUOTE_LINKABLE_SIGNATURE && m_raConfig.linkable_sign != SGX_QUOTE_UNLINKABLE_SIGNATURE) ||
-		(m_raConfig.enable_pse != 0 && m_raConfig.enable_pse != 1) ||
-		(m_raConfig.allow_ofd_enc != 0 && m_raConfig.allow_ofd_enc != 1) ||
-		(m_raConfig.allow_ofd_pse != 0 && m_raConfig.allow_ofd_pse != 1) )
+	if (!Ias::CheckRaConfigValidaty(m_raConfig))
 	{
-		return false;
+		throw RuntimeException("RA config given to RaProcessorSp::Init is invalid.");
 	}
 
 	if (!CheckKeyDerivationFuncId(m_raConfig.ckdf_id))
 	{
-		return false;
+		throw RuntimeException("Key derivation function ID in RA config given to RaProcessorSp::Init is invalid.");
 	}
-
-	return true;
 }
 
-bool RaProcessorSp::ProcessMsg0(const sgx_ra_msg0s_t & msg0s, sgx_ra_msg0r_t & msg0r)
+void RaProcessorSp::ProcessMsg0(const sgx_ra_msg0s_t & msg0s, sgx_ra_msg0r_t & msg0r)
 {
 	if (!CheckExGrpId(msg0s.extended_grp_id))
 	{
-		return false;
+		throw RuntimeException("RA extension group ID given by the RA responder is not supported.");
 	}
 
-	return GetMsg0r(msg0r);
+	GetMsg0r(msg0r);
 }
 
-bool RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>& msg2)
+void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>& msg2)
 {
-	if (!SetPeerEncrPubKey(SgxEc256Type2General(msg1.g_a)))
-	{
-		return false;
-	}
+	SetPeerEncrPubKey(SgxEc256Type2General(msg1.g_a));
 
 	msg2.resize(sizeof(sgx_ra_msg2_t));
 	sgx_ra_msg2_t& msg2Ref = *reinterpret_cast<sgx_ra_msg2_t*>(msg2.data());
@@ -186,19 +159,19 @@ bool RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 	if (!m_mySignKey->EcdsaSign(SgxEc256Type2General(msg2Ref.sign_gb_ga), hashToBeSigned,
 		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
 	{
-		return false;
+		throw RuntimeException("RaProcessorSp::ProcessMsg1 failed to ECDSA sign.");
 	}
 
 	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
 	if (!MbedTlsHelper::CalcCmacAes128(m_smk, reinterpret_cast<uint8_t*>(&(msg2Ref.g_b)), cmac_size, msg2Ref.mac))
 	{
-		return false;
+		throw RuntimeException("RaProcessorSp::ProcessMsg1 failed to calculate CMAC.");
 	}
 
 	std::string revcList;
 	if (!StatConnector::GetRevocationList(m_iasConnectorPtr, msg1.gid, revcList))
 	{
-		return false;
+		throw RuntimeException("RaProcessorSp::ProcessMsg1 failed to get revocation list.");
 	}
 
 	std::vector<uint8_t> revcListBin;
@@ -206,16 +179,14 @@ bool RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 
 	msg2Ref.sig_rl_size = static_cast<uint32_t>(revcListBin.size());
 	msg2.insert(msg2.end(), revcListBin.begin(), revcListBin.end());
-
-	return true;
 }
 
-bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_ra_msg4_t & msg4, 
+void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_ra_msg4_t & msg4, 
 	sgx_report_data_t * outOriRD)
 {
 	if (!consttime_memequal(&(m_peerEncrKey), &msg3.g_a, sizeof(sgx_ec256_public_t)))
 	{
-		return false;
+		throw RuntimeException("RaProcessorSp::ProcessMsg3 failed to verify MSG 3.");
 	}
 	
 	//Make sure that msg3_size is bigger than sgx_mac_t.
@@ -224,7 +195,7 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 
 	if (!MbedTlsHelper::VerifyCmacAes128(m_smk, p_msg3_cmaced, mac_size, msg3.mac))
 	{
-		return false;
+		throw RuntimeException("RaProcessorSp::ProcessMsg3 failed to verify MSG 3.");
 	}
 
 	//std::memcpy(&spCTX.m_secProp, &msg3.ps_sec_prop, sizeof(sgx_ps_sec_prop_desc_t));
@@ -288,10 +259,13 @@ bool RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 	if (!m_mySignKey->EcdsaSign(SgxEc256Type2General(msg4.signature), hashToBeSigned,
 		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
 	{
-		return false;
+		throw RuntimeException("RaProcessorSp::ProcessMsg3 failed to ECDSA sign.");
 	}
 
-	return m_isAttested;
+	if (!m_isAttested)
+	{
+		throw RuntimeException("RaProcessorSp::ProcessMsg3 rejects the quote; SGX RA failed.");
+	}
 }
 
 const sgx_ra_config & RaProcessorSp::GetRaConfig() const
@@ -319,15 +293,14 @@ const General128BitKey & RaProcessorSp::GetMK() const
 	return m_mk;
 }
 
-bool RaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
+void RaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
 {
 	msg0r.ra_config = m_raConfig;
 
 	if (!m_mySignKey->ToGeneralPubKey(SgxEc256Type2General(msg0r.sp_pub_key)))
 	{
-		return false;
+		throw RuntimeException("Failed to generate MSG 0 RESP.");
 	}
-	return true;
 }
 
 const std::string & RaProcessorSp::GetIasReportStr() const
@@ -355,19 +328,19 @@ bool RaProcessorSp::CheckKeyDerivationFuncId(const uint16_t id) const
 	return id == SGX_DEFAULT_AES_CMAC_KDF_ID;
 }
 
-bool RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrPubKey)
+void RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrPubKey)
 {
 	m_peerEncrKey = inEncrPubKey;
 
 	MbedTlsObj::ECKeyPublic peerEncrKey = MbedTlsObj::ECKeyPublic::FromGeneral(inEncrPubKey);
 	if (!peerEncrKey)
 	{
-		return false;
+		throw RuntimeException("In RaProcessorSp::SetPeerEncrPubKey, failed to parse public key.");
 	}
 	General256BitKey sharedKey;
 	if (!m_encrKeyPair->GenerateSharedKey(sharedKey, peerEncrKey))
 	{
-		return false;
+		throw RuntimeException("In RaProcessorSp::SetPeerEncrPubKey, failed to calculate shared secret.");
 	}
 
 	if (!MbedTlsHelper::CkdfAes128(sharedKey, "SMK", m_smk) ||
@@ -375,9 +348,8 @@ bool RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrP
 		!MbedTlsHelper::CkdfAes128(sharedKey, "SK", m_sk) ||
 		!MbedTlsHelper::CkdfAes128(sharedKey, "VK", m_vk))
 	{
-		return false;
+		throw RuntimeException("In RaProcessorSp::SetPeerEncrPubKey, failed to calculate shared key set.");
 	}
-	return true;
 }
 
 bool RaProcessorSp::CheckIasReport(sgx_ias_report_t & outIasReport,

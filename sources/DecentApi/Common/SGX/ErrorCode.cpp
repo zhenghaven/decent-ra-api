@@ -340,13 +340,13 @@ const char * Decent::Sgx::GetErrorSolution(const sgx_status_t code)
 
 std::string Decent::Sgx::ConstructErrorMsg(sgx_status_t errCode, const std::string & funcName)
 {
-	return "SGX Runtime Error: From function, " + funcName + 
-		"\nSGX Err Msg: " + GetErrorMessage(errCode) + 
-		"\nHint: " + GetErrorSolution(errCode);
+	return "SGX Runtime Error in function, " + funcName + ". " +
+		"SGX Err Msg, " + GetErrorMessage(errCode) + ". " +
+		"Hint, " + GetErrorSolution(errCode) + ".";
 }
 
 std::string Decent::Sgx::ConstructSimpleErrorMsg(sgx_status_t errCode, const std::string & funcName)
 {
-	return "SGX Runtime Error: From function, " + funcName +
-		". SGX Err Msg: " + GetErrorMessage(errCode);
+	return "SGX Runtime Error in function, " + funcName + ". " +
+		"SGX Err Msg, " + GetErrorMessage(errCode) + ".";
 }

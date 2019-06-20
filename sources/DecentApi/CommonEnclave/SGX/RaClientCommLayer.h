@@ -21,7 +21,7 @@ namespace Decent
 		{
 		public:
 			RaClientCommLayer() = delete;
-			RaClientCommLayer(Decent::Net::EnclaveCntTranslator& connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor);
+			RaClientCommLayer(Net::ConnectionBase& connectionPtr, std::unique_ptr<Sgx::RaProcessorClient>& raProcessor);
 			RaClientCommLayer(const RaClientCommLayer& other) = delete;
 			RaClientCommLayer(RaClientCommLayer&& other);
 
