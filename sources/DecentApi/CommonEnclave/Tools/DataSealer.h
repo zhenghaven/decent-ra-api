@@ -46,10 +46,10 @@ namespace Decent
 					void* outKey, const size_t expectedKeySize, const void* inMeta, const size_t inMetaSize, const std::vector<uint8_t>& salt);
 
 				std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-					std::vector<uint8_t>& outMac, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize);
+					std::vector<uint8_t>& outMac, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize, const size_t sealedBlockSize);
 
 				void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-					const void* inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& outMeta, std::vector<uint8_t>& outData);
+					const void* inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& outMeta, std::vector<uint8_t>& outData, const size_t sealedBlockSize);
 			}
 
 			/**
@@ -92,44 +92,59 @@ namespace Decent
 			/**
 			 * \brief	Seal data
 			 *
+			 * \exception	Decent::RuntimeException	Thrown when underlying function call failed.
+			 *
 			 * \tparam	MetaCtn	Container type that stores the metadata.
 			 * \tparam	DataCtn	Container type that stores the data.
-			 * \param 	   	keyPolicy	The key policy.
-			 * \param [out]	outMac   	The output MAC. The MAC generated when sealing the data. This can be
-			 * 							used to prevent replay attack during unseal process.
-			 * \param 	   	metadata 	The metadata.
-			 * \param 	   	data	 	The data.
+			 * \param 	   	keyPolicy	   	The key policy.
+			 * \param 	   	decentState	   	Decent global state.
+			 * \param 	   	keyLabel	   	The key label.
+			 * \param [out]	outMac		   	The output MAC. The MAC generated when sealing the data. This can
+			 * 								be used to prevent replay attack during unseal process.
+			 * \param 	   	metadata	   	The metadata.
+			 * \param 	   	data		   	The data.
+			 * \param 	   	sealedBlockSize	(Optional) Size of the blocks for sealed data. The default size
+			 * 								is 4KB.
 			 *
 			 * \return	A std::vector&lt;uint8_t&gt;, the sealed data.
 			 */
 			template<typename MetaCtn, typename DataCtn>
 			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-				std::vector<uint8_t>& outMac, const MetaCtn& metadata, const DataCtn& data)
+				std::vector<uint8_t>& outMac, const MetaCtn& metadata, const DataCtn& data, const size_t sealedBlockSize = 4096)
 			{
 				return detail::SealData(keyPolicy, decentState, keyLabel, outMac, 
 					ArrayPtrAndSize::GetPtr(metadata), ArrayPtrAndSize::GetSize(metadata),
-					ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data));
+					ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data),
+					sealedBlockSize);
 			}
 
 			/**
 			 * \brief	Unseal data
 			 *
+			 * \exception	Decent::RuntimeException	Thrown when the sealed data structure is invalid, or
+			 * 											underlying function call failed.
+			 *
 			 * \tparam	SealedDataCtn	Container type that stores the sealed data .
-			 * \param 	   	keyPolicy	The key policy.
-			 * \param 	   	inData   	Input, sealed data.
-			 * \param 	   	inMac	 	The input MAC. If the size of the container is greater than zero, the
-			 * 							MAC retrieved from the sealed data will be compared with the input
-			 * 							MAC.
-			 * \param [out]	metadata 	The metadata.
-			 * \param [out]	data	 	The data.
+			 * \param 	   	keyPolicy	   	The key policy.
+			 * \param 	   	decentState	   	Decent global state.
+			 * \param 	   	keyLabel	   	The key label.
+			 * \param 	   	inData		   	Input, sealed data.
+			 * \param 	   	inMac		   	The input MAC. If the size of the container is greater than zero,
+			 * 								the MAC retrieved from the sealed data will be compared with the
+			 * 								input MAC.
+			 * \param [out]	metadata	   	The metadata.
+			 * \param [out]	data		   	The data.
+			 * \param 	   	sealedBlockSize	(Optional) Size of the blocks for sealed data. The default size
+			 * 								is 4KB.
 			 */
 			template<typename SealedDataCtn>
 			void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-				const SealedDataCtn& inData, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data)
+				const SealedDataCtn& inData, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data, const size_t sealedBlockSize = 4096)
 			{
 				detail::UnsealData(keyPolicy, decentState, keyLabel, 
 					ArrayPtrAndSize::GetPtr(inData), ArrayPtrAndSize::GetSize(inData), inMac, 
-					metadata, data);
+					metadata, data,
+					sealedBlockSize);
 			}
 		}
 	}

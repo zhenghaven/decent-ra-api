@@ -12,7 +12,7 @@ using namespace Decent::Tools;
 
 namespace
 {
-	constexpr size_t gsk_sealedBlockSize = 4096; // block size is 4 KBytes.
+	//constexpr size_t gsk_sealedBlockSize = 4096; // block size is 4 KBytes.
 
 	constexpr char   gsk_sealedDataLabel[] = "Decent_Data_Sealing";
 
@@ -24,13 +24,13 @@ namespace
 
 	constexpr size_t gsk_sealPkgAllKnownSize = gsk_sealMetaSize + sizeof(uint64_t) + sizeof(uint64_t);
 
-	size_t GetTotalSealedBlockSize( const size_t inKeyMetaSize, const size_t inMetaSize, const size_t inDataSize, size_t& addSize, size_t& sealedSize)
+	size_t GetTotalSealedBlockSize(const size_t inSealedBlockSize, const size_t inKeyMetaSize, const size_t inMetaSize, const size_t inDataSize, size_t& addSize, size_t& sealedSize)
 	{
 		const size_t totalDataSize = gsk_sealPkgAllKnownSize + inKeyMetaSize + inMetaSize + inDataSize;
 
-		const size_t totalBlockNum = static_cast<size_t>(std::ceil(static_cast<float>(totalDataSize) / gsk_sealedBlockSize));
+		const size_t totalBlockNum = static_cast<size_t>(std::ceil(static_cast<float>(totalDataSize) / inSealedBlockSize));
 
-		const size_t totalBlockSize = totalBlockNum * gsk_sealedBlockSize;
+		const size_t totalBlockSize = totalBlockNum * inSealedBlockSize;
 
 		const size_t padSize = totalBlockSize - totalDataSize;
 
@@ -73,7 +73,7 @@ namespace
 // Padding bytes            (Encrypted)         - variable Size
 
 std::vector<uint8_t> DataSealer::detail::SealData(KeyPolicy keyPolicy, const Ra::States & decentState, const std::string& keyLabel, 
-	std::vector<uint8_t>& outMac, const void * inMeta, const size_t inMetaSize, const void * inData, const size_t inDataSize)
+	std::vector<uint8_t>& outMac, const void * inMeta, const size_t inMetaSize, const void * inData, const size_t inDataSize, const size_t sealedBlockSize)
 {
 	std::vector<uint8_t> keyMeta = GenSealKeyRecoverMeta(false);
 	General128BitKey sealKey;
@@ -82,7 +82,7 @@ std::vector<uint8_t> DataSealer::detail::SealData(KeyPolicy keyPolicy, const Ra:
 	size_t addSize = 0;
 	size_t sealedSize = 0;
 	std::vector<uint8_t> sealedRes(
-		GetTotalSealedBlockSize(keyMeta.size(), inMetaSize, inDataSize, addSize, sealedSize));
+		GetTotalSealedBlockSize(sealedBlockSize, keyMeta.size(), inMetaSize, inDataSize, addSize, sealedSize));
 
 	uint8_t* sealedResPtr = sealedRes.data();
 
@@ -133,14 +133,14 @@ std::vector<uint8_t> DataSealer::detail::SealData(KeyPolicy keyPolicy, const Ra:
 }
 
 void DataSealer::detail::UnsealData(KeyPolicy keyPolicy, const Ra::States & decentState, const std::string & keyLabel, 
-	const void * inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& outMeta, std::vector<uint8_t>& outData)
+	const void * inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& outMeta, std::vector<uint8_t>& outData, const size_t sealedBlockSize)
 {
 	if (!inEncData)
 	{
 		throw RuntimeException("Null pointer is given to function DataSealer::detail::UnsealData.");
 	}
 
-	if (inEncDataSize < gsk_sealedBlockSize || 
+	if (inEncDataSize < sealedBlockSize ||
 		!consttime_memequal(inEncData, gsk_sealedDataLabel, sizeof(gsk_sealedDataLabel)))
 	{
 		throw RuntimeException("Invalid sealed data is given to function DataSealer::detail::UnsealData.");
