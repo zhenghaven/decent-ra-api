@@ -50,6 +50,8 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 
 				cnt.SendRawGuarantee(&gsk_resumeSucc, sizeof(gsk_resumeSucc));
 
+				isResumed = true;
+
 				return std::make_pair(std::move(neSession), &cnt);
 			}
 		}
@@ -89,13 +91,13 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	cnt.SendRawGuarantee(&msg4, sizeof(msg4));
 
 	neSession->m_secretKey = raProcessor->GetSK();
-	neSession->GetReport() = *raProcessor->ReleaseIasReport();
+	neSession->m_iasReport = *raProcessor->ReleaseIasReport();
 
 	//try to generate new ticket
 	std::vector<uint8_t> neTicket;
 
-	std::vector<uint8_t> sessionBin(sizeof(*neSession));
-	memcpy(sessionBin.data(), neSession.get(), sizeof(*neSession));
+	std::vector<uint8_t> sessionBin(neSession->GetSize());
+	neSession->ToBinary(sessionBin.begin(), sessionBin.end());
 
 	try
 	{
@@ -134,7 +136,12 @@ RaSpCommLayer::~RaSpCommLayer()
 
 const sgx_ias_report_t & RaSpCommLayer::GetIasReport() const
 {
-	return m_session->GetReport();
+	return m_session->m_iasReport;
+}
+
+const RaSession & RaSpCommLayer::GetSession() const
+{
+	return *m_session;
 }
 
 RaSpCommLayer::RaSpCommLayer(std::pair<std::unique_ptr<RaSession>, ConnectionBase*> hsResult) :

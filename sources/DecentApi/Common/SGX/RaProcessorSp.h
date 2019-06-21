@@ -33,7 +33,6 @@ namespace Decent
 		public:
 			typedef std::function<bool(const sgx_report_data_t&, const sgx_report_data_t&)> SgxReportDataVerifier;
 			typedef std::function<bool(const sgx_quote_t&)> SgxQuoteVerifier;
-			static void SetSpid(const sgx_spid_t & spid);
 			static const SgxReportDataVerifier sk_defaultRpDataVrfy;
 
 			static constexpr sgx_ra_config sk_defaultRaConfig = 

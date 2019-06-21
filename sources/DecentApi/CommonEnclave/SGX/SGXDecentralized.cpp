@@ -6,7 +6,6 @@ extern "C" sgx_status_t ecall_decent_sgx_decentralized_init(const sgx_spid_t* in
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	Decent::Sgx::RaProcessorSp::SetSpid(*in_spid);
 
 	return SGX_SUCCESS;
 }

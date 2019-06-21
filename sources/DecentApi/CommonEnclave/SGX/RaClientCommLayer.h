@@ -26,7 +26,7 @@ namespace Decent
 			 * \param 		  	savedSession 	The saved session used to resume a saved session. It can be
 			 * 									nullptr if there is no saved session.
 			 */
-			RaClientCommLayer(Net::ConnectionBase& connectionPtr, std::unique_ptr<Sgx::RaProcessorClient> raProcessor, std::shared_ptr<const RaClientSession> savedSession);
+			RaClientCommLayer(Net::ConnectionBase& connectionPtr, std::unique_ptr<RaProcessorClient> raProcessor, std::shared_ptr<const RaClientSession> savedSession);
 
 			RaClientCommLayer(const RaClientCommLayer& other) = delete;
 

@@ -66,6 +66,13 @@ namespace Decent
 			 */
 			const sgx_ias_report_t& GetIasReport() const;
 
+			/**
+			 * \brief	Gets the session
+			 *
+			 * \return	The session.
+			 */
+			const RaSession& GetSession() const;
+
 		private:
 			RaSpCommLayer(std::pair<std::unique_ptr<RaSession>, Net::ConnectionBase*> hsResult);
 

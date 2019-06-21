@@ -90,7 +90,7 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 	}
 
 	neSession->m_session.m_secretKey = raProcessor->GetSK();
-	neSession->m_session.GetReport() = *raProcessor->ReleaseIasReport();
+	neSession->m_session.m_iasReport = *raProcessor->ReleaseIasReport();
 
 	return std::make_pair(neSession, &connection);
 }
@@ -112,7 +112,7 @@ RaClientCommLayer::~RaClientCommLayer()
 
 const sgx_ias_report_t & RaClientCommLayer::GetIasReport() const
 {
-	return m_session->m_session.GetReport();
+	return m_session->m_session.m_iasReport;
 }
 
 std::shared_ptr<const RaClientSession> Decent::Sgx::RaClientCommLayer::GetSession() const
