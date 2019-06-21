@@ -5,13 +5,7 @@
 
 using namespace Decent::Net;
 
-CntPair::CntPair(std::unique_ptr<ConnectionBase>&& cnt, std::unique_ptr<SecureCommLayer>&& comm) :
-	m_cnt(std::forward<std::unique_ptr<ConnectionBase> >(cnt)),
-	m_comm(std::forward<std::unique_ptr<SecureCommLayer> >(comm))
-{
-}
-
-CntPair::CntPair(std::unique_ptr<ConnectionBase>& cnt, std::unique_ptr<SecureCommLayer>& comm) :
+CntPair::CntPair(std::unique_ptr<ConnectionBase> cnt, std::unique_ptr<SecureCommLayer> comm) :
 	m_cnt(std::move(cnt)),
 	m_comm(std::move(comm))
 {

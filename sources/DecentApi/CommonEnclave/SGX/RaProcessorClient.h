@@ -44,7 +44,7 @@ namespace Decent
 			bool IsAttested() const;
 			const General128BitKey& GetMK() const;
 			const General128BitKey& GetSK() const;
-			sgx_ias_report_t* ReleaseIasReport();
+			std::unique_ptr<sgx_ias_report_t> ReleaseIasReport();
 
 		protected:
 			virtual void InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey);

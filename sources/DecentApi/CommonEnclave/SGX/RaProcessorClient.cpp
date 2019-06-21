@@ -143,6 +143,9 @@ void RaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
 		}
 	}
 
+	m_iasReport = Tools::make_unique<sgx_ias_report_t>();
+	*m_iasReport = msg4.report;
+
 	if (!msg4.is_accepted)
 	{
 		throw RuntimeException("Initiator rejected the SGX RA quote.");
@@ -168,9 +171,9 @@ const General128BitKey & RaProcessorClient::GetSK() const
 	return m_sk;
 }
 
-sgx_ias_report_t * RaProcessorClient::ReleaseIasReport()
+std::unique_ptr<sgx_ias_report_t> RaProcessorClient::ReleaseIasReport()
 {
-	return m_iasReport.release();
+	return std::move(m_iasReport);
 }
 
 void RaProcessorClient::InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey)

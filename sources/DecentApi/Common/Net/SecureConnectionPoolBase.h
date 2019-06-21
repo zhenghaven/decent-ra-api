@@ -12,9 +12,7 @@ namespace Decent
 		class CntPair
 		{
 		public:
-			CntPair(std::unique_ptr<ConnectionBase>&& cnt, std::unique_ptr<SecureCommLayer>&& tls);
-
-			CntPair(std::unique_ptr<ConnectionBase>& cnt, std::unique_ptr<SecureCommLayer>& tls);
+			CntPair(std::unique_ptr<ConnectionBase> cnt, std::unique_ptr<SecureCommLayer> tls);
 
 			//Copy is not allowed
 			CntPair(const CntPair&) = delete;

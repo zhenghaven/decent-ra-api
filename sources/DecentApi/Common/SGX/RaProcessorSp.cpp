@@ -278,9 +278,9 @@ bool RaProcessorSp::IsAttested() const
 	return m_isAttested;
 }
 
-sgx_ias_report_t * RaProcessorSp::ReleaseIasReport()
+std::unique_ptr<sgx_ias_report_t> RaProcessorSp::ReleaseIasReport()
 {
-	return m_iasReport.release();
+	return std::move(m_iasReport);
 }
 
 const General128BitKey & RaProcessorSp::GetSK() const

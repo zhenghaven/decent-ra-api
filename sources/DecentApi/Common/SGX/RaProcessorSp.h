@@ -66,7 +66,7 @@ namespace Decent
 
 			const sgx_ra_config& GetRaConfig() const;
 			bool IsAttested() const;
-			sgx_ias_report_t* ReleaseIasReport();
+			std::unique_ptr<sgx_ias_report_t> ReleaseIasReport();
 			const General128BitKey& GetSK() const;
 			const General128BitKey& GetMK() const;
 

@@ -221,7 +221,7 @@ void AesGcmCommLayer::SendRaw(const void * buf, const size_t size)
 		throw ConnectionNotEstablished();
 	}
 
-	std::string encrypted = EncryptMsg(buf, size);
+	std::vector<uint8_t> encrypted = EncryptBin(buf, size);
 
 	m_connection->SendPack(encrypted);
 }

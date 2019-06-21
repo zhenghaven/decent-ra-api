@@ -205,6 +205,19 @@ namespace Decent
 				SecureCommLayer::SendMsg(cnt, inMsg);
 			}
 
+			virtual void SendRpc(const RpcWriter& rpc) override
+			{
+				if (rpc.HasSizeAtFront())
+				{
+					const auto& bin = rpc.GetBinaryArray();
+					SendRaw(bin.data() + sizeof(uint64_t), bin.size());
+				}
+				else
+				{
+					SendMsg(rpc.GetBinaryArray());
+				}
+			}
+
 			using SecureCommLayer::ReceiveBinary;
 			virtual std::vector<uint8_t> ReceiveBinary() override;
 

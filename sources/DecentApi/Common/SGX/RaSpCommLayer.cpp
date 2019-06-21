@@ -5,17 +5,60 @@
 #include "../Net/ConnectionBase.h"
 #include "../Net/NetworkException.h"
 
-#include "sgx_structs.h"
+#include "../make_unique.h"
+#include "RaTicket.h"
 #include "RaProcessorSp.h"
 
+using namespace Decent;
 using namespace Decent::Net;
 using namespace Decent::Sgx;
 
-static std::pair<std::unique_ptr<RaProcessorSp>, ConnectionBase*> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor)
+namespace
+{
+	static constexpr uint8_t gsk_resumeSucc = 1;
+	static constexpr uint8_t gsk_resumeFail = 0;
+
+	static constexpr uint8_t gsk_hasNewTicket = 1;
+	static constexpr uint8_t gsk_noNewTicket = 0;
+}
+
+static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
+	bool& isResumed, RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc)
 {
 	if (!raProcessor)
 	{
 		throw Exception("Null pointer is given to the RA Processor SP DoHandShake.");
+	}
+
+	std::unique_ptr<RaSession> neSession = Tools::make_unique<RaSession>();
+
+	uint8_t clientHasTicket = 0;
+	cnt.ReceiveRawGuarantee(&clientHasTicket, sizeof(clientHasTicket));
+
+	if (clientHasTicket)
+	{
+		//try to resume the session
+		
+		std::vector<uint8_t> ticket;
+		cnt.ReceivePack(ticket);
+		try
+		{
+			std::vector<uint8_t> sessionBin = unsealFunc(ticket);
+			if (sessionBin.size() == sizeof(*neSession))
+			{
+				memcpy(neSession.get(), sessionBin.data(), sessionBin.size());
+
+				cnt.SendRawGuarantee(&gsk_resumeSucc, sizeof(gsk_resumeSucc));
+
+				return std::make_pair(std::move(neSession), &cnt);
+			}
+		}
+		catch (const std::exception&)
+		{
+			//Failed to unseal the ticket, go ahead and generate a new session.
+		}
+
+		cnt.SendRawGuarantee(&gsk_resumeFail, sizeof(gsk_resumeFail));
 	}
 	
 	raProcessor->Init();
@@ -45,39 +88,57 @@ static std::pair<std::unique_ptr<RaProcessorSp>, ConnectionBase*> DoHandShake(Co
 
 	cnt.SendRawGuarantee(&msg4, sizeof(msg4));
 
-	return std::make_pair(std::move(raProcessor), &cnt);
+	neSession->m_secretKey = raProcessor->GetSK();
+	neSession->GetReport() = *raProcessor->ReleaseIasReport();
+
+	//try to generate new ticket
+	std::vector<uint8_t> neTicket;
+
+	std::vector<uint8_t> sessionBin(sizeof(*neSession));
+	memcpy(sessionBin.data(), neSession.get(), sizeof(*neSession));
+
+	try
+	{
+		neTicket = sealFunc(sessionBin);
+	}
+	catch (const std::exception&)
+	{
+		//Failed to seal the data.
+		cnt.SendRawGuarantee(&gsk_noNewTicket, sizeof(gsk_noNewTicket));
+		return std::make_pair(std::move(neSession), &cnt);
+	}
+
+	std::fill_n(sessionBin.begin(), sessionBin.size(), 0);
+
+	cnt.SendRawGuarantee(&gsk_hasNewTicket, sizeof(gsk_hasNewTicket));
+	cnt.SendPack(neTicket);
+
+	return std::make_pair(std::move(neSession), &cnt);
 }
 
-RaSpCommLayer::RaSpCommLayer(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp>& raProcessor) :
-	RaSpCommLayer(DoHandShake(cnt, raProcessor))
+RaSpCommLayer::RaSpCommLayer(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
+	bool& isResumed, TicketSealer sealFunc, TicketSealer unsealFunc) :
+	RaSpCommLayer(DoHandShake(cnt, std::move(raProcessor), isResumed, sealFunc, unsealFunc))
 {
 }
 
 RaSpCommLayer::RaSpCommLayer(RaSpCommLayer && other) :
 	AesGcmCommLayer(std::forward<AesGcmCommLayer>(other)),
-	m_isHandShaked(other.m_isHandShaked),
-	m_iasReport(std::move(other.m_iasReport))
+	m_session(std::move(other.m_session))
 {
-	other.m_isHandShaked = false;
-}
-
-const sgx_ias_report_t & RaSpCommLayer::GetIasReport() const
-{
-	return *m_iasReport;
 }
 
 RaSpCommLayer::~RaSpCommLayer()
 {
 }
 
-RaSpCommLayer::operator bool() const
+const sgx_ias_report_t & RaSpCommLayer::GetIasReport() const
 {
-	return AesGcmCommLayer::operator bool() && m_isHandShaked;
+	return m_session->GetReport();
 }
 
-RaSpCommLayer::RaSpCommLayer(std::pair<std::unique_ptr<RaProcessorSp>, ConnectionBase*> raProcessor) :
-	AesGcmCommLayer(raProcessor.first && raProcessor.first->IsAttested() ? raProcessor.first->GetSK() : General128BitKey(), raProcessor.second),
-	m_isHandShaked(raProcessor.first && raProcessor.first->IsAttested()),
-	m_iasReport(m_isHandShaked ? raProcessor.first->ReleaseIasReport() : new sgx_ias_report_t)
+RaSpCommLayer::RaSpCommLayer(std::pair<std::unique_ptr<RaSession>, ConnectionBase*> hsResult) :
+	AesGcmCommLayer(hsResult.first->m_secretKey, hsResult.second),
+	m_session(std::move(hsResult.first))
 {
 }
