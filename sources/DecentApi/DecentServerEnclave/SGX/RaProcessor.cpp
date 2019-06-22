@@ -2,15 +2,17 @@
 
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
-#include "../../Common/MbedTls/MbedTlsObjects.h"
 #include "../../Common/MbedTls/Hasher.h"
+#include "../../Common/MbedTls/MbedTlsObjects.h"
 #include "../../Common/Ra/States.h"
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
-#include "../../Common/SGX/SgxCryptoConversions.h"
 #include "../../Common/SGX/IasReport.h"
+#include "../../Common/SGX/RuntimeError.h"
+#include "../../Common/SGX/SgxCryptoConversions.h"
 
 #include "../../CommonEnclave/Tools/Crypto.h"
+#include "../../CommonEnclave/Tools/UntrustedBuffer.h"
 #include "../../CommonEnclave/SGX/edl_decent_tools.h"
 
 #include "DecentReplace/decent_tkey_exchange.h"
@@ -43,37 +45,34 @@ RaProcessorClient::RaProcessorClient(RaProcessorClient && other) :
 {
 }
 
-bool RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
+void RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg2Len, std::vector<uint8_t>& msg3)
 {
 	size_t retVal = 0;
 	uint8_t* tmpMsg3 = nullptr;
-	if (ocall_decent_ra_server_ra_proc_msg2(&retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3) != SGX_SUCCESS ||
-		!retVal)
+
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(ocall_decent_ra_server_ra_proc_msg2, &retVal, m_enclaveId, m_raCtxId, &msg2, msg2Len, &tmpMsg3);
+
+	if (!retVal)
 	{
-		return false;
+		throw RuntimeException("Function call to " "ocall_decent_ra_server_ra_proc_msg2" " Failed.");
 	}
 
-	msg3.resize(retVal);
-	std::copy(tmpMsg3, tmpMsg3 + retVal, msg3.begin());
+	Tools::UntrustedBuffer msg3Buf(tmpMsg3, retVal);
 
-	ocall_decent_tools_del_buf_uint8(tmpMsg3);
-
-	return true;
+	msg3 = msg3Buf.Read();
 }
 
-bool RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_ec256_public_t & pubKey)
+void RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_ec256_public_t & pubKey)
 {
 	using namespace Decent::MbedTlsObj;
 
-	sgx_status_t ret;
 	if (raConfig.enable_pse)
 	{
 		//int busy_retry_times = 2; do {} while (ret == SGX_ERROR_BUSY && busy_retry_times--);
-		ret = sgx_create_pse_session();
-		if (ret != SGX_SUCCESS)
-			return false;
+		DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_create_pse_session);
 	}
-	ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, 
+
+	sgx_status_t ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, 
 		[this](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
 		{
 			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = m_decentStates.GetKeyContainer().GetSignKeyPair();
@@ -103,8 +102,9 @@ bool RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_
 		sgx_close_pse_session();
 	}
 
-	m_ctxInited = (ret == SGX_SUCCESS);
-	return m_ctxInited;
+	DECENT_CHECK_SGX_STATUS_ERROR(ret, sgx_ra_init_ex);
+
+	m_ctxInited = true;
 }
 
 void RaProcessorClient::CloseRaContext()
@@ -115,15 +115,16 @@ void RaProcessorClient::CloseRaContext()
 	}
 }
 
-bool RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
+void RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
 {
 	int retVal = 0;
-	if (ocall_decent_ra_server_ra_get_msg1(&retVal, m_enclaveId, m_raCtxId, &msg1) != SGX_SUCCESS ||
-		!retVal)
+
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(ocall_decent_ra_server_ra_get_msg1, &retVal, m_enclaveId, m_raCtxId, &msg1);
+
+	if (!retVal)
 	{
-		return false;
+		throw RuntimeException("Function call to " "ocall_decent_ra_server_ra_get_msg1" " Failed.");
 	}
-	return true;
 }
 
 const Decent::Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQuoteVerifier(
@@ -136,10 +137,12 @@ const Decent::Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQ
 );
 
 std::unique_ptr<Decent::Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr,
-	const sgx_ec256_public_t & peerSignkey, const States& decentStates)
+	const sgx_ec256_public_t & peerSignkey, std::shared_ptr<const sgx_spid_t> spidPtr, const States& decentStates)
 {
 	sgx_ec256_public_t signKey(peerSignkey);
+
 	return Tools::make_unique<Sgx::RaProcessorSp>(iasConnectorPtr, decentStates.GetKeyContainer().GetSignKeyPair(),
+		spidPtr,
 		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
 		MbedTlsObj::ECKeyPublic pubKey = MbedTlsObj::ECKeyPublic::FromGeneral(SgxEc256Type2General(signKey));

@@ -15,7 +15,7 @@ namespace Decent
 		namespace RaProcessorSp
 		{
 			extern const Sgx::RaProcessorSp::SgxQuoteVerifier defaultServerQuoteVerifier;
-			std::unique_ptr<Sgx::RaProcessorSp> GetSgxDecentRaProcessorSp(const void* const iasConnectorPtr, const sgx_ec256_public_t& peerSignkey, const Decent::Ra::States& decentStates);
+			std::unique_ptr<Sgx::RaProcessorSp> GetSgxDecentRaProcessorSp(const void* const iasConnectorPtr, const sgx_ec256_public_t& peerSignkey, std::shared_ptr<const sgx_spid_t> spidPtr, const Decent::Ra::States& decentStates);
 		}
 
 		class RaProcessorClient : public Sgx::RaProcessorClient
@@ -30,12 +30,12 @@ namespace Decent
 			RaProcessorClient(const RaProcessorClient& other) = delete;
 			RaProcessorClient(RaProcessorClient&& other);
 
-			virtual bool ProcessMsg2(const sgx_ra_msg2_t& msg2, const size_t msg2Len, std::vector<uint8_t>& msg3) override;
+			virtual void ProcessMsg2(const sgx_ra_msg2_t& msg2, const size_t msg2Len, std::vector<uint8_t>& msg3) override;
 
 		protected:
-			virtual bool InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey) override;
+			virtual void InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey) override;
 			virtual void CloseRaContext() override;
-			virtual bool GetMsg1(sgx_ra_msg1_t& msg1) override;
+			virtual void GetMsg1(sgx_ra_msg1_t& msg1) override;
 
 		private:
 			const Decent::Ra::States& m_decentStates;
