@@ -21,8 +21,8 @@
 #include "../../Common/SGX/IasConnector.h"
 
 #ifdef SIMULATING_ENCLAVE
-#include <json/json.h>
-#include <sgx_report.h>
+#include "../Net/TCPConnection.h"
+#include "../../Common/Net/RpcParser.h"
 #endif // SIMULATING_ENCLAVE
 
 using namespace Decent::Ias;
@@ -104,7 +104,8 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 {
 	static const std::string s_iasSigRlRootPath = std::string(sk_iasUrl) + sk_pathSigRl;
 
-	const std::string iasSigRlFullPath = s_iasSigRlRootPath + GetGIDBigEndianStr(gid);
+	const std::string gidBigEndStr = GetGIDBigEndianStr(gid);
+	const std::string iasSigRlFullPath = s_iasSigRlRootPath + gidBigEndStr;
 
 	outRevcList.resize(0);
 	std::string requestId;
@@ -158,6 +159,19 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 
 	return response_code == 200;
 #else
+
+	Net::TCPConnection iasSimConnection("127.0.0.1", 57720);
+
+	iasSimConnection.SendPack("SigRl");
+	iasSimConnection.SendPack(gidBigEndStr);
+
+	std::vector<uint8_t> resp;
+	iasSimConnection.ReceivePack(resp);
+
+	Net::RpcParser iasSimRet(std::move(resp));
+
+	outRevcList = iasSimRet.GetStringArg();
+
 	return true;
 #endif // !SIMULATING_ENCLAVE
 }
@@ -239,30 +253,20 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 	return response_code == 200;
 
 #else
-	Json::Value jsonRoot;
-	Json::CharReaderBuilder rbuilder;
-	rbuilder["collectComments"] = false;
-	std::string errStr;
 
-	const std::unique_ptr<Json::CharReader> reader(rbuilder.newCharReader());
-	bool isValid = reader->parse(jsonReqBody.c_str(), jsonReqBody.c_str() + jsonReqBody.size(), &jsonRoot, &errStr);
+	Net::TCPConnection iasSimConnection("127.0.0.1", 57720);
 
-	std::vector<uint8_t> buffer;
-	DeserializeStruct(buffer, jsonRoot["isvEnclaveQuote"].asString());
-	std::string quoteB64 = SerializeStruct(buffer.data(), sizeof(sgx_quote_t) - sizeof(sgx_quote_t::signature_len));
+	iasSimConnection.SendPack("Report");
+	iasSimConnection.SendPack(jsonReqBody);
 
-	Json::Value reportJson;
+	std::vector<uint8_t> resp;
+	iasSimConnection.ReceivePack(resp);
 
-	reportJson["id"] = "165171271757108173876306223827987629752";
-	reportJson["timestamp"] = "2015-09-29T10:07:26.711023";
-	reportJson["version"] = 3;
-	reportJson["isvEnclaveQuoteStatus"] = "OK";
-	//reportJson["pseManifestStatus"] = "OK";
-	//reportJson["pseManifestHash"] = "7563016AF9AE650FCAE9D94FBEE7DA39264A5C6C2B85CCDA8337D208BA17709E";
-	reportJson["nonce"] = jsonRoot["nonce"].asString();
-	reportJson["isvEnclaveQuoteBody"] = quoteB64;
+	Net::RpcParser iasSimRet(std::move(resp));
 
-	outReport = reportJson.toStyledString();
+	outReport = iasSimRet.GetStringArg();
+	outSign = iasSimRet.GetStringArg();
+	outCert = iasSimRet.GetStringArg();
 
 	return true;
 #endif // !SIMULATING_ENCLAVE

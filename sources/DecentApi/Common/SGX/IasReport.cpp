@@ -298,7 +298,6 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 {
 	using namespace Decent::MbedTlsObj;
 
-#ifndef SIMULATING_ENCLAVE
 	MbedTlsObj::X509Cert trustedIasCert(Ias::gsk_IasReportCert);
 	MbedTlsObj::X509Cert reportCertChain(reportCert);
 
@@ -325,8 +324,6 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 		//LOGI("Signature of the report is invalid!");
 		return false;
 	}
-
-#endif // !SIMULATING_ENCLAVE
 
 	std::string idStr;
 	std::string nonceInReport;

@@ -136,7 +136,8 @@ namespace Decent
 		{
 			const sgx_ias_report_t& iasReport = outIasReport;
 			return ParseIasReportAndCheckSignature(outIasReport, iasReportStr, reportCert, reportSign, nonce) &&
-				CheckIasReportStatus(iasReport, raConfig) && vrfier(iasReport);
+				CheckIasReportStatus(iasReport, raConfig) &&
+				vrfier(iasReport);
 		}
 	}
 }

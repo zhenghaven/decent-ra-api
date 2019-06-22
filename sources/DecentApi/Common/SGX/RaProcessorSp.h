@@ -39,14 +39,10 @@ namespace Decent
 			{
 				SGX_QUOTE_LINKABLE_SIGNATURE,
 				SGX_DEFAULT_AES_CMAC_KDF_ID,
-#ifndef SIMULATING_ENCLAVE
-				0, //Enable PSE
-#else
-				0,
-#endif 
+				0, //Disenabled PSE
 				1, //Allow out-of-date enclave
 				1, //Allow configuration needed enclave
-				1 //Allow out-of-date PSE
+				1  //Allow out-of-date PSE
 			};
 
 		public:

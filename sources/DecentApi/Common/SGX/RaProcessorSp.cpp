@@ -38,8 +38,13 @@ namespace
 		size_t dataSize = (size / 4) * 3;
 		std::vector<uint8_t> randData(dataSize);
 
+#ifndef SIMULATING_ENCLAVE
 		Drbg drbg;
 		drbg.RandContainer(randData);
+#else
+		std::fill_n(randData.begin(), randData.size(), 0);
+#endif // SIMULATING_ENCLAVE
+
 
 		return cppcodec::base64_rfc4648::encode(randData);
 	}
@@ -48,7 +53,11 @@ namespace
 
 const RaProcessorSp::SgxReportDataVerifier RaProcessorSp::sk_defaultRpDataVrfy([](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 {
+#ifndef SIMULATING_ENCLAVE
 	return consttime_memequal(&initData, &expected, sizeof(sgx_report_data_t)) == 1;
+#else
+	return true;
+#endif // SIMULATING_ENCLAVE
 });
 
 RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::ECKeyPair> mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
@@ -231,7 +240,12 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 		if (!StatConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse,
 			m_iasReportStr, m_reportSign, m_reportCert) ||
 			!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data) ||
-			!consttime_memequal(&quoteInMsg3, &m_iasReport->m_quote, sizeof(sgx_quote_t) - sizeof(uint32_t)))
+#ifndef SIMULATING_ENCLAVE
+			!consttime_memequal(&quoteInMsg3, &m_iasReport->m_quote, sizeof(sgx_quote_t) - sizeof(sgx_quote_t::signature_len))
+#else
+			false
+#endif // !SIMULATING_ENCLAVE
+			)
 		{
 			break;
 		}

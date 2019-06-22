@@ -41,7 +41,11 @@ bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const ui
 			DataListItem{pubSignKey.data(), pubSignKey.size()},
 		}, hashRes);
 
+#ifndef SIMULATING_ENCLAVE
 	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;
+#else
+	return true;
+#endif // SIMULATING_ENCLAVE
 }
 
 bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, std::string & outHashStr, report_timestamp_t& outTimestamp)
