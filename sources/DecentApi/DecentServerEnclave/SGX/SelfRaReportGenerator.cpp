@@ -42,15 +42,12 @@ bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std
 
 	sgx_report_data_t reportData;
 
-	if (!m_raSp->Init() ||
-		!m_raSp->GetMsg0r(msg0r) ||
-		!m_raClient->ProcessMsg0r(msg0r, msg1) ||
-		!m_raSp->ProcessMsg1(msg1, msg2) ||
-		!m_raClient->ProcessMsg2(*reinterpret_cast<sgx_ra_msg2_t*>(msg2.data()), msg2.size(), msg3) ||
-		!m_raSp->ProcessMsg3(*reinterpret_cast<sgx_ra_msg3_t*>(msg3.data()), msg3.size(), msg4, &reportData))
-	{
-		return false;
-	}
+	m_raSp->Init();
+	m_raSp->GetMsg0r(msg0r);
+	m_raClient->ProcessMsg0r(msg0r, msg1);
+	m_raSp->ProcessMsg1(msg1, msg2);
+	m_raClient->ProcessMsg2(*reinterpret_cast<sgx_ra_msg2_t*>(msg2.data()), msg2.size(), msg3);
+	m_raSp->ProcessMsg3(*reinterpret_cast<sgx_ra_msg3_t*>(msg3.data()), msg3.size(), msg4, &reportData);
 
 	PRINT_I("Received self IAS RA report:");
 	PRINT_I("%s", m_raSp->GetIasReportStr().c_str());

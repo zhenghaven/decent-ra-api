@@ -31,6 +31,8 @@ using namespace Decent::RaSgx;
 namespace
 {
 	static ServerStates& gs_serverState = GetServerStateSingleton();
+
+	std::shared_ptr<const sgx_spid_t> gs_spid;
 }
 
 //Initialize Decent enclave.
@@ -40,7 +42,8 @@ extern "C" sgx_status_t ecall_decent_ra_server_init(const sgx_spid_t* inSpid)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
 	}
-	Decent::Sgx::RaProcessorSp::SetSpid(*inSpid);
+
+	gs_spid = std::make_shared<sgx_spid_t>(*inSpid);
 	
 	PRINT_I("Initializing Decent Server with hash: %s\n", Tools::GetSelfHashBase64().c_str());
 
@@ -62,7 +65,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_gen_x509(const void * const ias_c
 
 	try
 	{
-		std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub), gs_serverState);
+		std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub), gs_spid, gs_serverState);
 		std::unique_ptr<RaProcessorClient> clientProcessor = Tools::make_unique<RaProcessorClient>(
 			enclave_Id,
 			[](const sgx_ec256_public_t& pubKey) {
