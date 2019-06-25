@@ -19,6 +19,10 @@ namespace Decent
 		public:
 			KeyContainer();
 
+			KeyContainer(std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<PrivateKeyWrap> > keyPair);
+
+			KeyContainer(std::unique_ptr<MbedTlsObj::ECKeyPair> keyPair);
+
 			virtual ~KeyContainer();
 
 			virtual std::shared_ptr<const PrivateKeyWrap> GetSignPrvKey() const;
@@ -28,8 +32,6 @@ namespace Decent
 			virtual std::shared_ptr<const MbedTlsObj::ECKeyPair> GetSignKeyPair() const;
 
 		protected:
-			KeyContainer(std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<PrivateKeyWrap> > keyPair);
-			KeyContainer(std::unique_ptr<MbedTlsObj::ECKeyPair> keyPair);
 
 			virtual void SetSignPrvKey(std::shared_ptr<const PrivateKeyWrap> key);
 
