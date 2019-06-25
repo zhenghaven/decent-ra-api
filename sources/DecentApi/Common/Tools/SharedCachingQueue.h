@@ -92,6 +92,16 @@ namespace Decent
 				}
 			}
 
+			/** \brief	Clears this cache to its blank/initial state */
+			virtual void Clear()
+			{
+				std::unique_lock<std::mutex> queueLock(m_queueMutex);
+
+				m_queue.clear();
+				m_index.clear();
+				m_itemCount = 0;
+			}
+
 			/**
 			 * \brief	Gets cache size
 			 *
