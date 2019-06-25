@@ -493,16 +493,14 @@ bool ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic &
 
 	Drbg drbg;
 
-	int mbedRet = mbedtls_ecdh_compute_shared(&grp.m_grp, sharedKey.Get(),
+	if (mbedtls_ecdh_compute_shared(&grp.m_grp, sharedKey.Get(),
 		&peerPubKey.GetEcKeyPtr()->Q, &ecPtr.d,
-		&Drbg::CallBack, &drbg);
-
-	if (mbedRet != MBEDTLS_SUCCESS_RET ||
-		mbedtls_mpi_size(sharedKey.Get()) != outKey.size() ||
-		mbedtls_mpi_write_binary(sharedKey.Get(), outKey.data(), outKey.size()) != MBEDTLS_SUCCESS_RET)
+		&Drbg::CallBack, &drbg) != MBEDTLS_SUCCESS_RET)
 	{
 		return false;
 	}
+
+	sharedKey.ToBinary(outKey, sk_bigEndian);
 
 	std::reverse(outKey.begin(), outKey.end());
 
