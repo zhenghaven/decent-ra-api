@@ -12,6 +12,7 @@
 #include <mbedtls/md.h>
 
 #include "../Common.h"
+#include "../make_unique.h"
 #include "../consttime_memequal.h"
 #include "../Tools/DataCoding.h"
 #include "../MbedTls/MbedTlsObjects.h"
@@ -66,17 +67,17 @@ RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<
 	m_spid(spidPtr),
 	m_iasConnectorPtr(iasConnectorPtr),
 	m_mySignKey(mySignKey),
-	m_encrKeyPair(new MbedTlsObj::ECKeyPair(MbedTlsObj::ECKeyPair::GenerateNewKey())),
+	m_encrKeyPair(),
 	m_myEncrKey(),
 	m_peerEncrKey(),
-	m_nonce(ConstructNonce(IAS_REQUEST_NONCE_SIZE)),
+	m_nonce(),
 	m_smk(General128BitKey()),
 	m_mk(General128BitKey()),
 	m_sk(General128BitKey()),
 	m_vk(General128BitKey()),
 	m_rpDataVrfy(rpDataVrfy),
 	m_quoteVrfy(quoteVrfy),
-	m_iasReport(new sgx_ias_report_t),
+	m_iasReport(),
 	m_isAttested(false),
 	m_iasReportStr(),
 	m_reportCert(),
@@ -123,6 +124,12 @@ RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
 
 void RaProcessorSp::Init()
 {
+	m_encrKeyPair = Tools::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::ECKeyPair::GenerateNewKey());
+
+	m_nonce = ConstructNonce(IAS_REQUEST_NONCE_SIZE);
+
+	m_iasReport = Tools::make_unique<sgx_ias_report_t>();
+
 	if (!m_encrKeyPair || !*m_encrKeyPair || !m_mySignKey || !*m_mySignKey ||
 		!m_encrKeyPair->ToGeneralPubKey(m_myEncrKey))
 	{
