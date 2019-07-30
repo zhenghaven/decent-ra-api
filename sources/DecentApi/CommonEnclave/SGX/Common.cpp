@@ -75,7 +75,7 @@ void Tools::GetSystemUtcTime(const time_t& timer, struct tm& outTime)
 }
 
 #ifdef __GNUC__
-extern "C" void __cxa_deleted_virtual(void) 
+extern "C" void __cxa_deleted_virtual(void)
 {
 	abort();
 }

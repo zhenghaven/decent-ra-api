@@ -41,17 +41,5 @@ namespace Decent
 		 * \param 	   	size	The size of the buffer.
 		 */
 		void SecureRand(void* buf, size_t size);
-
-		void PlatformAesGcmEncrypt(const void* keyPtr, const size_t keySize, const void* srcPtr, const size_t srcSize,
-			void* destPtr,
-			const void* ivPtr, const size_t ivSize,
-			const void* addPtr, const size_t addSize,
-			void* macPtr, const size_t macSize);
-
-		void PlatformAesGcmDecrypt(const void* keyPtr, const size_t keySize, const void* srcPtr, const size_t srcSize,
-			void* destPtr,
-			const void* ivPtr, const size_t ivSize,
-			const void* addPtr, const size_t addSize,
-			const void* macPtr, const size_t macSize);
 	}
 }

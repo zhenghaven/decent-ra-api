@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "../../Common/Tools/Crypto.h"
 #include "../../Common/GeneralKeyTypes.h"
 #include "../../Common/ArrayPtrAndSize.h"
 
@@ -28,28 +29,8 @@ namespace Decent
 
 			namespace detail
 			{
-				/**
-				 * \brief	This function calls platform seal key derivation function. Its implementation is
-				 * 			determined by the platform. Note: this function derive the root seal for this enclave
-				 * 			program or signer (or both), thus, it's not recommended to use this function
-				 * 			directly. Instead, use the following functions to derive different seal keys for
-				 * 			different functionalities.
-				 *
-				 * \param	keyPolicy	The key policy.
-				 * \param	meta	 	The meta.
-				 *
-				 * \return	A std::vector&lt;uint8_t&gt;
-				 */
-				//std::vector<uint8_t> PlatformDeriveSealKey(KeyPolicy keyPolicy, const std::vector<uint8_t>& meta);
-
 				void DeriveSealKey(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& label, 
 					void* outKey, const size_t expectedKeySize, const void* inMeta, const size_t inMetaSize, const std::vector<uint8_t>& salt);
-
-				std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-					std::vector<uint8_t>& outMac, const void* inMetadata, const size_t inMetadataSize, const void* inData, const size_t inDataSize, const size_t sealedBlockSize);
-
-				void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-					const void* inEncData, const size_t inEncDataSize, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& outMeta, std::vector<uint8_t>& outData, const size_t sealedBlockSize);
 			}
 
 			/**
@@ -85,8 +66,10 @@ namespace Decent
 			template<typename KeyType, typename MetaType>
 			void DeriveSealKey(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& label, KeyType& outKey, const MetaType& meta, const std::vector<uint8_t>& salt)
 			{
-				detail::DeriveSealKey(keyPolicy, decentState, label, ArrayPtrAndSize::GetPtr(outKey), ArrayPtrAndSize::GetSize(outKey), 
-					ArrayPtrAndSize::GetPtr(meta), ArrayPtrAndSize::GetSize(meta), salt);
+				using namespace ArrayPtrAndSize;
+				detail::DeriveSealKey(keyPolicy, decentState, label,
+					GetPtr(outKey), GetSize(outKey),
+					GetPtr(meta), GetSize(meta), salt);
 			}
 
 			/**
@@ -99,7 +82,7 @@ namespace Decent
 			 * \param 	   	keyPolicy	   	The key policy.
 			 * \param 	   	decentState	   	Decent global state.
 			 * \param 	   	keyLabel	   	The key label.
-			 * \param [out]	outMac		   	The output MAC. The MAC generated when sealing the data. This can
+			 * \param [out]	outTag		   	The output tag. The tag generated when sealing the data. This can
 			 * 								be used to prevent replay attack during unseal process.
 			 * \param 	   	metadata	   	The metadata.
 			 * \param 	   	data		   	The data.
@@ -110,12 +93,13 @@ namespace Decent
 			 */
 			template<typename MetaCtn, typename DataCtn>
 			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-				std::vector<uint8_t>& outMac, const MetaCtn& metadata, const DataCtn& data, const size_t sealedBlockSize = 4096)
+				const MetaCtn& metadata, const DataCtn& data, General128Tag& outTag, const size_t sealedBlockSize = 4096)
 			{
-				return detail::SealData(keyPolicy, decentState, keyLabel, outMac, 
-					ArrayPtrAndSize::GetPtr(metadata), ArrayPtrAndSize::GetSize(metadata),
-					ArrayPtrAndSize::GetPtr(data), ArrayPtrAndSize::GetSize(data),
-					sealedBlockSize);
+				std::vector<uint8_t> keyMeta = GenSealKeyRecoverMeta(false);
+				General128BitKey sealKey;
+				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey, keyMeta, std::vector<uint8_t>());
+
+				return QuickAesGcmPack(sealKey, keyMeta, metadata, data, outTag, sealedBlockSize);
 			}
 
 			/**
@@ -129,9 +113,8 @@ namespace Decent
 			 * \param 	   	decentState	   	Decent global state.
 			 * \param 	   	keyLabel	   	The key label.
 			 * \param 	   	inData		   	Input, sealed data.
-			 * \param 	   	inMac		   	The input MAC. If the size of the container is greater than zero,
-			 * 								the MAC retrieved from the sealed data will be compared with the
-			 * 								input MAC.
+			 * \param 	   	inTag		   	The input tag. If the pointer is not null, the tag retrieved from
+			 * 								the sealed data will be compared with the input tag.
 			 * \param [out]	metadata	   	The metadata.
 			 * \param [out]	data		   	The data.
 			 * \param 	   	sealedBlockSize	(Optional) Size of the blocks for sealed data. The default size
@@ -139,12 +122,12 @@ namespace Decent
 			 */
 			template<typename SealedDataCtn>
 			void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-				const SealedDataCtn& inData, const std::vector<uint8_t>& inMac, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data, const size_t sealedBlockSize = 4096)
+				const SealedDataCtn& inData, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data, const General128Tag* inTag, const size_t sealedBlockSize = 4096)
 			{
-				detail::UnsealData(keyPolicy, decentState, keyLabel, 
-					ArrayPtrAndSize::GetPtr(inData), ArrayPtrAndSize::GetSize(inData), inMac, 
-					metadata, data,
-					sealedBlockSize);
+				General128BitKey sealKey;
+				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey, GetKeyMetaFromPack(inData), std::vector<uint8_t>());
+
+				return QuickAesGcmUnpack(sealKey, inData, metadata, data, inTag, sealedBlockSize);
 			}
 		}
 	}

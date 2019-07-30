@@ -1,6 +1,7 @@
 //#if ENCLAVE_PLATFORM_SGX
 
 #include "../Crypto.h"
+#include "../../../Common/Tools/Crypto.h"
 
 #include <iterator>
 
@@ -8,8 +9,7 @@
 #include <sgx_trts.h>
 #include <sgx_tcrypto.h>
 
-#include "../../../Common/RuntimeException.h"
-#include "../../../Common/SGX/ErrorCode.h"
+#include "../../../Common/SGX/RuntimeError.h"
 
 using namespace Decent;
 using namespace Decent::Tools;
@@ -51,14 +51,10 @@ const std::vector<uint8_t>& Tools::GetSelfHash()
 
 void Tools::SecureRand(void * buf, size_t size)
 {
-	sgx_status_t sgxRet = sgx_read_rand(static_cast<unsigned char*>(buf), size);
-	if (sgxRet != SGX_SUCCESS)
-	{
-		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_read_rand"));
-	}
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_read_rand, static_cast<unsigned char*>(buf), size);
 }
 
-void Tools::PlatformAesGcmEncrypt(const void * keyPtr, const size_t keySize, 
+void Tools::detail::PlatformAesGcmEncrypt(const void * keyPtr, const size_t keySize,
 	const void * srcPtr, const size_t srcSize, 
 	void * destPtr, 
 	const void * ivPtr, const size_t ivSize, 
@@ -92,7 +88,7 @@ void Tools::PlatformAesGcmEncrypt(const void * keyPtr, const size_t keySize,
 	}
 }
 
-void Tools::PlatformAesGcmDecrypt(const void * keyPtr, const size_t keySize, 
+void Tools::detail::PlatformAesGcmDecrypt(const void * keyPtr, const size_t keySize,
 	const void * srcPtr, const size_t srcSize, 
 	void * destPtr, 
 	const void * ivPtr, const size_t ivSize, 
