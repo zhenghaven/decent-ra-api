@@ -31,11 +31,13 @@ namespace Decent
 		public:
 
 			/**
-			 * \brief	Construct an empty but valid GCM object.
+			 * \brief	Constructor
 			 *
-			 * \param	parameter1	Indicate the need to generate an empty GCM object.
+			 * \param	key   	The pointer to the key.
+			 * \param	size  	The size of the key in Byte.
+			 * \param	cipher	The cipher type.
 			 */
-			GcmBase(const Empty&);
+			GcmBase(const void* key, const size_t size, const GcmBase::Cipher cipher);
 
 			/**
 			* \brief	Constructor that accept a reference to mbedtls_gcm_context object, thus, this instance doesn't
@@ -172,12 +174,6 @@ namespace Decent
 					detail::GetPtr(inTag), detail::GetSize(inTag));
 			}
 
-		protected:
-
-			GcmBase(mbedtls_gcm_context* ptr, FreeFuncType freeFunc) noexcept :
-				ObjBase(ptr, freeFunc)
-			{}
-
 			/**
 			 * \brief	Encrypts data with GCM.
 			 *
@@ -218,15 +214,29 @@ namespace Decent
 				const void* iv, const size_t ivLen, const void* add, const size_t addLen,
 				const void* tag, const size_t tagLen);
 
+		protected:
+
 			/**
-			 * \brief	Sets GCM key
+			 * \brief	Construct GCM context with the specified key
 			 *
 			 * \param [in,out]	ctx   	The mbed TLS GCM context.
 			 * \param 		  	key   	The key.
 			 * \param 		  	size  	The size of the key.
 			 * \param 		  	cipher	The cipher type.
+			 *
+			 * \return	A std::unique_ptr&lt;mbedtls_gcm_context&gt;
 			 */
-			static void SetGcmKey(mbedtls_gcm_context& ctx, const void* key, const size_t size, const GcmBase::Cipher cipher);
+			static std::unique_ptr<mbedtls_gcm_context> ConstructGcmWithKey(const void* key, const size_t size, const GcmBase::Cipher cipher);
+
+			/**
+			 * \brief	Constructor
+			 *
+			 * \param [in,out]	ptr			If non-null, the pointer.
+			 * \param 		  	freeFunc	The free function.
+			 */
+			GcmBase(mbedtls_gcm_context* ptr, FreeFuncType freeFunc) noexcept :
+				ObjBase(ptr, freeFunc)
+			{}
 		};
 
 		/**
@@ -243,15 +253,13 @@ namespace Decent
 
 		public:
 			Gcm(const std::array<uint8_t, keySizeByte>& key) :
-				GcmBase(sk_empty)
+				GcmBase(key.data(), keySizeByte, cipher)
 			{
-				SetGcmKey(*Get(), key.data(), keySizeByte, cipher);
 			}
 
 			Gcm(const uint8_t(&key)[keySizeByte]) :
-				GcmBase(sk_empty)
+				GcmBase(key, keySizeByte, cipher)
 			{
-				SetGcmKey(*Get(), key, keySizeByte, cipher);
 			}
 
 			Gcm(Gcm&& other) noexcept :
