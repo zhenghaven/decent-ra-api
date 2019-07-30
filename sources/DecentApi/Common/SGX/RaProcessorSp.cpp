@@ -8,13 +8,13 @@
 
 #include <sgx_key_exchange.h>
 
-#include <cppcodec/base64_rfc4648.hpp>
+#include <cppcodec/base64_default_rfc4648.hpp>
 #include <mbedtls/md.h>
 
 #include "../Common.h"
 #include "../make_unique.h"
 #include "../consttime_memequal.h"
-#include "../Tools/DataCoding.h"
+#include "../Tools/Crypto.h"
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/MbedTlsHelpers.h"
 #include "../MbedTls/Hasher.h"
@@ -45,7 +45,6 @@ namespace
 #else
 		std::fill_n(randData.begin(), randData.size(), 0);
 #endif // SIMULATING_ENCLAVE
-
 
 		return cppcodec::base64_rfc4648::encode(randData);
 	}
@@ -190,14 +189,13 @@ void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 		throw RuntimeException("RaProcessorSp::ProcessMsg1 failed to get revocation list.");
 	}
 
-	std::vector<uint8_t> revcListBin;
-	DeserializeStruct(revcListBin, revcList);
+	std::vector<uint8_t> revcListBin = cppcodec::base64_rfc4648::decode(revcList);
 
 	msg2Ref.sig_rl_size = static_cast<uint32_t>(revcListBin.size());
 	msg2.insert(msg2.end(), revcListBin.begin(), revcListBin.end());
 }
 
-void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_ra_msg4_t & msg4, 
+void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std::vector<uint8_t> & msg4Pack,
 	sgx_report_data_t * outOriRD)
 {
 	if (!consttime_memequal(&(m_peerEncrKey), &msg3.g_a, sizeof(sgx_ec256_public_t)))
@@ -271,17 +269,15 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, sgx_
 		m_isAttested = true;
 	} while (false);
 
+	sgx_ra_msg4_t msg4;
 	std::memcpy(&msg4.report, m_iasReport.get(), sizeof(*m_iasReport));
 	msg4.is_accepted = m_isAttested ? 1 : 0;
 
-	General256Hash hashToBeSigned;
-	Hasher::Calc<HashType::SHA256>(&msg4.is_accepted, sizeof(msg4) - sizeof(sgx_ec256_signature_t), hashToBeSigned);
+	std::vector<uint8_t> msg4Bin(sizeof(msg4));
+	std::memcpy(msg4Bin.data(), &msg4, msg4Bin.size());
 
-	if (!m_mySignKey->EcdsaSign(SgxEc256Type2General(msg4.signature), hashToBeSigned,
-		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
-	{
-		throw RuntimeException("RaProcessorSp::ProcessMsg3 failed to ECDSA sign.");
-	}
+	General128Tag tag;
+	msg4Pack = QuickAesGcmPack(GetSK(), std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), msg4Bin, tag, 1024);
 
 	if (!m_isAttested)
 	{

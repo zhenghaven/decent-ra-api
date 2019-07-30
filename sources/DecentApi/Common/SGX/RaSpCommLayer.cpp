@@ -70,7 +70,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	sgx_ra_msg1_t msg1;
 	std::vector<uint8_t> msg2;
 	std::string msg3;
-	sgx_ra_msg4_t msg4;
+	std::vector<uint8_t> msg4;
 
 	cnt.ReceiveRawGuarantee(&msg0s, sizeof(msg0s));
 
@@ -88,7 +88,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	}
 	raProcessor->ProcessMsg3(*reinterpret_cast<const sgx_ra_msg3_t*>(msg3.data()), msg3.size(), msg4, nullptr);
 
-	cnt.SendRawGuarantee(&msg4, sizeof(msg4));
+	cnt.SendPack(msg4);
 
 	neSession->m_secretKey = raProcessor->GetSK();
 	neSession->m_iasReport = *raProcessor->ReleaseIasReport();

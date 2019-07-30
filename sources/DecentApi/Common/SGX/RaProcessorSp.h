@@ -57,7 +57,7 @@ namespace Decent
 			virtual void Init();
 			virtual void ProcessMsg0(const sgx_ra_msg0s_t& msg0s, sgx_ra_msg0r_t& msg0r);
 			virtual void ProcessMsg1(const sgx_ra_msg1_t& msg1, std::vector<uint8_t>& msg2);
-			virtual void ProcessMsg3(const sgx_ra_msg3_t& msg3, size_t msg3Len, sgx_ra_msg4_t& msg4, sgx_report_data_t* outOriRD);
+			virtual void ProcessMsg3(const sgx_ra_msg3_t& msg3, size_t msg3Len, std::vector<uint8_t>& msg4Pack, sgx_report_data_t* outOriRD);
 
 			const sgx_ra_config& GetRaConfig() const;
 			bool IsAttested() const;

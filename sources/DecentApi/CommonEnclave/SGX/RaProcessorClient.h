@@ -39,7 +39,7 @@ namespace Decent
 			virtual void GetMsg0s(sgx_ra_msg0s_t& msg0s);
 			virtual void ProcessMsg0r(const sgx_ra_msg0r_t& msg0r, sgx_ra_msg1_t& msg1);
 			virtual void ProcessMsg2(const sgx_ra_msg2_t& msg2, const size_t msg2Len, std::vector<uint8_t>& msg3);
-			virtual void ProcessMsg4(const sgx_ra_msg4_t& msg4);
+			virtual void ProcessMsg4(const std::vector<uint8_t>& msg4Pack);
 
 			bool IsAttested() const;
 			const General128BitKey& GetMK() const;

@@ -51,7 +51,6 @@ extern "C" {
 
 	typedef struct _sgx_ra_msg4_t
 	{
-		sgx_ec256_signature_t  signature;
 		uint8_t                is_accepted;  //Yes(1) or No(0)
 		sgx_ias_report_t       report;
 	} sgx_ra_msg4_t;

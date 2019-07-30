@@ -4,10 +4,11 @@
 
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
+#include "../../Common/Ra/KeyContainer.h"
+#include "../../Common/Tools/Crypto.h"
 #include "../../Common/SGX/sgx_structs.h"
 #include "../../Common/SGX/IasReport.h"
 #include "../../Common/SGX/RuntimeError.h"
-#include "../../Common/Ra/KeyContainer.h"
 
 #include "../Tools/UntrustedBuffer.h"
 
@@ -118,30 +119,22 @@ void RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg
 	msg3 = msg3Buf.Read();
 }
 
-void RaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
+void RaProcessorClient::ProcessMsg4(const std::vector<uint8_t> & msg4Pack)
 {
+	DeriveSharedKeys(m_mk, m_sk);
+
+	std::vector<uint8_t> meta;
+	std::vector<uint8_t> msg4Bin;
+
+	Tools::QuickAesGcmUnpack(GetSK(), msg4Pack, meta, msg4Bin, nullptr, 1024);
+
+	if (msg4Bin.size() != sizeof(sgx_ra_msg4_t))
 	{
-		sgx_ecc_state_handle_t eccState;
-
-		DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ecc256_open_context, &eccState);
-
-		uint8_t signVerifyRes = SGX_EC_INVALID_SIGNATURE;
-
-		sgx_status_t enclaveRet = sgx_ecdsa_verify(reinterpret_cast<const uint8_t*>(&msg4.is_accepted), 
-			sizeof(msg4) - sizeof(sgx_ec256_signature_t), 
-			m_peerSignKey.get(),
-			const_cast<sgx_ec256_signature_t*>(&msg4.signature),
-			&signVerifyRes, eccState);
-
-		sgx_ecc256_close_context(eccState);
-
-		DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, sgx_ecdsa_verify);
-
-		if (signVerifyRes != SGX_EC_VALID)
-		{
-			throw RuntimeException("Failed to verify the signature in SGX RA MSG 4.");
-		}
+		throw RuntimeException("Invalid SGX RA MSG4 received.");
 	}
+
+	sgx_ra_msg4_t msg4;
+	std::memcpy(&msg4, msg4Bin.data(), sizeof(msg4));
 
 	m_iasReport = Tools::make_unique<sgx_ias_report_t>();
 	*m_iasReport = msg4.report;
@@ -150,8 +143,6 @@ void RaProcessorClient::ProcessMsg4(const sgx_ra_msg4_t & msg4)
 	{
 		throw RuntimeException("Initiator rejected the SGX RA quote.");
 	}
-
-	DeriveSharedKeys(m_mk, m_sk);
 
 	m_isAttested = true;
 }

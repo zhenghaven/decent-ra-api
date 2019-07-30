@@ -56,7 +56,7 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 	sgx_ra_msg1_t msg1;
 	std::vector<uint8_t> msg2;
 	std::vector<uint8_t> msg3;
-	sgx_ra_msg4_t msg4;
+	std::vector<uint8_t> msg4;
 
 	raProcessor->GetMsg0s(msg0s);
 
@@ -76,7 +76,7 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 	raProcessor->ProcessMsg2(*reinterpret_cast<const sgx_ra_msg2_t*>(msg2.data()), msg2.size(), msg3);
 
 	connection.SendPack(msg3);
-	connection.ReceiveRawGuarantee(&msg4, sizeof(msg4));
+	connection.ReceivePack(msg4);
 
 	raProcessor->ProcessMsg4(msg4);
 
