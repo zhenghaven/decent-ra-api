@@ -46,6 +46,7 @@ Drbg::Drbg() :
 Drbg::~Drbg()
 {
 	mbedtls_ctr_drbg_context* ctxPtr = CastCtx(m_state);
+	mbedtls_ctr_drbg_free(ctxPtr);
 	delete ctxPtr;
 	m_state = nullptr;
 }

@@ -1,6 +1,6 @@
 //#if ENCLAVE_PLATFORM_SGX
 
-#include "../../Common/MbedTls/MbedTlsSubFunc.h"
+#include "../../../Common/MbedTls/MbedTlsSubFunc.h"
 
 #include <stdarg.h>
 #include <stdio.h>      /* vsnprintf */
@@ -12,42 +12,46 @@ using namespace Decent;
 
 void MbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 {
-	if (!mutex || 
+	if (!mutex ||
 		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)))
 	{
 		return;
 	}
 
-	mutex->m_ptr = new sgx_thread_mutex_t;
-	sgx_thread_mutex_t* sgxMutex = reinterpret_cast<sgx_thread_mutex_t*>(mutex->m_ptr);
-	sgx_thread_mutex_init(sgxMutex, nullptr);
+	*mutex = new sgx_thread_mutex_t;
+
+	sgx_thread_mutex_t* sgxMutex = static_cast<sgx_thread_mutex_t*>(*mutex);
+	if (sgx_thread_mutex_init(sgxMutex, nullptr) != 0)
+	{
+		delete sgxMutex;
+		sgxMutex = nullptr;
+	}
 }
 
 void MbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
-		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)) ||
-		!mutex->m_ptr ||
-		sgx_is_outside_enclave(mutex->m_ptr, sizeof(sgx_thread_mutex_t)))
+		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)))
 	{
 		return;
 	}
 
-	sgx_thread_mutex_t* sgxMutex = reinterpret_cast<sgx_thread_mutex_t*>(mutex->m_ptr);
-	sgx_thread_mutex_destroy(sgxMutex);
+	sgx_thread_mutex_t* sgxMutex = static_cast<sgx_thread_mutex_t*>(*mutex);
+	if (sgx_thread_mutex_destroy(sgxMutex) == 0)
+	{
+		delete sgxMutex;
+	}
 }
 
 int MbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
-		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)) ||
-		!mutex->m_ptr ||
-		sgx_is_outside_enclave(mutex->m_ptr, sizeof(sgx_thread_mutex_t)))
+		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)))
 	{
 		return -1;
 	}
 
-	sgx_thread_mutex_t* sgxMutex = reinterpret_cast<sgx_thread_mutex_t*>(mutex->m_ptr);
+	sgx_thread_mutex_t* sgxMutex = static_cast<sgx_thread_mutex_t*>(*mutex);
 
 	return sgx_thread_mutex_lock(sgxMutex) == 0 ? 0 : -1;
 }
@@ -55,14 +59,12 @@ int MbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 int MbedTls::mbedtls_mutex_unlock(mbedtls_threading_mutex_t *mutex)
 {
 	if (!mutex ||
-		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)) ||
-		!mutex->m_ptr ||
-		sgx_is_outside_enclave(mutex->m_ptr, sizeof(sgx_thread_mutex_t)))
+		sgx_is_outside_enclave(mutex, sizeof(mbedtls_threading_mutex_t)))
 	{
 		return -1;
 	}
 
-	sgx_thread_mutex_t* sgxMutex = reinterpret_cast<sgx_thread_mutex_t*>(mutex->m_ptr);
+	sgx_thread_mutex_t* sgxMutex = static_cast<sgx_thread_mutex_t*>(*mutex);
 
 	return sgx_thread_mutex_unlock(sgxMutex) == 0 ? 0 : -1;
 }

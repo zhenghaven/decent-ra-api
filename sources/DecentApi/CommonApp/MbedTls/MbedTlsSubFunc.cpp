@@ -12,9 +12,9 @@ struct MyMutexStruct
 	std::mutex m_mutex;
 	std::unique_ptr<std::unique_lock<std::mutex> > m_lock;
 
-	MyMutexStruct() :
-		m_mutex(),
-		m_lock()
+	MyMutexStruct() noexcept :
+		m_mutex(), //noexcept
+		m_lock() //noexcept
 	{
 	}
 };
@@ -27,33 +27,31 @@ void MbedTls::mbedtls_mutex_init(mbedtls_threading_mutex_t *mutex)
 		return;
 	}
 
-	mutex->m_ptr = new MyMutexStruct();
+	*mutex = new MyMutexStruct();
 }
 
 void MbedTls::mbedtls_mutex_free(mbedtls_threading_mutex_t *mutex)
 {
-	if (!mutex ||
-		!mutex->m_ptr)
+	if (!mutex)
 	{
 		//PRINT_I("Nullptr received in mbedtls_mutex_free.");
 		return;
 	}
 
-	MyMutexStruct* myMutex = reinterpret_cast<MyMutexStruct*>(mutex->m_ptr);
+	MyMutexStruct* myMutex = static_cast<MyMutexStruct*>(*mutex);
 	delete myMutex;
-	mutex->m_ptr = nullptr;
+	*mutex = nullptr;
 }
 
 int MbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 {
-	if (!mutex ||
-		!mutex->m_ptr)
+	if (!mutex || !(*mutex))
 	{
 		//PRINT_I("Nullptr received in mbedtls_mutex_lock.");
 		return -1;
 	}
 
-	MyMutexStruct* myMutex = reinterpret_cast<MyMutexStruct*>(mutex->m_ptr);
+	MyMutexStruct* myMutex = static_cast<MyMutexStruct*>(*mutex);
 
 	try
 	{
@@ -71,14 +69,13 @@ int MbedTls::mbedtls_mutex_lock(mbedtls_threading_mutex_t *mutex)
 
 int MbedTls::mbedtls_mutex_unlock(mbedtls_threading_mutex_t *mutex)
 {
-	if (!mutex ||
-		!mutex->m_ptr)
+	if (!mutex || !(*mutex))
 	{
 		//PRINT_I("Nullptr received in mbedtls_mutex_unlock.");
 		return -1;
 	}
 
-	MyMutexStruct* myMutex = reinterpret_cast<MyMutexStruct*>(mutex->m_ptr);
+	MyMutexStruct* myMutex = static_cast<MyMutexStruct*>(*mutex);
 
 	try
 	{
