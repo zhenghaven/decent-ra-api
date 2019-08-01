@@ -38,7 +38,7 @@ bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std
 	sgx_ra_msg1_t msg1;
 	std::vector<uint8_t> msg2;
 	std::vector<uint8_t> msg3;
-	sgx_ra_msg4_t msg4;
+	std::vector<uint8_t> msg4;
 
 	sgx_report_data_t reportData;
 
