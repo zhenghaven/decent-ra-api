@@ -3,49 +3,40 @@
 #include "../Common.h"
 #include "../GeneralKeyTypes.h"
 
-#include "../Tools/DataCoding.h"
-#include "../MbedTls/Drbg.h"
+#include "../Tools/Crypto.h"
 
 #include "NetworkException.h"
 #include "ConnectionBase.h"
 
 using namespace Decent::Net;
-using namespace Decent::MbedTlsObj;
 
-struct EncryptedStruct
+namespace
 {
-	general_128bit_tag m_mac;
-	suggested_aesgcm_iv m_iv;
+	constexpr size_t PACK_BLOCK_SIZE = GENERAL_512BIT_64BYTE_SIZE * GENERAL_BITS_PER_BYTE;
 
-#ifdef _MSC_VER
-#pragma warning(push)
-	/* Disable warning that array payload has size 0 */
-#ifdef __INTEL_COMPILER
-#pragma warning ( disable:94 )
-#else
-#pragma warning ( disable: 4200 )
-#endif
-#endif
-	char m_msg[];
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-};
+	inline std::string Bin2String(const std::vector<uint8_t>& bin)
+	{
+		static_assert(sizeof(std::string::value_type) == sizeof(std::vector<uint8_t>::value_type), "This platform has sizeof(char) != sizeof(uint8_t)");
+
+		return std::string(reinterpret_cast<const char*>(bin.data()),
+			               reinterpret_cast<const char*>(bin.data()) + bin.size());
+	}
+}
 
 AesGcmCommLayer::AesGcmCommLayer(const uint8_t (&sKey)[GENERAL_128BIT_16BYTE_SIZE], ConnectionBase* connection) :
-	m_gcm(sKey),
+	m_key(sKey),
 	m_connection(connection)
 {
 }
 
 AesGcmCommLayer::AesGcmCommLayer(const AesGcm128bKeyType & sKey, ConnectionBase* connection) :
-	m_gcm(sKey),
+	m_key(sKey),
 	m_connection(connection)
 {
 }
 
 AesGcmCommLayer::AesGcmCommLayer(AesGcmCommLayer && other) :
-	m_gcm(std::move(other.m_gcm)),
+	m_key(std::move(other.m_key)),
 	m_connection(other.m_connection)
 {
 	other.m_connection = nullptr;
@@ -59,7 +50,7 @@ AesGcmCommLayer & AesGcmCommLayer::operator=(AesGcmCommLayer && other)
 {
 	if (this != &other)
 	{
-		m_gcm = std::forward<GcmObjType>(other.m_gcm);
+		m_key = std::forward<decltype(m_key)>(other.m_key);
 
 		ConnectionBase* tmpCnt = m_connection;
 		m_connection = other.m_connection;
@@ -70,104 +61,38 @@ AesGcmCommLayer & AesGcmCommLayer::operator=(AesGcmCommLayer && other)
 
 AesGcmCommLayer::operator bool() const
 {
-	return m_gcm;
+	return true;
 }
 
-static void DecryptMsgPreChecked(const EncryptedStruct& encryptedStruct, void* outBuffer, size_t messageSize, AesGcmCommLayer::GcmObjType& gcm)
+std::string AesGcmCommLayer::DecryptMsg(const std::string & inMsg)
 {
-	try
-	{
-		gcm.Decrypt(
-			&encryptedStruct.m_msg, messageSize,
-			outBuffer, messageSize,
-			encryptedStruct.m_iv,
-			encryptedStruct.m_mac);
-	}
-	catch (const std::exception& e)
-	{
-		throw Exception(std::string("Decryption failed with error: ") + e.what());
-	}
-}
-
-std::string AesGcmCommLayer::DecryptMsg(const void* inMsg, const size_t inSize)
-{
-	if (inSize <= sizeof(EncryptedStruct))
-	{
-		throw Exception("Invalid input parameters for function " "AesGcmCommLayer::DecryptMsg" ". The input message is even smaller than an empty encrypted message!");
-	}
-
-	const EncryptedStruct& encryptedStruct = *reinterpret_cast<const EncryptedStruct*>(inMsg);
-
-	std::string res;
-
-	size_t messageSize = inSize - sizeof(EncryptedStruct);
-	res.resize(messageSize);
-
-	DecryptMsgPreChecked(encryptedStruct, &res[0], messageSize, m_gcm);
-
-	return std::move(res);
-}
-
-std::vector<uint8_t> AesGcmCommLayer::DecryptBin(const void * inMsg, const size_t inSize)
-{
-	if (inSize <= sizeof(EncryptedStruct))
-	{
-		throw Exception("Invalid input parameters for function " "AesGcmCommLayer::DecryptMsg" ". The input message is even smaller than an empty encrypted message!");
-	}
-
-	const EncryptedStruct& encryptedStruct = *reinterpret_cast<const EncryptedStruct*>(inMsg);
-
+	std::vector<uint8_t> meta; //Not used here.
 	std::vector<uint8_t> res;
+	Tools::QuickAesGcmUnpack(m_key.m_key, inMsg, meta, res, nullptr, PACK_BLOCK_SIZE);
 
-	size_t messageSize = inSize - sizeof(EncryptedStruct);
-	res.resize(messageSize);
-
-	DecryptMsgPreChecked(encryptedStruct, &res[0], messageSize, m_gcm);
-
-	return std::move(res);
+	return Bin2String(res);
 }
 
-static void EncryptMsgPreChecked(EncryptedStruct& encryptedStruct, const void * inMsg, const size_t inSize, AesGcmCommLayer::GcmObjType& gcm)
+std::string AesGcmCommLayer::EncryptMsg(const std::string & inMsg)
 {
-	try
-	{
-		Drbg drbg;
-		drbg.RandStruct(encryptedStruct.m_iv);
-
-		gcm.Encrypt(
-			inMsg, inSize,
-			&encryptedStruct.m_msg, inSize,
-			encryptedStruct.m_iv,
-			encryptedStruct.m_mac);
-	}
-	catch (const std::exception& e)
-	{
-		throw Exception(std::string("Encryption failed with error: ") + e.what());
-	}
+	General128Tag tag; //Not used here.
+	return Bin2String(
+		Tools::QuickAesGcmPack(m_key.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, tag, PACK_BLOCK_SIZE));
 }
 
-std::string AesGcmCommLayer::EncryptMsg(const void * inMsg, const size_t inSize)
+std::vector<uint8_t> AesGcmCommLayer::DecryptMsg(const std::vector<uint8_t>& inMsg)
 {
-	std::string res;
-	res.resize(sizeof(EncryptedStruct) + inSize);
-
-	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(res[0]);
-
-	EncryptMsgPreChecked(encryptedStruct, inMsg, inSize, m_gcm);
-
-	return std::move(res);
-}
-
-std::vector<uint8_t> AesGcmCommLayer::EncryptBin(const void * inMsg, const size_t inSize)
-{
+	std::vector<uint8_t> meta; //Not used here.
 	std::vector<uint8_t> res;
-	res.resize(sizeof(EncryptedStruct) + inSize);
+	Tools::QuickAesGcmUnpack(m_key.m_key, inMsg, meta, res, nullptr, PACK_BLOCK_SIZE);
 
-	EncryptedStruct& encryptedStruct = reinterpret_cast<EncryptedStruct&>(res[0]);
+	return res;
+}
 
-	EncryptMsgPreChecked(encryptedStruct, inMsg, inSize, m_gcm);
-
-	return std::move(res);
+std::vector<uint8_t> AesGcmCommLayer::EncryptMsg(const std::vector<uint8_t>& inMsg)
+{
+	General128Tag tag; //Not used here.
+	return Tools::QuickAesGcmPack(m_key.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, tag, PACK_BLOCK_SIZE);
 }
 
 void AesGcmCommLayer::SetConnectionPtr(ConnectionBase& cnt)
@@ -221,7 +146,8 @@ void AesGcmCommLayer::SendRaw(const void * buf, const size_t size)
 		throw ConnectionNotEstablished();
 	}
 
-	std::vector<uint8_t> encrypted = EncryptBin(buf, size);
+	std::vector<uint8_t> encrypted = EncryptMsg(
+		std::vector<uint8_t>(static_cast<const uint8_t*>(buf), static_cast<const uint8_t*>(buf) + size));
 
 	m_connection->SendPack(encrypted);
 }

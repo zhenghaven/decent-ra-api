@@ -2,10 +2,7 @@
 
 #include "SecureCommLayer.h"
 
-#include <memory>
-
 #include "../GeneralKeyTypes.h"
-#include "../MbedTls/Gcm.h"
 
 namespace Decent
 {
@@ -16,7 +13,7 @@ namespace Decent
 		{
 		public:
 			typedef General128BitKey AesGcm128bKeyType;
-			typedef MbedTlsObj::Gcm<16, MbedTlsObj::GcmBase::Cipher::AES> GcmObjType;
+			typedef G128BitSecretKeyWrap KeyType;
 
 		public:
 			AesGcmCommLayer() = delete;
@@ -72,62 +69,11 @@ namespace Decent
 			/**
 			 * \brief	Decrypts a message
 			 *
-			 * \exception Decent::Net::Exception
-			 *
-			 * \param	inMsg 	Input message (cipher text).
-			 * \param	inSize	Message length.
-			 *
-			 * \return	Output message (plain text).
-			 */
-			virtual std::string DecryptMsg(const void* inMsg, const size_t inSize);
-
-			/**
-			 * \brief	Encrypts a message
-			 *
-			 * \exception Decent::Net::Exception
-			 *
-			 * \param	inMsg 	Input message (plain text).
-			 * \param	inSize	Message length.
-			 *
-			 * \return	Output message (cipher text).
-			 */
-			virtual std::string EncryptMsg(const void* inMsg, const size_t inSize);
-
-			/**
-			 * \brief	Decrypts a message into binary.
-			 *
-			 * \exception Decent::Net::Exception
-			 *
-			 * \param	inMsg 	Input message (cipher text).
-			 * \param	inSize	Message length.
-			 *
-			 * \return	Output message in binary (plain text).
-			 */
-			virtual std::vector<uint8_t> DecryptBin(const void* inMsg, const size_t inSize);
-
-			/**
-			 * \brief	Encrypts a message into binary.
-			 *
-			 * \exception Decent::Net::Exception
-			 *
-			 * \param	inMsg 	Input message (plain text).
-			 * \param	inSize	Message length.
-			 *
-			 * \return	Output message in binary (cipher text).
-			 */
-			virtual std::vector<uint8_t> EncryptBin(const void* inMsg, const size_t inSize);
-
-			/**
-			 * \brief	Decrypts a message
-			 *
 			 * \param 	inMsg	Input message (cipher text).
 			 *
 			 * \return	Output message (plain text).
 			 */
-			virtual std::string DecryptMsg(const std::string& inMsg)
-			{
-				return DecryptMsg(inMsg.data(), inMsg.size());
-			}
+			virtual std::string DecryptMsg(const std::string& inMsg);
 
 			/**
 			 * \brief	Encrypts a message
@@ -138,10 +84,7 @@ namespace Decent
 			 *
 			 * \return	Output message (cipher text).
 			 */
-			virtual std::string EncryptMsg(const std::string& inMsg)
-			{
-				return EncryptMsg(inMsg.data(), inMsg.size());
-			}
+			virtual std::string EncryptMsg(const std::string& inMsg);
 
 			/**
 			 * \brief	Decrypts a message into binary
@@ -150,10 +93,7 @@ namespace Decent
 			 *
 			 * \return	Output message in binary (plain text).
 			 */
-			virtual std::vector<uint8_t> DecryptMsg(const std::vector<uint8_t>& inMsg)
-			{
-				return DecryptBin(inMsg.data(), inMsg.size());
-			}
+			virtual std::vector<uint8_t> DecryptMsg(const std::vector<uint8_t>& inMsg);
 
 			/**
 			 * \brief	Encrypts a message into binary
@@ -164,10 +104,7 @@ namespace Decent
 			 *
 			 * \return	Output message in binary (cipher text).
 			 */
-			virtual std::vector<uint8_t> EncryptMsg(const std::vector<uint8_t>& inMsg)
-			{
-				return EncryptBin(inMsg.data(), inMsg.size());
-			}
+			virtual std::vector<uint8_t> EncryptMsg(const std::vector<uint8_t>& inMsg);
 
 			virtual void ReceiveRaw(void* buf, const size_t size) override;
 			virtual void ReceiveRaw(ConnectionBase& cnt, void* buf, const size_t size) override
@@ -224,7 +161,7 @@ namespace Decent
 			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 
 		private:
-			GcmObjType m_gcm;
+			KeyType m_key;
 			ConnectionBase* m_connection;
 		};
 	}
