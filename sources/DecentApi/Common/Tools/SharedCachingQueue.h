@@ -62,7 +62,7 @@ namespace Decent
 			}
 
 			/**
-			 * \brief	Gets a item from the cache using the given key
+			 * \brief	Gets an item from the cache with the given key
 			 *
 			 * \param	key	The key associated with the value.
 			 *
@@ -89,6 +89,34 @@ namespace Decent
 					idxIt->second.splice(idxIt->second.end(), idxIt->second, idxIt->second.begin());
 
 					return res;
+				}
+			}
+
+			/**
+			 * \brief	Removes all items with the given key from the cache
+			 *
+			 * \param	key	The key associated to the value to be removed.
+			 */
+			virtual void RemoveAll(const KeyType& key)
+			{
+				std::unique_lock<std::mutex> queueLock(m_queueMutex);
+
+				auto idxIt = m_index.find(key);
+				if (idxIt == m_index.end() || idxIt->second.size() == 0)
+				{
+					//No available item in the queue. No need to remove anything
+					return;
+				}
+				else
+				{
+					//Some item is available in the queue.
+					for (auto qIt : idxIt->second)
+					{
+						m_queue.erase(qIt);
+						m_itemCount--;
+					}
+
+					m_index.erase(idxIt);
 				}
 			}
 
