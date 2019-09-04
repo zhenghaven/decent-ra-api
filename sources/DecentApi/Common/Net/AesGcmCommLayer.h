@@ -106,11 +106,11 @@ namespace Decent
 			 */
 			virtual std::vector<uint8_t> EncryptMsg(const std::vector<uint8_t>& inMsg);
 
-			using SecureCommLayer::SendRawI;
-			virtual size_t SendRawI(const void* buf, const size_t size) override;
+			using SecureCommLayer::SendRaw;
+			virtual size_t SendRaw(const void* buf, const size_t size) override;
 
-			using SecureCommLayer::RecvRawI;
-			virtual size_t RecvRawI(void* buf, const size_t size) override;
+			using SecureCommLayer::RecvRaw;
+			virtual size_t RecvRaw(void* buf, const size_t size) override;
 
 			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 

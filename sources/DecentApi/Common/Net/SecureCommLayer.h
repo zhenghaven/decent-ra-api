@@ -44,7 +44,7 @@ namespace Decent
 			 *
 			 * \return	A size_t. Size of data that has been sent.
 			 */
-			virtual size_t SendRawI(const void* buf, const size_t size) = 0;
+			virtual size_t SendRaw(const void* buf, const size_t size) = 0;
 
 			/**
 			 * \brief	Sends a secure message with specific length.
@@ -57,10 +57,10 @@ namespace Decent
 			 *
 			 * \return	A size_t. Size of data that has been sent.
 			 */
-			virtual size_t SendRawI(ConnectionBase& connectionPtr, const void* buf, const size_t size)
+			virtual size_t SendRaw(ConnectionBase& connectionPtr, const void* buf, const size_t size)
 			{
 				SetConnectionPtr(connectionPtr);
-				return SendRawI(buf, size);
+				return SendRaw(buf, size);
 			}
 
 			/**
@@ -78,7 +78,7 @@ namespace Decent
 				size_t byteSent = 0;
 				while (byteSent < size)
 				{
-					byteSent += SendRawI(static_cast<const uint8_t*>(buf) + byteSent, size - byteSent);
+					byteSent += SendRaw(static_cast<const uint8_t*>(buf) + byteSent, size - byteSent);
 				}
 			}
 
@@ -234,7 +234,7 @@ namespace Decent
 			 *
 			 * \return	A size_t. Size of data that has been received.
 			 */
-			virtual size_t RecvRawI(void* buf, const size_t size) = 0;
+			virtual size_t RecvRaw(void* buf, const size_t size) = 0;
 
 			/**
 			 * \brief	Receive a secure message with specific length.
@@ -247,10 +247,10 @@ namespace Decent
 			 *
 			 * \return	A size_t. Size of data that has been received.
 			 */
-			virtual size_t RecvRawI(ConnectionBase& connectionPtr, void* buf, const size_t size)
+			virtual size_t RecvRaw(ConnectionBase& connectionPtr, void* buf, const size_t size)
 			{
 				SetConnectionPtr(connectionPtr);
-				return RecvRawI(buf, size);
+				return RecvRaw(buf, size);
 			}
 
 			/**
@@ -268,7 +268,7 @@ namespace Decent
 				size_t byteRecv = 0;
 				while (byteRecv < size)
 				{
-					byteRecv += RecvRawI(static_cast<uint8_t*>(buf) + byteRecv, size - byteRecv);
+					byteRecv += RecvRaw(static_cast<uint8_t*>(buf) + byteRecv, size - byteRecv);
 				}
 			}
 

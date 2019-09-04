@@ -108,7 +108,7 @@ TlsCommLayer & TlsCommLayer::operator=(TlsCommLayer && other)
 	return *this;
 }
 
-size_t TlsCommLayer::SendRawI(const void * buf, const size_t size)
+size_t TlsCommLayer::SendRaw(const void * buf, const size_t size)
 {
 	if (!IsValid())
 	{
@@ -133,7 +133,7 @@ size_t TlsCommLayer::SendRawI(const void * buf, const size_t size)
 	return static_cast<size_t>(mbedRet);
 }
 
-size_t TlsCommLayer::RecvRawI(void * buf, const size_t size)
+size_t TlsCommLayer::RecvRaw(void * buf, const size_t size)
 {
 	if (!IsValid())
 	{

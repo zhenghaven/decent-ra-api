@@ -105,7 +105,7 @@ void AesGcmCommLayer::SetConnectionPtr(ConnectionBase& cnt)
 	m_connection = &cnt;
 }
 
-size_t AesGcmCommLayer::RecvRawI(void * buf, const size_t size)
+size_t AesGcmCommLayer::RecvRaw(void * buf, const size_t size)
 {
 	if (!IsValid())
 	{
@@ -139,7 +139,7 @@ size_t AesGcmCommLayer::RecvRawI(void * buf, const size_t size)
 	return byteToCopy;
 }
 
-size_t AesGcmCommLayer::SendRawI(const void * buf, const size_t size)
+size_t AesGcmCommLayer::SendRaw(const void * buf, const size_t size)
 {
 	if (!IsValid())
 	{
