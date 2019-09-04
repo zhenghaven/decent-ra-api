@@ -51,19 +51,15 @@ namespace Decent
 
 			virtual void SendPack(const void* const dataPtr, const size_t size);
 
-			using ConnectionBase::ReceiveRaw;
+			using ConnectionBase::RecvRaw;
 
-			virtual size_t ReceiveRaw(void* const bufPtr, const size_t size);
+			virtual size_t RecvRaw(void* const bufPtr, const size_t size);
 
-			using ConnectionBase::ReceivePack;
+			using ConnectionBase::RecvPack;
 
-			virtual void ReceivePack(std::string& outMsg);
+			using ConnectionBase::SendAndRecvPack;
 
-			virtual void ReceivePack(std::vector<uint8_t>& outMsg);
-
-			using ConnectionBase::SendAndReceivePack;
-
-			virtual void SendAndReceivePack(const void* const inData, const size_t inDataLen, std::string& outMsg);
+			virtual void SendAndRecvPack(const void* const inData, const size_t inDataLen, std::string& outMsg);
 
 			void* GetPointer() const { return m_cntPtr; }
 

@@ -130,7 +130,7 @@ size_t LocalConnection::SendRaw(const void * const dataPtr, const size_t size)
 	return totalSentSize;
 }
 
-size_t LocalConnection::ReceiveRaw(void * const bufPtr, const size_t size)
+size_t LocalConnection::RecvRaw(void * const bufPtr, const size_t size)
 {
 	LocalSessionStruct& dataRef = m_inSharedObj->GetObject();
 

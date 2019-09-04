@@ -35,7 +35,7 @@ extern "C" int ocall_decent_net_cnet_recv_pack(size_t* recv_size, void* const pt
 
 	try
 	{
-		*recv_size = static_cast<ConnectionBase*>(ptr)->ReceivePack(*msg);
+		*recv_size = static_cast<ConnectionBase*>(ptr)->RecvPack(*msg);
 		return true;
 	}
 	catch (const std::exception& e)
@@ -56,7 +56,7 @@ extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const c
 	try
 	{
 		static_cast<ConnectionBase*>(ptr)->SendPack(in_msg, in_size);
-		*out_size = static_cast<ConnectionBase*>(ptr)->ReceivePack(*out_msg);
+		*out_size = static_cast<ConnectionBase*>(ptr)->RecvPack(*out_msg);
 		return true;
 	}
 	catch (const std::exception& e)
@@ -96,7 +96,7 @@ extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr
 
 	try
 	{
-		*recv_size = static_cast<ConnectionBase*>(ptr)->ReceiveRaw(buf, buf_size);
+		*recv_size = static_cast<ConnectionBase*>(ptr)->RecvRaw(buf, buf_size);
 		return true;
 	}
 	catch (const std::exception& e)

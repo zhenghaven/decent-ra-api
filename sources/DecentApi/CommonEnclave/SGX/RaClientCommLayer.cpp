@@ -26,13 +26,13 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 	if (savedSession && savedSession->m_ticket.size() > 0)
 	{
 		//There is saved session, try to resume it first.
-		connection.SendRawGuarantee(&gsk_hasTicket, sizeof(gsk_hasTicket));
+		connection.SendRawAll(&gsk_hasTicket, sizeof(gsk_hasTicket));
 		
-		connection.SendPack(savedSession->m_ticket);
+		connection.SendContainer(savedSession->m_ticket);
 
 		uint8_t resumeSucc = 0;
 
-		connection.ReceiveRawGuarantee(&resumeSucc, sizeof(resumeSucc));
+		connection.RecvRawAll(&resumeSucc, sizeof(resumeSucc));
 
 		if (resumeSucc)
 		{
@@ -46,7 +46,7 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 	else
 	{
 		//There is no saved session, tell the SP now.
-		connection.SendRawGuarantee(&gsk_noTicket, sizeof(gsk_noTicket));
+		connection.SendRawAll(&gsk_noTicket, sizeof(gsk_noTicket));
 	}
 
 	//Perform SGX RA...
@@ -60,13 +60,13 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 
 	raProcessor->GetMsg0s(msg0s);
 
-	connection.SendRawGuarantee(&msg0s, sizeof(msg0s));
-	connection.ReceiveRawGuarantee(&msg0r, sizeof(msg0r));
+	connection.SendRawAll(&msg0s, sizeof(msg0s));
+	connection.RecvRawAll(&msg0r, sizeof(msg0r));
 
 	raProcessor->ProcessMsg0r(msg0r, msg1);
 
-	connection.SendRawGuarantee(&msg1, sizeof(msg1));
-	connection.ReceivePack(msg2);
+	connection.SendRawAll(&msg1, sizeof(msg1));
+	msg2 = connection.RecvContainer<std::vector<uint8_t> >();
 
 	if (msg2.size() < sizeof(sgx_ra_msg2_t))
 	{
@@ -75,18 +75,18 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 
 	raProcessor->ProcessMsg2(*reinterpret_cast<const sgx_ra_msg2_t*>(msg2.data()), msg2.size(), msg3);
 
-	connection.SendPack(msg3);
-	connection.ReceivePack(msg4);
+	connection.SendContainer(msg3);
+	msg4 = connection.RecvContainer<std::vector<uint8_t> >();
 
 	raProcessor->ProcessMsg4(msg4);
 
 	std::shared_ptr<RaClientSession> neSession = std::make_shared<RaClientSession>();
 
 	uint8_t hasNewTicket = 0;
-	connection.ReceiveRawGuarantee(&hasNewTicket, sizeof(hasNewTicket));
+	connection.RecvRawAll(&hasNewTicket, sizeof(hasNewTicket));
 	if (hasNewTicket)
 	{
-		connection.ReceivePack(neSession->m_ticket);
+		neSession->m_ticket = connection.RecvContainer<std::vector<uint8_t> >();
 	}
 
 	neSession->m_session.m_secretKey = raProcessor->GetSK();

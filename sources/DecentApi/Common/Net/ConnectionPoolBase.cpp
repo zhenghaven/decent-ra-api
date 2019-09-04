@@ -7,23 +7,23 @@ using namespace Decent::Net;
 void ConnectionPoolBase::ClientAckKeepAlive(ConnectionBase & cnt)
 {
 	char serverQuery;
-	cnt.ReceiveRawGuarantee(&serverQuery, sizeof(serverQuery));
+	cnt.RecvRawAll(&serverQuery, sizeof(serverQuery));
 }
 
 void ConnectionPoolBase::ClientWakePeer(ConnectionBase & cnt)
 {
-	cnt.SendRawGuarantee(&sk_clientWakeMsg, sizeof(sk_clientWakeMsg));
+	cnt.SendRawAll(&sk_clientWakeMsg, sizeof(sk_clientWakeMsg));
 }
 
 void ConnectionPoolBase::ServerAsk(ConnectionBase & cnt)
 {
-	cnt.SendRawGuarantee(&sk_serverAskMsg, sizeof(sk_serverAskMsg));
+	cnt.SendRawAll(&sk_serverAskMsg, sizeof(sk_serverAskMsg));
 }
 
 void ConnectionPoolBase::ServerWaitWakeUpMsg(ConnectionBase & cnt)
 {
 	char wakeMsg;
-	cnt.ReceiveRawGuarantee(&wakeMsg, sizeof(wakeMsg)); //Waitting wake-up message.
+	cnt.RecvRawAll(&wakeMsg, sizeof(wakeMsg)); //Waitting wake-up message.
 }
 
 ConnectionPoolBase::ConnectionPoolBase(size_t maxInCnt) :

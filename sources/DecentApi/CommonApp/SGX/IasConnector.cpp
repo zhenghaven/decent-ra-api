@@ -162,11 +162,10 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, const std::st
 
 	Net::TCPConnection iasSimConnection("127.0.0.1", 57720);
 
-	iasSimConnection.SendPack("SigRl");
-	iasSimConnection.SendPack(gidBigEndStr);
+	iasSimConnection.SendContainer("SigRl");
+	iasSimConnection.SendContainer(gidBigEndStr);
 
-	std::vector<uint8_t> resp;
-	iasSimConnection.ReceivePack(resp);
+	std::vector<uint8_t> resp = iasSimConnection.RecvContainer<std::vector<uint8_t> >();
 
 	Net::RpcParser iasSimRet(std::move(resp));
 
@@ -256,11 +255,10 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 
 	Net::TCPConnection iasSimConnection("127.0.0.1", 57720);
 
-	iasSimConnection.SendPack("Report");
-	iasSimConnection.SendPack(jsonReqBody);
+	iasSimConnection.SendContainer("Report");
+	iasSimConnection.SendContainer(jsonReqBody);
 
-	std::vector<uint8_t> resp;
-	iasSimConnection.ReceivePack(resp);
+	std::vector<uint8_t> resp = iasSimConnection.RecvContainer<std::vector<uint8_t> >();
 
 	Net::RpcParser iasSimRet(std::move(resp));
 

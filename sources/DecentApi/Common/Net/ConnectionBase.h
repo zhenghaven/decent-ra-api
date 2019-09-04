@@ -39,7 +39,7 @@ namespace Decent
 			*
 			* \return	Length of the data that has been received, or -1 when error.
 			*/
-			static int ReceiveRawCallback(void* const connection, void* const buf, const size_t bufLen) noexcept;
+			static int RecvRawCallback(void* const connection, void* const buf, const size_t bufLen) noexcept;
 
 		public:
 
@@ -67,15 +67,15 @@ namespace Decent
 
 			/**
 			 * \brief	Sends a raw message. This function will keep calling SendRaw until entire message has
-			 * 			been sent out. Exceptions from SendRaw will not be caught, thus, it can be stopped by
-			 * 			exceptions.
+			 * 			been sent out. Exceptions from SendRaw will be thrown directly, thus, it can be
+			 * 			stopped by exceptions.
 			 *
 			 * \exception	Decent::Net::Exception	.
 			 *
 			 * \param	dataPtr	The data pointer.
 			 * \param	size   	The size.
 			 */
-			virtual void SendRawGuarantee(const void* const dataPtr, const size_t size)
+			virtual void SendRawAll(const void* const dataPtr, const size_t size)
 			{
 				size_t sentSize = 0;
 				while (sentSize < size)
@@ -96,8 +96,8 @@ namespace Decent
 			virtual void SendPack(const void* const dataPtr, const size_t size)
 			{
 				uint64_t packSize = size;
-				SendRawGuarantee(&packSize, sizeof(uint64_t));
-				SendRawGuarantee(dataPtr, packSize);
+				SendRawAll(&packSize, sizeof(uint64_t));
+				SendRawAll(dataPtr, packSize);
 			}
 
 			/**
@@ -110,7 +110,7 @@ namespace Decent
 			 * \param	msg	The message.
 			 */
 			template<typename Container>
-			void SendPack(const Container& msg)
+			void SendContainer(const Container& msg)
 			{
 				SendPack(ArrayPtrAndSize::GetPtr(msg), ArrayPtrAndSize::GetSize(msg));
 			}
@@ -129,11 +129,11 @@ namespace Decent
 			 *
 			 * \return	A size_t. The size of data has been received.
 			 */
-			virtual size_t ReceiveRaw(void* const bufPtr, const size_t size) = 0;
+			virtual size_t RecvRaw(void* const bufPtr, const size_t size) = 0;
 
 			/**
-			 * \brief	Receive raw message. This function will keep calling ReceiveRaw until entire message
-			 * 			has been received. Exceptions from ReceiveRaw will not be caught, thus, it can be
+			 * \brief	Receive raw message. This function will keep calling RecvRaw until entire message has
+			 * 			been received. Exceptions from RecvRaw will be thrown directly, thus, it can be
 			 * 			stopped by exceptions.
 			 *
 			 * \exception	Decent::Net::Exception	.
@@ -141,12 +141,12 @@ namespace Decent
 			 * \param [out]	bufPtr	The buffer pointer. Must not null!
 			 * \param 	   	size  	The message size.
 			 */
-			virtual void ReceiveRawGuarantee(void* const bufPtr, const size_t size)
+			virtual void RecvRawAll(void* const bufPtr, const size_t size)
 			{
 				size_t recvSize = 0;
 				while (recvSize < size)
 				{
-					recvSize += ReceiveRaw(static_cast<uint8_t*>(bufPtr) + recvSize, size - recvSize);
+					recvSize += RecvRaw(static_cast<uint8_t*>(bufPtr) + recvSize, size - recvSize);
 				}
 			}
 
@@ -164,74 +164,37 @@ namespace Decent
 			 *
 			 * \return	A size_t. The size of the package.
 			 */
-			virtual size_t ReceivePack(char*& dest)
+			virtual size_t RecvPack(char*& dest)
 			{
 				uint64_t packSize = 0;
-				ReceiveRawGuarantee(&packSize, sizeof(packSize));
+				RecvRawAll(&packSize, sizeof(packSize));
 
 				dest = new char[static_cast<size_t>(packSize)];
-				ReceiveRawGuarantee(dest, static_cast<size_t>(packSize));
+				RecvRawAll(dest, static_cast<size_t>(packSize));
 				return static_cast<size_t>(packSize);
 			}
 
 			/**
-			 * \brief	Receive pack
+			 * \brief	Receives a container.
 			 *
-			 * \exception	Decent::Net::Exception	.
+			 * \exception	Decent::Net::Exception	Thrown when the operation is failed.
 			 *
-			 * \param [out]	outMsg	Output message.
+			 * \tparam	Container	Type of the container.
+			 *
+			 * \return	A Container.
 			 */
-			virtual void ReceivePack(std::string& outMsg)
+			template<typename Container>
+			Container RecvContainer()
 			{
+				using namespace ArrayPtrAndSize;
 				uint64_t packSize = 0;
-				ReceiveRawGuarantee(&packSize, sizeof(packSize));
+				RecvRawAll(&packSize, sizeof(packSize));
 
-				outMsg.resize(static_cast<size_t>(packSize));
-				ReceiveRawGuarantee(&outMsg[0], outMsg.size());
-			}
+				Container cnt;
+				Resize(cnt, static_cast<size_t>(packSize));
+				RecvRawAll(GetPtr(cnt), GetSize(cnt));
 
-			/**
-			 * \brief	Receive pack
-			 *
-			 * \exception	Decent::Net::Exception	.
-			 *
-			 * \param [out]	outBin	Output binary.
-			 */
-			virtual void ReceivePack(std::vector<uint8_t>& outBin)
-			{
-				uint64_t packSize = 0;
-				ReceiveRawGuarantee(&packSize, sizeof(packSize));
-
-				outBin.resize(static_cast<size_t>(packSize));
-				ReceiveRawGuarantee(&outBin[0], outBin.size());
-			}
-
-			/**
-			 * \brief	Receive message.
-			 *
-			 * \exception	Decent::Net::Exception	.
-			 *
-			 * \return	A std::string.
-			 */
-			virtual std::string RecvMsg()
-			{
-				std::string msg;
-				ReceivePack(msg);
-				return msg;
-			}
-
-			/**
-			 * \brief	Receive binary.
-			 *
-			 * \exception	Decent::Net::Exception	.
-			 *
-			 * \return	A std::vector&lt;uint8_t&gt;
-			 */
-			virtual std::vector<uint8_t> RecvBin()
-			{
-				std::vector<uint8_t> bin;
-				ReceivePack(bin);
-				return bin;
+				return cnt;
 			}
 
 			//#################################################
@@ -245,23 +208,26 @@ namespace Decent
 			 * \param 	   	inDataLen	Length of the in data.
 			 * \param [out]	outMsg   	Output message.
 			 */
-			virtual void SendAndReceivePack(const void* const inData, const size_t inDataLen, std::string& outMsg)
+			virtual void SendAndRecvPack(const void* const inData, const size_t inDataLen, std::string& outMsg)
 			{
 				SendPack(inData, inDataLen);
-				ReceivePack(outMsg);
+				outMsg = RecvContainer<std::string>();
 			}
 
 			/**
 			 * \brief	Sends a package of message, and then receive a package of message.
 			 *
-			 * \tparam	Container	Type of the container.
-			 * \param 	   	inMsg 	Message describing the in.
-			 * \param [out]	outMsg	Output message.
+			 * \tparam	SentContainerT	Type of the container used for sending message.
+			 * \tparam	RecvContainerT	Type of the container used for receiving message.
+			 * \param 	   	inCnt	Input container.
+			 *
+			 * \return	A RecvContainerT.
 			 */
-			template<typename Container>
-			void SendAndReceivePack(const Container& inMsg, std::string& outMsg)
+			template<typename SentContainerT, typename RecvContainerT>
+			RecvContainerT SendAndRecvContainer(const SentContainerT& inCnt)
 			{
-				SendAndReceivePack(ArrayPtrAndSize::GetPtr(inMsg), ArrayPtrAndSize::GetSize(inMsg), outMsg);
+				SendContainer(inCnt);
+				return RecvContainer<RecvContainerT>();
 			}
 
 			/** \brief	Terminates this connection */

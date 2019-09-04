@@ -65,8 +65,8 @@ namespace Decent
 
 			/**
 			 * \brief	Sends a raw message. This function will keep calling SendRaw until entire message has
-			 * 			been sent out. Exceptions from SendRaw will not be caught, thus, it can be stopped by
-			 * 			exceptions.
+			 * 			been sent out. Exceptions from SendRaw will be thrown directly, thus, it can be
+			 * 			stopped by exceptions.
 			 *
 			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
@@ -84,8 +84,8 @@ namespace Decent
 
 			/**
 			 * \brief	Sends a raw message. This function will keep calling SendRaw until entire message has
-			 * 			been sent out. Exceptions from SendRaw will not be caught, thus, it can be stopped by
-			 * 			exceptions.
+			 * 			been sent out. Exceptions from SendRaw will be thrown directly, thus, it can be
+			 * 			stopped by exceptions.
 			 *
 			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
@@ -254,14 +254,14 @@ namespace Decent
 			}
 
 			/**
-			 * \brief	Receive raw message. This function will keep calling ReceiveRaw until entire message
-			 * 			has been received. Exceptions from ReceiveRaw will not be caught, thus, it can be
+			 * \brief	Receive raw message. This function will keep calling RecvRaw until entire message has
+			 * 			been received. Exceptions from RecvRaw will be thrown directly, thus, it can be
 			 * 			stopped by exceptions.
 			 *
 			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
-			 * \param [out]	bufPtr	The buffer pointer. Must not null.
-			 * \param 	   	size  	The message size.
+			 * \param [out]	buf 	The pointer to the buffer. Must not null.
+			 * \param 	   	size	The message size.
 			 */
 			virtual void RecvRawAll(void* const buf, const size_t size)
 			{
@@ -273,8 +273,8 @@ namespace Decent
 			}
 
 			/**
-			 * \brief	Receive raw message. This function will keep calling ReceiveRaw until entire message
-			 * 			has been received. Exceptions from ReceiveRaw will not be caught, thus, it can be
+			 * \brief	Receive raw message. This function will keep calling RecvRaw until entire message has
+			 * 			been received. Exceptions from RecvRaw will be thrown directly, thus, it can be
 			 * 			stopped by exceptions.
 			 *
 			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.

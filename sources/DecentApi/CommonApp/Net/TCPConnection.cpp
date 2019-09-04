@@ -88,7 +88,7 @@ size_t TCPConnection::SendRaw(const void * const dataPtr, const size_t size)
 	RETHROW_BOOST_EXCEPTION_AS_DECENT_EXCEPTION("Unknown exception caught at TCP send.")
 }
 
-size_t TCPConnection::ReceiveRaw(void * const bufPtr, const size_t size)
+size_t TCPConnection::RecvRaw(void * const bufPtr, const size_t size)
 {
 	try
 	{

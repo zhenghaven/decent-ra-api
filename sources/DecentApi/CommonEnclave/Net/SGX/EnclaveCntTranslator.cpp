@@ -47,7 +47,7 @@ void EnclaveCntTranslator::SendPack(const void * const dataPtr, const size_t siz
 	CHECK_OCALL_BOOL_RET(sentRes);
 }
 
-size_t EnclaveCntTranslator::ReceiveRaw(void * const bufPtr, const size_t size)
+size_t EnclaveCntTranslator::RecvRaw(void * const bufPtr, const size_t size)
 {
 	int recvRes = 0;
 	size_t recvSize = 0;
@@ -58,35 +58,7 @@ size_t EnclaveCntTranslator::ReceiveRaw(void * const bufPtr, const size_t size)
 	return recvSize;
 }
 
-void EnclaveCntTranslator::ReceivePack(std::string & outMsg)
-{
-	int recvRes = 0;
-	size_t size = 0;
-	OcallMessageWrapper msg;
-
-	sgx_status_t enclaveRet = ocall_decent_net_cnet_recv_pack(&recvRes, &size, m_cntPtr, &msg.m_ptr);
-	CHECK_SGX_ERROR(enclaveRet);
-	CHECK_OCALL_BOOL_RET(recvRes);
-
-	outMsg.resize(size);
-	std::memcpy(&outMsg[0], msg.m_ptr, size);
-}
-
-void EnclaveCntTranslator::ReceivePack(std::vector<uint8_t>& outMsg)
-{
-	int recvRes = 0;
-	size_t size = 0;
-	OcallMessageWrapper msg;
-
-	sgx_status_t enclaveRet = ocall_decent_net_cnet_recv_pack(&recvRes, &size, m_cntPtr, &msg.m_ptr);
-	CHECK_SGX_ERROR(enclaveRet);
-	CHECK_OCALL_BOOL_RET(recvRes);
-
-	outMsg.resize(size);
-	std::memcpy(&outMsg[0], msg.m_ptr, size);
-}
-
-void EnclaveCntTranslator::SendAndReceivePack(const void * const inData, const size_t inDataLen, std::string & outMsg)
+void EnclaveCntTranslator::SendAndRecvPack(const void * const inData, const size_t inDataLen, std::string & outMsg)
 {
 	int retVal = 0;
 	size_t size = 0;

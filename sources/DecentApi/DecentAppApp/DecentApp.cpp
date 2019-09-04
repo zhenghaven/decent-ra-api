@@ -79,8 +79,8 @@ bool DecentApp::ProcessSmartMessage(const std::string & category, ConnectionBase
 
 bool DecentApp::InitEnclave(const std::string & wListKey, ConnectionBase & serverConn)
 {
-	serverConn.SendPack(Ra::RequestCategory::sk_requestAppCert);
-	serverConn.SendPack(wListKey); //Send request.
+	serverConn.SendContainer(Ra::RequestCategory::sk_requestAppCert);
+	serverConn.SendContainer(wListKey); //Send request.
 
 	sgx_status_t enclaveRet = SGX_SUCCESS;
 	sgx_status_t retval = SGX_SUCCESS;

@@ -211,8 +211,7 @@ void SmartServer::ConnectionProcesser(std::shared_ptr<ConnectionBase> connection
 {
 	try
 	{
-		std::string categoryStr;
-		connection->ReceivePack(categoryStr);
+		std::string categoryStr = connection->RecvContainer<std::string>();
 		categoryStr.erase(std::find(categoryStr.begin(), categoryStr.end(), '\0'), categoryStr.end());
 
 		ConnectionBase* prevHeldCnt = nullptr;

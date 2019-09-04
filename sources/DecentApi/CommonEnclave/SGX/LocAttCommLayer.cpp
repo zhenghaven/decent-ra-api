@@ -69,19 +69,18 @@ LocAttCommLayer::LocAttCommLayer(std::unique_ptr<General128BitKey> key, std::uni
 void LocAttCommLayer::InitiatorHandshake(ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity)
 {
 	sgx_dh_session_t session;
-	std::string inMsgBuf;
 
 	CHECK_SGX_SDK_RESULT(sgx_dh_init_session(SGX_DH_SESSION_INITIATOR, &session), "Failed to initiate DH session.");
 
 	sgx_dh_msg2_t msg2;
 	std::memset(&msg2, 0, sizeof(msg2));
 
-	cnt.ReceivePack(inMsgBuf);
+	std::string inMsgBuf = cnt.RecvContainer<std::string>();
 
 	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg1_t), "Received message 1 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg1(CastPtr<sgx_dh_msg1_t>(inMsgBuf.data()), &msg2, &session), "Failed to process message 1.");
 
-	cnt.SendAndReceivePack(&msg2, sizeof(msg2), inMsgBuf);
+	cnt.SendAndRecvPack(&msg2, sizeof(msg2), inMsgBuf);
 
 	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg3_t), "Received message 3 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg3(CastPtr<sgx_dh_msg3_t>(inMsgBuf.data()), &session,
@@ -102,7 +101,7 @@ void LocAttCommLayer::ResponderHandshake(ConnectionBase& cnt, General128BitKey& 
 
 	CHECK_SGX_SDK_RESULT(sgx_dh_responder_gen_msg1(&msg1, &session), "Failed to generate message 1.");
 
-	cnt.SendAndReceivePack(&msg1, sizeof(sgx_dh_msg1_t), inMsgBuf);
+	cnt.SendAndRecvPack(&msg1, sizeof(sgx_dh_msg1_t), inMsgBuf);
 
 	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg2_t), "Received message 2 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(sgx_dh_responder_proc_msg2(CastPtr<sgx_dh_msg2_t>(inMsgBuf.data()), &msg3, &session,

@@ -32,9 +32,9 @@ namespace Decent
 				return m_cntPtr->SendRaw(dataPtr, size);
 			}
 
-			virtual void SendRawGuarantee(const void* const dataPtr, const size_t size)
+			virtual void SendRawAll(const void* const dataPtr, const size_t size)
 			{
-				m_cntPtr->SendRawGuarantee(dataPtr, size);
+				m_cntPtr->SendRawAll(dataPtr, size);
 			}
 
 			virtual void SendPack(const void* const dataPtr, const size_t size)
@@ -43,35 +43,25 @@ namespace Decent
 			}
 
 
-			virtual size_t ReceiveRaw(void* const bufPtr, const size_t size)
+			virtual size_t RecvRaw(void* const bufPtr, const size_t size)
 			{
-				return m_cntPtr->ReceiveRaw(bufPtr, size);
+				return m_cntPtr->RecvRaw(bufPtr, size);
 			}
 
-			virtual void ReceiveRawGuarantee(void* const bufPtr, const size_t size)
+			virtual void RecvRawAll(void* const bufPtr, const size_t size)
 			{
-				m_cntPtr->ReceiveRawGuarantee(bufPtr, size);
+				m_cntPtr->RecvRawAll(bufPtr, size);
 			}
 
-			virtual size_t ReceivePack(char*& dest)
+			virtual size_t RecvPack(char*& dest)
 			{
-				return m_cntPtr->ReceivePack(dest);
-			}
-
-			virtual void ReceivePack(std::string& outMsg)
-			{
-				m_cntPtr->ReceivePack(outMsg);
-			}
-
-			virtual void ReceivePack(std::vector<uint8_t>& outMsg)
-			{
-				m_cntPtr->ReceivePack(outMsg);
+				return m_cntPtr->RecvPack(dest);
 			}
 
 
-			virtual void SendAndReceivePack(const void* const inData, const size_t inDataLen, std::string& outMsg)
+			virtual void SendAndRecvPack(const void* const inData, const size_t inDataLen, std::string& outMsg)
 			{
-				m_cntPtr->SendAndReceivePack(inData, inDataLen, outMsg);
+				m_cntPtr->SendAndRecvPack(inData, inDataLen, outMsg);
 			}
 
 

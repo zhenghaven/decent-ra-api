@@ -33,14 +33,13 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	std::unique_ptr<RaSession> neSession = Tools::make_unique<RaSession>();
 
 	uint8_t clientHasTicket = 0;
-	cnt.ReceiveRawGuarantee(&clientHasTicket, sizeof(clientHasTicket));
+	cnt.RecvRawAll(&clientHasTicket, sizeof(clientHasTicket));
 
 	if (clientHasTicket)
 	{
 		//try to resume the session
 		
-		std::vector<uint8_t> ticket;
-		cnt.ReceivePack(ticket);
+		std::vector<uint8_t> ticket = cnt.RecvContainer<std::vector<uint8_t> >();
 		try
 		{
 			std::vector<uint8_t> sessionBin = unsealFunc(ticket);
@@ -48,7 +47,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 			{
 				memcpy(neSession.get(), sessionBin.data(), sessionBin.size());
 
-				cnt.SendRawGuarantee(&gsk_resumeSucc, sizeof(gsk_resumeSucc));
+				cnt.SendRawAll(&gsk_resumeSucc, sizeof(gsk_resumeSucc));
 
 				isResumed = true;
 
@@ -60,7 +59,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 			//Failed to unseal the ticket, go ahead and generate a new session.
 		}
 
-		cnt.SendRawGuarantee(&gsk_resumeFail, sizeof(gsk_resumeFail));
+		cnt.SendRawAll(&gsk_resumeFail, sizeof(gsk_resumeFail));
 	}
 	
 	raProcessor->Init();
@@ -72,23 +71,23 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	std::string msg3;
 	std::vector<uint8_t> msg4;
 
-	cnt.ReceiveRawGuarantee(&msg0s, sizeof(msg0s));
+	cnt.RecvRawAll(&msg0s, sizeof(msg0s));
 
 	raProcessor->ProcessMsg0(msg0s, msg0r);
 
-	cnt.SendRawGuarantee(&msg0r, sizeof(msg0r));
-	cnt.ReceiveRawGuarantee(&msg1, sizeof(msg1));
+	cnt.SendRawAll(&msg0r, sizeof(msg0r));
+	cnt.RecvRawAll(&msg1, sizeof(msg1));
 
 	raProcessor->ProcessMsg1(msg1, msg2);
 
-	cnt.SendAndReceivePack(msg2.data(), msg2.size(), msg3);
+	cnt.SendAndRecvPack(msg2.data(), msg2.size(), msg3);
 	if (msg3.size() < sizeof(sgx_ra_msg3_t))
 	{
 		throw Exception("Decent::Sgx::RaProcessorSp DoHandShake Failed.");
 	}
 	raProcessor->ProcessMsg3(*reinterpret_cast<const sgx_ra_msg3_t*>(msg3.data()), msg3.size(), msg4, nullptr);
 
-	cnt.SendPack(msg4);
+	cnt.SendContainer(msg4);
 
 	neSession->m_secretKey = raProcessor->GetSK();
 	neSession->m_iasReport = *raProcessor->ReleaseIasReport();
@@ -106,14 +105,14 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	catch (const std::exception&)
 	{
 		//Failed to seal the data.
-		cnt.SendRawGuarantee(&gsk_noNewTicket, sizeof(gsk_noNewTicket));
+		cnt.SendRawAll(&gsk_noNewTicket, sizeof(gsk_noNewTicket));
 		return std::make_pair(std::move(neSession), &cnt);
 	}
 
 	std::fill_n(sessionBin.begin(), sessionBin.size(), 0);
 
-	cnt.SendRawGuarantee(&gsk_hasNewTicket, sizeof(gsk_hasNewTicket));
-	cnt.SendPack(neTicket);
+	cnt.SendRawAll(&gsk_hasNewTicket, sizeof(gsk_hasNewTicket));
+	cnt.SendContainer(neTicket);
 
 	return std::make_pair(std::move(neSession), &cnt);
 }

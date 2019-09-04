@@ -116,8 +116,7 @@ size_t AesGcmCommLayer::RecvRawI(void * buf, const size_t size)
 	{
 		//Buffer is clear, we need to poll data from remote first.
 
-		std::vector<uint8_t> encBlock;
-		m_connection->ReceivePack(encBlock);
+		std::vector<uint8_t> encBlock = m_connection->RecvContainer<std::vector<uint8_t> >();
 
 		m_streamBuf = DecryptMsg(encBlock);
 	}
@@ -150,7 +149,7 @@ size_t AesGcmCommLayer::SendRawI(const void * buf, const size_t size)
 	std::vector<uint8_t> encBlock = EncryptMsg(
 		std::vector<uint8_t>(static_cast<const uint8_t*>(buf), static_cast<const uint8_t*>(buf) + size));
 
-	m_connection->SendPack(encBlock);
+	m_connection->SendContainer(encBlock);
 
 	return size;
 }

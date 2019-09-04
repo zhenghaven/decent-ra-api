@@ -30,7 +30,7 @@ namespace
 
 	static int MbedTlsSslRecv(void *ctx, unsigned char *buf, size_t len)
 	{
-		return ConnectionBase::ReceiveRawCallback(ctx, buf, len);
+		return ConnectionBase::RecvRawCallback(ctx, buf, len);
 	}
 }
 

@@ -42,7 +42,7 @@ namespace Decent
 
 			virtual size_t SendRaw(const void* const dataPtr, const size_t size) override;
 
-			virtual size_t ReceiveRaw(void* const bufPtr, const size_t size) override;
+			virtual size_t RecvRaw(void* const bufPtr, const size_t size) override;
 
 			virtual bool IsTerminate() const noexcept;
 
