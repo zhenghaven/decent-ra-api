@@ -164,12 +164,12 @@ namespace Decent
 			 *
 			 * \return	A size_t. The size of the package.
 			 */
-			virtual size_t RecvPack(char*& dest)
+			virtual size_t RecvPack(uint8_t*& dest)
 			{
 				uint64_t packSize = 0;
 				RecvRawAll(&packSize, sizeof(packSize));
 
-				dest = new char[static_cast<size_t>(packSize)];
+				dest = new uint8_t[static_cast<size_t>(packSize)];
 				RecvRawAll(dest, static_cast<size_t>(packSize));
 				return static_cast<size_t>(packSize);
 			}
@@ -208,10 +208,10 @@ namespace Decent
 			 * \param 	   	inDataLen	Length of the in data.
 			 * \param [out]	outMsg   	Output message.
 			 */
-			virtual void SendAndRecvPack(const void* const inData, const size_t inDataLen, std::string& outMsg)
+			virtual std::vector<uint8_t> SendAndRecvPack(const void* const inData, const size_t inDataLen)
 			{
 				SendPack(inData, inDataLen);
-				outMsg = RecvContainer<std::string>();
+				return RecvContainer<std::vector<uint8_t> >();
 			}
 
 			/**

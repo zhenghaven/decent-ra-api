@@ -27,47 +27,47 @@ namespace Decent
 				m_cntPool->Put(m_addr, std::move(m_cntPtr));
 			}
 
-			virtual size_t SendRaw(const void* const dataPtr, const size_t size)
+			virtual size_t SendRaw(const void* const dataPtr, const size_t size) override
 			{
 				return m_cntPtr->SendRaw(dataPtr, size);
 			}
 
-			virtual void SendRawAll(const void* const dataPtr, const size_t size)
+			virtual void SendRawAll(const void* const dataPtr, const size_t size) override
 			{
-				m_cntPtr->SendRawAll(dataPtr, size);
+				return m_cntPtr->SendRawAll(dataPtr, size);
 			}
 
-			virtual void SendPack(const void* const dataPtr, const size_t size)
+			virtual void SendPack(const void* const dataPtr, const size_t size) override
 			{
-				m_cntPtr->SendPack(dataPtr, size);
+				return m_cntPtr->SendPack(dataPtr, size);
 			}
 
 
-			virtual size_t RecvRaw(void* const bufPtr, const size_t size)
+			virtual size_t RecvRaw(void* const bufPtr, const size_t size) override
 			{
 				return m_cntPtr->RecvRaw(bufPtr, size);
 			}
 
-			virtual void RecvRawAll(void* const bufPtr, const size_t size)
+			virtual void RecvRawAll(void* const bufPtr, const size_t size) override
 			{
-				m_cntPtr->RecvRawAll(bufPtr, size);
+				return m_cntPtr->RecvRawAll(bufPtr, size);
 			}
 
-			virtual size_t RecvPack(char*& dest)
+			virtual size_t RecvPack(uint8_t*& dest) override
 			{
 				return m_cntPtr->RecvPack(dest);
 			}
 
 
-			virtual void SendAndRecvPack(const void* const inData, const size_t inDataLen, std::string& outMsg)
+			virtual std::vector<uint8_t> SendAndRecvPack(const void* const inData, const size_t inDataLen) override
 			{
-				m_cntPtr->SendAndRecvPack(inData, inDataLen, outMsg);
+				return m_cntPtr->SendAndRecvPack(inData, inDataLen);
 			}
 
 
-			virtual void Terminate() noexcept
+			virtual void Terminate() noexcept override
 			{
-				m_cntPtr->Terminate();
+				return m_cntPtr->Terminate();
 			}
 
 		private:

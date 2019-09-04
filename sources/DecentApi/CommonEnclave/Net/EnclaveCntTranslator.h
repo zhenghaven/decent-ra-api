@@ -45,21 +45,23 @@ namespace Decent
 
 			using ConnectionBase::SendRaw;
 
-			virtual size_t SendRaw(const void* const dataPtr, const size_t size);
-
-			using ConnectionBase::SendPack;
-
-			virtual void SendPack(const void* const dataPtr, const size_t size);
+			virtual size_t SendRaw(const void* const dataPtr, const size_t size) override;
 
 			using ConnectionBase::RecvRaw;
 
-			virtual size_t RecvRaw(void* const bufPtr, const size_t size);
+			virtual size_t RecvRaw(void* const bufPtr, const size_t size) override;
+
+			using ConnectionBase::SendPack;
+
+			virtual void SendPack(const void* const dataPtr, const size_t size) override;
 
 			using ConnectionBase::RecvPack;
 
+			virtual size_t RecvPack(uint8_t*& dest) override;
+
 			using ConnectionBase::SendAndRecvPack;
 
-			virtual void SendAndRecvPack(const void* const inData, const size_t inDataLen, std::string& outMsg);
+			virtual std::vector<uint8_t> SendAndRecvPack(const void* const inData, const size_t inDataLen) override;
 
 			void* GetPointer() const { return m_cntPtr; }
 

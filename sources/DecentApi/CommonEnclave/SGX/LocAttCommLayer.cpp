@@ -75,22 +75,21 @@ void LocAttCommLayer::InitiatorHandshake(ConnectionBase& cnt, General128BitKey& 
 	sgx_dh_msg2_t msg2;
 	std::memset(&msg2, 0, sizeof(msg2));
 
-	std::string inMsgBuf = cnt.RecvContainer<std::string>();
+	std::vector<uint8_t> inBinBuf = cnt.RecvContainer<std::vector<uint8_t> >();
 
-	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg1_t), "Received message 1 has unexpected size.");
-	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg1(CastPtr<sgx_dh_msg1_t>(inMsgBuf.data()), &msg2, &session), "Failed to process message 1.");
+	ASSERT_BOOL_RESULT(inBinBuf.size() == sizeof(sgx_dh_msg1_t), "Received message 1 has unexpected size.");
+	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg1(CastPtr<sgx_dh_msg1_t>(inBinBuf.data()), &msg2, &session), "Failed to process message 1.");
 
-	cnt.SendAndRecvPack(&msg2, sizeof(msg2), inMsgBuf);
+	inBinBuf = cnt.SendAndRecvPack(&msg2, sizeof(msg2));
 
-	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg3_t), "Received message 3 has unexpected size.");
-	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg3(CastPtr<sgx_dh_msg3_t>(inMsgBuf.data()), &session,
+	ASSERT_BOOL_RESULT(inBinBuf.size() == sizeof(sgx_dh_msg3_t), "Received message 3 has unexpected size.");
+	CHECK_SGX_SDK_RESULT(sgx_dh_initiator_proc_msg3(CastPtr<sgx_dh_msg3_t>(inBinBuf.data()), &session,
 		CastPtr<sgx_ec_key_128bit_t>(outKey.data()), &outIdentity), "Failed to process message 3.");
 }
 
 void LocAttCommLayer::ResponderHandshake(ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity)
 {
 	sgx_dh_session_t session;
-	std::string inMsgBuf;
 
 	CHECK_SGX_SDK_RESULT(sgx_dh_init_session(SGX_DH_SESSION_RESPONDER, &session), "Failed to initiate DH session.");
 
@@ -101,10 +100,10 @@ void LocAttCommLayer::ResponderHandshake(ConnectionBase& cnt, General128BitKey& 
 
 	CHECK_SGX_SDK_RESULT(sgx_dh_responder_gen_msg1(&msg1, &session), "Failed to generate message 1.");
 
-	cnt.SendAndRecvPack(&msg1, sizeof(sgx_dh_msg1_t), inMsgBuf);
+	std::vector<uint8_t> inBinBuf = cnt.SendAndRecvPack(&msg1, sizeof(sgx_dh_msg1_t));
 
-	ASSERT_BOOL_RESULT(inMsgBuf.size() == sizeof(sgx_dh_msg2_t), "Received message 2 has unexpected size.");
-	CHECK_SGX_SDK_RESULT(sgx_dh_responder_proc_msg2(CastPtr<sgx_dh_msg2_t>(inMsgBuf.data()), &msg3, &session,
+	ASSERT_BOOL_RESULT(inBinBuf.size() == sizeof(sgx_dh_msg2_t), "Received message 2 has unexpected size.");
+	CHECK_SGX_SDK_RESULT(sgx_dh_responder_proc_msg2(CastPtr<sgx_dh_msg2_t>(inBinBuf.data()), &msg3, &session,
 		CastPtr<sgx_ec_key_128bit_t>(outKey.data()), &outIdentity), "Failed to process message 2.");
 
 	cnt.SendPack(&msg3, sizeof(msg3));

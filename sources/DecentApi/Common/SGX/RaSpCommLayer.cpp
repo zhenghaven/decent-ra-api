@@ -68,7 +68,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	sgx_ra_msg0r_t msg0r;
 	sgx_ra_msg1_t msg1;
 	std::vector<uint8_t> msg2;
-	std::string msg3;
+	std::vector<uint8_t> msg3;
 	std::vector<uint8_t> msg4;
 
 	cnt.RecvRawAll(&msg0s, sizeof(msg0s));
@@ -80,7 +80,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 
 	raProcessor->ProcessMsg1(msg1, msg2);
 
-	cnt.SendAndRecvPack(msg2.data(), msg2.size(), msg3);
+	msg3 = cnt.SendAndRecvPack(msg2.data(), msg2.size());
 	if (msg3.size() < sizeof(sgx_ra_msg3_t))
 	{
 		throw Exception("Decent::Sgx::RaProcessorSp DoHandShake Failed.");

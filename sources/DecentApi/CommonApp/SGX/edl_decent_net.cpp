@@ -5,7 +5,7 @@
 
 using namespace Decent::Net;
 
-extern "C" int ocall_decent_net_cnet_send_pack(void* const ptr, const char* msg, size_t size)
+extern "C" int ocall_decent_net_cnet_send_pack(void* const ptr, const uint8_t* msg, size_t size)
 {
 	if (!ptr || !msg)
 	{
@@ -25,7 +25,7 @@ extern "C" int ocall_decent_net_cnet_send_pack(void* const ptr, const char* msg,
 	}
 }
 
-extern "C" int ocall_decent_net_cnet_recv_pack(size_t* recv_size, void* const ptr, char** msg)
+extern "C" int ocall_decent_net_cnet_recv_pack(void* const ptr, uint8_t** msg, size_t* recv_size)
 {
 	if (!recv_size || !ptr || !msg)
 	{
@@ -45,7 +45,7 @@ extern "C" int ocall_decent_net_cnet_recv_pack(size_t* recv_size, void* const pt
 	}
 }
 
-extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const char* in_msg, size_t in_size, char** out_msg, size_t* out_size)
+extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const uint8_t* in_msg, size_t in_size, uint8_t** out_msg, size_t* out_size)
 {
 	if (!ptr || !in_msg || !out_msg || !out_size)
 	{
@@ -66,7 +66,7 @@ extern "C" int ocall_decent_net_cnet_send_and_recv_pack(void* const ptr, const c
 	}
 }
 
-extern "C" int ocall_decent_net_cnet_send_raw(size_t* sent_size, void* const ptr, const char* msg, size_t size)
+extern "C" int ocall_decent_net_cnet_send_raw(size_t* sent_size, void* const ptr, const uint8_t* msg, size_t size)
 {
 	if (!sent_size || !ptr || !msg)
 	{
@@ -86,7 +86,7 @@ extern "C" int ocall_decent_net_cnet_send_raw(size_t* sent_size, void* const ptr
 	}
 }
 
-extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr, char* buf, size_t buf_size)
+extern "C" int ocall_decent_net_cnet_recv_raw(size_t* recv_size, void* const ptr, uint8_t* buf, size_t buf_size)
 {
 	if (!recv_size || !ptr || !buf)
 	{
