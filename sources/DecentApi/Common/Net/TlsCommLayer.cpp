@@ -32,42 +32,6 @@ namespace
 	{
 		return ConnectionBase::ReceiveRawCallback(ctx, buf, len);
 	}
-
-	static void MbedTlsSslWriteWrap(mbedtls_ssl_context *ssl, const void* const buf, const size_t len)
-	{
-		size_t sentSize = 0;
-		int res = 0;
-		while (sentSize < len)
-		{
-			res = mbedtls_ssl_write(ssl, reinterpret_cast<const uint8_t*>(buf), len - sentSize); //Pure C function, assume throw();
-			if (res < 0 && res != MBEDTLS_ERR_SSL_WANT_WRITE)
-			{
-				throw MbedTlsException("mbedtls_ssl_write", res);
-			}
-			else if(res >= 0)
-			{
-				sentSize += res;
-			}
-		}
-	}
-
-	static void MbedTlsSslReadWrap(mbedtls_ssl_context *ssl, void* const buf, const size_t len)
-	{
-		size_t recvSize = 0;
-		int res = 0;
-		while (recvSize < len)
-		{
-			res = mbedtls_ssl_read(ssl, reinterpret_cast<uint8_t*>(buf), len - recvSize);
-			if (res < 0 && res != MBEDTLS_ERR_SSL_WANT_READ)
-			{
-				throw MbedTlsException("mbedtls_ssl_read", res);
-			}
-			else if (res >= 0)
-			{
-				recvSize += res;
-			}
-		}
-	}
 }
 
 TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig> tlsConfig, bool reqPeerCert, std::shared_ptr<const MbedTlsObj::Session> session) :
@@ -144,85 +108,54 @@ TlsCommLayer & TlsCommLayer::operator=(TlsCommLayer && other)
 	return *this;
 }
 
-TlsCommLayer::operator bool() const
+size_t TlsCommLayer::SendRawI(const void * buf, const size_t size)
 {
-	return m_sslCtx != nullptr && m_tlsConfig && *m_tlsConfig;
-}
-
-void TlsCommLayer::SendRaw(const void * buf, const size_t size)
-{
-	if (!*this)
+	if (!IsValid())
 	{
 		throw ConnectionNotEstablished();
 	}
+	if (!buf)
+	{
+		throw Net::Exception("Function called with null pointer.");
+	}
 
-	MbedTlsSslWriteWrap(m_sslCtx.get(), buf, size);
+	int mbedRet = MBEDTLS_ERR_SSL_WANT_WRITE;
+
+	while (mbedRet == MBEDTLS_ERR_SSL_WANT_WRITE)
+	{
+		mbedRet = mbedtls_ssl_write(m_sslCtx.get(), static_cast<const uint8_t*>(buf), size); //Pure C function, assume nothrow;
+		if (mbedRet < 0 && mbedRet != MBEDTLS_ERR_SSL_WANT_WRITE)
+		{
+			throw MbedTlsException("mbedtls_ssl_write", mbedRet);
+		}
+	}
+
+	return static_cast<size_t>(mbedRet);
 }
 
-void TlsCommLayer::ReceiveRaw(void * buf, const size_t size)
+size_t TlsCommLayer::RecvRawI(void * buf, const size_t size)
 {
-	if (!*this)
+	if (!IsValid())
 	{
 		throw ConnectionNotEstablished();
 	}
-
-	MbedTlsSslReadWrap(m_sslCtx.get(), buf, size);
-}
-
-void TlsCommLayer::SendMsg(const std::string & inMsg)
-{
-	if (!*this)
+	if (!buf)
 	{
-		throw ConnectionNotEstablished();
+		throw Net::Exception("Function called with null pointer.");
 	}
 
-	uint64_t msgSize = static_cast<uint64_t>(inMsg.size());
-	MbedTlsSslWriteWrap(m_sslCtx.get(), &msgSize, sizeof(uint64_t));
-	MbedTlsSslWriteWrap(m_sslCtx.get(), inMsg.data(), inMsg.size());
-}
+	int mbedRet = MBEDTLS_ERR_SSL_WANT_READ;
 
-void TlsCommLayer::ReceiveMsg(std::string & outMsg)
-{
-	if (!*this)
+	while (mbedRet == MBEDTLS_ERR_SSL_WANT_READ)
 	{
-		throw ConnectionNotEstablished();
+		mbedRet = mbedtls_ssl_read(m_sslCtx.get(), reinterpret_cast<uint8_t*>(buf), size);
+		if (mbedRet < 0 && mbedRet != MBEDTLS_ERR_SSL_WANT_READ)
+		{
+			throw MbedTlsException("mbedtls_ssl_read", mbedRet);
+		}
 	}
 
-	uint64_t msgSize = 0;
-	MbedTlsSslReadWrap(m_sslCtx.get(), &msgSize, sizeof(uint64_t));
-
-	outMsg.resize(msgSize);
-
-	MbedTlsSslReadWrap(m_sslCtx.get(), msgSize == 0 ? nullptr : &outMsg[0], outMsg.size());
-}
-
-void TlsCommLayer::SendMsg(const std::vector<uint8_t>& inMsg)
-{
-	if (!*this)
-	{
-		throw ConnectionNotEstablished();
-	}
-
-	uint64_t msgSize = static_cast<uint64_t>(inMsg.size());
-	MbedTlsSslWriteWrap(m_sslCtx.get(), &msgSize, sizeof(uint64_t));
-	MbedTlsSslWriteWrap(m_sslCtx.get(), inMsg.data(), inMsg.size());
-}
-
-std::vector<uint8_t> TlsCommLayer::ReceiveBinary()
-{
-	if (!*this)
-	{
-		throw ConnectionNotEstablished();
-	}
-
-	uint64_t msgSize = 0;
-	MbedTlsSslReadWrap(m_sslCtx.get(), &msgSize, sizeof(uint64_t));
-
-	std::vector<uint8_t> bin(msgSize);
-
-	MbedTlsSslReadWrap(m_sslCtx.get(), bin.data(), bin.size());
-
-	return bin;
+	return static_cast<size_t>(mbedRet);
 }
 
 void TlsCommLayer::SetConnectionPtr(ConnectionBase& cnt)
@@ -246,7 +179,7 @@ std::string TlsCommLayer::GetPeerCertPem() const
 {
 	const mbedtls_x509_crt* crtPtr = mbedtls_ssl_get_peer_cert(m_sslCtx.get());
 	
-	if (!*this || !crtPtr)
+	if (!IsValid() || !crtPtr)
 	{
 		throw ConnectionNotEstablished();
 	}
@@ -258,10 +191,15 @@ std::string TlsCommLayer::GetPublicKeyPem() const
 {
 	const mbedtls_x509_crt* crtPtr = mbedtls_ssl_get_peer_cert(m_sslCtx.get());
 
-	if (!*this || !crtPtr)
+	if (!IsValid() || !crtPtr)
 	{
 		throw ConnectionNotEstablished();
 	}
 	//We just need the non-const pointer, and then we will return the PEM string.
 	return Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).GetPublicKey().ToPubPemString();
+}
+
+bool TlsCommLayer::IsValid() const
+{
+	return m_sslCtx != nullptr && m_tlsConfig && *m_tlsConfig;
 }

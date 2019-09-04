@@ -44,9 +44,9 @@ LocAttCommLayer::~LocAttCommLayer()
 {
 }
 
-LocAttCommLayer::operator bool() const
+bool LocAttCommLayer::IsValid() const
 {
-	return AesGcmCommLayer::operator bool() && m_identity;
+	return AesGcmCommLayer::IsValid() && m_identity;
 }
 
 const sgx_dh_session_enclave_identity_t& LocAttCommLayer::GetIdentity() const

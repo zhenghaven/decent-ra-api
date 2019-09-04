@@ -52,7 +52,7 @@ CntPair & CntPair::Swap(CntPair & other)
 void SecureConnectionPoolBase::ClientAckKeepAlive(CntPair & cntPair)
 {
 	char serverQuery;
-	cntPair.GetCommLayer().ReceiveStruct(serverQuery);
+	cntPair.GetCommLayer().RecvStruct(serverQuery);
 }
 
 void SecureConnectionPoolBase::ClientWakePeer(CntPair & cntPair)
@@ -68,7 +68,7 @@ void SecureConnectionPoolBase::ServerAsk(SecureCommLayer & secComm)
 void SecureConnectionPoolBase::ServerWaitWakeUpMsg(SecureCommLayer & secComm)
 {
 	char wakeMsg = 'W';
-	secComm.ReceiveStruct(wakeMsg); //Waitting wake-up message.
+	secComm.RecvStruct(wakeMsg); //Waitting wake-up message.
 }
 
 bool SecureConnectionPoolBase::HoldInComingConnection(ConnectionBase& cnt, SecureCommLayer& secComm)

@@ -70,9 +70,8 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 			return SGX_ERROR_UNEXPECTED;
 		}
 
-		std::string plainMsg;
-		commLayer.SendMsg(certReq.ToPemString());
-		commLayer.ReceiveMsg(plainMsg);
+		commLayer.SendContainer(certReq.ToPemString());
+		std::string plainMsg = commLayer.RecvContainer<std::string>();
 
 		//Process X509 Message:
 

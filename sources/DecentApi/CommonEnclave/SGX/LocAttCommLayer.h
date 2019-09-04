@@ -45,7 +45,7 @@ namespace Decent
 			 *
 			 * \return	The result of the operation.
 			 */
-			virtual operator bool() const override;
+			virtual bool IsValid() const override;
 
 			/**
 			 * \brief	Gets the identity

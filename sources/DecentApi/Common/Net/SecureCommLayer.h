@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "../ArrayPtrAndSize.h"
 #include "RpcWriter.h"
 
 namespace Decent
@@ -16,110 +17,106 @@ namespace Decent
 		class SecureCommLayer
 		{
 		public:
+			/** \brief	Default constructor */
 			SecureCommLayer() = default;
 
+			/** \brief	Destructor */
 			virtual ~SecureCommLayer() {}
 
 			/**
-			 * \brief	Sends a secure message with specific length. It's guaranteed that after this call,
-			 * 			entire message will be sent.
+			 * \brief	Sets connection pointer
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer. Must not null!
+			 */
+			virtual void SetConnectionPtr(ConnectionBase& connectionPtr) = 0;
+
+			//#################################################
+			//#      Senders
+			//#################################################
+
+			/**
+			 * \brief	Sends a secure message with specific length.
 			 *
 			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
-			 * \param 		  	buf 	The pointer to data buffer (must not null).
-			 * \param 		  	size	Size of the data.
+			 * \param	buf 	The pointer to data buffer (must not null).
+			 * \param	size	Size of the data.
+			 *
+			 * \return	A size_t. Size of data that has been sent.
 			 */
-			virtual void SendRaw(const void* buf, const size_t size) = 0;
+			virtual size_t SendRawI(const void* buf, const size_t size) = 0;
 
 			/**
-			 * \brief	Sends a secure message with specific length. It's guaranteed that after this call,
-			 * 			entire message will be sent.
+			 * \brief	Sends a secure message with specific length.
 			 *
 			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
 			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
 			 * \param 		  	buf			 	The pointer to data buffer (must not null).
 			 * \param 		  	size		 	Size of the data.
+			 *
+			 * \return	A size_t. Size of data that has been sent.
 			 */
-			virtual void SendRaw(ConnectionBase& connectionPtr, const void* buf, const size_t size)
+			virtual size_t SendRawI(ConnectionBase& connectionPtr, const void* buf, const size_t size)
 			{
 				SetConnectionPtr(connectionPtr);
-				SendRaw(buf, size);
+				return SendRawI(buf, size);
 			}
 
 			/**
-			 * \brief	Receive a secure message with specific length. It's guaranteed that after this call,
-			 * 			entire message will be received. Note: If the message received doesn't match the size
-			 * 			requested, exception will be thrown!
+			 * \brief	Sends a raw message. This function will keep calling SendRaw until entire message has
+			 * 			been sent out. Exceptions from SendRaw will not be caught, thus, it can be stopped by
+			 * 			exceptions.
 			 *
 			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
-			 * \param [in,out]	buf 	The pointer to data buffer (must not null).
-			 * \param 		  	size	The size of data need to be received.
+			 * \param	buf 	The buffer. (must not null).
+			 * \param	size	The size.
 			 */
-			virtual void ReceiveRaw(void* buf, const size_t size) = 0;
-
-			/**
-			 * \brief	Receive a secure message with specific length. It's guaranteed that after this call,
-			 * 			entire message will be received. Note: If the message received doesn't match the size
-			 * 			requested, exception will be thrown!
-			 *
-			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
-			 *
-			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
-			 * \param [in,out]	buf			 	The pointer to data buffer (must not null).
-			 * \param 		  	size		 	The size of data need to be received.
-			 */
-			virtual void ReceiveRaw(ConnectionBase& connectionPtr, void* buf, const size_t size)
+			virtual void SendRawAll(const void* buf, const size_t size)
 			{
-				SetConnectionPtr(connectionPtr);
-				ReceiveRaw(buf, size);
-			}
-
-			/**
-			 * \brief	Sends a RPC
-			 *
-			 * \param	rpc	The RPC.
-			 */
-			virtual void SendRpc(const RpcWriter& rpc)
-			{
-				if (rpc.HasSizeAtFront())
+				size_t byteSent = 0;
+				while (byteSent < size)
 				{
-					const auto& bin = rpc.GetBinaryArray();
-					SendRaw(bin.data(), bin.size());
-				}
-				else
-				{
-					SendMsg(rpc.GetBinaryArray());
+					byteSent += SendRawI(static_cast<const uint8_t*>(buf) + byteSent, size - byteSent);
 				}
 			}
 
 			/**
-			* \brief	Sends a structure as message.
-			*
-			* \tparam	T	Generic type parameter.
-			* \param 		  	buf			 	The structure to be sent.
-			*/
-			template<typename T>
-			void SendStruct(const T& buf)
+			 * \brief	Sends a raw message. This function will keep calling SendRaw until entire message has
+			 * 			been sent out. Exceptions from SendRaw will not be caught, thus, it can be stopped by
+			 * 			exceptions.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer. (must not null).
+			 * \param 		  	buf			 	The buffer. (must not null).
+			 * \param 		  	size		 	The size.
+			 */
+			virtual void SendRawAll(ConnectionBase& connectionPtr, const void* buf, const size_t size)
 			{
-				SendRaw(&buf, sizeof(T));
-			}
-
-			/**
-			* \brief	Receive structure as message.
-			*
-			* \tparam	T	Generic type parameter.
-			* \param [in,out]	buf			 	The structure buffer.
-			*/
-			template<typename T>
-			void ReceiveStruct(T& buf)
-			{
-				ReceiveRaw(&buf, sizeof(T));
+				SetConnectionPtr(connectionPtr);
+				return SendRawAll(buf, size);
 			}
 
 			/**
 			 * \brief	Sends a structure as message.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \tparam	T	Generic type parameter.
+			 * \param	buf	The structure to be sent.
+			 */
+			template<typename T>
+			void SendStruct(const T& buf)
+			{
+				SendRawAll(&buf, sizeof(T));
+			}
+
+			/**
+			 * \brief	Sends a structure as message.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
 			 * \tparam	T	Generic type parameter.
 			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
@@ -128,109 +125,282 @@ namespace Decent
 			template<typename T>
 			void SendStruct(ConnectionBase& connectionPtr, const T& buf)
 			{
-				SendRaw(connectionPtr, &buf, sizeof(T));
+				SetConnectionPtr(connectionPtr);
+				return SendStruct(buf);
+			}
+
+			/**
+			 * \brief	Sends a package of message. The size of the package is sent first, so that receiver
+			 * 			can distinguish different packages.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param	dataPtr	The data pointer.
+			 * \param	size   	The size.
+			 */
+			virtual void SendPack(const void* const buf, const size_t size)
+			{
+				uint64_t packSize = size;
+				SendRawAll(&packSize, sizeof(packSize));
+				SendRawAll(buf, packSize);
+			}
+
+			/**
+			 * \brief	Sends a package of message. The size of the package is sent first, so that receiver
+			 * 			can distinguish different packages.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer. Must not null.
+			 * \param 		  	buf			 	The pointer to the buffer. Must not null.
+			 * \param 		  	size		 	The size.
+			 */
+			virtual void SendPack(ConnectionBase& connectionPtr, const void* const buf, const size_t size)
+			{
+				SetConnectionPtr(connectionPtr);
+				return SendPack(buf, size);
+			}
+
+			/**
+			 * \brief	Sends a container.
+			 *
+			 * \tparam	Container	Type of the container.
+			 * \param	cnt	Container to be sent.
+			 */
+			template<typename Container>
+			void SendContainer(const Container& cnt)
+			{
+				SendPack(ArrayPtrAndSize::GetPtr(cnt), ArrayPtrAndSize::GetSize(cnt));
+			}
+
+			/**
+			 * \brief	Sends a container.
+			 *
+			 * \tparam	Container	Type of the container.
+			 * \param [in,out]	connectionPtr	The connection pointer. Must not null.
+			 * \param 		  	cnt			 	Container to be sent.
+			 */
+			template<typename Container>
+			void SendContainer(ConnectionBase& connectionPtr, const Container& cnt)
+			{
+				SendPack(connectionPtr, ArrayPtrAndSize::GetPtr(cnt), ArrayPtrAndSize::GetSize(cnt));
+			}
+
+			/**
+			 * \brief	Sends a RPC
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param	rpc	The RPC.
+			 */
+			virtual void SendRpc(const RpcWriter& rpc)
+			{
+				if (rpc.HasSizeAtFront())
+				{
+					const auto& bin = rpc.GetBinaryArray();
+					SendRawAll(bin.data(), bin.size());
+				}
+				else
+				{
+					SendContainer(rpc.GetBinaryArray());
+				}
+			}
+
+			/**
+			 * \brief	Sends a RPC
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer. Must not null.
+			 * \param 		  	rpc			 	The RPC.
+			 */
+			virtual void SendRpc(ConnectionBase& connectionPtr, const RpcWriter& rpc)
+			{
+				SetConnectionPtr(connectionPtr);
+				return SendRpc(rpc);
+			}
+
+			//#################################################
+			//#      Receivers
+			//#################################################
+
+			/**
+			 * \brief	Receive a secure message with specific length.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param [in,out]	buf 	The pointer to data buffer (must not null).
+			 * \param 		  	size	The size of data need to be received.
+			 *
+			 * \return	A size_t. Size of data that has been received.
+			 */
+			virtual size_t RecvRawI(void* buf, const size_t size) = 0;
+
+			/**
+			 * \brief	Receive a secure message with specific length.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
+			 * \param [in,out]	buf			 	The pointer to data buffer (must not null).
+			 * \param 		  	size		 	The size of data need to be received.
+			 *
+			 * \return	A size_t. Size of data that has been received.
+			 */
+			virtual size_t RecvRawI(ConnectionBase& connectionPtr, void* buf, const size_t size)
+			{
+				SetConnectionPtr(connectionPtr);
+				return RecvRawI(buf, size);
+			}
+
+			/**
+			 * \brief	Receive raw message. This function will keep calling ReceiveRaw until entire message
+			 * 			has been received. Exceptions from ReceiveRaw will not be caught, thus, it can be
+			 * 			stopped by exceptions.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param [out]	bufPtr	The buffer pointer. Must not null.
+			 * \param 	   	size  	The message size.
+			 */
+			virtual void RecvRawAll(void* const buf, const size_t size)
+			{
+				size_t byteRecv = 0;
+				while (byteRecv < size)
+				{
+					byteRecv += RecvRawI(static_cast<uint8_t*>(buf) + byteRecv, size - byteRecv);
+				}
+			}
+
+			/**
+			 * \brief	Receive raw message. This function will keep calling ReceiveRaw until entire message
+			 * 			has been received. Exceptions from ReceiveRaw will not be caught, thus, it can be
+			 * 			stopped by exceptions.
+			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \param [in,out]	connectionPtr	The connection pointer. Must not null.
+			 * \param [in,out]	buf			 	If non-null, the buffer. Must not null.
+			 * \param 		  	size		 	The message size.
+			 */
+			virtual void RecvRawAll(ConnectionBase& connectionPtr, void* const buf, const size_t size)
+			{
+				SetConnectionPtr(connectionPtr);
+				return RecvRawAll(buf, size);
 			}
 
 			/**
 			 * \brief	Receive structure as message.
 			 *
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
 			 * \tparam	T	Generic type parameter.
-			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
-			 * \param [in,out]	buf			 	The structure buffer.
+			 * \param [out]	st	The structure to be received.
 			 */
 			template<typename T>
-			void ReceiveStruct(ConnectionBase& connectionPtr, T& buf)
+			void RecvStruct(T& st)
 			{
-				ReceiveRaw(connectionPtr, &buf, sizeof(T));
+				RecvRawAll(&st, sizeof(T));
 			}
 
 			/**
-			 * \brief	Sends a message.
+			 * \brief	Receive structure as message.
 			 *
-			 * \param 		  	inMsg	Message to be sent.
-			 */
-			virtual void SendMsg(const std::string& inMsg) = 0;
-
-			/**
-			 * \brief	Sends a message.
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
+			 * \tparam	T	Generic type parameter.
 			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
-			 * \param 		  	inMsg		 	Message to be sent.
+			 * \param [out]	  	st			 	The structure to be received.
 			 */
-			virtual void SendMsg(ConnectionBase& connectionPtr, const std::string& inMsg)
+			template<typename T>
+			void RecvStruct(ConnectionBase& connectionPtr, T& st)
 			{
 				SetConnectionPtr(connectionPtr);
-				SendMsg(inMsg);
+				return RecvStruct(st);
 			}
 
 			/**
-			 * \brief	Receives a message. Output message size will be automatically adjusted to fit the
-			 * 			message received.
+			 * \brief	Receive a package of message. It receives the size of the package first, so it knows
+			 * 			how much data to receive. Note: The sender must send the size of package first (e.g.
+			 * 			by calling SendPack function).
 			 *
-			 * \param [in,out]	outMsg	Received message.
-			 */
-			virtual void ReceiveMsg(std::string& outMsg) = 0;
-
-			/**
-			 * \brief	Receives a message. Output message size will be automatically adjusted to fit the
-			 * 			message received.
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
-			 * \param [in,out]	connectionPtr	The connection pointer.
-			 * \param [in,out]	outMsg		 	Received message.
+			 * \param [in,out]	dest	[in,out] The pointer to the destination buffer. Must be null when
+			 * 							calling, otherwise, the buffer pointed by the pointer will not be de-
+			 * 							allocated. After the function call, the pointer to new destination buffer
+			 * 							will be assigned.
+			 *
+			 * \return	A size_t. The size of the package.
 			 */
-			virtual void ReceiveMsg(ConnectionBase& connectionPtr, std::string& outMsg)
+			virtual size_t RecvPack(char*& dest)
 			{
-				SetConnectionPtr(connectionPtr);
-				ReceiveMsg(outMsg);
+				uint64_t packSize = 0;
+				RecvRawAll(&packSize, sizeof(packSize));
+
+				dest = new char[static_cast<size_t>(packSize)];
+				RecvRawAll(dest, static_cast<size_t>(packSize));
+				return static_cast<size_t>(packSize);
 			}
 
 			/**
-			 * \brief	Sends a message.
+			 * \brief	Receive a package of message. It receives the size of the package first, so it knows
+			 * 			how much data to receive. Note: The sender must send the size of package first (e.g.
+			 * 			by calling SendPack function).
 			 *
-			 * \param 		  	inMsg	Message to be sent.
-			 */
-			virtual void SendMsg(const std::vector<uint8_t>& inMsg) = 0;
-
-			/**
-			 * \brief	Sends a message.
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
 			 *
-			 * \param [in,out]	connectionPtr	The connection pointer (must not null).
-			 * \param 		  	inMsg		 	Message to be sent.
+			 * \param [in,out]	dest	[in,out] The pointer to the destination buffer. Must be null when
+			 * 							calling, otherwise, the buffer pointed by the pointer will not be de-
+			 * 							allocated. After the function call, the pointer to new destination buffer
+			 * 							will be assigned.
+			 *
+			 * \return	A size_t. The size of the package.
 			 */
-			virtual void SendMsg(ConnectionBase& connectionPtr, const std::vector<uint8_t>& inMsg)
+			virtual size_t RecvPack(ConnectionBase& connectionPtr, char*& dest)
 			{
 				SetConnectionPtr(connectionPtr);
-				SendMsg(inMsg);
+				return RecvPack(dest);
 			}
 
 			/**
-			 * \brief	Receives a binary block.
+			 * \brief	Receives a container.
 			 *
-			 * \return	A std::vector&lt;uint8_t&gt;
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \tparam	Container	Type of the container.
+			 *
+			 * \return	A Container.
 			 */
-			virtual std::vector<uint8_t> ReceiveBinary() = 0;
-
-			/**
-			 * \brief	Receives a binary block. 
-			 *
-			 * \param [in,out]	connectionPtr	The connection pointer.
-			 *
-			 * \return	A std::vector&lt;uint8_t&gt;
-			 */
-			virtual std::vector<uint8_t> ReceiveBinary(ConnectionBase& connectionPtr)
+			template<typename Container>
+			Container RecvContainer()
 			{
-				SetConnectionPtr(connectionPtr);
-				return ReceiveBinary();
+				using namespace ArrayPtrAndSize;
+				uint64_t packSize = 0;
+				RecvRawAll(&packSize, sizeof(packSize));
+				
+				Container cnt;
+				Resize(cnt, static_cast<size_t>(packSize));
+				RecvRawAll(GetPtr(cnt), GetSize(cnt));
+
+				return cnt;
 			}
 
 			/**
-			 * \brief	Determine this instance is in valid or not.
+			 * \brief	Receives a container.
 			 *
-			 * \return	True if valid, otherwise, false.
+			 * \exception	Decent::Net::Exception	It's thrown when the operation is failed.
+			 *
+			 * \tparam	Container	Type of the container.
+			 *
+			 * \return	A Container.
 			 */
-			virtual operator bool() const = 0;
-
-			virtual void SetConnectionPtr(ConnectionBase& connectionPtr) = 0;
+			template<typename Container>
+			Container RecvContainer(ConnectionBase& connectionPtr)
+			{
+				SetConnectionPtr(connectionPtr);
+				return RecvContainer<Container>();
+			}
 		};
 	}
 }

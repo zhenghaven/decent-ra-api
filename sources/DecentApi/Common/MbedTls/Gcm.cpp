@@ -22,7 +22,7 @@ void GcmBase::FreeObject(mbedtls_gcm_context * ptr)
 	delete ptr;
 }
 
-Decent::MbedTlsObj::GcmBase::GcmBase(const void * key, const size_t size, const GcmBase::Cipher cipher) :
+GcmBase::GcmBase(const void * key, const size_t size, const GcmBase::Cipher cipher) :
 	GcmBase(ConstructGcmWithKey(key, size, cipher).release(), &GcmBase::FreeObject)
 {
 }

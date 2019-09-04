@@ -33,40 +33,11 @@ namespace Decent
 			TlsCommLayer& operator=(const TlsCommLayer& other) = delete;
 			TlsCommLayer& operator=(TlsCommLayer&& other);
 
-			operator bool() const;
+			using SecureCommLayer::SendRawI;
+			virtual size_t SendRawI(const void* buf, const size_t size) override;
 
-			virtual void SendRaw(const void* buf, const size_t size) override;
-			virtual void SendRaw(ConnectionBase& cnt, const void* buf, const size_t size) override
-			{
-				SecureCommLayer::SendRaw(cnt, buf, size);
-			}
-
-			virtual void ReceiveRaw(void* buf, const size_t size) override;
-			virtual void ReceiveRaw(ConnectionBase& cnt, void* buf, const size_t size) override
-			{
-				SecureCommLayer::ReceiveRaw(cnt, buf, size);
-			}
-
-			virtual void SendMsg(const std::string& inMsg) override;
-			virtual void SendMsg(ConnectionBase& cnt, const std::string& inMsg) override
-			{
-				SecureCommLayer::SendMsg(cnt, inMsg);
-			}
-
-			virtual void ReceiveMsg(std::string& outMsg) override;
-			virtual void ReceiveMsg(ConnectionBase& cnt, std::string& outMsg) override
-			{
-				SecureCommLayer::ReceiveMsg(cnt, outMsg);
-			}
-
-			virtual void SendMsg(const std::vector<uint8_t>& inMsg) override;
-			virtual void SendMsg(ConnectionBase& cnt, const std::vector<uint8_t>& inMsg) override
-			{
-				SecureCommLayer::SendMsg(cnt, inMsg);
-			}
-
-			using SecureCommLayer::ReceiveBinary;
-			virtual std::vector<uint8_t> ReceiveBinary() override;
+			using SecureCommLayer::RecvRawI;
+			virtual size_t RecvRawI(void* buf, const size_t size) override;
 
 			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 
@@ -74,6 +45,8 @@ namespace Decent
 
 			std::string GetPeerCertPem() const;
 			std::string GetPublicKeyPem() const;
+
+			virtual bool IsValid() const;
 
 		private:
 			std::unique_ptr<mbedtls_ssl_context> m_sslCtx;

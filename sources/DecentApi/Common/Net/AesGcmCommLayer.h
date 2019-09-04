@@ -64,7 +64,7 @@ namespace Decent
 			 *
 			 * \return	True if is valid, otherwise, false.
 			 */
-			virtual operator bool() const override;
+			virtual bool IsValid() const;
 
 			/**
 			 * \brief	Decrypts a message
@@ -106,63 +106,19 @@ namespace Decent
 			 */
 			virtual std::vector<uint8_t> EncryptMsg(const std::vector<uint8_t>& inMsg);
 
-			virtual void ReceiveRaw(void* buf, const size_t size) override;
-			virtual void ReceiveRaw(ConnectionBase& cnt, void* buf, const size_t size) override
-			{
-				SecureCommLayer::ReceiveRaw(cnt, buf, size);
-			}
+			using SecureCommLayer::SendRawI;
+			virtual size_t SendRawI(const void* buf, const size_t size) override;
 
-			virtual void SendRaw(const void* buf, const size_t size) override;
-			virtual void SendRaw(ConnectionBase& cnt, const void* buf, const size_t size) override
-			{
-				SecureCommLayer::SendRaw(cnt, buf, size);
-			}
-
-			virtual void SendMsg(const std::string& inMsg) override
-			{
-				SendRaw(inMsg.data(), inMsg.size());
-			}
-			virtual void SendMsg(ConnectionBase& cnt, const std::string& inMsg) override
-			{
-				SecureCommLayer::SendMsg(cnt, inMsg);
-			}
-
-			virtual void ReceiveMsg(std::string& outMsg) override;
-			virtual void ReceiveMsg(ConnectionBase& cnt, std::string& outMsg) override
-			{
-				SecureCommLayer::ReceiveMsg(cnt, outMsg);
-			}
-
-			virtual void SendMsg(const std::vector<uint8_t>& inMsg) override
-			{
-				SendRaw(inMsg.data(), inMsg.size());
-			}
-			virtual void SendMsg(ConnectionBase& cnt, const std::vector<uint8_t>& inMsg) override
-			{
-				SecureCommLayer::SendMsg(cnt, inMsg);
-			}
-
-			virtual void SendRpc(const RpcWriter& rpc) override
-			{
-				if (rpc.HasSizeAtFront())
-				{
-					const auto& bin = rpc.GetBinaryArray();
-					SendRaw(bin.data() + sizeof(uint64_t), bin.size());
-				}
-				else
-				{
-					SendMsg(rpc.GetBinaryArray());
-				}
-			}
-
-			using SecureCommLayer::ReceiveBinary;
-			virtual std::vector<uint8_t> ReceiveBinary() override;
+			using SecureCommLayer::RecvRawI;
+			virtual size_t RecvRawI(void* buf, const size_t size) override;
 
 			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 
 		private:
 			KeyType m_key;
 			ConnectionBase* m_connection;
+
+			std::vector<uint8_t> m_streamBuf;
 		};
 	}
 }

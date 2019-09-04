@@ -25,19 +25,22 @@ namespace
 
 AesGcmCommLayer::AesGcmCommLayer(const uint8_t (&sKey)[GENERAL_128BIT_16BYTE_SIZE], ConnectionBase* connection) :
 	m_key(sKey),
-	m_connection(connection)
+	m_connection(connection),
+	m_streamBuf()
 {
 }
 
 AesGcmCommLayer::AesGcmCommLayer(const AesGcm128bKeyType & sKey, ConnectionBase* connection) :
 	m_key(sKey),
-	m_connection(connection)
+	m_connection(connection),
+	m_streamBuf()
 {
 }
 
 AesGcmCommLayer::AesGcmCommLayer(AesGcmCommLayer && other) :
 	m_key(std::move(other.m_key)),
-	m_connection(other.m_connection)
+	m_connection(other.m_connection),
+	m_streamBuf(std::move(other.m_streamBuf))
 {
 	other.m_connection = nullptr;
 }
@@ -55,11 +58,13 @@ AesGcmCommLayer & AesGcmCommLayer::operator=(AesGcmCommLayer && other)
 		ConnectionBase* tmpCnt = m_connection;
 		m_connection = other.m_connection;
 		other.m_connection = tmpCnt;
+
+		m_streamBuf = std::move(other.m_streamBuf);
 	}
 	return *this;
 }
 
-AesGcmCommLayer::operator bool() const
+bool AesGcmCommLayer::IsValid() const
 {
 	return true;
 }
@@ -100,55 +105,53 @@ void AesGcmCommLayer::SetConnectionPtr(ConnectionBase& cnt)
 	m_connection = &cnt;
 }
 
-void AesGcmCommLayer::ReceiveRaw(void * buf, const size_t size)
+size_t AesGcmCommLayer::RecvRawI(void * buf, const size_t size)
 {
-	std::string msgBuf;
-	ReceiveMsg(msgBuf);
-	if (msgBuf.size() != size)
-	{
-		throw Exception("The size of received message does not match the size that requested!");
-	}
-
-	uint8_t* bytePtr = static_cast<uint8_t*>(buf);
-	memcpy(bytePtr, msgBuf.data(), size);
-}
-
-void AesGcmCommLayer::ReceiveMsg(std::string & outMsg)
-{
-	if (!*this)
+	if (!IsValid())
 	{
 		throw ConnectionNotEstablished();
 	}
 
-	std::string encrypted;
-	m_connection->ReceivePack(encrypted);
+	if (m_streamBuf.size() == 0)
+	{
+		//Buffer is clear, we need to poll data from remote first.
+
+		std::vector<uint8_t> encBlock;
+		m_connection->ReceivePack(encBlock);
+
+		m_streamBuf = DecryptMsg(encBlock);
+	}
 	
-	outMsg = DecryptMsg(encrypted);
+	const bool isOutBufEnough = m_streamBuf.size() <= size;
+	const size_t byteToCopy = isOutBufEnough ? m_streamBuf.size() : size;
+	
+	std::memcpy(buf, m_streamBuf.data(), byteToCopy);
+
+	//Clean the buffer
+	if (isOutBufEnough)
+	{
+		m_streamBuf.clear();
+	}
+	else
+	{
+		m_streamBuf = std::vector<uint8_t>(m_streamBuf.begin() + byteToCopy, m_streamBuf.end());
+	}
+
+	return byteToCopy;
 }
 
-std::vector<uint8_t> AesGcmCommLayer::ReceiveBinary()
+size_t AesGcmCommLayer::SendRawI(const void * buf, const size_t size)
 {
-	if (!*this)
+	if (!IsValid())
 	{
 		throw ConnectionNotEstablished();
 	}
 
-	std::vector<uint8_t> encrypted;
-	m_connection->ReceivePack(encrypted);
-
-	return DecryptMsg(encrypted);
-}
-
-void AesGcmCommLayer::SendRaw(const void * buf, const size_t size)
-{
-	if (!*this)
-	{
-		throw ConnectionNotEstablished();
-	}
-
-	std::vector<uint8_t> encrypted = EncryptMsg(
+	std::vector<uint8_t> encBlock = EncryptMsg(
 		std::vector<uint8_t>(static_cast<const uint8_t*>(buf), static_cast<const uint8_t*>(buf) + size));
 
-	m_connection->SendPack(encrypted);
+	m_connection->SendPack(encBlock);
+
+	return size;
 }
 
