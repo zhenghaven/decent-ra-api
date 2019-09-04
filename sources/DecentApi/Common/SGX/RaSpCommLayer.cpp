@@ -90,6 +90,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	cnt.SendContainer(msg4);
 
 	neSession->m_secretKey = raProcessor->GetSK();
+	neSession->m_maskingKey = raProcessor->GetMK();
 	neSession->m_iasReport = *raProcessor->ReleaseIasReport();
 
 	//try to generate new ticket
@@ -109,7 +110,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 		return std::make_pair(std::move(neSession), &cnt);
 	}
 
-	std::fill_n(sessionBin.begin(), sessionBin.size(), 0);
+	ZeroizeContainer(sessionBin);
 
 	cnt.SendRawAll(&gsk_hasNewTicket, sizeof(gsk_hasNewTicket));
 	cnt.SendContainer(neTicket);

@@ -42,15 +42,15 @@ namespace Decent
 			virtual void ProcessMsg4(const std::vector<uint8_t>& msg4Pack);
 
 			bool IsAttested() const;
-			const General128BitKey& GetMK() const;
-			const General128BitKey& GetSK() const;
+			const G128BitSecretKeyWrap& GetMK() const;
+			const G128BitSecretKeyWrap& GetSK() const;
 			std::unique_ptr<sgx_ias_report_t> ReleaseIasReport();
 
 		protected:
 			virtual void InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey);
 			virtual void CloseRaContext();
 			virtual bool CheckKeyDerivationFuncId(const uint16_t id) const;
-			virtual void DeriveSharedKeys(General128BitKey& mk, General128BitKey& sk);
+			virtual void DeriveSharedKeys(G128BitSecretKeyWrap& mk, G128BitSecretKeyWrap& sk);
 			virtual void GetMsg1(sgx_ra_msg1_t& msg1);
 
 			uint64_t m_enclaveId;
@@ -61,8 +61,8 @@ namespace Decent
 
 			std::unique_ptr<sgx_ra_config> m_raConfig;
 			std::unique_ptr<sgx_ec256_public_t> m_peerSignKey;
-			General128BitKey m_mk;
-			General128BitKey m_sk;
+			G128BitSecretKeyWrap m_mk;
+			G128BitSecretKeyWrap m_sk;
 			std::unique_ptr<sgx_ias_report_t> m_iasReport;
 
 			SpSignPubKeyVerifier m_signKeyVerifier;

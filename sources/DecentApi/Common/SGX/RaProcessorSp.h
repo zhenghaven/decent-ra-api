@@ -62,8 +62,8 @@ namespace Decent
 			const sgx_ra_config& GetRaConfig() const;
 			bool IsAttested() const;
 			std::unique_ptr<sgx_ias_report_t> ReleaseIasReport();
-			const General128BitKey& GetSK() const;
-			const General128BitKey& GetMK() const;
+			const G128BitSecretKeyWrap& GetSK() const;
+			const G128BitSecretKeyWrap& GetMK() const;
 
 			virtual void GetMsg0r(sgx_ra_msg0r_t& msg0r);
 			const std::string& GetIasReportStr() const;
@@ -96,10 +96,10 @@ namespace Decent
 
 			std::string m_nonce;
 
-			General128BitKey m_smk;
-			General128BitKey m_mk;
-			General128BitKey m_sk;
-			General128BitKey m_vk;
+			G128BitSecretKeyWrap m_smk;
+			G128BitSecretKeyWrap m_mk;
+			G128BitSecretKeyWrap m_sk;
+			G128BitSecretKeyWrap m_vk;
 
 			SgxReportDataVerifier m_rpDataVrfy;
 			SgxQuoteVerifier m_quoteVrfy;

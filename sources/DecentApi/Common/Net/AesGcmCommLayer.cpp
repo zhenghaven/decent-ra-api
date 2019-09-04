@@ -73,7 +73,7 @@ std::string AesGcmCommLayer::DecryptMsg(const std::string & inMsg)
 {
 	std::vector<uint8_t> meta; //Not used here.
 	std::vector<uint8_t> res;
-	Tools::QuickAesGcmUnpack(m_key.m_key, inMsg, meta, res, nullptr, PACK_BLOCK_SIZE);
+	Tools::QuickAesGcmUnpack(m_key.m_key, inMsg, std::array<uint8_t, 0>(), meta, res, nullptr, PACK_BLOCK_SIZE);
 
 	return Bin2String(res);
 }
@@ -82,14 +82,14 @@ std::string AesGcmCommLayer::EncryptMsg(const std::string & inMsg)
 {
 	General128Tag tag; //Not used here.
 	return Bin2String(
-		Tools::QuickAesGcmPack(m_key.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, tag, PACK_BLOCK_SIZE));
+		Tools::QuickAesGcmPack(m_key.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, std::array<uint8_t, 0>(), tag, PACK_BLOCK_SIZE));
 }
 
 std::vector<uint8_t> AesGcmCommLayer::DecryptMsg(const std::vector<uint8_t>& inMsg)
 {
 	std::vector<uint8_t> meta; //Not used here.
 	std::vector<uint8_t> res;
-	Tools::QuickAesGcmUnpack(m_key.m_key, inMsg, meta, res, nullptr, PACK_BLOCK_SIZE);
+	Tools::QuickAesGcmUnpack(m_key.m_key, inMsg, std::array<uint8_t, 0>(), meta, res, nullptr, PACK_BLOCK_SIZE);
 
 	return res;
 }
@@ -97,7 +97,7 @@ std::vector<uint8_t> AesGcmCommLayer::DecryptMsg(const std::vector<uint8_t>& inM
 std::vector<uint8_t> AesGcmCommLayer::EncryptMsg(const std::vector<uint8_t>& inMsg)
 {
 	General128Tag tag; //Not used here.
-	return Tools::QuickAesGcmPack(m_key.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, tag, PACK_BLOCK_SIZE);
+	return Tools::QuickAesGcmPack(m_key.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, std::array<uint8_t, 0>(), tag, PACK_BLOCK_SIZE);
 }
 
 void AesGcmCommLayer::SetConnectionPtr(ConnectionBase& cnt)

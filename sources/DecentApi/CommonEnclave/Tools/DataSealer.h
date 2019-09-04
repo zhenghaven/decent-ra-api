@@ -99,7 +99,7 @@ namespace Decent
 				General128BitKey sealKey;
 				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey, keyMeta, std::vector<uint8_t>());
 
-				return QuickAesGcmPack(sealKey, keyMeta, metadata, data, outTag, sealedBlockSize);
+				return QuickAesGcmPack(sealKey, keyMeta, metadata, data, std::array<uint8_t, 0>(), outTag, sealedBlockSize);
 			}
 
 			/**
@@ -127,7 +127,7 @@ namespace Decent
 				General128BitKey sealKey;
 				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey, GetKeyMetaFromPack(inData), std::vector<uint8_t>());
 
-				return QuickAesGcmUnpack(sealKey, inData, metadata, data, inTag, sealedBlockSize);
+				return QuickAesGcmUnpack(sealKey, inData, std::array<uint8_t, 0>(), metadata, data, inTag, sealedBlockSize);
 			}
 		}
 	}

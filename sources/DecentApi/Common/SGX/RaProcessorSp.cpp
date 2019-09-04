@@ -86,10 +86,6 @@ RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<
 
 RaProcessorSp::~RaProcessorSp()
 {
-	m_smk.fill(0);
-	m_mk.fill(0);
-	m_sk.fill(0);
-	m_vk.fill(0);
 }
 
 RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
@@ -114,10 +110,6 @@ RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
 	m_reportSign(std::move(other.m_reportSign))
 {
 	other.m_iasConnectorPtr = nullptr;
-	other.m_smk.fill(0);
-	other.m_mk.fill(0);
-	other.m_sk.fill(0);
-	other.m_vk.fill(0);
 	other.m_isAttested = false;
 }
 
@@ -178,7 +170,7 @@ void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 	}
 
 	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
-	if (!MbedTlsHelper::CalcCmacAes128(m_smk, reinterpret_cast<uint8_t*>(&(msg2Ref.g_b)), cmac_size, msg2Ref.mac))
+	if (!MbedTlsHelper::CalcCmacAes128(m_smk.m_key, reinterpret_cast<uint8_t*>(&(msg2Ref.g_b)), cmac_size, msg2Ref.mac))
 	{
 		throw RuntimeException("RaProcessorSp::ProcessMsg1 failed to calculate CMAC.");
 	}
@@ -207,7 +199,7 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	uint32_t mac_size = static_cast<uint32_t>(msg3Len - sizeof(sgx_mac_t));
 	const uint8_t *p_msg3_cmaced = reinterpret_cast<const uint8_t*>(&msg3) + sizeof(sgx_mac_t);
 
-	if (!MbedTlsHelper::VerifyCmacAes128(m_smk, p_msg3_cmaced, mac_size, msg3.mac))
+	if (!MbedTlsHelper::VerifyCmacAes128(m_smk.m_key, p_msg3_cmaced, mac_size, msg3.mac))
 	{
 		throw RuntimeException("RaProcessorSp::ProcessMsg3 failed to verify MSG 3.");
 	}
@@ -277,7 +269,7 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	std::memcpy(msg4Bin.data(), &msg4, msg4Bin.size());
 
 	General128Tag tag;
-	msg4Pack = QuickAesGcmPack(GetSK(), std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), msg4Bin, tag, 1024);
+	msg4Pack = QuickAesGcmPack(GetSK().m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), msg4Bin, GetMK().m_key, tag, 1024);
 
 	if (!m_isAttested)
 	{
@@ -300,12 +292,12 @@ std::unique_ptr<sgx_ias_report_t> RaProcessorSp::ReleaseIasReport()
 	return std::move(m_iasReport);
 }
 
-const General128BitKey & RaProcessorSp::GetSK() const
+const G128BitSecretKeyWrap & RaProcessorSp::GetSK() const
 {
 	return m_sk;
 }
 
-const General128BitKey & RaProcessorSp::GetMK() const
+const G128BitSecretKeyWrap & RaProcessorSp::GetMK() const
 {
 	return m_mk;
 }
@@ -360,10 +352,10 @@ void RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrP
 		throw RuntimeException("In RaProcessorSp::SetPeerEncrPubKey, failed to calculate shared secret.");
 	}
 
-	if (!MbedTlsHelper::CkdfAes128(sharedKey, "SMK", m_smk) ||
-		!MbedTlsHelper::CkdfAes128(sharedKey, "MK", m_mk) ||
-		!MbedTlsHelper::CkdfAes128(sharedKey, "SK", m_sk) ||
-		!MbedTlsHelper::CkdfAes128(sharedKey, "VK", m_vk))
+	if (!MbedTlsHelper::CkdfAes128(sharedKey, "SMK", m_smk.m_key) ||
+		!MbedTlsHelper::CkdfAes128(sharedKey, "MK", m_mk.m_key) ||
+		!MbedTlsHelper::CkdfAes128(sharedKey, "SK", m_sk.m_key) ||
+		!MbedTlsHelper::CkdfAes128(sharedKey, "VK", m_vk.m_key))
 	{
 		throw RuntimeException("In RaProcessorSp::SetPeerEncrPubKey, failed to calculate shared key set.");
 	}

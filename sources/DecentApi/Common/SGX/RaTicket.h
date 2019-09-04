@@ -43,12 +43,13 @@ namespace Decent
 
 		struct RaSession
 		{
-			General128BitKey m_secretKey;
+			G128BitSecretKeyWrap m_secretKey;
+			G128BitSecretKeyWrap m_maskingKey;
 			SgxIasReport m_iasReport;
 
 			static constexpr size_t GetSize()
 			{
-				return GENERAL_128BIT_16BYTE_SIZE + sizeof(m_iasReport.m_iasReport);
+				return GENERAL_128BIT_16BYTE_SIZE + GENERAL_128BIT_16BYTE_SIZE + sizeof(m_iasReport.m_iasReport);
 			}
 
 			void ToBinary(std::vector<uint8_t>::iterator start, std::vector<uint8_t>::iterator end) const
@@ -58,7 +59,8 @@ namespace Decent
 					throw RuntimeException("Failed to serialize SGX RA session, because buffer size is too small.");
 				}
 
-				auto keyEnd = std::copy(m_secretKey.begin(), m_secretKey.end(), start);
+				auto keyEnd = std::copy(m_secretKey.m_key.begin(), m_secretKey.m_key.end(), start);
+				keyEnd = std::copy(m_maskingKey.m_key.begin(), m_maskingKey.m_key.end(), keyEnd);
 
 				std::copy(std::begin(m_iasReport.m_iasReport), std::end(m_iasReport.m_iasReport), keyEnd);
 			}

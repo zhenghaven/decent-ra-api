@@ -75,23 +75,25 @@ namespace
 
 std::vector<uint8_t> detail::QuickAesGcmPack(const void * keyPtr, const size_t keySize,
 	const void * inKeyMeta, const size_t inKeyMetaSize,
-	const void * inMeta, const size_t inMetaSize,
-	const void * inData, const size_t inDataSize,
+	const void * inMeta,    const size_t inMetaSize,
+	const void * inData,    const size_t inDataSize,
+	const void * addData,   const size_t addDataSize,
 	Decent::General128Tag& outTag,
 	const size_t sealedBlockSize)
 {
 	if (!keyPtr ||
 		!inData ||
 		(inKeyMetaSize > 0 && !inKeyMeta) ||
-		(inMetaSize > 0 && !inMeta))
+		(inMetaSize > 0 && !inMeta) ||
+		(addDataSize > 0 && !addData))
 	{
 		throw RuntimeException("Invalid argument(s) is given to function detail::QuickAesGcmPack");
 	}
 
-	size_t addSize = 0;
+	size_t defAddSize = 0;
 	size_t sealedSize = 0;
 	std::vector<uint8_t> sealedRes(
-		GetTotalSealedBlockSize(sealedBlockSize, inKeyMetaSize, inMetaSize, inDataSize, addSize, sealedSize));
+		GetTotalSealedBlockSize(sealedBlockSize, inKeyMetaSize, inMetaSize, inDataSize, defAddSize, sealedSize));
 
 	uint8_t* sealedResPtr = sealedRes.data();
 
@@ -132,14 +134,24 @@ std::vector<uint8_t> detail::QuickAesGcmPack(const void * keyPtr, const size_t k
 	sealedResKeyMetaSize = inKeyMetaSize;
 	std::copy(static_cast<const uint8_t*>(inKeyMeta), static_cast<const uint8_t*>(inKeyMeta) + inKeyMetaSize, sealedResKeyMetaPtr);
 
+	//Build Full Add Data:
+	std::vector<uint8_t> fullAddData(defAddSize + addDataSize);
+	std::memcpy(fullAddData.data(), sealedResIvPtr, defAddSize);
+	std::memcpy(fullAddData.data() + defAddSize, addData, addDataSize);
+
+	//Encrypt!!:
 	PlatformAesGcmEncrypt(keyPtr, keySize,
 		inputPkg.data(), inputPkg.size(), sealedResOutputPtr,
 		sealedResIvPtr, sizeof(IVType),
-		sealedResIvPtr, addSize,
+		fullAddData.data(), fullAddData.size(),
 		outTag.data(), outTag.size());
 
 	//static_assert(sizeof(General128Tag) == sizeof(general_128bit_tag));
 	std::copy(outTag.begin(), outTag.end(), sealedResMacPtr);
+
+	//Clear the temp memory used to hold sensitive data:
+	ZeroizeContainer(fullAddData);
+	ZeroizeContainer(inputPkg);
 
 	return sealedRes;
 }
@@ -174,6 +186,7 @@ std::vector<uint8_t> detail::GetKeyMetaFromPack(const void * inEncData, const si
 
 void detail::QuickAesGcmUnpack(const void * keyPtr, const size_t keySize,
 	const void * inEncData, const size_t inEncDataSize,
+	const void * addData,   const size_t addDataSize,
 	std::vector<uint8_t>& outMeta, std::vector<uint8_t>& outData,
 	const Decent::General128Tag* inTag,
 	const size_t sealedBlockSize)
@@ -216,14 +229,22 @@ void detail::QuickAesGcmUnpack(const void * keyPtr, const size_t keySize,
 		}
 	}
 
+	//Build Full Add Data:
+	const size_t defAddSize = gsk_knownAddSize + sealedKeyMetaSize;
+	std::vector<uint8_t> fullAddData(defAddSize + addDataSize);
+	std::memcpy(fullAddData.data(), sealedIvPtr, defAddSize);
+	std::memcpy(fullAddData.data() + defAddSize, addData, addDataSize);
+
 	std::vector<uint8_t> unsealedPkg(sealedPayloadSize);
 
+	//Decrypt!!:
 	PlatformAesGcmDecrypt(keyPtr, keySize,
 		sealedOutputPtr, sealedPayloadSize, unsealedPkg.data(),
 		sealedIvPtr, sizeof(IVType),
-		sealedIvPtr, gsk_knownAddSize + sealedKeyMetaSize,
+		fullAddData.data(), fullAddData.size(),
 		sealedMacPtr, sizeof(general_128bit_tag));
 
+	//Parse unsealed package:
 	std::vector<uint8_t>::iterator pkgIt = unsealedPkg.begin();
 	uint64_t& pkgMetaSize = reinterpret_cast<uint64_t&>(*pkgIt);
 	uint64_t& pkgDataSize = reinterpret_cast<uint64_t&>(*(pkgIt += sizeof(uint64_t)));
@@ -270,6 +291,10 @@ void detail::QuickAesGcmUnpack(const void * keyPtr, const size_t keySize,
 	}
 
 	outData.insert(pos, pkgDataIt, pkgDataEndIt);
+
+	//Clear the temp memory used to hold sensitive data:
+	ZeroizeContainer(fullAddData);
+	ZeroizeContainer(unsealedPkg);
 
 	EXCEPTION_ASSERT(outMeta.size() == pkgMetaSize, "In function detail::QuickAesGcmUnpack, the final metadata size is different from the sealed value.");
 	EXCEPTION_ASSERT(outData.size() == pkgDataSize, "In function detail::QuickAesGcmUnpack, the final data size is different from the sealed value.");

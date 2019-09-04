@@ -5,6 +5,7 @@
 #include <array>
 
 #include "general_key_types.h"
+#include "ArrayPtrAndSize.h"
 
 namespace Decent
 {
@@ -28,6 +29,20 @@ namespace Decent
 		void MemZeroize(void* buf, size_t size);
 	}
 
+	/**
+	 * \brief	Zeroize any data held inside the container. This function won't affect the size or
+	 * 			any other metadata of the container.
+	 *
+	 * \tparam	Container	Type of the container.
+	 * \param [in,out]	cnt	The container.
+	 */
+	template<typename Container>
+	void ZeroizeContainer(Container& cnt)
+	{
+		using namespace ArrayPtrAndSize;
+		detail::MemZeroize(GetPtr(cnt), GetSize(cnt));
+	}
+
 	struct PrivateKeyWrap
 	{
 		general_secp256r1_private_t m_prvKey;
@@ -45,10 +60,15 @@ namespace Decent
 
 		~PrivateKeyWrap()
 		{
-			detail::MemZeroize(m_prvKey.r, sizeof(m_prvKey.r));
+			ZeroizeContainer(m_prvKey.r);
 		}
 	};
 
+	/**
+	 * \brief	A secret key wrap. Memory will be zeroized at destruction.
+	 *
+	 * \tparam	keySize	Size of the key.
+	 */
 	template <size_t keySize>
 	struct SecretKeyWrap
 	{
@@ -87,13 +107,63 @@ namespace Decent
 		SecretKeyWrap(std::array<uint8_t, keySize>&& key) :
 			m_key(key)
 		{
-			detail::MemZeroize(key.data(), key.size());
+			ZeroizeContainer(key);
+		}
+
+		/**
+		 * \brief	Copy Constructor
+		 *
+		 * \param	rhs	The right hand side.
+		 */
+		SecretKeyWrap(const SecretKeyWrap& rhs) :
+			m_key(rhs.m_key)
+		{}
+
+		/**
+		 * \brief	Move Constructor. Right hand size will be zeroized.
+		 *
+		 * \param [in,out]	rhs	The right hand side.
+		 */
+		SecretKeyWrap(SecretKeyWrap&& rhs) :
+			m_key(rhs.m_key)
+		{
+			ZeroizeContainer(rhs.m_key);
+		}
+
+		/**
+		 * \brief	Assignment operator
+		 *
+		 * \param	rhs	The right hand side.
+		 *
+		 * \return	A reference to this instance.
+		 */
+		SecretKeyWrap& operator=(const SecretKeyWrap& rhs)
+		{
+			m_key = rhs.m_key;
+			return *this;
+		}
+
+		/**
+		 * \brief	Move assignment operator
+		 *
+		 * \param [in,out]	rhs	The right hand side.
+		 *
+		 * \return	A reference to this instance.
+		 */
+		SecretKeyWrap& operator=(SecretKeyWrap&& rhs)
+		{
+			m_key = std::forward<decltype(m_key)>(rhs.m_key);
+			if (this != &rhs)
+			{
+				ZeroizeContainer(rhs.m_key);
+			}
+			return *this;
 		}
 
 		/** \brief	Destructor, which will zeroize the memory of the secret key. */
 		~SecretKeyWrap()
 		{
-			detail::MemZeroize(m_key.data(), m_key.size());
+			ZeroizeContainer(m_key);
 		}
 	};
 

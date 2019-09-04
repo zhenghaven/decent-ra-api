@@ -49,8 +49,6 @@ RaProcessorClient::RaProcessorClient(const uint64_t enclaveId, SpSignPubKeyVerif
 
 RaProcessorClient::~RaProcessorClient()
 {
-	m_mk.fill(0);
-	m_sk.fill(0);
 	CloseRaContext();
 }
 
@@ -67,8 +65,6 @@ RaProcessorClient::RaProcessorClient(RaProcessorClient && other) :
 	m_configChecker(std::move(other.m_configChecker)),
 	m_isAttested(other.m_isAttested)
 {
-	m_mk.fill(0);
-	m_sk.fill(0);
 	other.m_enclaveId = 0;
 	other.m_raCtxId = 0;
 	other.m_isAttested = false;
@@ -126,7 +122,7 @@ void RaProcessorClient::ProcessMsg4(const std::vector<uint8_t> & msg4Pack)
 	std::vector<uint8_t> meta;
 	std::vector<uint8_t> msg4Bin;
 
-	Tools::QuickAesGcmUnpack(GetSK(), msg4Pack, meta, msg4Bin, nullptr, 1024);
+	Tools::QuickAesGcmUnpack(GetSK().m_key, msg4Pack, GetMK().m_key, meta, msg4Bin, nullptr, 1024);
 
 	if (msg4Bin.size() != sizeof(sgx_ra_msg4_t))
 	{
@@ -152,12 +148,12 @@ bool RaProcessorClient::IsAttested() const
 	return m_isAttested;
 }
 
-const General128BitKey & RaProcessorClient::GetMK() const
+const G128BitSecretKeyWrap & RaProcessorClient::GetMK() const
 {
 	return m_mk;
 }
 
-const General128BitKey & RaProcessorClient::GetSK() const
+const G128BitSecretKeyWrap & RaProcessorClient::GetSK() const
 {
 	return m_sk;
 }
@@ -200,10 +196,10 @@ bool RaProcessorClient::CheckKeyDerivationFuncId(const uint16_t id) const
 	return id == SGX_DEFAULT_AES_CMAC_KDF_ID;
 }
 
-void RaProcessorClient::DeriveSharedKeys(General128BitKey & mk, General128BitKey & sk)
+void RaProcessorClient::DeriveSharedKeys(G128BitSecretKeyWrap & mk, G128BitSecretKeyWrap & sk)
 {
-	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(sk.data()));
-	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(mk.data()));
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(sk.m_key.data()));
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(mk.m_key.data()));
 }
 
 void RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)
