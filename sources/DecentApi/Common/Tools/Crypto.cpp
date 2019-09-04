@@ -292,10 +292,10 @@ void detail::QuickAesGcmUnpack(const void * keyPtr, const size_t keySize,
 
 	outData.insert(pos, pkgDataIt, pkgDataEndIt);
 
+	EXCEPTION_ASSERT(outMeta.size() == pkgMetaSize, "In function detail::QuickAesGcmUnpack, the final metadata size is different from the sealed value.");
+	EXCEPTION_ASSERT(outData.size() == pkgDataSize, "In function detail::QuickAesGcmUnpack, the final data size is different from the sealed value.");
+
 	//Clear the temp memory used to hold sensitive data:
 	ZeroizeContainer(fullAddData);
 	ZeroizeContainer(unsealedPkg);
-
-	EXCEPTION_ASSERT(outMeta.size() == pkgMetaSize, "In function detail::QuickAesGcmUnpack, the final metadata size is different from the sealed value.");
-	EXCEPTION_ASSERT(outData.size() == pkgDataSize, "In function detail::QuickAesGcmUnpack, the final data size is different from the sealed value.");
 }
