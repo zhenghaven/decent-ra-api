@@ -95,20 +95,17 @@ bool DecentServer::ProcessSmartMessage(const std::string& category, ConnectionBa
 	if (category == Ra::RequestCategory::sk_loadWhiteList)
 	{
 		static const char ackMsg[] = "ACK";
-		std::string key;
-		std::string whiteList;
-		connection.ReceivePack(key);
-		connection.ReceivePack(whiteList);
+		std::string key = connection.RecvContainer<std::string>();
+		std::string whiteList = connection.RecvContainer<std::string>();
 		LoadConstWhiteList(key, whiteList);
 		
-		connection.SendRawGuarantee(&ackMsg, sizeof(ackMsg));
+		connection.SendRawAll(&ackMsg, sizeof(ackMsg));
 
 		return false;
 	}
 	else if (category == Ra::RequestCategory::sk_requestAppCert)
 	{
-		std::string key;
-		connection.ReceivePack(key);
+		std::string key = connection.RecvContainer<std::string>();
 		ProcessAppCertReq(key, connection);
 		return false;
 	}

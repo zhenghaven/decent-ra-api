@@ -128,8 +128,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 		Decent::Sgx::LocAttCommLayer commLayer(cnt, true);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
-		std::string plainMsg;
-		commLayer.ReceiveMsg(plainMsg);
+		std::string plainMsg = commLayer.RecvContainer<std::string>();
 		X509Req appX509Req(plainMsg);
 		if (!appX509Req || !appX509Req.VerifySignature())
 		{
@@ -153,7 +152,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 			return SGX_ERROR_UNEXPECTED;
 		}
 
-		commLayer.SendMsg(appX509.ToPemString());
+		commLayer.SendContainer(appX509.ToPemString());
 	}
 	catch (const std::exception&)
 	{
