@@ -12,7 +12,6 @@ namespace Decent
 		class AesGcmCommLayer : virtual public SecureCommLayer
 		{
 		public:
-			typedef General128BitKey AesGcm128bKeyType;
 			typedef G128BitSecretKeyWrap KeyType;
 
 		public:
@@ -30,7 +29,7 @@ namespace Decent
 			 *
 			 * \param	sKey	128-bit key used for AES-GCM encryption.
 			 */
-			AesGcmCommLayer(const AesGcm128bKeyType& sKey, ConnectionBase* connection);
+			AesGcmCommLayer(const KeyType& sKey, ConnectionBase* connection);
 
 			//Copy is prohibited. 
 			AesGcmCommLayer(const AesGcmCommLayer& other) = delete;

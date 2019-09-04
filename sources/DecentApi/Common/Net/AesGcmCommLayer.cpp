@@ -12,7 +12,7 @@ using namespace Decent::Net;
 
 namespace
 {
-	constexpr size_t PACK_BLOCK_SIZE = GENERAL_512BIT_64BYTE_SIZE * GENERAL_BITS_PER_BYTE;
+	constexpr size_t PACK_BLOCK_SIZE = GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE;
 
 	inline std::string Bin2String(const std::vector<uint8_t>& bin)
 	{
@@ -30,7 +30,7 @@ AesGcmCommLayer::AesGcmCommLayer(const uint8_t (&sKey)[GENERAL_128BIT_16BYTE_SIZ
 {
 }
 
-AesGcmCommLayer::AesGcmCommLayer(const AesGcm128bKeyType & sKey, ConnectionBase* connection) :
+AesGcmCommLayer::AesGcmCommLayer(const KeyType & sKey, ConnectionBase* connection) :
 	m_key(sKey),
 	m_connection(connection),
 	m_streamBuf()
