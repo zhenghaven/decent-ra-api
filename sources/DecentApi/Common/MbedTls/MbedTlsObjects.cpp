@@ -476,7 +476,7 @@ PrivateKeyWrap ECKeyPair::ToGeneralPrvKeyChecked() const
 	return PrivateKeyWrap();
 }
 
-bool ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic & peerPubKey)
+bool ECKeyPair::GenerateSharedKey(G256BitSecretKeyWrap & outKey, const ECKeyPublic & peerPubKey)
 {
 	if (!*this || !peerPubKey)
 	{
@@ -500,9 +500,9 @@ bool ECKeyPair::GenerateSharedKey(General256BitKey & outKey, const ECKeyPublic &
 		return false;
 	}
 
-	sharedKey.ToBinary(outKey, sk_bigEndian);
+	sharedKey.ToBinary(outKey.m_key, sk_bigEndian);
 
-	std::reverse(outKey.begin(), outKey.end());
+	std::reverse(outKey.m_key.begin(), outKey.m_key.end());
 
 	return true;
 }

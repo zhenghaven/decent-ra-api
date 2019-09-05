@@ -8,6 +8,7 @@
 #include "../GeneralKeyTypes.h"
 
 #include "../MbedTls/Drbg.h"
+#include "../MbedTls/SafeWrappers.h"
 
 using namespace Decent::Tools;
 
@@ -150,8 +151,8 @@ std::vector<uint8_t> detail::QuickAesGcmPack(const void * keyPtr, const size_t k
 	std::copy(outTag.begin(), outTag.end(), sealedResMacPtr);
 
 	//Clear the temp memory used to hold sensitive data:
-	ZeroizeContainer(fullAddData);
-	ZeroizeContainer(inputPkg);
+	MbedTlsObj::ZeroizeContainer(fullAddData);
+	MbedTlsObj::ZeroizeContainer(inputPkg);
 
 	return sealedRes;
 }
@@ -296,6 +297,6 @@ void detail::QuickAesGcmUnpack(const void * keyPtr, const size_t keySize,
 	EXCEPTION_ASSERT(outData.size() == pkgDataSize, "In function detail::QuickAesGcmUnpack, the final data size is different from the sealed value.");
 
 	//Clear the temp memory used to hold sensitive data:
-	ZeroizeContainer(fullAddData);
-	ZeroizeContainer(unsealedPkg);
+	MbedTlsObj::ZeroizeContainer(fullAddData);
+	MbedTlsObj::ZeroizeContainer(unsealedPkg);
 }

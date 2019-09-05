@@ -126,7 +126,7 @@ namespace
 		}
 	}
 
-	void SgxDeriveSealKey(KeyPolicy keyPolicy, General128BitKey& outKey, const void* inMeta, const size_t inMetaSize)
+	void SgxDeriveSealKey(KeyPolicy keyPolicy, G128BitSecretKeyWrap& outKey, const void* inMeta, const size_t inMetaSize)
 	{
 		if (inMetaSize != sizeof(SgxSealKeyMeta))
 		{
@@ -134,7 +134,7 @@ namespace
 		}
 		const SgxSealKeyMeta& metaRef = *static_cast<const SgxSealKeyMeta*>(inMeta);
 
-		general_128bit_key& keyRef = *reinterpret_cast<general_128bit_key*>(outKey.data());
+		general_128bit_key& keyRef = *reinterpret_cast<general_128bit_key*>(outKey.m_key.data());
 
 		SgxDeriveKey(SgxKeyType::Seal, keyPolicy, keyRef, metaRef);
 	}
@@ -143,10 +143,10 @@ namespace
 void DataSealer::detail::DeriveSealKey(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& label, 
 	void* outKey, const size_t expectedKeySize, const void* inMeta, const size_t inMetaSize, const std::vector<uint8_t>& salt)
 {
-	General128BitKey rootSealKey;
+	G128BitSecretKeyWrap rootSealKey;
 	SgxDeriveSealKey(keyPolicy, rootSealKey, inMeta, inMetaSize);
 
-	HKDF<HashType::SHA256>(rootSealKey, decentState.GetLoadedWhiteList().GetWhiteListHash() + label, salt, outKey, expectedKeySize);
+	HKDF<HashType::SHA256>(rootSealKey.m_key, decentState.GetLoadedWhiteList().GetWhiteListHash() + label, salt, outKey, expectedKeySize);
 }
 
 std::vector<uint8_t> DataSealer::GenSealKeyRecoverMeta(bool isDefault)

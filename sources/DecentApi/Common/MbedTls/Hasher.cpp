@@ -2,7 +2,7 @@
 
 #include <mbedtls/md.h>
 
-#include "RuntimeException.h"
+#include "MbedTlsException.h"
 
 using namespace Decent;
 using namespace Decent::MbedTlsObj;
@@ -55,7 +55,7 @@ void Hasher::BatchedCalcInternal(const mbedtls_md_info_t& mdInfo, const DataList
 	int mbedRet = MBEDTLS_SUCCESS_RET;
 	for (size_t i = 0; i < listLen && mbedRet == MBEDTLS_SUCCESS_RET; ++i)
 	{
-		mbedRet = mbedtls_md_update(Get(), static_cast<const uint8_t*>(dataList[i].m_ptr), dataList[i].size);
+		mbedRet = mbedtls_md_update(Get(), static_cast<const uint8_t*>(dataList[i].m_ptr), dataList[i].m_size);
 	}
 	CHECK_MBEDTLS_RET(mbedRet, Hasher::CalcHash);
 

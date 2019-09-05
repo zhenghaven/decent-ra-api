@@ -49,28 +49,6 @@ namespace Decent
 			}
 		}
 
-		/** \brief	An item in data list, which is used in batched calculations. */
-		struct DataListItem
-		{
-			const void* m_ptr;
-			const size_t size;
-		};
-
-		namespace detail
-		{
-			template<typename T>
-			inline DataListItem ConstructDataListItem(const T& data)
-			{
-				return DataListItem{ detail::GetPtr(data), detail::GetSize(data) };
-			}
-
-			template<class... Args>
-			inline std::array<DataListItem, sizeof...(Args)> ConstructDataList(Args&&... args)
-			{
-				return std::array<DataListItem, sizeof...(Args)>{ ConstructDataListItem(std::forward<Args>(args))... };
-			}
-		}
-
 		/** \brief	A hash calculator. */
 		class Hasher : public ObjBase<mbedtls_md_context_t>
 		{
@@ -155,18 +133,18 @@ namespace Decent
 
 			/**
 			 * \brief	Batched calculates hash for any number of array type objects (i.e. C array (not
-			 * 			pointer!), std::array, std::vector, std::basic_string). 
+			 * 			pointer!), std::array, std::vector, std::basic_string).
 			 *
 			 * \tparam	hashType	Type of the hash algorithm.
 			 * \tparam	OutT		Data type of the output hash.
 			 * \tparam	Args		Type of the arguments.
 			 * \param [in,out]	output	The output.
-			 * \param 		  	args  	Variable arguments providing [in,out] The arguments.
+			 * \param 		  	args  	Variable arguments providing the arguments.
 			 */
 			template<HashType hashType, typename OutT, class... Args>
-			static void ArrayBatchedCalc(OutT& output, Args&&... args)
+			static void ArrayBatchedCalc(OutT& output, const Args&... args)
 			{
-				BatchedCalc<hashType>(detail::ConstructDataList(std::forward<Args>(args)...), output);
+				BatchedCalc<hashType>(detail::ConstructDataList(args...), output);
 			}
 
 		private:

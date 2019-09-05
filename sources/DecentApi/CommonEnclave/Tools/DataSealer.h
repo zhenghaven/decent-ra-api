@@ -96,10 +96,10 @@ namespace Decent
 				const MetaCtn& metadata, const DataCtn& data, General128Tag& outTag, const size_t sealedBlockSize = 4096)
 			{
 				std::vector<uint8_t> keyMeta = GenSealKeyRecoverMeta(false);
-				General128BitKey sealKey;
-				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey, keyMeta, std::vector<uint8_t>());
+				G128BitSecretKeyWrap sealKey;
+				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey.m_key, keyMeta, std::vector<uint8_t>());
 
-				return QuickAesGcmPack(sealKey, keyMeta, metadata, data, std::array<uint8_t, 0>(), outTag, sealedBlockSize);
+				return QuickAesGcmPack(sealKey.m_key, keyMeta, metadata, data, std::array<uint8_t, 0>(), outTag, sealedBlockSize);
 			}
 
 			/**
@@ -124,10 +124,10 @@ namespace Decent
 			void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
 				const SealedDataCtn& inData, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data, const General128Tag* inTag, const size_t sealedBlockSize = 4096)
 			{
-				General128BitKey sealKey;
-				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey, GetKeyMetaFromPack(inData), std::vector<uint8_t>());
+				G128BitSecretKeyWrap sealKey;
+				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey.m_key, GetKeyMetaFromPack(inData), std::vector<uint8_t>());
 
-				return QuickAesGcmUnpack(sealKey, inData, std::array<uint8_t, 0>(), metadata, data, inTag, sealedBlockSize);
+				return QuickAesGcmUnpack(sealKey.m_key, inData, std::array<uint8_t, 0>(), metadata, data, inTag, sealedBlockSize);
 			}
 		}
 	}

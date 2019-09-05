@@ -11,6 +11,13 @@ namespace Decent
 {
 	namespace Sgx
 	{
+		struct LocAttSession
+		{
+			G128BitSecretKeyWrap m_aek;
+
+			std::unique_ptr<sgx_dh_session_enclave_identity_t> m_id;
+		};
+
 		class LocAttCommLayer : public Decent::Net::AesGcmCommLayer
 		{
 		public:
@@ -59,18 +66,10 @@ namespace Decent
 			/**
 			 * \brief	Constructor that accept the result of the local attestation.
 			 *
-			 * \param	resultPair	The result pair.
+			 * \param 		  	session	The LA session (after handshake).
+			 * \param [in,out]	cnt	   	Network connection.
 			 */
-			LocAttCommLayer(std::pair<std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> >,
-				Net::ConnectionBase*> resultPair);
-
-			/**
-			 * \brief	Constructor  that accept the result of the local attestation.
-			 *
-			 * \param	key			The key.
-			 * \param	identity	The identity.
-			 */
-			LocAttCommLayer(std::unique_ptr<General128BitKey> key, std::unique_ptr<sgx_dh_session_enclave_identity_t> identity, Net::ConnectionBase* cnt);
+			LocAttCommLayer(std::unique_ptr<LocAttSession> session, Net::ConnectionBase& cnt);
 
 			/**
 			 * \brief	Perform the handshakes procedure (i.e. local attestation).
@@ -78,31 +77,29 @@ namespace Decent
 			 * \param [in,out]	cnt		   	The connection to the peer.
 			 * \param 		  	isInitiator	True if is initiator, false if not.
 			 *
-			 * \return	A std::pair&lt;std::unique_ptr&lt;General128BitKey&gt;,std::unique_ptr&lt;
-			 * 			sgx_dh_session_enclave_identity_t&gt; &gt;
+			 * \return	A std::unique_ptr&lt;LocAttSession&gt;
 			 */
-			std::pair<std::pair<std::unique_ptr<General128BitKey>, std::unique_ptr<sgx_dh_session_enclave_identity_t> >,
-				Net::ConnectionBase*> Handshake(Decent::Net::ConnectionBase& cnt, bool isInitiator);
+			std::unique_ptr<LocAttSession> Handshake(Decent::Net::ConnectionBase& cnt, bool isInitiator);
 
 			/**
 			 * \brief	Perform the handshakes procedure in initiator side.
 			 *
-			 * \param [in,out]	cnt		   	The connection to the peer.
-			 * \param [in,out]	outKey		 	The out key.
-			 * \param [in,out]	outIdentity  	The out identity.
+			 * \param [in,out]	cnt	The connection to the peer.
+			 *
+			 * \return	A std::unique_ptr&lt;LocAttSession&gt;
 			 */
-			static void InitiatorHandshake(Decent::Net::ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity);
+			static std::unique_ptr<LocAttSession> InitiatorHandshake(Decent::Net::ConnectionBase& cnt);
 
 			/**
 			 * \brief	Perform the handshakes procedure in responder side.
 			 *
-			 * \param [in,out]	cnt		   	The connection to the peer.
-			 * \param [in,out]	outKey		 	The out key.
-			 * \param [in,out]	outIdentity  	The out identity.
+			 * \param [in,out]	cnt	The connection to the peer.
+			 *
+			 * \return	A std::unique_ptr&lt;LocAttSession&gt;
 			 */
-			static void ResponderHandshake(Decent::Net::ConnectionBase& cnt, General128BitKey& outKey, sgx_dh_session_enclave_identity_t& outIdentity);
+			static std::unique_ptr<LocAttSession> ResponderHandshake(Decent::Net::ConnectionBase& cnt);
 
-			std::unique_ptr<sgx_dh_session_enclave_identity_t> m_identity;
+			std::unique_ptr<LocAttSession> m_session;
 		};
 	}
 }

@@ -11,7 +11,7 @@ using namespace Decent::Tools;
 
 #define THROW_FILE_NOT_OPENED_EXCEPTION throw FileException("Specified file is not opened yet!")
 
-SecureFile::SecureFile(const std::string & path, std::unique_ptr<General128BitKey> key, const char * modeStr) :
+SecureFile::SecureFile(const std::string & path, std::unique_ptr<G128BitSecretKeyWrap> key, const char * modeStr) :
 	m_path(path),
 	m_userKey(std::move(key)),
 	m_modeChar(modeStr),
@@ -30,20 +30,20 @@ SecureFile::SecureFile(const std::string & path, const Mode mode, DeferOpen) :
 {
 }
 
-SecureFile::SecureFile(const std::string & path, const General128BitKey & key, const Mode mode) :
+SecureFile::SecureFile(const std::string & path, const G128BitSecretKeyWrap & key, const Mode mode) :
 	SecureFile(path, key, mode, sk_deferOpen)
 {
 	Open();
 }
 
-SecureFile::SecureFile(const std::string & path, const General128BitKey & key, const Mode mode, DeferOpen) :
-	SecureFile(path, Tools::make_unique<General128BitKey>(key), FileBase::InterpretMode(mode))
+SecureFile::SecureFile(const std::string & path, const G128BitSecretKeyWrap & key, const Mode mode, DeferOpen) :
+	SecureFile(path, Tools::make_unique<G128BitSecretKeyWrap>(key), FileBase::InterpretMode(mode))
 {
 }
 
 SecureFile::SecureFile(SecureFile && rhs) :
 	m_path(std::forward<std::string>(rhs.m_path)),
-	m_userKey(std::forward<std::unique_ptr<General128BitKey> >(rhs.m_userKey)),
+	m_userKey(std::forward<std::unique_ptr<G128BitSecretKeyWrap> >(rhs.m_userKey)),
 	m_modeChar(rhs.m_modeChar),
 	m_file(rhs.m_file)
 {
@@ -57,17 +57,13 @@ SecureFile::~SecureFile()
 		sgx_fclose(static_cast<SGX_FILE*>(m_file));
 		m_file = nullptr;
 	}
-	if (m_userKey)
-	{
-		memset_s(m_userKey->data(), m_userKey->size(), 0, m_userKey->size());
-	}
 }
 
 void SecureFile::Open()
 {
 	if (m_userKey)
 	{
-		m_file = sgx_fopen(m_path.c_str(), m_modeChar, reinterpret_cast<const sgx_key_128bit_t*>(m_userKey->data()));
+		m_file = sgx_fopen(m_path.c_str(), m_modeChar, reinterpret_cast<const sgx_key_128bit_t*>(m_userKey->m_key.data()));
 	}
 	else
 	{
@@ -110,14 +106,14 @@ WritableSecureFile::WritableSecureFile(const std::string & path, const WritableM
 {
 }
 
-WritableSecureFile::WritableSecureFile(const std::string & path, const General128BitKey & key, const WritableMode mode) :
+WritableSecureFile::WritableSecureFile(const std::string & path, const G128BitSecretKeyWrap & key, const WritableMode mode) :
 	WritableSecureFile(path, key, mode, sk_deferOpen)
 {
 	Open();
 }
 
-WritableSecureFile::WritableSecureFile(const std::string & path, const General128BitKey & key, const WritableMode mode, DeferOpen) :
-	SecureFile(path, Tools::make_unique<General128BitKey>(key), WritableFileBase::InterpretMode(mode))
+WritableSecureFile::WritableSecureFile(const std::string & path, const G128BitSecretKeyWrap & key, const WritableMode mode, DeferOpen) :
+	SecureFile(path, Tools::make_unique<G128BitSecretKeyWrap>(key), WritableFileBase::InterpretMode(mode))
 {
 }
 

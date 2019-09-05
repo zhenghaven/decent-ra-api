@@ -4,6 +4,7 @@
 
 #include "../Net/ConnectionBase.h"
 #include "../Net/NetworkException.h"
+#include "../MbedTls/SafeWrappers.h"
 
 #include "../make_unique.h"
 #include "RaTicket.h"
@@ -110,7 +111,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 		return std::make_pair(std::move(neSession), &cnt);
 	}
 
-	ZeroizeContainer(sessionBin);
+	MbedTlsObj::ZeroizeContainer(sessionBin);
 
 	cnt.SendRawAll(&gsk_hasNewTicket, sizeof(gsk_hasNewTicket));
 	cnt.SendContainer(neTicket);

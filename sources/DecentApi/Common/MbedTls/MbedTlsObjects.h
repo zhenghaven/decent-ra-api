@@ -221,7 +221,7 @@ namespace Decent
 			std::unique_ptr<PrivateKeyWrap> ToGeneralPrvKey() const;
 			PrivateKeyWrap ToGeneralPrvKeyChecked() const;
 
-			bool GenerateSharedKey(General256BitKey& outKey, const ECKeyPublic& peerPubKey);
+			bool GenerateSharedKey(G256BitSecretKeyWrap& outKey, const ECKeyPublic& peerPubKey);
 			bool EcdsaSign(general_secp256r1_signature_t& outSign, const uint8_t* hash, const size_t hashLen, const mbedtls_md_info_t* mdInfo) const;
 
 			template<size_t hashSize>
