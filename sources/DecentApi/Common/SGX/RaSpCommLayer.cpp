@@ -23,7 +23,25 @@ namespace
 	static constexpr uint8_t gsk_noNewTicket = 0;
 }
 
-static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
+// SP side steps:
+//     1. <--- Recv "Has Ticket" or "No Ticket"
+//     If has ticket:
+//         2. <--- Recv ticket
+//         3. ---> Send "Resume Succ", and return
+//         (If not succ, send "Resume Failed", and continue)
+//     else:
+//         2. <--- Recv RA MSG 0 Send
+//         3. ---> Send RA MSG 0 Resp
+//         4. <--- Recv RA MSG 1
+//         5. ---> Send RA MSG 2
+//         6. <--- Recv RA MSG 3
+//         7. ---> Send RA MSG 4
+//         If ticket sealed:
+//             8. ---> Send "Has Ticket"
+//             9. ---> Send Ticket
+//         else:
+//             8. ---> Send "No Ticket"
+static std::unique_ptr<RaSession> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
 	bool& isResumed, RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc)
 {
 	if (!raProcessor)
@@ -31,7 +49,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 		throw Exception("Null pointer is given to the RA Processor SP DoHandShake.");
 	}
 
-	std::unique_ptr<RaSession> neSession = Tools::make_unique<RaSession>();
+	isResumed = false;
 
 	uint8_t clientHasTicket = 0;
 	cnt.RecvRawAll(&clientHasTicket, sizeof(clientHasTicket));
@@ -44,15 +62,15 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 		try
 		{
 			std::vector<uint8_t> sessionBin = unsealFunc(ticket);
-			if (sessionBin.size() == sizeof(*neSession))
+			if (sessionBin.size() == RaSession::GetSize())
 			{
-				memcpy(neSession.get(), sessionBin.data(), sessionBin.size());
+				std::unique_ptr<RaSession> neSession = Tools::make_unique<RaSession>(sessionBin.cbegin(), sessionBin.cend());
 
 				cnt.SendRawAll(&gsk_resumeSucc, sizeof(gsk_resumeSucc));
 
 				isResumed = true;
 
-				return std::make_pair(std::move(neSession), &cnt);
+				return std::move(neSession);
 			}
 		}
 		catch (const std::exception&)
@@ -90,6 +108,8 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 
 	cnt.SendContainer(msg4);
 
+	std::unique_ptr<RaSession> neSession = Tools::make_unique<RaSession>();
+
 	neSession->m_secretKey = raProcessor->GetSK();
 	neSession->m_maskingKey = raProcessor->GetMK();
 	neSession->m_iasReport = *raProcessor->ReleaseIasReport();
@@ -108,7 +128,7 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	{
 		//Failed to seal the data.
 		cnt.SendRawAll(&gsk_noNewTicket, sizeof(gsk_noNewTicket));
-		return std::make_pair(std::move(neSession), &cnt);
+		return std::move(neSession);
 	}
 
 	MbedTlsObj::ZeroizeContainer(sessionBin);
@@ -116,12 +136,12 @@ static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoHandShake(Connec
 	cnt.SendRawAll(&gsk_hasNewTicket, sizeof(gsk_hasNewTicket));
 	cnt.SendContainer(neTicket);
 
-	return std::make_pair(std::move(neSession), &cnt);
+	return std::move(neSession);
 }
 
 RaSpCommLayer::RaSpCommLayer(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
 	bool& isResumed, TicketSealer sealFunc, TicketSealer unsealFunc) :
-	RaSpCommLayer(DoHandShake(cnt, std::move(raProcessor), isResumed, sealFunc, unsealFunc))
+	RaSpCommLayer(cnt, DoHandShake(cnt, std::move(raProcessor), isResumed, sealFunc, unsealFunc))
 {
 }
 
@@ -145,8 +165,8 @@ const RaSession & RaSpCommLayer::GetSession() const
 	return *m_session;
 }
 
-RaSpCommLayer::RaSpCommLayer(std::pair<std::unique_ptr<RaSession>, ConnectionBase*> hsResult) :
-	AesGcmCommLayer(hsResult.first->m_secretKey, hsResult.second),
-	m_session(std::move(hsResult.first))
+RaSpCommLayer::RaSpCommLayer(Net::ConnectionBase& cnt, std::unique_ptr<RaSession> session) :
+	AesGcmCommLayer(session->m_secretKey, session->m_maskingKey, &cnt),
+	m_session(std::move(session))
 {
 }

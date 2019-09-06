@@ -16,7 +16,23 @@ namespace
 	static constexpr uint8_t gsk_noTicket = 0;
 }
 
-static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHandShake(ConnectionBase& connection, std::unique_ptr<RaProcessorClient> raProcessor, std::shared_ptr<const RaClientSession> savedSession)
+// Client side steps:
+//     If there is saved ticket:
+//         1. ---> Send "Has ticket"
+//         2. ---> Send ticket via plain network channel
+//         3. <--- Recv resume succ or not result
+//     else:
+//         1. ---> Send "No Ticket"
+//         2. ---> Send RA MSG 0 Send
+//         3. <--- Recv RA MSG 0 Resp
+//         4. ---> Send RA MSG 1
+//         5. <--- Recv RA MSG 2
+//         6. ---> Send RA MSG 3
+//         7. <--- Recv RA MSG 4
+//         8. <--- Recv "Has Ticket" or "No Ticket"
+//         If has ticket:
+//             9. <--- Recv ticket
+static std::shared_ptr<const RaClientSession> DoHandShake(ConnectionBase& connection, std::unique_ptr<RaProcessorClient> raProcessor, std::shared_ptr<const RaClientSession> savedSession)
 {
 	if (!raProcessor)
 	{
@@ -37,7 +53,7 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 		if (resumeSucc)
 		{
 			//Successfully resume the session. Return the resumed session.
-			return std::make_pair(savedSession, &connection);
+			return savedSession;
 		}
 
 		//Failed to resume the session.
@@ -93,11 +109,11 @@ static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoHand
 	neSession->m_session.m_maskingKey = raProcessor->GetMK();
 	neSession->m_session.m_iasReport = *raProcessor->ReleaseIasReport();
 
-	return std::make_pair(neSession, &connection);
+	return neSession;
 }
 
 RaClientCommLayer::RaClientCommLayer(ConnectionBase& connection, std::unique_ptr<RaProcessorClient> raProcessor, std::shared_ptr<const RaClientSession> savedSession) :
-	RaClientCommLayer(DoHandShake(connection, std::move(raProcessor), savedSession))
+	RaClientCommLayer(connection, DoHandShake(connection, std::move(raProcessor), savedSession))
 {
 }
 
@@ -121,8 +137,8 @@ std::shared_ptr<const RaClientSession> RaClientCommLayer::GetSession() const
 	return m_session;
 }
 
-RaClientCommLayer::RaClientCommLayer(std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> hsResult) :
-	AesGcmCommLayer(hsResult.first->m_session.m_secretKey, hsResult.second),
-	m_session(hsResult.first)
+RaClientCommLayer::RaClientCommLayer(ConnectionBase& connectionPtr, std::shared_ptr<const RaClientSession> session) :
+	AesGcmCommLayer(session->m_session.m_secretKey, session->m_session.m_maskingKey, &connectionPtr),
+	m_session(session)
 {
 }

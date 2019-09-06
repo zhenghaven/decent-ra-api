@@ -11,7 +11,7 @@ namespace Decent
 		/** \brief	The communications layer that uses 128-bit AES-GCM encryption. */
 		class AesGcmCommLayer : virtual public SecureCommLayer
 		{
-		public:
+		public: //static members:
 			typedef G128BitSecretKeyWrap KeyType;
 
 		public:
@@ -22,14 +22,7 @@ namespace Decent
 			 *
 			 * \param	sKey	128-bit key used for AES-GCM encryption.
 			 */
-			AesGcmCommLayer(const uint8_t(&sKey)[GENERAL_128BIT_16BYTE_SIZE], ConnectionBase* connection);
-
-			/**
-			 * \brief	Constructor
-			 *
-			 * \param	sKey	128-bit key used for AES-GCM encryption.
-			 */
-			AesGcmCommLayer(const KeyType& sKey, ConnectionBase* connection);
+			AesGcmCommLayer(const KeyType& sKey, const KeyType& mKey, ConnectionBase* connection);
 
 			//Copy is prohibited. 
 			AesGcmCommLayer(const AesGcmCommLayer& other) = delete;
@@ -65,25 +58,15 @@ namespace Decent
 			 */
 			virtual bool IsValid() const;
 
-			/**
-			 * \brief	Decrypts a message
-			 *
-			 * \param 	inMsg	Input message (cipher text).
-			 *
-			 * \return	Output message (plain text).
-			 */
-			virtual std::string DecryptMsg(const std::string& inMsg);
+			using SecureCommLayer::SendRaw;
+			virtual size_t SendRaw(const void* buf, const size_t size) override;
 
-			/**
-			 * \brief	Encrypts a message
-			 *
-			 * \exception Decent::Net::Exception
-			 *
-			 * \param 	inMsg	Input message (plain text).
-			 *
-			 * \return	Output message (cipher text).
-			 */
-			virtual std::string EncryptMsg(const std::string& inMsg);
+			using SecureCommLayer::RecvRaw;
+			virtual size_t RecvRaw(void* buf, const size_t size) override;
+
+			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
+
+		private: // Methods:
 
 			/**
 			 * \brief	Decrypts a message into binary
@@ -105,16 +88,11 @@ namespace Decent
 			 */
 			virtual std::vector<uint8_t> EncryptMsg(const std::vector<uint8_t>& inMsg);
 
-			using SecureCommLayer::SendRaw;
-			virtual size_t SendRaw(const void* buf, const size_t size) override;
-
-			using SecureCommLayer::RecvRaw;
-			virtual size_t RecvRaw(void* buf, const size_t size) override;
-
-			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 
 		private:
-			KeyType m_key;
+			KeyType m_sKey; //Secret Key
+			KeyType m_mKey; //Masking Key
+
 			ConnectionBase* m_connection;
 
 			std::vector<uint8_t> m_streamBuf;

@@ -29,12 +29,12 @@ namespace
 		return reinterpret_cast<const T*>(ptr);
 	}
 
-	G128BitSecretKeyWrap DeriveSK(const G128BitSecretKeyWrap& aeKey)
+	G128BitSecretKeyWrap DeriveSubKeys(const G128BitSecretKeyWrap& aeKey, const std::string& label)
 	{
 		using namespace Decent::MbedTlsObj;
 
 		G128BitSecretKeyWrap sk;
-		CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(aeKey, "SK", sk);
+		CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(aeKey, label, sk);
 		return sk;
 	}
 }
@@ -65,7 +65,7 @@ const sgx_dh_session_enclave_identity_t& LocAttCommLayer::GetIdentity() const
 }
 
 LocAttCommLayer::LocAttCommLayer(std::unique_ptr<LocAttSession> session, Net::ConnectionBase& cnt) :
-	AesGcmCommLayer(DeriveSK(session->m_aek), &cnt),
+	AesGcmCommLayer(DeriveSubKeys(session->m_aek, "SK"), DeriveSubKeys(session->m_aek, "MK"), &cnt),
 	m_session(std::move(session))
 {
 }

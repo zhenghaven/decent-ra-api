@@ -55,7 +55,7 @@ namespace Decent
 			std::shared_ptr<const RaClientSession> GetSession() const;
 
 		private:
-			RaClientCommLayer(std::pair<std::shared_ptr<const RaClientSession>, Net::ConnectionBase*> hsResult);
+			RaClientCommLayer(Net::ConnectionBase& connectionPtr, std::shared_ptr<const RaClientSession> session);
 
 			std::shared_ptr<const RaClientSession> m_session;
 

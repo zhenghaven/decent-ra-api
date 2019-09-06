@@ -14,7 +14,15 @@ using namespace Decent::Sgx;
 
 namespace
 {
-	static std::pair<std::shared_ptr<const RaClientSession>, ConnectionBase*> DoClientHandshake(ConnectionBase & cnt,
+	// Client side steps:
+	//     1. Follow RA Client steps
+	//     If session is recovered from saved one:
+	//         2. Return session from RA Client steps
+	//     else:
+	//         2. Follow RA SP steps
+	//         3. Save peer's identity from SP steps
+	//         4. Return session from RA Client steps
+	static std::shared_ptr<const RaClientSession> DoClientHandshake(ConnectionBase & cnt,
 		std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
 		std::shared_ptr<const RaClientSession> savedSession)
 	{
@@ -24,7 +32,7 @@ namespace
 		if (savedSession == tmpNewSession)
 		{
 			//Ticket is accepted by peer.
-			return std::make_pair(savedSession, &cnt);
+			return savedSession;
 		}
 
 		//New ticket is generated, so we need to verify the peer as well.
@@ -36,10 +44,16 @@ namespace
 
 		neSession->m_session.m_iasReport = spComm.GetIasReport();
 
-		return std::make_pair(neSession, &cnt);
+		return neSession;
 	}
 
-	static std::pair<std::unique_ptr<RaSession>, ConnectionBase*> DoSpHandshake(ConnectionBase & cnt,
+	// Server side steps:
+	//     1. Follow RA SP steps
+	//     2. Keep session
+	//     If it was NOT resumed from ticket:
+	//         3. Follow RA client steps
+	//     3.(or 4.) Return session from RA SP steps
+	static std::unique_ptr<RaSession> DoSpHandshake(ConnectionBase & cnt,
 		std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
 		RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc)
 	{
@@ -57,21 +71,21 @@ namespace
 
 		//Otherwise, session is resumed from a ticket.
 
-		return std::make_pair(std::move(session), &cnt);
+		return std::move(session);
 	}
 }
 
 RaMutualCommLayer::RaMutualCommLayer(ConnectionBase & cnt,
 	std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
 	std::shared_ptr<const RaClientSession> savedSession) :
-	RaMutualCommLayer(DoClientHandshake(cnt, std::move(clientRaProcessor), std::move(spRaProcessor), savedSession))
+	RaMutualCommLayer(cnt, DoClientHandshake(cnt, std::move(clientRaProcessor), std::move(spRaProcessor), savedSession))
 {
 }
 
 RaMutualCommLayer::RaMutualCommLayer(ConnectionBase & cnt,
 	std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
 	RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc) :
-	RaMutualCommLayer(DoSpHandshake(cnt, std::move(clientRaProcessor), std::move(spRaProcessor), sealFunc, unsealFunc))
+	RaMutualCommLayer(cnt, DoSpHandshake(cnt, std::move(clientRaProcessor), std::move(spRaProcessor), sealFunc, unsealFunc))
 {
 }
 
@@ -103,16 +117,16 @@ std::shared_ptr<const RaClientSession> RaMutualCommLayer::GetClientSession() con
 	return m_clientSession;
 }
 
-RaMutualCommLayer::RaMutualCommLayer(std::pair<std::unique_ptr<RaSession>, Net::ConnectionBase*> hsResult) :
-	AesGcmCommLayer(hsResult.first->m_secretKey, hsResult.second),
+RaMutualCommLayer::RaMutualCommLayer(Net::ConnectionBase& cnt, std::unique_ptr<RaSession> session) :
+	AesGcmCommLayer(session->m_secretKey, session->m_maskingKey, &cnt),
 	m_clientSession(),
-	m_spSession(std::move(hsResult.first))
+	m_spSession(std::move(session))
 {
 }
 
-RaMutualCommLayer::RaMutualCommLayer(std::pair<std::shared_ptr<const RaClientSession>, Net::ConnectionBase*> hsResult) :
-	AesGcmCommLayer(hsResult.first->m_session.m_secretKey, hsResult.second),
-	m_clientSession(hsResult.first),
+RaMutualCommLayer::RaMutualCommLayer(Net::ConnectionBase& cnt, std::shared_ptr<const RaClientSession> session) :
+	AesGcmCommLayer(session->m_session.m_secretKey, session->m_session.m_maskingKey, &cnt),
+	m_clientSession(session),
 	m_spSession()
 {
 }

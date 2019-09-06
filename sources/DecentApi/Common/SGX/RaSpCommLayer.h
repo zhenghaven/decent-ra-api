@@ -74,7 +74,7 @@ namespace Decent
 			const RaSession& GetSession() const;
 
 		private:
-			RaSpCommLayer(std::pair<std::unique_ptr<RaSession>, Net::ConnectionBase*> hsResult);
+			RaSpCommLayer(Net::ConnectionBase& cnt, std::unique_ptr<RaSession> session);
 
 			std::unique_ptr<RaSession> m_session;
 		};

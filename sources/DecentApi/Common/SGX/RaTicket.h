@@ -47,22 +47,58 @@ namespace Decent
 			G128BitSecretKeyWrap m_maskingKey;
 			SgxIasReport m_iasReport;
 
+			RaSession() = default;
+
+			~RaSession()
+			{}
+
+			RaSession(std::vector<uint8_t>::const_iterator start, std::vector<uint8_t>::const_iterator end) :
+				RaSession()
+			{
+				ReadBinary(start, end);
+			}
+
 			static constexpr size_t GetSize()
 			{
 				return GENERAL_128BIT_16BYTE_SIZE + GENERAL_128BIT_16BYTE_SIZE + sizeof(m_iasReport.m_iasReport);
 			}
 
-			void ToBinary(std::vector<uint8_t>::iterator start, std::vector<uint8_t>::iterator end) const
+			std::vector<uint8_t>::const_iterator ReadBinary(std::vector<uint8_t>::const_iterator start, std::vector<uint8_t>::const_iterator end)
 			{
 				if (std::distance(start, end) < static_cast<int64_t>(GetSize()))
 				{
-					throw RuntimeException("Failed to serialize SGX RA session, because buffer size is too small.");
+					throw RuntimeException("Failed to de-serialize SGX RA session, because the binary size is too small.");
 				}
 
-				auto keyEnd = std::copy(m_secretKey.m_key.begin(), m_secretKey.m_key.end(), start);
-				keyEnd = std::copy(m_maskingKey.m_key.begin(), m_maskingKey.m_key.end(), keyEnd);
+				auto prevStart = start;
+				auto prevEnd = start + m_secretKey.m_key.size();
+				std::copy(prevStart, prevEnd, m_secretKey.m_key.begin());
 
-				std::copy(std::begin(m_iasReport.m_iasReport), std::end(m_iasReport.m_iasReport), keyEnd);
+				prevStart = prevEnd;
+				prevEnd = prevStart + m_maskingKey.m_key.size();
+				std::copy(prevStart, prevEnd, m_maskingKey.m_key.begin());
+
+				prevStart = prevEnd;
+				prevEnd = prevStart + sizeof(m_iasReport.m_iasReport);
+				std::copy(prevStart, prevEnd, std::begin(m_iasReport.m_iasReport));
+
+				return prevEnd;
+			}
+
+			std::vector<uint8_t>::iterator ToBinary(std::vector<uint8_t>::iterator start, std::vector<uint8_t>::iterator end) const
+			{
+				if (std::distance(start, end) < static_cast<int64_t>(GetSize()))
+				{
+					throw RuntimeException("Failed to serialize SGX RA session, because the buffer size is too small.");
+				}
+
+				auto prevEnd = start;
+
+				prevEnd = std::copy(m_secretKey.m_key.begin(), m_secretKey.m_key.end(), prevEnd);
+				prevEnd = std::copy(m_maskingKey.m_key.begin(), m_maskingKey.m_key.end(), prevEnd);
+				prevEnd = std::copy(std::begin(m_iasReport.m_iasReport), std::end(m_iasReport.m_iasReport), prevEnd);
+
+				return prevEnd;
 			}
 		};
 
