@@ -107,7 +107,7 @@ namespace Decent
 			SecretKeyWrap<cSize> deriveKey;
 			CMACer<cType, cSize, cMode>(cmacKey).Calc(deriveKey.m_key, inKey.m_key);
 
-			CMACer<cType, cSize, cMode>(deriveKey).Calc(outKey.m_key, detail::GetCkdfByteSequence(0x01, label, cSize));
+			CMACer<cType, cSize, cMode>(deriveKey).Calc(outKey.m_key, detail::GetCkdfByteSequence(0x01, label, cSize * BITS_PER_BYTE));
 		}
 	}
 }

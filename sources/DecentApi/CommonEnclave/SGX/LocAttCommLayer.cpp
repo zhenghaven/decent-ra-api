@@ -34,7 +34,7 @@ namespace
 		using namespace Decent::MbedTlsObj;
 
 		G128BitSecretKeyWrap sk;
-		CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::GCM>(aeKey, "SK", sk);
+		CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(aeKey, "SK", sk);
 		return sk;
 	}
 }
@@ -87,6 +87,7 @@ std::unique_ptr<LocAttSession> LocAttCommLayer::InitiatorHandshake(ConnectionBas
 	inBinBuf = cnt.SendAndRecvPack(&msg2, sizeof(msg2));
 
 	std::unique_ptr<LocAttSession> resSession = Tools::make_unique<LocAttSession>();
+	resSession->m_id = Tools::make_unique<sgx_dh_session_enclave_identity_t>();
 
 	ASSERT_BOOL_RESULT(inBinBuf.size() == sizeof(sgx_dh_msg3_t), "Received message 3 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(
@@ -116,6 +117,7 @@ std::unique_ptr<LocAttSession> LocAttCommLayer::ResponderHandshake(ConnectionBas
 	std::vector<uint8_t> inBinBuf = cnt.SendAndRecvPack(&msg1, sizeof(sgx_dh_msg1_t));
 
 	std::unique_ptr<LocAttSession> resSession = Tools::make_unique<LocAttSession>();
+	resSession->m_id = Tools::make_unique<sgx_dh_session_enclave_identity_t>();
 
 	ASSERT_BOOL_RESULT(inBinBuf.size() == sizeof(sgx_dh_msg2_t), "Received message 2 has unexpected size.");
 	CHECK_SGX_SDK_RESULT(
