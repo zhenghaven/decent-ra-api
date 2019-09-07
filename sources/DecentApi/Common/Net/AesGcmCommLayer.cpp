@@ -215,7 +215,7 @@ void AesGcmCommLayer::RefreshPeerKeys()
 	m_peerSecKey = tmpSecKey;
 	m_peerMakKey = tmpMakKey;
 
-	RefreshSelfAddData();
+	RefreshPeerAddData();
 }
 
 void AesGcmCommLayer::RefreshSelfAddData()

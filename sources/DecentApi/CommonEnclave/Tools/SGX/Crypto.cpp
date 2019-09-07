@@ -84,7 +84,7 @@ void Tools::detail::PlatformAesGcmEncrypt(const void * keyPtr, const size_t keyS
 		p_out_mac);
 	if (sgxRet != SGX_SUCCESS)
 	{
-		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_read_rand"));
+		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_rijndael128GCM_encrypt"));
 	}
 }
 
@@ -118,7 +118,7 @@ void Tools::detail::PlatformAesGcmDecrypt(const void * keyPtr, const size_t keyS
 		p_in_mac);
 	if (sgxRet != SGX_SUCCESS)
 	{
-		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_read_rand"));
+		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_rijndael128GCM_decrypt"));
 	}
 }
 
