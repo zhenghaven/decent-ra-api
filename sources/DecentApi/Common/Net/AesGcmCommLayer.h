@@ -14,6 +14,8 @@ namespace Decent
 		public: //static members:
 			typedef G128BitSecretKeyWrap KeyType;
 
+			static constexpr uint64_t sk_maxCounter = std::numeric_limits<uint64_t>::max();
+
 		public:
 			AesGcmCommLayer() = delete;
 
@@ -66,7 +68,7 @@ namespace Decent
 
 			virtual void SetConnectionPtr(ConnectionBase& cnt) override;
 
-		private: // Methods:
+		protected: // Methods:
 
 			/**
 			 * \brief	Decrypts a message into binary
@@ -88,10 +90,30 @@ namespace Decent
 			 */
 			virtual std::vector<uint8_t> EncryptMsg(const std::vector<uint8_t>& inMsg);
 
+			virtual void CheckSelfKeysLifetime();
+
+			virtual void CheckPeerKeysLifetime();
+
+			virtual void RefreshSelfKeys();
+
+			virtual void RefreshPeerKeys();
 
 		private:
-			KeyType m_sKey; //Secret Key
-			KeyType m_mKey; //Masking Key
+
+			/** \brief	Refresh self add data. USED BY THE CONSTRUCTOR, CANNOT BE VIRTUAL! */
+			void RefreshSelfAddData();
+
+			/** \brief	Refresh peer add data. USED BY THE CONSTRUCTOR, CANNOT BE VIRTUAL! */
+			void RefreshPeerAddData();
+
+		private:
+			KeyType m_selfSecKey; //Secret Key
+			KeyType m_selfMakKey; //Masking Key
+			std::array<uint64_t, 3> m_selfAddData; //Additonal Data for MAC (m_selfMakKey || MsgCounter)
+
+			KeyType m_peerSecKey; //Secret Key
+			KeyType m_peerMakKey; //Masking Key
+			std::array<uint64_t, 3> m_peerAddData; //Additonal Data for MAC (m_peerMakKey || MsgCounter)
 
 			ConnectionBase* m_connection;
 

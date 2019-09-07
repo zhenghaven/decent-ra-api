@@ -35,6 +35,11 @@ namespace Decent
 		{
 			std::array<uint8_t, keySize> m_key;
 
+			static constexpr size_t GetTotalSize()
+			{
+				return sizeof(typename decltype(m_key)::value_type) * keySize;
+			}
+
 			/** \brief	Default constructor. Constructs an empty key which can be filled later. */
 			SecretKeyWrap() :
 				m_key()
