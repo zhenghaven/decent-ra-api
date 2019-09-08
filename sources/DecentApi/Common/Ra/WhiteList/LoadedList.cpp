@@ -34,7 +34,7 @@ namespace
 		whiteListStr += "}";
 
 		Decent::General256Hash hash;
-		Hasher::Calc<HashType::SHA256>(whiteListStr, hash);
+		Hasher<HashType::SHA256>().Calc(hash, whiteListStr);
 
 		return cppcodec::base64_rfc4648::encode(hash);
 	}

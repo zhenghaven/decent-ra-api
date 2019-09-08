@@ -311,7 +311,7 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 	std::vector<uint8_t> signBinBuf = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
 
 	General256Hash hash;
-	Hasher::Calc<HashType::SHA256>(iasReportStr, hash);
+	Hasher<HashType::SHA256>().Calc(hash, iasReportStr);
 
 	bool signVerRes = false;
 	do

@@ -34,12 +34,12 @@ bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const ui
 	}
 
 	General256Hash hashRes;
-	Hasher::BatchedCalc<HashType::SHA256>(
+	Hasher<HashType::SHA256>().Batched(hashRes,
 		std::array<DataListItem, 2>
 		{
 			DataListItem{initData, size},
 			DataListItem{pubSignKey.data(), pubSignKey.size()},
-		}, hashRes);
+		});
 
 #ifndef SIMULATING_ENCLAVE
 	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;

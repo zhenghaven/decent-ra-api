@@ -215,13 +215,13 @@ namespace Decent
 		namespace detail
 		{
 			template<typename T>
-			inline DataListItem ConstructDataListItem(const T& data)
+			inline constexpr DataListItem ConstructDataListItem(const T& data)
 			{
 				return DataListItem{ GetPtr(data), GetSize(data) };
 			}
 
 			template<class... Args>
-			inline std::array<DataListItem, sizeof...(Args)> ConstructDataList(const Args&... args)
+			inline constexpr std::array<DataListItem, sizeof...(Args)> ConstructDataList(const Args&... args)
 			{
 				return std::array<DataListItem, sizeof...(Args)>{ ConstructDataListItem(args)... };
 			}

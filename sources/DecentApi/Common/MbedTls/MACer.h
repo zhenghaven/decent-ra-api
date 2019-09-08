@@ -43,6 +43,10 @@ namespace Decent
 
 		class CMACerBase : public CipherBase
 		{
+		public:
+			/** \brief	Destructor */
+			virtual ~CMACerBase();
+
 		protected:
 			CMACerBase() = delete;
 
@@ -54,9 +58,6 @@ namespace Decent
 			 * \param	keySize   	Size of the key. In Bytes.
 			 */
 			CMACerBase(const mbedtls_cipher_info_t& cipherInfo, const void* key, const size_t keySize);
-
-			/** \brief	Destructor */
-			virtual ~CMACerBase();
 
 			/**
 			 * \brief	Updates this CMAC instance
@@ -176,9 +177,9 @@ namespace Decent
 			 * \param 		  	args  	Variable arguments providing the arguments.
 			 */
 			template<class... Args>
-			static void EasyBatched(std::array<uint8_t, cSize>& output, const Args&... args)
+			void EasyBatched(std::array<uint8_t, cSize>& output, const Args&... args)
 			{
-				Batched(output.data(), detail::ConstructDataList(args...));
+				Batched(output, detail::ConstructDataList(args...));
 			}
 
 		private:

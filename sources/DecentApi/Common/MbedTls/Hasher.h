@@ -21,36 +21,37 @@ namespace Decent
 		 *
 		 * \return	A reference to MbedTls's const mbedtls_md_info_t.
 		 */
-		const mbedtls_md_info_t& GetMdInfo(HashType type);
+		const mbedtls_md_info_t& GetMsgDigestInfo(HashType type);
 
 		/**
 		 * \brief	Gets hash size in Byte
 		 *
 		 * \exception	MbedTlsObj::RuntimeException	Thrown when a nonexistent hash type is given.
 		 *
-		 * \param	type	The type of hash algorithm.
+		 * \tparam	type	Type of the hash.
 		 *
 		 * \return	The hash size in Byte.
 		 */
-		inline uint8_t GetHashSizeByte(HashType type)
+		template<HashType type>
+		inline constexpr uint8_t GetHashByteSize()
 		{
 			switch (type)
 			{
 			case HashType::SHA224:
-				return (224 / 8);
+				return (224 / BITS_PER_BYTE);
 			case HashType::SHA256:
-				return (256 / 8);
+				return (256 / BITS_PER_BYTE);
 			case HashType::SHA384:
-				return (384 / 8);
+				return (384 / BITS_PER_BYTE);
 			case HashType::SHA512:
-				return (512 / 8);
+				return (512 / BITS_PER_BYTE);
 			default:
 				throw MbedTlsObj::RuntimeException("Invalid hash type is given!");
 			}
 		}
 
 		/** \brief	A hash calculator. */
-		class Hasher : public ObjBase<mbedtls_md_context_t>
+		class MsgDigestBase : public ObjBase<mbedtls_md_context_t>
 		{
 		public:
 			/**
@@ -60,175 +61,167 @@ namespace Decent
 			*/
 			static void FreeObject(mbedtls_md_context_t* ptr);
 
-			/**
-			 * \brief	Calculates hash for a single item.
-			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			 *
-			 * \tparam	hashType	Type of the hash algorithm.
-			 * \tparam	InType		Data type of the input.
-			 * \tparam	OutType		Data type of the output hash.
-			 * \param 		  	input 	The input data.
-			 * \param [in,out]	output	The output hash.
-			 */
-			template<HashType hashType, typename InType, typename OutType>
-			static void Calc(const InType& input, OutType& output)
-			{
-				Calc(GetMdInfo(hashType), detail::GetPtr(input), detail::GetSize(input), detail::GetPtr(output), detail::GetSize(output));
-			}
+		public:
 
-			/**
-			 * \brief	Calculates hash for a single item.
-			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			 *
-			 * \tparam	hashType	Type of the hash algorithm.
-			 * \tparam	OutType		Data type of the output hash.
-			 * \param 		  	input 	The input data.
-			 * \param 		  	inSize	Size of the input data.
-			 * \param [in,out]	output	The output hash.
-			 */
-			template<HashType hashType, typename OutType>
-			static void Calc(const void* input, const size_t inSize, OutType& output)
-			{
-				Calc(GetMdInfo(hashType), input, inSize, detail::GetPtr(output), detail::GetSize(output));
-			}
-
-			/**
-			 * \brief	Batched calculates hash for a list of data. The datalist is provided in std::array,
-			 * 			which means the size of the list is determined at compiled time. 
-			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			 *
-			 * \tparam	hashType   	Type of the hash algorithm.
-			 * \tparam	dataListLen	Length of the data list.
-			 * \tparam	OutType	   	Data type of the output hash.
-			 * \param 		  	dataList	List of DataListItem. Please also checkout the definition of
-			 * 								struct DataListItem.
-			 * \param [in,out]	output  	The output hash.
-			 */
-			template<HashType hashType, size_t dataListLen, typename OutType>
-			static void BatchedCalc(const std::array<DataListItem, dataListLen>& dataList, OutType& output)
-			{
-				Hasher().BatchedCalcInternal<hashType>(dataList, output);
-			}
-
-			/**
-			* \brief	Batched calculates hash for a list of data. The datalist is provided in std::vector,
-			* 			so that the size of the list can be determined at runtime.
-			*
-			* \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			*
-			* \tparam	hashType	Type of the hash algorithm.
-			* \tparam	OutType		Data type of the output hash.
-			* \param 		  	dataList	List of DataListItem. Please also checkout the definition of
-			* 								struct DataListItem.
-			* \param [in,out]	output  	The output hash.
-			*/
-			template<HashType hashType, typename OutType>
-			static void BatchedCalc(const std::vector<DataListItem>& dataList, OutType& output)
-			{
-				Hasher().BatchedCalcInternal<hashType>(dataList, output);
-			}
-
-			/**
-			 * \brief	Batched calculates hash for any number of array type objects (i.e. C array (not
-			 * 			pointer!), std::array, std::vector, std::basic_string).
-			 *
-			 * \tparam	hashType	Type of the hash algorithm.
-			 * \tparam	OutT		Data type of the output hash.
-			 * \tparam	Args		Type of the arguments.
-			 * \param [in,out]	output	The output.
-			 * \param 		  	args  	Variable arguments providing the arguments.
-			 */
-			template<HashType hashType, typename OutT, class... Args>
-			static void ArrayBatchedCalc(OutT& output, const Args&... args)
-			{
-				BatchedCalc<hashType>(detail::ConstructDataList(args...), output);
-			}
-
-		private:
-
-			/**
-			 * \brief	Default constructor that constructs Hasher object. This is only needed for batched
-			 * 			calculation. However, all member methods are private, instead, static functions are
-			 * 			exposed to be used for hash calculations. Please use static member functions.
-			 */
-			Hasher();
-
-			Hasher(const Hasher& rhs) = delete; //There is no reason to copy this object;
-
-			Hasher(Hasher&& rhs) = delete; //There is no reason to move this object;
+			MsgDigestBase(const mbedtls_md_info_t& mdInfo, bool needHMac);
 
 			/** \brief	Destructor */
-			virtual ~Hasher();
+			virtual ~MsgDigestBase();
+
+		protected:
+
+			MsgDigestBase();
+
+			MsgDigestBase(MsgDigestBase&& rhs);
+
+			MsgDigestBase(const MsgDigestBase& rhs) = delete;
+		};
+		
+		class HasherBase : public MsgDigestBase
+		{
+		public:
+
+			/** \brief	Destructor */
+			virtual ~HasherBase();
+
+		protected:
+
+			HasherBase() = delete;
 
 			/**
-			 * \brief	Batched calculates hash for a list of data. The datalist is provided in std::array,
-			 * 			which means the size of the list is determined at compiled time.  
+			 * \brief	Constructor. mbedtls_md_starts is called here.
 			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			 *
-			 * \tparam	hashType   	Type of the hash algorithm.
-			 * \tparam	dataListLen	Length of the data list.
-			 * \tparam	OutType	   	Data type of the output hash.
-			 * \param 		  	dataList	List of DataListItem. Please also checkout the definition of
-			 * 								struct DataListItem.
-			 * \param [in,out]	output  	The output hash.
+			 * \param	mdInfo	Information describing the md.
 			 */
-			template<HashType hashType, size_t dataListLen, typename OutType>
-			void BatchedCalcInternal(const std::array<DataListItem, dataListLen>& dataList, OutType& output)
+			HasherBase(const mbedtls_md_info_t& mdInfo);
+
+			/**
+			 * \brief	Updates the calculation with the given data.
+			 *
+			 * \param	data		The data.
+			 * \param	dataSize	Size of the data.
+			 */
+			void Update(const void* data, const size_t dataSize);
+
+			/**
+			 * \brief	Finishes the hash calculation and get the result.
+			 *
+			 * \param [out]	output	The output. Must not null! And make sure to check the buffer size is big
+			 * 						enough before calling this method!
+			 */
+			void Finish(void* output);
+		};
+
+		template<HashType hType>
+		class Hasher : public HasherBase
+		{
+		public: //static members:
+			static constexpr size_t sk_hashByteSize = GetHashByteSize<hType>();
+
+		public:
+			Hasher() :
+				HasherBase(GetMsgDigestInfo(hType))
+			{}
+
+			virtual ~Hasher()
+			{}
+
+			/**
+			 * \brief	Calculate hash of a list of data in batched mode.
+			 *
+			 * \tparam	listLen	Type of the list length.
+			 * \param [out]	output	The output.
+			 * \param 	   	list  	The list of pointers and sizes.
+			 */
+			template<size_t listLen>
+			void Batched(std::array<uint8_t, sk_hashByteSize>& output, const std::array<DataListItem, listLen>& list)
 			{
-				BatchedCalcInternal(GetMdInfo(hashType), dataList.data(), dataListLen, detail::GetPtr(output), detail::GetSize(output));
+				return BatchedInternal(output.data(), list.data(), listLen);
+			}
+
+			template<size_t listLen>
+			void Batched(uint8_t(&output)[sk_hashByteSize], const std::array<DataListItem, listLen>& list)
+			{
+				return BatchedInternal(output, list.data(), listLen);
+			}
+
+			void Batched(std::array<uint8_t, sk_hashByteSize>& output, const std::vector<DataListItem>& list)
+			{
+				return BatchedInternal(output.data(), list.data(), list.size());
+			}
+
+			void Batched(uint8_t(&output)[sk_hashByteSize], const std::vector<DataListItem>& list)
+			{
+				return BatchedInternal(output, list.data(), list.size());
 			}
 
 			/**
-			 * \brief	Batched calculates hash for a list of data. The datalist is provided in std::vector,
-			 * 			so that the size of the list can be determined at runtime.
+			 * \brief	Calculate hash of a single piece of data.
 			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			 *
-			 * \tparam	hashType	Type of the hash algorithm.
-			 * \tparam	OutType		Data type of the output hash.
-			 * \param 		  	dataList	List of DataListItem. Please also checkout the definition of
-			 * 								struct DataListItem.
-			 * \param [in,out]	output  	The output hash.
+			 * \tparam	Container	Type of the container.
+			 * \param [in,out]	output	The output.
+			 * \param 		  	data  	The data.
 			 */
-			template<HashType hashType, typename OutType>
-			void BatchedCalcInternal(const std::vector<DataListItem>& dataList, OutType& output)
+			template<typename Container>
+			void Calc(std::array<uint8_t, sk_hashByteSize>& output, const Container& data)
 			{
-				BatchedCalcInternal(GetMdInfo(hashType), dataList.data(), dataList.size(), detail::GetPtr(output), detail::GetSize(output));
+				Update(detail::GetPtr(data), detail::GetSize(data));
+				Finish(output.data());
+			}
+
+			template<typename Container>
+			void Calc(uint8_t(&output)[sk_hashByteSize], const Container& data)
+			{
+				Update(detail::GetPtr(data), detail::GetSize(data));
+				Finish(output);
+			}
+
+			/**
+			 * \brief	Calculate hash of a list of data (more than one) in batched mode, with helper to setup the batch list. This function
+			 * 			only accept container types for input data, so that it can automatically get the
+			 * 			pointers and sizes.
+			 *
+			 * \tparam	Arg1	Type of the argument 1.
+			 * \tparam	Arg2	Type of the argument 2.
+			 * \tparam	Args	Type of the arguments. NOTE: only continuous containers (i.e. C array,
+			 * 					std::array, std::vector, std::basic_string) are accepted.
+			 * \param [in,out]	output	The output.
+			 * \param 		  	arg1  	The first argument.
+			 * \param 		  	arg2  	The second argument.
+			 * \param 		  	args  	Variable arguments providing the arguments.
+			 */
+			template<class Arg1, class Arg2, class... Args>
+			void Calc(std::array<uint8_t, sk_hashByteSize>& output, const Arg1& arg1, const Arg2& arg2, const Args&... args)
+			{
+				Batched(output, detail::ConstructDataList(arg1, arg2, args...));
+			}
+
+			template<class Arg1, class Arg2, class... Args>
+			void Calc(uint8_t(&output)[sk_hashByteSize], const Arg1& arg1, const Arg2& arg2, const Args&... args)
+			{
+				Batched(output, detail::ConstructDataList(arg1, arg2, args...));
 			}
 
 		private:
 
 			/**
-			 * \brief	Batched calculates hash for a list of data. 
+			 * \brief	Internal method to calculate MAC in batched mode.
 			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			 *
-			 * \param 		  	mdInfo  	MbedTls's mbedtls_md_info_t.
-			 * \param 		  	dataList	List of data.
-			 * \param 		  	listLen 	Length of the list.
-			 * \param [in,out]	output  	The output buffer.
-			 * \param 		  	outSize 	Size of the output.
+			 * \param [out]	output  	The output.
+			 * \param 	   	dataList	List of data.
+			 * \param 	   	listLen 	Length of the list.
 			 */
-			void BatchedCalcInternal(const mbedtls_md_info_t& mdInfo, const DataListItem* dataList, size_t listLen, void* output, const size_t outSize);
+			void BatchedInternal(void* output, const DataListItem* dataList, size_t listLen)
+			{
+				// Used internally, assume dataList is not null, AND output has enough memory size.
 
-			/**
-			 * \brief	Calculates hash for a single item.
-			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when a error happened during calculation.
-			 *
-			 * \param 		  	mdInfo 	MbedTls's mbedtls_md_info_t.
-			 * \param 		  	input  	The input buffer.
-			 * \param 		  	inSize 	Size of the input.
-			 * \param [in,out]	output 	The output buffer.
-			 * \param 		  	outSize	Size of the output.
-			 */
-			static void Calc(const mbedtls_md_info_t& mdInfo, const void* input, const size_t inSize, void* output, const size_t outSize);
+				for (size_t i = 0; i < listLen; ++i)
+				{
+					Update(dataList[i].m_ptr, dataList[i].m_size);
+				}
 
+				Finish(output);
+			}
 		};
-		
 	}
 }

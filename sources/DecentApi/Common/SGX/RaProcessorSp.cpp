@@ -161,7 +161,8 @@ void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 	msg2Ref.kdf_id = m_raConfig.ckdf_id;
 
 	General256Hash hashToBeSigned;
-	Hasher::Calc<HashType::SHA256>(&m_myEncrKey, 2 * sizeof(sgx_ec256_public_t), hashToBeSigned);
+	Hasher<HashType::SHA256>().Batched(hashToBeSigned,
+		std::array<DataListItem, 1>{{&m_myEncrKey, 2 * sizeof(sgx_ec256_public_t)}});
 
 	if (!m_mySignKey->EcdsaSign(SgxEc256Type2General(msg2Ref.sign_gb_ga), hashToBeSigned,
 		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
@@ -214,14 +215,13 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
 	// The second 32 bytes of report_data are set to zero.
 	General256Hash reportDataHash;
-	Hasher::BatchedCalc<HashType::SHA256>(
+	Hasher<HashType::SHA256>().Batched(reportDataHash,
 		std::array<DataListItem, 3>
 		{
 			DataListItem{&(m_peerEncrKey), sizeof(sgx_ec256_public_t)},
 			DataListItem{&(m_myEncrKey), sizeof(sgx_ec256_public_t)},
 			DataListItem{&(m_vk), sizeof(sgx_ec_key_128bit_t)},
-		},
-		reportDataHash);
+		});
 
 	std::copy(reportDataHash.begin(), reportDataHash.end(), report_data.d);
 
@@ -250,7 +250,7 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 		if (m_raConfig.enable_pse)
 		{
 			General256Hash pseHash;
-			Hasher::Calc<HashType::SHA256>(msg3.ps_sec_prop.sgx_ps_sec_prop_desc, pseHash);
+			Hasher<HashType::SHA256>().Calc(pseHash, msg3.ps_sec_prop.sgx_ps_sec_prop_desc);
 
 			if (!consttime_memequal(pseHash.data(), &m_iasReport->m_pse_hash, pseHash.size()))
 			{

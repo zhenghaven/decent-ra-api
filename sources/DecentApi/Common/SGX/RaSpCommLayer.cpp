@@ -56,7 +56,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 		try
 		{
 			using namespace Decent::MbedTlsObj;
-			Hasher::ArrayBatchedCalc<HashType::SHA256>(peerMsgHash, rpcResuTicket.GetFullBinary());
+			Hasher<HashType::SHA256>().Calc(peerMsgHash, rpcResuTicket.GetFullBinary());
 
 			auto ticketSpace = rpcResuTicket.GetBinaryArg();
 			std::vector<uint8_t> sessionBin = unsealFunc(std::vector<uint8_t>(ticketSpace.first, ticketSpace.second));
@@ -90,7 +90,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 		connection.SendRpc(rpcSuccResu);
 
 		using namespace Decent::MbedTlsObj;
-		Hasher::ArrayBatchedCalc<HashType::SHA256>(selfMsgHash, rpcSuccResu.GetFullBinary());
+		Hasher<HashType::SHA256>().Calc(selfMsgHash, rpcSuccResu.GetFullBinary());
 	}
 
 	// 4. Recv client's verification message:
