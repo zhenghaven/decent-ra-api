@@ -2,11 +2,19 @@
 
 #include <sgx_key_exchange.h>
 
+#include "../Net/RpcWriter.h"
+#include "../Net/RpcParser.h"
 #include "../Net/ConnectionBase.h"
 #include "../Net/NetworkException.h"
+
+#include "../MbedTls/Kdf.h"
+#include "../MbedTls/Drbg.h"
+#include "../MbedTls/Hasher.h"
 #include "../MbedTls/SafeWrappers.h"
+#include "../Tools/Crypto.h"
 
 #include "../make_unique.h"
+#include "../consttime_memequal.h"
 #include "RaTicket.h"
 #include "RaProcessorSp.h"
 
@@ -21,6 +29,141 @@ namespace
 
 	static constexpr uint8_t gsk_hasNewTicket = 1;
 	static constexpr uint8_t gsk_noNewTicket = 0;
+
+	static constexpr char const gsk_keyDerLabel[] = "new_session_keys";
+}
+
+static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, RaSpCommLayer::TicketSealer unsealFunc)
+{
+	std::array<uint64_t, 2> nonces;
+	uint64_t& peerNonce = nonces[0]; //Client nonce is at first position
+	uint64_t& selfNonce = nonces[1]; //Server nonce is at second position
+	std::unique_ptr<RaSession> origSession;
+	Decent::General256Hash selfMsgHash;
+	Decent::General256Hash peerMsgHash;
+	
+	// 1. Recv client's RPC
+	{
+		RpcParser rpcResuTicket(connection.RecvContainer<std::vector<uint8_t> >());
+
+		uint8_t hasTicket = rpcResuTicket.GetPrimitiveArg<uint8_t>();
+
+		if (!hasTicket)
+		{
+			return nullptr; // Client doesn't have ticket.
+		}
+
+		try
+		{
+			using namespace Decent::MbedTlsObj;
+			Hasher::ArrayBatchedCalc<HashType::SHA256>(peerMsgHash, rpcResuTicket.GetFullBinary());
+
+			auto ticketSpace = rpcResuTicket.GetBinaryArg();
+			std::vector<uint8_t> sessionBin = unsealFunc(std::vector<uint8_t>(ticketSpace.first, ticketSpace.second));
+			peerNonce = rpcResuTicket.GetPrimitiveArg<uint64_t>();
+
+			origSession = Tools::make_unique<RaSession>(sessionBin.cbegin(), sessionBin.cend());
+		}
+		catch (const std::exception&)
+		{
+			//Failed to unseal the ticket, inform the client, and go ahead and generate a new session.
+			
+			RpcWriter rpcFailedResu(RpcWriter::CalcSizePrim<uint8_t>(), 1);
+			rpcFailedResu.AddPrimitiveArg<uint8_t>() = gsk_resumeFail;
+			connection.SendRpc(rpcFailedResu);
+		}
+	}
+
+	// 2. Generate a nonce:
+	Decent::MbedTlsObj::Drbg drbg;
+	drbg.RandStruct(selfNonce);
+
+	// 3. Send resume result:
+	{
+		RpcWriter rpcSuccResu(RpcWriter::CalcSizePrim<uint8_t>() +
+			RpcWriter::CalcSizePrim<uint64_t>(), 2, false);
+
+		rpcSuccResu.AddPrimitiveArg<uint8_t>() = gsk_resumeSucc;
+		rpcSuccResu.AddPrimitiveArg<uint64_t>() = selfNonce;
+
+		using namespace Decent::MbedTlsObj;
+		Hasher::ArrayBatchedCalc<HashType::SHA256>(selfMsgHash, rpcSuccResu.GetBinaryArray());
+	}
+
+	// 4. Recv client's verification message:
+	{
+		Decent::MbedTlsObj::SecretKeyWrap<GENERAL_128BIT_16BYTE_SIZE + sizeof(uint64_t)> peerAdd;
+		std::copy(origSession->m_maskingKey.m_key.begin(), origSession->m_maskingKey.m_key.end(), peerAdd.m_key.begin());
+		std::memcpy(peerAdd.m_key.data() + GENERAL_128BIT_16BYTE_SIZE, &selfNonce, sizeof(uint64_t));
+
+		std::vector<uint8_t> peerVrfyMsgEnc = connection.RecvContainer<std::vector<uint8_t> >();
+		std::vector<uint8_t> meta;
+		std::vector<uint8_t> peerVrfyMsg;
+		Decent::Tools::QuickAesGcmUnpack(origSession->m_secretKey.m_key, peerVrfyMsgEnc, peerAdd.m_key,
+			meta, peerVrfyMsg, nullptr, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
+
+		if (peerVrfyMsg.size() != selfMsgHash.size() ||
+			!consttime_memequal(peerVrfyMsg.data(), selfMsgHash.data(), selfMsgHash.size()))
+		{
+			// At this step, we don't fall back to RA process.
+			throw Decent::Net::Exception("Failed to verify ticket resume message from client.");
+		}
+	}
+
+	// 5. Send server's verification message:
+	{
+		Decent::MbedTlsObj::SecretKeyWrap<GENERAL_128BIT_16BYTE_SIZE + sizeof(uint64_t)> selfAdd;
+		std::copy(origSession->m_maskingKey.m_key.begin(), origSession->m_maskingKey.m_key.end(), selfAdd.m_key.begin());
+		std::memcpy(selfAdd.m_key.data() + GENERAL_128BIT_16BYTE_SIZE, &peerNonce, sizeof(uint64_t));
+
+		Decent::General128Tag tag;
+		std::vector<uint8_t> selfVrfyMsg = Decent::Tools::QuickAesGcmPack(origSession->m_secretKey.m_key,
+			std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), peerMsgHash, selfAdd.m_key, tag, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
+
+		connection.SendContainer(selfVrfyMsg);
+	}
+
+	// 6. Derive new keys to prevent replay attack:
+	std::unique_ptr<RaSession> currSession = Decent::Tools::make_unique<RaSession>();
+	{
+		using namespace Decent::MbedTlsObj;
+		HKDF<HashType::SHA256>(origSession->m_secretKey.m_key, gsk_keyDerLabel, nonces, currSession->m_secretKey.m_key);
+		HKDF<HashType::SHA256>(origSession->m_maskingKey.m_key, gsk_keyDerLabel, nonces, currSession->m_maskingKey.m_key);
+	}
+
+	origSession->m_secretKey = currSession->m_secretKey;
+	origSession->m_maskingKey = currSession->m_maskingKey;
+	return std::move(origSession);
+}
+
+static void GenerateAndSendTicket(ConnectionBase& cnt, const RaSession& session, RaSpCommLayer::TicketSealer sealFunc)
+{
+	std::vector<uint8_t> neTicket;
+
+	try
+	{
+		std::vector<uint8_t> sessionBin(session.GetSize());
+		session.ToBinary(sessionBin.begin(), sessionBin.end());
+		neTicket = sealFunc(sessionBin);
+
+		MbedTlsObj::ZeroizeContainer(sessionBin);
+	}
+	catch (const std::exception&)
+	{
+		//Failed to seal the data, and tells client there is no ticket.
+		RpcWriter rpcNoTicket(RpcWriter::CalcSizePrim<uint8_t>(),
+			1);
+		rpcNoTicket.AddPrimitiveArg<uint8_t>() = gsk_noNewTicket;
+		cnt.SendRpc(rpcNoTicket);
+
+		return;
+	}
+
+	RpcWriter rpcNewTicket(RpcWriter::CalcSizePrim<uint8_t>() +
+		RpcWriter::CalcSizeBin(neTicket.size()), 2);
+	rpcNewTicket.AddPrimitiveArg<uint8_t>() = gsk_hasNewTicket;
+	rpcNewTicket.AddBinaryArg(neTicket.size()).Set(neTicket);
+	cnt.SendRpc(rpcNewTicket);
 }
 
 // SP side steps:
@@ -50,35 +193,11 @@ static std::unique_ptr<RaSession> DoHandShake(ConnectionBase& cnt, std::unique_p
 	}
 
 	isResumed = false;
-
-	uint8_t clientHasTicket = 0;
-	cnt.RecvRawAll(&clientHasTicket, sizeof(clientHasTicket));
-
-	if (clientHasTicket)
+	std::unique_ptr<RaSession> neSession = ResumeSessionFromTicket(cnt, unsealFunc);
+	if (neSession)
 	{
-		//try to resume the session
-		
-		std::vector<uint8_t> ticket = cnt.RecvContainer<std::vector<uint8_t> >();
-		try
-		{
-			std::vector<uint8_t> sessionBin = unsealFunc(ticket);
-			if (sessionBin.size() == RaSession::GetSize())
-			{
-				std::unique_ptr<RaSession> neSession = Tools::make_unique<RaSession>(sessionBin.cbegin(), sessionBin.cend());
-
-				cnt.SendRawAll(&gsk_resumeSucc, sizeof(gsk_resumeSucc));
-
-				isResumed = true;
-
-				return std::move(neSession);
-			}
-		}
-		catch (const std::exception&)
-		{
-			//Failed to unseal the ticket, go ahead and generate a new session.
-		}
-
-		cnt.SendRawAll(&gsk_resumeFail, sizeof(gsk_resumeFail));
+		isResumed = true;
+		return std::move(neSession);
 	}
 	
 	raProcessor->Init();
@@ -108,33 +227,13 @@ static std::unique_ptr<RaSession> DoHandShake(ConnectionBase& cnt, std::unique_p
 
 	cnt.SendContainer(msg4);
 
-	std::unique_ptr<RaSession> neSession = Tools::make_unique<RaSession>();
+	neSession = Tools::make_unique<RaSession>();
 
 	neSession->m_secretKey = raProcessor->GetSK();
 	neSession->m_maskingKey = raProcessor->GetMK();
 	neSession->m_iasReport = *raProcessor->ReleaseIasReport();
 
-	//try to generate new ticket
-	std::vector<uint8_t> neTicket;
-
-	std::vector<uint8_t> sessionBin(neSession->GetSize());
-	neSession->ToBinary(sessionBin.begin(), sessionBin.end());
-
-	try
-	{
-		neTicket = sealFunc(sessionBin);
-	}
-	catch (const std::exception&)
-	{
-		//Failed to seal the data.
-		cnt.SendRawAll(&gsk_noNewTicket, sizeof(gsk_noNewTicket));
-		return std::move(neSession);
-	}
-
-	MbedTlsObj::ZeroizeContainer(sessionBin);
-
-	cnt.SendRawAll(&gsk_hasNewTicket, sizeof(gsk_hasNewTicket));
-	cnt.SendContainer(neTicket);
+	GenerateAndSendTicket(cnt, *neSession, sealFunc);
 
 	return std::move(neSession);
 }

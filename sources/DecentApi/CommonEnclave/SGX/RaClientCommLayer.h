@@ -12,6 +12,7 @@ namespace Decent
 	{
 		class RaProcessorClient;
 		struct RaClientSession;
+		struct RaSession;
 
 		class RaClientCommLayer : public Decent::Net::AesGcmCommLayer
 		{
@@ -48,17 +49,41 @@ namespace Decent
 			const sgx_ias_report_t& GetIasReport() const;
 
 			/**
-			 * \brief	Gets the session. It can be saved and resumed later.
+			 * \brief	Gets the original session. It can be saved and resumed later. original session
+			 * 			contains ticket given by the SP, and the original symmetric key derived during
+			 * 			standard RA process.
 			 *
-			 * \return	The session.
+			 * \return	The original session.
 			 */
-			std::shared_ptr<const RaClientSession> GetSession() const;
+			std::shared_ptr<const RaClientSession> GetOrigSession() const;
+
+			/**
+			 * \brief	Gets current session that is generated during the handshake, and its keys are the
+			 * 			ones actually used in current session. If session is recovered from ticket, keys in
+			 * 			current session is derived from keys in original session, otherwise, it's same as the
+			 * 			ones in original session.
+			 *
+			 * \return	The current session.
+			 */
+			const RaSession& GetCurrSession() const;
 
 		private:
-			RaClientCommLayer(Net::ConnectionBase& connectionPtr, std::shared_ptr<const RaClientSession> session);
+			RaClientCommLayer(Net::ConnectionBase& connectionPtr, std::pair<std::shared_ptr<const RaClientSession>, std::unique_ptr<RaSession> > session);
 
-			std::shared_ptr<const RaClientSession> m_session;
+			RaClientCommLayer(Net::ConnectionBase& connectionPtr, std::shared_ptr<const RaClientSession> origSession, std::unique_ptr<RaSession> currSession);
 
+			/**
+			 * \brief	m_origSession contains ticket given by the SP, and the original symmetric key derived
+			 * 			during standard RA process. All these info should not be changed throughout the
+			 * 			lifetime of the included ticket.
+			 */
+			std::shared_ptr<const RaClientSession> m_origSession;
+
+			/**
+			 * \brief	If session is recovered from ticket, keys in m_currSession is derived from keys in
+			 * 			m_origSession
+			 */
+			std::unique_ptr<RaSession> m_currSession;
 		};
 	}
 }

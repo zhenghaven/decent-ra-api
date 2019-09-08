@@ -22,17 +22,17 @@ namespace
 	//         2. Follow RA SP steps
 	//         3. Save peer's identity from SP steps
 	//         4. Return session from RA Client steps
-	static std::shared_ptr<const RaClientSession> DoClientHandshake(ConnectionBase & cnt,
-		std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
+	static std::pair<std::shared_ptr<const RaClientSession>, std::unique_ptr<RaSession> >
+		DoClientHandshake(ConnectionBase & cnt, std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
 		std::shared_ptr<const RaClientSession> savedSession)
 	{
 		RaClientCommLayer clientComm(cnt, std::move(clientRaProcessor), savedSession);
 
-		std::shared_ptr<const RaClientSession> tmpNewSession = clientComm.GetSession();
+		std::shared_ptr<const RaClientSession> tmpNewSession = clientComm.GetOrigSession();
 		if (savedSession == tmpNewSession)
 		{
-			//Ticket is accepted by peer.
-			return savedSession;
+			//Ticket is accepted by peer; the handshake is finished
+			return std::make_pair(tmpNewSession, Tools::make_unique<RaSession>(clientComm.GetCurrSession()));
 		}
 
 		//New ticket is generated, so we need to verify the peer as well.
@@ -44,7 +44,7 @@ namespace
 
 		neSession->m_session.m_iasReport = spComm.GetIasReport();
 
-		return neSession;
+		return std::make_pair(neSession, Tools::make_unique<RaSession>(clientComm.GetCurrSession()));
 	}
 
 	// Server side steps:
@@ -124,9 +124,14 @@ RaMutualCommLayer::RaMutualCommLayer(Net::ConnectionBase& cnt, std::unique_ptr<R
 {
 }
 
-RaMutualCommLayer::RaMutualCommLayer(Net::ConnectionBase& cnt, std::shared_ptr<const RaClientSession> session) :
-	AesGcmCommLayer(session->m_session.m_secretKey, session->m_session.m_maskingKey, &cnt),
-	m_clientSession(session),
+RaMutualCommLayer::RaMutualCommLayer(Net::ConnectionBase& cnt, std::pair<std::shared_ptr<const RaClientSession>, std::unique_ptr<RaSession> > session) :
+	RaMutualCommLayer(cnt, session.first, std::move(session.second))
+{
+}
+
+RaMutualCommLayer::RaMutualCommLayer(Net::ConnectionBase& cnt, std::shared_ptr<const RaClientSession> origSession, std::unique_ptr<RaSession> currSession) :
+	AesGcmCommLayer(currSession->m_secretKey, currSession->m_maskingKey, &cnt),
+	m_clientSession(origSession),
 	m_spSession()
 {
 }

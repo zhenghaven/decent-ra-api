@@ -1,10 +1,12 @@
 #pragma once
 
-#include <string>
-#include <vector>
 #include <cstdint>
 
+#include <string>
+#include <vector>
+
 #include "../ArrayPtrAndSize.h"
+#include "RpcWriter.h"
 
 namespace Decent
 {
@@ -113,6 +115,26 @@ namespace Decent
 			void SendContainer(const Container& msg)
 			{
 				SendPack(ArrayPtrAndSize::GetPtr(msg), ArrayPtrAndSize::GetSize(msg));
+			}
+
+			/**
+			 * \brief	Sends a RPC
+			 *
+			 * \exception	Decent::Net::Exception	Thrown when the operation is failed.
+			 *
+			 * \param	rpc	The RPC.
+			 */
+			virtual void SendRpc(const RpcWriter& rpc)
+			{
+				if (rpc.HasSizeAtFront())
+				{
+					const auto& bin = rpc.GetBinaryArray();
+					SendRawAll(bin.data(), bin.size());
+				}
+				else
+				{
+					SendContainer(rpc.GetBinaryArray());
+				}
 			}
 
 			//#################################################

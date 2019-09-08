@@ -103,6 +103,16 @@ namespace Decent
 				return end();
 			}
 
+			std::vector<uint8_t>::iterator Set(const std::vector<uint8_t>& input)
+			{
+				if (static_cast<size_t>(std::distance(begin(), end())) < input.size())
+				{
+					throw RuntimeException("The space reserved in RPC is not enough to hold the given data.");
+				}
+
+				return std::copy(input.begin(), input.end(), begin());
+			}
+
 			size_t GetSize() const
 			{
 				return m_len;

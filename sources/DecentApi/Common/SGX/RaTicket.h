@@ -52,6 +52,12 @@ namespace Decent
 			~RaSession()
 			{}
 
+			RaSession(const RaSession& rhs) :
+				m_secretKey(rhs.m_secretKey),
+				m_maskingKey(rhs.m_maskingKey),
+				m_iasReport(rhs.m_iasReport)
+			{}
+
 			RaSession(std::vector<uint8_t>::const_iterator start, std::vector<uint8_t>::const_iterator end) :
 				RaSession()
 			{

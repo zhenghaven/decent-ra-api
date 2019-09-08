@@ -148,6 +148,11 @@ namespace Decent
 				return m_argCount;
 			}
 
+			const std::vector<uint8_t>& GetFullBinary() const
+			{
+				return m_binary;
+			}
+
 		protected:
 
 			std::vector<uint8_t>::iterator InternalGetNext(size_t size)
