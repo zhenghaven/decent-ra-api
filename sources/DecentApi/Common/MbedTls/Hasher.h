@@ -177,9 +177,9 @@ namespace Decent
 			}
 
 			/**
-			 * \brief	Calculate hash of a list of data (more than one) in batched mode, with helper to setup the batch list. This function
-			 * 			only accept container types for input data, so that it can automatically get the
-			 * 			pointers and sizes.
+			 * \brief	Calculate hash of a list of data (more than one) in batched mode, with helper to
+			 * 			setup the batch list. This function only accept container types for input data, so
+			 * 			that it can automatically get the pointers and sizes.
 			 *
 			 * \tparam	Arg1	Type of the argument 1.
 			 * \tparam	Arg2	Type of the argument 2.
