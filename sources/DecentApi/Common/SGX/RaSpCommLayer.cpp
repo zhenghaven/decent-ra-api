@@ -71,6 +71,8 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 			RpcWriter rpcFailedResu(RpcWriter::CalcSizePrim<uint8_t>(), 1);
 			rpcFailedResu.AddPrimitiveArg<uint8_t>() = gsk_resumeFail;
 			connection.SendRpc(rpcFailedResu);
+
+			return nullptr;
 		}
 	}
 
@@ -85,6 +87,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 
 		rpcSuccResu.AddPrimitiveArg<uint8_t>() = gsk_resumeSucc;
 		rpcSuccResu.AddPrimitiveArg<uint64_t>() = selfNonce;
+		connection.SendRpc(rpcSuccResu);
 
 		using namespace Decent::MbedTlsObj;
 		Hasher::ArrayBatchedCalc<HashType::SHA256>(selfMsgHash, rpcSuccResu.GetBinaryArray());

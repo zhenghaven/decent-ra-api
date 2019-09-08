@@ -231,7 +231,7 @@ static std::pair<std::shared_ptr<const RaClientSession>, std::unique_ptr<RaSessi
 	currSession->m_secretKey = origSession->m_session.m_secretKey;
 	currSession->m_maskingKey = origSession->m_session.m_maskingKey;
 
-	return std::make_pair(savedSession, std::move(currSession));
+	return std::make_pair(origSession, std::move(currSession));
 }
 
 RaClientCommLayer::RaClientCommLayer(ConnectionBase& connection, std::unique_ptr<RaProcessorClient> raProcessor, std::shared_ptr<const RaClientSession> savedSession) :
@@ -258,6 +258,11 @@ const sgx_ias_report_t & RaClientCommLayer::GetIasReport() const
 std::shared_ptr<const RaClientSession> RaClientCommLayer::GetOrigSession() const
 {
 	return m_origSession;
+}
+
+const RaSession & Decent::Sgx::RaClientCommLayer::GetCurrSession() const
+{
+	return *m_currSession;
 }
 
 RaClientCommLayer::RaClientCommLayer(ConnectionBase& connectionPtr, std::pair<std::shared_ptr<const RaClientSession>, std::unique_ptr<RaSession> > session) :

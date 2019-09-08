@@ -29,7 +29,7 @@ namespace
 		RaClientCommLayer clientComm(cnt, std::move(clientRaProcessor), savedSession);
 
 		std::shared_ptr<const RaClientSession> tmpNewSession = clientComm.GetOrigSession();
-		if (savedSession == tmpNewSession)
+		if (savedSession && savedSession == tmpNewSession)
 		{
 			//Ticket is accepted by peer; the handshake is finished
 			return std::make_pair(tmpNewSession, Tools::make_unique<RaSession>(clientComm.GetCurrSession()));
