@@ -119,9 +119,8 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 		std::copy(origSession->m_maskingKey.m_key.begin(), origSession->m_maskingKey.m_key.end(), selfAdd.m_key.begin());
 		std::memcpy(selfAdd.m_key.data() + GENERAL_128BIT_16BYTE_SIZE, &peerNonce, sizeof(uint64_t));
 
-		Decent::General128Tag tag;
 		std::vector<uint8_t> selfVrfyMsg = Decent::Tools::QuickAesGcmPack(origSession->m_secretKey.m_key,
-			std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), peerMsgHash, selfAdd.m_key, tag, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
+			std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), peerMsgHash, selfAdd.m_key, nullptr, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
 
 		connection.SendContainer(selfVrfyMsg);
 	}

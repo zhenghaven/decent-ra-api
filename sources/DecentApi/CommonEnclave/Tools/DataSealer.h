@@ -93,7 +93,7 @@ namespace Decent
 			 */
 			template<typename MetaCtn, typename DataCtn>
 			std::vector<uint8_t> SealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-				const MetaCtn& metadata, const DataCtn& data, General128Tag& outTag, const size_t sealedBlockSize = 4096)
+				const MetaCtn& metadata, const DataCtn& data, General128Tag* outTag = nullptr, const size_t sealedBlockSize = 4096)
 			{
 				std::vector<uint8_t> keyMeta = GenSealKeyRecoverMeta(false);
 				G128BitSecretKeyWrap sealKey;
@@ -122,7 +122,7 @@ namespace Decent
 			 */
 			template<typename SealedDataCtn>
 			void UnsealData(KeyPolicy keyPolicy, const Ra::States& decentState, const std::string& keyLabel, 
-				const SealedDataCtn& inData, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data, const General128Tag* inTag, const size_t sealedBlockSize = 4096)
+				const SealedDataCtn& inData, std::vector<uint8_t>& metadata, std::vector<uint8_t>& data, const General128Tag* inTag = nullptr, const size_t sealedBlockSize = 4096)
 			{
 				G128BitSecretKeyWrap sealKey;
 				DeriveSealKey(keyPolicy, decentState, keyLabel, sealKey.m_key, GetKeyMetaFromPack(inData), std::vector<uint8_t>());

@@ -268,8 +268,7 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	std::vector<uint8_t> msg4Bin(sizeof(msg4));
 	std::memcpy(msg4Bin.data(), &msg4, msg4Bin.size());
 
-	General128Tag tag;
-	msg4Pack = QuickAesGcmPack(GetSK().m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), msg4Bin, GetMK().m_key, tag, 1024);
+	msg4Pack = QuickAesGcmPack(GetSK().m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), msg4Bin, GetMK().m_key, nullptr, 1024);
 
 	if (!m_isAttested)
 	{

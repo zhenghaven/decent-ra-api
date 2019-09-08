@@ -152,10 +152,8 @@ std::vector<uint8_t> AesGcmCommLayer::DecryptMsg(const std::vector<uint8_t>& inM
 
 std::vector<uint8_t> AesGcmCommLayer::EncryptMsg(const std::vector<uint8_t>& inMsg)
 {
-	General128Tag tag; //Not used here.
-
 	std::vector<uint8_t> res =
-		Tools::QuickAesGcmPack(m_selfSecKey.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, m_selfAddData, tag, PACK_BLOCK_SIZE);
+		Tools::QuickAesGcmPack(m_selfSecKey.m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), inMsg, m_selfAddData, nullptr, PACK_BLOCK_SIZE);
 
 	CheckSelfKeysLifetime();
 

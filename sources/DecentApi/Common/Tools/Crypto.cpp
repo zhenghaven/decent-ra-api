@@ -79,7 +79,7 @@ std::vector<uint8_t> detail::QuickAesGcmPack(const void * keyPtr, const size_t k
 	const void * inMeta,    const size_t inMetaSize,
 	const void * inData,    const size_t inDataSize,
 	const void * addData,   const size_t addDataSize,
-	Decent::General128Tag& outTag,
+	Decent::General128Tag* outTag,
 	const size_t sealedBlockSize)
 {
 	if (!keyPtr ||
@@ -128,7 +128,7 @@ std::vector<uint8_t> detail::QuickAesGcmPack(const void * keyPtr, const size_t k
 	uint8_t* sealedResOutputPtr = (sealedResPtr += inKeyMetaSize);
 
 	EXCEPTION_ASSERT((&sealedRes[sealedRes.size() - 1] - sealedResOutputPtr + 1) == inputPkg.size(),
-		"In function DataSealer::detail::SealData, the free space in the sealed result does not match the size of input package.");
+		"In function DataSealer::detail::QuickAesGcmPack, the free space in the sealed result does not match the size of input package.");
 
 	MbedTlsObj::Drbg().Rand(sealedResIvPtr, sizeof(IVType));
 	sealedResPayloadSize = sealedSize;
@@ -145,10 +145,14 @@ std::vector<uint8_t> detail::QuickAesGcmPack(const void * keyPtr, const size_t k
 		inputPkg.data(), inputPkg.size(), sealedResOutputPtr,
 		sealedResIvPtr, sizeof(IVType),
 		fullAddData.data(), fullAddData.size(),
-		outTag.data(), outTag.size());
+		sealedResMacPtr, sizeof(general_128bit_tag));
 
-	//static_assert(sizeof(General128Tag) == sizeof(general_128bit_tag));
-	std::copy(outTag.begin(), outTag.end(), sealedResMacPtr);
+	if (outTag)
+	{
+		//Tag is needed
+
+		std::copy(sealedResMacPtr, sealedResMacPtr + sizeof(general_128bit_tag), outTag->begin());
+	}
 
 	//Clear the temp memory used to hold sensitive data:
 	MbedTlsObj::ZeroizeContainer(fullAddData);

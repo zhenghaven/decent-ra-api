@@ -30,7 +30,7 @@ namespace Decent
 				const void* inMeta,    const size_t inMetaSize,
 				const void* inData,    const size_t inDataSize,
 				const void* addData,   const size_t addDataSize,
-				General128Tag& outTag,
+				General128Tag* outTag,
 				const size_t sealedBlockSize);
 
 			std::vector<uint8_t> GetKeyMetaFromPack(const void* inEncData, const size_t inEncDataSize);
@@ -72,7 +72,7 @@ namespace Decent
 		template<typename KeyType, typename KeyMetaType, typename MetaType, typename DataType, typename AddDataType>
 		std::vector<uint8_t> QuickAesGcmPack(const KeyType& key,
 			const KeyMetaType& keyMeta, const MetaType& meta, const DataType& data, const AddDataType& addData,
-			General128Tag& outTag, const size_t sealedBlockSize)
+			General128Tag* outTag, const size_t sealedBlockSize)
 		{
 			using namespace ArrayPtrAndSize;
 			return detail::QuickAesGcmPack(GetPtr(key), GetSize(key),
