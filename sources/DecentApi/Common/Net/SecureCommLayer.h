@@ -197,12 +197,12 @@ namespace Decent
 			{
 				if (rpc.HasSizeAtFront())
 				{
-					const auto& bin = rpc.GetBinaryArray();
+					const auto& bin = rpc.GetFullBinary();
 					SendRawAll(bin.data(), bin.size());
 				}
 				else
 				{
-					SendContainer(rpc.GetBinaryArray());
+					SendContainer(rpc.GetFullBinary());
 				}
 			}
 

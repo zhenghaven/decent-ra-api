@@ -90,7 +90,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 		connection.SendRpc(rpcSuccResu);
 
 		using namespace Decent::MbedTlsObj;
-		Hasher::ArrayBatchedCalc<HashType::SHA256>(selfMsgHash, rpcSuccResu.GetBinaryArray());
+		Hasher::ArrayBatchedCalc<HashType::SHA256>(selfMsgHash, rpcSuccResu.GetFullBinary());
 	}
 
 	// 4. Recv client's verification message:

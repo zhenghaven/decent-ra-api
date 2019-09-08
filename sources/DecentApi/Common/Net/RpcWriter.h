@@ -332,7 +332,7 @@ namespace Decent
 			 *
 			 * \return	The binary array.
 			 */
-			const std::vector<uint8_t>& GetBinaryArray() const
+			const std::vector<uint8_t>& GetFullBinary() const
 			{
 				return m_binary;
 			}

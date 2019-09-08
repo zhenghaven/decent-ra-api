@@ -197,6 +197,10 @@ void detail::QuickAesGcmUnpack(const void * keyPtr, const size_t keySize,
 	{
 		throw RuntimeException("Invalid argument(s) is given to detail::QuickAesGcmUnpack");
 	}
+	if (!consttime_memequal(inEncData, gsk_sealedDataLabel, sizeof(gsk_sealedDataLabel)))
+	{
+		throw RuntimeException("The data given to detail::QuickAesGcmUnpack doesn't match the pre-defined format.");
+	}
 
 	//Sealed package:
 	const uint8_t* sealedPkgPtr = static_cast<const uint8_t*>(inEncData);

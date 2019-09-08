@@ -73,7 +73,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 
 		// Generate hash to verify in later step:
 		using namespace Decent::MbedTlsObj;
-		Hasher::ArrayBatchedCalc<HashType::SHA256>(selfMsgHash, rpcResuTicket.GetBinaryArray());
+		Hasher::ArrayBatchedCalc<HashType::SHA256>(selfMsgHash, rpcResuTicket.GetFullBinary());
 	}
 
 	// 3. Recv RPC from peer:
