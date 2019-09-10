@@ -26,8 +26,6 @@ namespace Decent
 			 * \param 		  	expectedKeyLen	Length of the output key that is wanted.
 			 */
 			void HKDF(HashType hashType, const void* inKey, const size_t inKeyLen, const void* label, const size_t labelLen, const void* inSalt, const size_t inSaltLen, void* outKey, const size_t expectedKeyLen);
-
-			std::vector<uint8_t> GetCkdfByteSequence(const uint8_t ctr, const std::string& label, const uint16_t resKeyBitSize);
 		}
 
 		/**
@@ -103,11 +101,19 @@ namespace Decent
 		template<CipherType cType, uint16_t cSize, CipherMode cMode, size_t oriKeySize>
 		inline void CKDF(const SecretKeyWrap<oriKeySize>& inKey, const std::string& label, SecretKeyWrap<cSize>& outKey)
 		{
+			static constexpr std::array<uint8_t, 1> counter{0x01};
+			static constexpr std::array<uint8_t, 1> nullTerm{0x00};
+			static constexpr std::array<uint16_t, 1> keyBitSize{cSize * BITS_PER_BYTE};
+
 			SecretKeyWrap<cSize> cmacKey;
 			SecretKeyWrap<cSize> deriveKey;
 			CMACer<cType, cSize, cMode>(cmacKey).Calc(deriveKey.m_key, inKey.m_key);
 
-			CMACer<cType, cSize, cMode>(deriveKey).Calc(outKey.m_key, detail::GetCkdfByteSequence(0x01, label, cSize * BITS_PER_BYTE));
+			CMACer<cType, cSize, cMode>(deriveKey).Calc(outKey.m_key,
+				counter,     //Counter
+				label,       //Label
+				nullTerm,    //Null terminator?
+				keyBitSize); //Bit length of the output key
 		}
 	}
 }
