@@ -32,6 +32,20 @@ namespace
 	static constexpr char const gsk_keyDerLabel[] = "new_session_keys";
 }
 
+// Client steps:
+//     If there is not saved ticket:
+//         1. ---> Send "NoTicket" RPC ("NoTicket")
+//         FALL BACK to standard RA handshake...
+//     Else:
+//         1. ---> Send "HasTicket" RPC ("HasTicket" || Ticket || Nonce)
+//         2. <--- Recv RPC from server ("Accepted" || Nonce) OR ("NotAccepted")
+//         If not accepted:
+//             FALL BACK to standard RA handshake...
+//         Else:
+//             3. ---> Send verification message, AES-GCM(Hash(RPC_from_server), key=secret_key, add=(masking_key || server_nonce))
+//             4. <--- Recv verification message, AES-GCM(Hash(HasTicket_RPC), key=secret_key, add=(masking_key || Nonce))
+//             5. Derive new set of keys: new_secret_key = HKDF(secret_key, label="new_session_keys", salt=(Nonce || server_nonce))
+//                                        new_masking_key = HKDF(masking_key, label="new_session_keys", salt=(Nonce || server_nonce))
 static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, std::shared_ptr<const RaClientSession> savedSession)
 {
 	// If there is no saved ticket:
@@ -155,21 +169,16 @@ static std::vector<uint8_t> GetTicketFromServer(ConnectionBase& connection)
 }
 
 // Client side steps:
-//     If there is saved ticket:
-//         1. ---> Send "Has ticket"
-//         2. ---> Send ticket via plain network channel
-//         3. <--- Recv resume succ or not result
-//     else:
-//         1. ---> Send "No Ticket"
+//     GO TO resume session from ticket
+//     If failed:
+//         1. ---> Send "No Ticket" RPC
 //         2. ---> Send RA MSG 0 Send
 //         3. <--- Recv RA MSG 0 Resp
 //         4. ---> Send RA MSG 1
 //         5. <--- Recv RA MSG 2
 //         6. ---> Send RA MSG 3
 //         7. <--- Recv RA MSG 4
-//         8. <--- Recv "Has Ticket" or "No Ticket"
-//         If has ticket:
-//             9. <--- Recv ticket
+//         GO TO get ticket from server...
 static std::pair<std::shared_ptr<const RaClientSession>, std::unique_ptr<RaSession> > DoHandShake(ConnectionBase& connection, std::unique_ptr<RaProcessorClient> raProcessor, std::shared_ptr<const RaClientSession> savedSession)
 {
 	if (!raProcessor)

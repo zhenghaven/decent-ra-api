@@ -33,6 +33,19 @@ namespace
 	static constexpr char const gsk_keyDerLabel[] = "new_session_keys";
 }
 
+// Server steps:
+//     1. <--- Recv client RPC, ("HasTicket" || Ticket || Nonce) OR ("NoTicket")
+//     If no ticket:
+//        FALL BACK to standard RA...
+//     Else if failed to unseal ticket:
+//        2. ---> Send "NotAccepted" RPC, ("NotAccepted")
+//        FALL BACK to standard RA...
+//     Else:
+//        2. ---> Send "Accepted" RPC, ("Accepted" || Nonce)
+//        3. Recv verification message, AES-GCM(Hash(Accepted_RPC), key=secret_key, add=(masking_key || Nonce))
+//        4. Send verification message, AES-GCM(Hash(RPC_from_client), key=secret_key, add=(masking_key || client_nonce))
+//        5. Derive new set of keys: new_secret_key = HKDF(secret_key, label="new_session_keys", salt=(client_nonce || Nonce))
+//                                   new_masking_key = HKDF(masking_key, label="new_session_keys", salt=(client_nonce || Nonce))
 static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, RaSpCommLayer::TicketSealer unsealFunc)
 {
 	std::array<uint64_t, 2> nonces;
@@ -169,23 +182,15 @@ static void GenerateAndSendTicket(ConnectionBase& cnt, const RaSession& session,
 }
 
 // SP side steps:
-//     1. <--- Recv "Has Ticket" or "No Ticket"
-//     If has ticket:
-//         2. <--- Recv ticket
-//         3. ---> Send "Resume Succ", and return
-//         (If not succ, send "Resume Failed", and continue)
-//     else:
+//     GO TO resume session from ticket
+//     If failed:
 //         2. <--- Recv RA MSG 0 Send
 //         3. ---> Send RA MSG 0 Resp
 //         4. <--- Recv RA MSG 1
 //         5. ---> Send RA MSG 2
 //         6. <--- Recv RA MSG 3
 //         7. ---> Send RA MSG 4
-//         If ticket sealed:
-//             8. ---> Send "Has Ticket"
-//             9. ---> Send Ticket
-//         else:
-//             8. ---> Send "No Ticket"
+//         GO TO send ticket
 static std::unique_ptr<RaSession> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
 	bool& isResumed, RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc)
 {
