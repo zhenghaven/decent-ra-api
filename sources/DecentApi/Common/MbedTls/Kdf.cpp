@@ -17,19 +17,3 @@ void detail::HKDF(HashType hashType, const void * inKey, const size_t inKeyLen, 
 		static_cast<const unsigned char *>(label), labelLen,
 		static_cast<unsigned char *>(outKey), outKeyLen);
 }
-
-std::vector<uint8_t> detail::GetCkdfByteSequence(const uint8_t ctr, const std::string & label, const uint16_t resKeyBitSize)
-{
-	constexpr size_t bufLenFixedPart = 4;
-
-	std::vector<uint8_t> devBuf(label.size() + bufLenFixedPart, 0);
-
-	devBuf[0] = ctr;
-
-	memcpy(&devBuf[1], label.data(), label.size());
-
-	uint16_t& keyLen = reinterpret_cast<uint16_t&>(devBuf[devBuf.size() - 2]);
-	keyLen = resKeyBitSize;
-
-	return devBuf;
-}
