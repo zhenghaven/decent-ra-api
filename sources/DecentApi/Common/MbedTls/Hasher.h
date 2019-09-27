@@ -68,6 +68,13 @@ namespace Decent
 			/** \brief	Destructor */
 			virtual ~MsgDigestBase();
 
+			/**
+			 * \brief	Query if the pointers to objects held by this object is null
+			 *
+			 * \return	True if null, false if not.
+			 */
+			using ObjBase::IsNull;
+
 		protected:
 
 			MsgDigestBase();

@@ -79,7 +79,7 @@ namespace
 		case DataSealer::KeyPolicy::ByMrEnclave:            return SGX_KEYPOLICY_MRENCLAVE;
 		case DataSealer::KeyPolicy::ByMrSigner:             return SGX_KEYPOLICY_MRSIGNER;
 		case DataSealer::KeyPolicy::ByMrEnclaveAndMrSigner: return SGX_KEYPOLICY_MRENCLAVE | SGX_KEYPOLICY_MRSIGNER;
-		default:                                            throw RuntimeException("Invalid parameter for function SgxDeriveKey.");
+		default:                                            throw Decent::RuntimeException("Invalid parameter for function SgxDeriveKey.");
 		}
 	}
 
@@ -92,7 +92,7 @@ namespace
 		case SgxKeyType::ProvisionSeal: return SGX_KEYSELECT_PROVISION_SEAL;
 		case SgxKeyType::Report:        return SGX_KEYSELECT_REPORT;
 		case SgxKeyType::Seal:          return SGX_KEYSELECT_SEAL;
-		default:                        throw RuntimeException("Invalid parameter for function SgxDeriveKey.");
+		default:                        throw Decent::RuntimeException("Invalid parameter for function SgxDeriveKey.");
 		}
 	}
 
@@ -100,7 +100,7 @@ namespace
 	{
 		if (!consttime_memequal(meta.m_label, gsk_sgxMetaLabel, sizeof(gsk_sgxMetaLabel)))
 		{
-			throw RuntimeException("Invalid metadata is given to function SgxDeriveKey.");
+			throw Decent::RuntimeException("Invalid metadata is given to function SgxDeriveKey.");
 		}
 
 		sgx_key_request_t keyReq;
@@ -122,7 +122,7 @@ namespace
 		sgx_status_t sgxRet = sgx_get_key(&keyReq, &outKey);
 		if (sgxRet != SGX_SUCCESS)
 		{
-			throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_get_key"));
+			throw Decent::RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_get_key"));
 		}
 	}
 
@@ -130,7 +130,7 @@ namespace
 	{
 		if (inMetaSize != sizeof(SgxSealKeyMeta))
 		{
-			throw RuntimeException("Invalid metadata is given to function DeriveSealKey.");
+			throw Decent::RuntimeException("Invalid metadata is given to function DeriveSealKey.");
 		}
 		const SgxSealKeyMeta& metaRef = *static_cast<const SgxSealKeyMeta*>(inMeta);
 

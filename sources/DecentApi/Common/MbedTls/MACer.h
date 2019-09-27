@@ -35,6 +35,14 @@ namespace Decent
 			/** \brief	Destructor */
 			virtual ~CipherBase();
 
+
+			/**
+			 * \brief	Query if the pointers to objects held by this object is null
+			 *
+			 * \return	True if null, false if not.
+			 */
+			using ObjBase::IsNull;
+
 		protected:
 
 			/** \brief	Default constructor. Construct a valid but empty cipher struct */

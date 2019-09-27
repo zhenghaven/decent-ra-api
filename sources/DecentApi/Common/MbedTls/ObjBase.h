@@ -2,6 +2,7 @@
 
 #include <utility>
 #include "MbedTlsCppDefs.h"
+#include "RuntimeException.h"
 
 namespace Decent
 {
@@ -68,14 +69,11 @@ namespace Decent
 			{
 				if (this != &other)
 				{
-					T * tmpPtr = this->m_ptr;
-					FreeFuncType tmpFreeFunc = this->m_freeFunc;
+					//Free the object to prevent memory leak.
+					(*m_freeFunc)(m_ptr);
 
-					this->m_ptr = other.m_ptr;
-					this->m_freeFunc = other.m_freeFunc;
-
-					other.m_ptr = tmpPtr;
-					other.m_freeFunc = tmpFreeFunc;
+					m_ptr = other.m_ptr;
+					m_freeFunc = other.m_freeFunc;
 				}
 				return *this;
 			}
@@ -124,7 +122,7 @@ namespace Decent
 				return tmp;
 			}
 
-			virtual void Swap(ObjBase& rhs) noexcept
+			void Swap(ObjBase& rhs) noexcept
 			{
 				ObjBase tmp(std::move(rhs));
 				rhs = std::move(*this);
@@ -139,6 +137,32 @@ namespace Decent
 			virtual bool IsOwner() const noexcept
 			{
 				return m_freeFunc != &DoNotFree;
+			}
+
+			/**
+			 * \brief	Query if c object held by this object is null
+			 *
+			 * \return	True if null, false if not.
+			 */
+			virtual bool IsNull() const noexcept
+			{
+				return m_ptr == nullptr;
+			}
+
+			/**
+			 * \brief	Check if the current instance is holding a null pointer for the mbedTLS object. If so,
+			 * 			exception will be thrown. Helper function to be called before accessing the mbedTLS
+			 * 			object.
+			 *
+			 * \exception	RuntimeException	Thrown when the current instance is holding a null pointer
+			 * 									for the mbedTLS object.
+			 */
+			virtual void NullCheck() const
+			{
+				if (IsNull())
+				{
+					throw RuntimeException("Trying to access a null mbedTLS Cpp object.");
+				}
 			}
 
 		protected:

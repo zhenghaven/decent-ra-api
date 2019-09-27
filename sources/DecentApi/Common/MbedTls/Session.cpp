@@ -7,6 +7,7 @@ using namespace Decent::MbedTlsObj;
 void Session::FreeObject(mbedtls_ssl_session * ptr)
 {
 	mbedtls_ssl_session_free(ptr);
+	delete ptr;
 }
 
 Session::Session() :

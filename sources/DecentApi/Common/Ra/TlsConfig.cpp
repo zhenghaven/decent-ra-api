@@ -12,8 +12,6 @@
 
 using namespace Decent::Ra;
 
-#define CHECK_MBEDTLS_RET(VAL, FUNCSTR) {int retVal = VAL; if(retVal != Decent::MbedTlsObj::MBEDTLS_SUCCESS_RET) { throw Decent::MbedTlsObj::MbedTlsException(#FUNCSTR, retVal); } }
-
 TlsConfig::TlsConfig(States& state, Mode cntMode, std::shared_ptr<Decent::MbedTlsObj::SessionTicketMgrBase> ticketMgr) :
 	MbedTlsObj::TlsConfig(ticketMgr),
 	m_state(state),
@@ -35,8 +33,8 @@ TlsConfig::TlsConfig(States& state, Mode cntMode, std::shared_ptr<Decent::MbedTl
 		throw Decent::RuntimeException("An unexpected TLS connection mode is given.");
 	}
 
-	CHECK_MBEDTLS_RET(mbedtls_ssl_config_defaults(Get(), endpoint, MBEDTLS_SSL_TRANSPORT_STREAM,
-		MBEDTLS_SSL_PRESET_SUITEB), TlsConfig::TlsConfig);
+	CALL_MBEDTLS_C_FUNC(mbedtls_ssl_config_defaults, Get(), endpoint, MBEDTLS_SSL_TRANSPORT_STREAM,
+		MBEDTLS_SSL_PRESET_SUITEB);
 
 
 	switch (cntMode)
@@ -48,7 +46,7 @@ TlsConfig::TlsConfig(States& state, Mode cntMode, std::shared_ptr<Decent::MbedTl
 		{
 			throw Decent::RuntimeException("Key or certificate stored in the global state are invalid.");
 		}
-		CHECK_MBEDTLS_RET(mbedtls_ssl_conf_own_cert(Get(), m_cert->Get(), m_prvKey->Get()), TlsConfig::TlsConfig);
+		CALL_MBEDTLS_C_FUNC(mbedtls_ssl_conf_own_cert, Get(), m_cert->Get(), m_prvKey->Get());
 		break;
 	case Mode::ClientNoCert:
 	default:

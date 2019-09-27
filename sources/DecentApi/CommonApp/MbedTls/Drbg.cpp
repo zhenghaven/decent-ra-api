@@ -13,8 +13,6 @@
 
 using namespace Decent::MbedTlsObj;
 
-#define CHECK_MBEDTLS_RET(VAL) { int retVal = VAL; if(retVal != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(__FUNCTION__, retVal); } }
-
 namespace
 {
 	EntropyCtx& GetEntropy()
@@ -27,11 +25,6 @@ namespace
 	{
 		return static_cast<mbedtls_ctr_drbg_context*>(state);
 	}
-
-	static inline Drbg& CastDrbg(void* state)
-	{
-		return *static_cast<Drbg*>(state);
-	}
 }
 
 Drbg::Drbg() :
@@ -40,7 +33,7 @@ Drbg::Drbg() :
 	EntropyCtx& entropy = GetEntropy();
 
 	mbedtls_ctr_drbg_init(CastCtx(m_state));
-	CHECK_MBEDTLS_RET(mbedtls_ctr_drbg_seed(CastCtx(m_state), &mbedtls_entropy_func, entropy.Get(), nullptr, 0));
+	CALL_MBEDTLS_C_FUNC(mbedtls_ctr_drbg_seed, CastCtx(m_state), &mbedtls_entropy_func, entropy.Get(), nullptr, 0);
 }
 
 Drbg::~Drbg()
@@ -53,23 +46,5 @@ Drbg::~Drbg()
 
 void Drbg::Rand(void* buf, const size_t size)
 {
-	CHECK_MBEDTLS_RET(mbedtls_ctr_drbg_random(m_state, static_cast<unsigned char *>(buf), size));
-}
-
-int Drbg::CallBack(void * ctx, unsigned char * buf, size_t len)
-{
-	if (!ctx)
-	{
-		return -1;
-	}
-
-	try
-	{
-		CastDrbg(ctx).Rand(buf, len);
-		return 0;
-	}
-	catch (const std::exception&)
-	{
-		return -1;
-	}
+	CALL_MBEDTLS_C_FUNC(mbedtls_ctr_drbg_random, m_state, static_cast<unsigned char *>(buf), size);
 }

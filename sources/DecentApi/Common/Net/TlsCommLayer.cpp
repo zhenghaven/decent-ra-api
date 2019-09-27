@@ -19,8 +19,6 @@ using namespace Decent;
 using namespace Decent::Net;
 using namespace Decent::MbedTlsObj;
 
-#define CHECK_MBEDTLS_RET(VAL, FUNCSTR) {int retVal = VAL; if(retVal != MBEDTLS_SUCCESS_RET) { throw Decent::MbedTlsObj::MbedTlsException(#FUNCSTR, retVal); } }
-
 namespace
 {
 	static int MbedTlsSslSend(void *ctx, const unsigned char *buf, size_t len)
@@ -166,12 +164,7 @@ void TlsCommLayer::SetConnectionPtr(ConnectionBase& cnt)
 std::shared_ptr<MbedTlsObj::Session> TlsCommLayer::GetSessionCopy() const
 {
 	std::shared_ptr<MbedTlsObj::Session> res = std::make_shared<MbedTlsObj::Session>();
-	int mbedRet = mbedtls_ssl_get_session(m_sslCtx.get(), res->Get());
-	if (mbedRet != MBEDTLS_SUCCESS_RET)
-	{
-		mbedtls_ssl_free(m_sslCtx.get());
-		throw Decent::MbedTlsObj::MbedTlsException("mbedtls_ssl_get_session", mbedRet);
-	}
+	CALL_MBEDTLS_C_FUNC(mbedtls_ssl_get_session, m_sslCtx.get(), res->Get());
 	return res;
 }
 

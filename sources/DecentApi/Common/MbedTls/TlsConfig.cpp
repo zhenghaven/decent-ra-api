@@ -37,7 +37,7 @@ TlsConfig::TlsConfig(TlsConfig&& other) :
 	m_rng(std::move(other.m_rng)),
 	m_ticketMgr(std::move(other.m_ticketMgr))
 {
-	if (Get())
+	if (!IsNull())
 	{
 		mbedtls_ssl_conf_verify(Get(), &TlsConfig::CertVerifyCallBack, this);
 
@@ -76,8 +76,8 @@ TlsConfig& TlsConfig::operator=(TlsConfig&& other) noexcept
 	ObjBase::operator=(std::forward<ObjBase>(other));
 	if (this != &other)
 	{
-		m_rng.swap(other.m_rng);
-		m_ticketMgr.swap(other.m_ticketMgr);
+		m_rng = std::move(other.m_rng);
+		m_ticketMgr = std::move(other.m_ticketMgr);
 	}
 	return *this;
 }
@@ -85,4 +85,9 @@ TlsConfig& TlsConfig::operator=(TlsConfig&& other) noexcept
 TlsConfig::operator bool() const noexcept
 {
 	return ObjBase::operator bool() && m_rng;
+}
+
+bool TlsConfig::IsNull() const noexcept
+{
+	return ObjBase::IsNull() || (m_rng.get() == nullptr);
 }

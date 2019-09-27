@@ -21,8 +21,10 @@ namespace Decent
 			static void FreeObject(mbedtls_ssl_session* ptr);
 
 		public:
+			/** \brief	Default constructor. Construct a non-null, but empty mbedTLS session object */
 			Session();
 
+			/** \brief	Destructor */
 			virtual ~Session();
 
 			Session(Session&&) = delete;
@@ -32,6 +34,13 @@ namespace Decent
 			Session& operator=(Session&&) = delete;
 
 			Session& operator=(const Session&) = delete;
+
+			/**
+			 * \brief	Query if the pointers to objects held by this object is null
+			 *
+			 * \return	True if null, false if not.
+			 */
+			using ObjBase::IsNull;
 		};
 	}
 }

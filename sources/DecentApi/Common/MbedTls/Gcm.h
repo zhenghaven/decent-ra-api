@@ -214,19 +214,14 @@ namespace Decent
 				const void* iv, const size_t ivLen, const void* add, const size_t addLen,
 				const void* tag, const size_t tagLen);
 
-		protected:
-
 			/**
-			 * \brief	Construct GCM context with the specified key
+			 * \brief	Query if the pointers to objects held by this object is null
 			 *
-			 * \param [in,out]	ctx   	The mbed TLS GCM context.
-			 * \param 		  	key   	The key.
-			 * \param 		  	size  	The size of the key.
-			 * \param 		  	cipher	The cipher type.
-			 *
-			 * \return	A std::unique_ptr&lt;mbedtls_gcm_context&gt;
+			 * \return	True if null, false if not.
 			 */
-			static std::unique_ptr<mbedtls_gcm_context> ConstructGcmWithKey(const void* key, const size_t size, const GcmBase::Cipher cipher);
+			using ObjBase::IsNull;
+
+		protected:
 
 			/**
 			 * \brief	Constructor

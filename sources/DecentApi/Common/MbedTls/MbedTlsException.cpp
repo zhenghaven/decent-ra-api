@@ -4,7 +4,7 @@
 
 using namespace Decent::MbedTlsObj;
 
-std::string MbedTlsException::ErrorCodeToStr(int error)
+std::string MbedTlsException::ErrorCodeToHexStr(int error)
 {
 	const bool isPos = error > 0;
 	std::string prefix = isPos ? "0x" : "-0x";

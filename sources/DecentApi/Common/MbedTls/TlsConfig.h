@@ -75,6 +75,13 @@ namespace Decent
 			 */
 			virtual operator bool() const noexcept override;
 
+			/**
+			 * \brief	Query if the pointers to objects held by this object is null
+			 *
+			 * \return	True if null, false if not.
+			 */
+			virtual bool IsNull() const noexcept;
+
 		protected:
 
 			/**

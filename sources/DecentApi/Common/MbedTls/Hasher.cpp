@@ -7,8 +7,6 @@
 using namespace Decent;
 using namespace Decent::MbedTlsObj;
 
-#define CALL_MBEDTLS_C_FUNC(FUNC, ...) {int retVal = FUNC(__VA_ARGS__); if(retVal != MBEDTLS_SUCCESS_RET) { throw Decent::MbedTlsObj::MbedTlsException(#FUNC, retVal); } }
-
 namespace
 {
 	mbedtls_md_type_t GetMsgDigestType(HashType type)
