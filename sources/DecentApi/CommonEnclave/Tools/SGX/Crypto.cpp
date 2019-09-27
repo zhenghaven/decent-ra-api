@@ -2,6 +2,7 @@
 
 #include "../Crypto.h"
 #include "../../../Common/Tools/Crypto.h"
+#include "../../../Common/MbedTls/Gcm.h"
 
 #include <iterator>
 
@@ -61,17 +62,18 @@ void Tools::detail::PlatformAesGcmEncrypt(const void * keyPtr, const size_t keyS
 	const void * addPtr, const size_t addSize, 
 	void * macPtr, const size_t macSize)
 {
-	if (keySize != sizeof(sgx_aes_gcm_128bit_key_t))
+#ifdef PLATFORM_DEPENDENT_CRYPTO
+	if (keySize != sizeof(sgx_aes_gcm_128bit_key_t) ||
+		srcSize > UINT32_MAX || ivSize > UINT32_MAX || addSize > UINT32_MAX)
 	{
-		throw RuntimeException("Unsupported key size is given to PlatformAesGcmEncrypt.");
-	}
-	if (macSize != sizeof(sgx_aes_gcm_128bit_tag_t))
-	{
-		throw RuntimeException("Unsupported MAC size is given to PlatformAesGcmEncrypt.");
-	}
-	if (srcSize > UINT32_MAX || ivSize > UINT32_MAX || addSize > UINT32_MAX)
-	{
-		throw RuntimeException("Either source size, IV size, or addtional auth data size given to PlatformAesGcmEncrypt is too big to supported by SGX.");
+#endif //PLATFORM_DEPENDENT_CRYPTO
+		using namespace Decent::MbedTlsObj;
+		GcmBase(keyPtr, keySize, GcmBase::Cipher::AES).Encrypt(srcPtr, srcSize,
+			destPtr, srcSize,
+			ivPtr, ivSize,
+			addPtr, addSize,
+			macPtr, macSize);
+#ifdef PLATFORM_DEPENDENT_CRYPTO
 	}
 
 	const sgx_aes_gcm_128bit_key_t *p_key = static_cast<const sgx_aes_gcm_128bit_key_t*>(keyPtr);
@@ -86,6 +88,7 @@ void Tools::detail::PlatformAesGcmEncrypt(const void * keyPtr, const size_t keyS
 	{
 		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_rijndael128GCM_encrypt"));
 	}
+#endif //PLATFORM_DEPENDENT_CRYPTO
 }
 
 void Tools::detail::PlatformAesGcmDecrypt(const void * keyPtr, const size_t keySize,
@@ -95,17 +98,17 @@ void Tools::detail::PlatformAesGcmDecrypt(const void * keyPtr, const size_t keyS
 	const void * addPtr, const size_t addSize, 
 	const void * macPtr, const size_t macSize)
 {
-	if (keySize != sizeof(sgx_aes_gcm_128bit_key_t))
+#ifdef PLATFORM_DEPENDENT_CRYPTO
+	if (keySize != sizeof(sgx_aes_gcm_128bit_key_t) ||
+		srcSize > UINT32_MAX || ivSize > UINT32_MAX || addSize > UINT32_MAX)
 	{
-		throw RuntimeException("Unsupported key size is given to PlatformAesGcmDecrypt.");
-	}
-	if (macSize != sizeof(sgx_aes_gcm_128bit_tag_t))
-	{
-		throw RuntimeException("Unsupported MAC size is given to PlatformAesGcmDecrypt.");
-	}
-	if (srcSize > UINT32_MAX || ivSize > UINT32_MAX || addSize > UINT32_MAX)
-	{
-		throw RuntimeException("Either source size, IV size, or addtional auth data size given to PlatformAesGcmEncrypt is too big to supported by SGX.");
+#endif //PLATFORM_DEPENDENT_CRYPTO
+		using namespace Decent::MbedTlsObj;
+		GcmBase(keyPtr, keySize, GcmBase::Cipher::AES).Decrypt(srcPtr, srcSize, destPtr, srcSize,
+			ivPtr, ivSize,
+			addPtr, addSize,
+			macPtr, macSize);
+#ifdef PLATFORM_DEPENDENT_CRYPTO
 	}
 
 	const sgx_aes_gcm_128bit_key_t *p_key = static_cast<const sgx_aes_gcm_128bit_key_t*>(keyPtr);
@@ -120,6 +123,7 @@ void Tools::detail::PlatformAesGcmDecrypt(const void * keyPtr, const size_t keyS
 	{
 		throw RuntimeException(Sgx::ConstructSimpleErrorMsg(sgxRet, "sgx_rijndael128GCM_decrypt"));
 	}
+#endif //PLATFORM_DEPENDENT_CRYPTO
 }
 
 //#endif //ENCLAVE_PLATFORM_SGX
