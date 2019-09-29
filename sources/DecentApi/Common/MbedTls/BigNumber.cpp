@@ -11,35 +11,37 @@
 
 using namespace Decent::MbedTlsObj;
 
-#define CHECK_MBEDTLS_RET(VAL) { int retVal = VAL; if(retVal != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(__FUNCTION__, retVal); } }
+//================================================================================================
+//  BigNumberBase
+//================================================================================================
 
-void BigNumber::FreeObject(mbedtls_mpi* ptr)
+namespace
 {
-	mbedtls_mpi_free(ptr);
-	delete ptr;
+	static constexpr char const gsk_hexLUT[] = "0123456789ABCDEF";
+
+	static constexpr char HiBitHex(uint8_t byte)
+	{
+		return gsk_hexLUT[(byte >> 4) & 0xF];
+	}
+
+	static constexpr char LoBitHex(uint8_t byte)
+	{
+		return gsk_hexLUT[byte & 0xF];
+	}
+
+	template<uint8_t byte>
+	struct StaticByteToHex
+	{
+		static constexpr char const sk_val[] = { HiBitHex(byte), LoBitHex(byte), '\0' };
+	};
+
+	static std::string ByteToHexStr(uint8_t byte)
+	{
+		return std::string({ HiBitHex(byte), LoBitHex(byte) });
+	}
 }
 
-BigNumber BigNumber::Rand(size_t size)
-{
-	BigNumber res(sk_empty);
-
-	Drbg drbg;
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_fill_random(res.Get(), size, &Drbg::CallBack, &drbg));
-
-	return std::move(res);
-}
-
-std::string BigNumber::ToHexStr(uint8_t num) noexcept
-{
-	static constexpr char const hexLUT[] = "0123456789ABCDEF";
-
-	char res[] = { hexLUT[(num >> 4) & 0xF], hexLUT[num & 0xF], '\0' };
-
-	return res;
-}
-
-std::string BigNumber::ToHexStr(const void * ptr, const size_t size, const BigEndian&)
+std::string BigNumberBase::BytesToBigEndianHexStr(const void * ptr, const size_t size)
 {
 	const uint8_t* bytePtr = static_cast<const uint8_t*>(ptr);
 	std::string res;
@@ -47,343 +49,167 @@ std::string BigNumber::ToHexStr(const void * ptr, const size_t size, const BigEn
 
 	for (int64_t i = size - 1; i >= 0; --i)
 	{
-		res.append(ToHexStr(bytePtr[i]));
+		res.append(ByteToHexStr(bytePtr[i]));
 	}
-
-	return std::move(res);
-}
-
-BigNumber::BigNumber(const Empty &) :
-	ObjBase(new mbedtls_mpi, &FreeObject)
-{
-	mbedtls_mpi_init(Get());
-}
-
-BigNumber::BigNumber(const void * ptr, const size_t size, bool isPositive) :
-	BigNumber(sk_empty)
-{
-	int extraLimb = (size % sizeof(mbedtls_mpi_uint)) ? 1 : 0;
-	size_t totalLimbs = (size / sizeof(mbedtls_mpi_uint)) + extraLimb;
-	CHECK_MBEDTLS_RET(mbedtls_mpi_grow(Get(), totalLimbs));
-
-	memcpy(Get()->p, ptr, size);
-
-	if (!isPositive)
-	{
-		Get()->s = -1;
-	}
-}
-
-BigNumber::BigNumber(const void * ptr, const size_t size, const BigEndian &, bool isPositive) :
-	BigNumber(sk_empty)
-{
-	const uint8_t* inByte = static_cast<const uint8_t*>(ptr);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_read_binary(Get(), inByte, size));
-
-	if (!isPositive)
-	{
-		Get()->s = -1;
-	}
-}
-
-BigNumber::BigNumber(const mbedtls_mpi & rhs) :
-	ObjBase(new mbedtls_mpi, &FreeObject)
-{
-	mbedtls_mpi_init(Get());
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_copy(Get(), &rhs));
-}
-
-BigNumber::BigNumber(const BigNumber & rhs) :
-	BigNumber(*rhs.Get())
-{
-}
-
-BigNumber::BigNumber(const ConstBigNumber & rhs) :
-	BigNumber(*static_cast<const BigNumber&>(rhs).Get())
-{
-}
-
-int BigNumber::Compare(const BigNumber & rhs) const noexcept
-{
-	return mbedtls_mpi_cmp_mpi(Get(), rhs.Get());
-}
-
-BigNumber & BigNumber::operator=(const BigNumber & rhs)
-{
-	if (this != &rhs)
-	{
-		CHECK_MBEDTLS_RET(mbedtls_mpi_copy(Get(), rhs.Get()));
-	}
-	return *this;
-}
-
-BigNumber BigNumber::operator+(const BigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_add_mpi(res.Get(), Get(), rhs.Get()));
-
-	return std::move(res);
-}
-
-BigNumber BigNumber::operator+(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_add_int(res.Get(), Get(), rhs));
-
-	return std::move(res);
-}
-
-BigNumber& BigNumber::operator+=(const BigNumber & rhs)
-{
-	BigNumber res = (*this + rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber & BigNumber::operator+=(int64_t rhs)
-{
-	BigNumber res = (*this + rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber BigNumber::operator-(const BigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_sub_mpi(res.Get(), Get(), rhs.Get()));
-
-	return std::move(res);
-}
-
-BigNumber BigNumber::operator-(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_sub_int(res.Get(), Get(), rhs));
-
-	return std::move(res);
-}
-
-BigNumber & BigNumber::operator-=(const BigNumber & rhs)
-{
-	BigNumber res = (*this - rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber & BigNumber::operator-=(int64_t rhs)
-{
-	BigNumber res = (*this - rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber BigNumber::operator*(const BigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mul_mpi(res.Get(), Get(), rhs.Get()));
-
-	return std::move(res);
-}
-
-BigNumber BigNumber::operator*(uint64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_uint, uint64_t>::value, "Currently, we only consider 64-bit numbers.");
-
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mul_int(res.Get(), Get(), rhs));
-
-	return std::move(res);
-}
-
-BigNumber & BigNumber::operator*=(const BigNumber & rhs)
-{
-	BigNumber res = (*this * rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber & BigNumber::operator*=(uint64_t rhs)
-{
-	BigNumber res = (*this * rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber BigNumber::operator/(const BigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_div_mpi(res.Get(), nullptr, Get(), rhs.Get()));
-
-	return std::move(res);
-}
-
-BigNumber BigNumber::operator/(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_div_int(res.Get(), nullptr, Get(), rhs));
-
-	return std::move(res);
-}
-
-BigNumber & BigNumber::operator/=(const BigNumber & rhs)
-{
-	BigNumber res = (*this / rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber & BigNumber::operator/=(int64_t rhs)
-{
-	BigNumber res = (*this / rhs);
-
-	this->Swap(res);
-
-	return *this;
-}
-
-BigNumber BigNumber::operator%(const BigNumber & rhs) const
-{
-	BigNumber res(sk_empty);
-
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mod_mpi(res.Get(), Get(), rhs.Get()));
-
-	return std::move(res);
-}
-
-uint64_t BigNumber::operator%(int64_t rhs) const
-{
-	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
-
-	uint64_t res = 0;
-	CHECK_MBEDTLS_RET(mbedtls_mpi_mod_int(&res, Get(), rhs));
 
 	return res;
 }
 
-BigNumber BigNumber::operator-() const
+void BigNumberBase::FreeObject(mbedtls_mpi* ptr)
 {
-	BigNumber cpy(*this);
-	cpy.FlipSign();
-	return std::move(cpy);
+	mbedtls_mpi_free(ptr);
+	delete ptr;
 }
 
-BigNumber BigNumber::operator<<(size_t count) const
+BigNumberBase::BigNumberBase() :
+	ObjBase(new mbedtls_mpi, &FreeObject)
 {
-	BigNumber res(*this);
-	res <<= count;
-	return std::move(res);
+	mbedtls_mpi_init(Get());
 }
 
-BigNumber Decent::MbedTlsObj::BigNumber::operator>>(size_t count) const
+BigNumberBase::BigNumberBase(const BigNumberBase & rhs) :
+	ObjBase(rhs.Get() ? new mbedtls_mpi : nullptr, rhs.Get() ? &FreeObject : &DoNotFree)
 {
-	BigNumber res(*this);
-	res >>= count;
-	return std::move(res);
+	if (rhs.Get())
+	{
+		mbedtls_mpi_init(Get());
+		CALL_MBEDTLS_C_FUNC(mbedtls_mpi_copy, Get(), rhs.Get());
+	}
 }
 
-BigNumber & BigNumber::operator%=(const BigNumber & rhs)
+BigNumberBase::BigNumberBase(BigNumberBase && rhs) :
+	ObjBase(std::forward<ObjBase>(rhs))
 {
-	BigNumber res = (*this % rhs);
+}
 
-	this->Swap(res);
+BigNumberBase::BigNumberBase(const mbedtls_mpi & rhs) :
+	BigNumberBase()
+{
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_copy, Get(), &rhs);
+}
+
+BigNumberBase::~BigNumberBase()
+{
+}
+
+BigNumberBase & BigNumberBase::operator=(const BigNumberBase & rhs)
+{
+	if (this != &rhs)
+	{
+		// Reset this instance to null state.
+		Reset();
+
+		if (rhs.Get())
+		{
+			SetFreeFunc(&FreeObject);
+			SetPtr(new mbedtls_mpi);
+
+			mbedtls_mpi_init(Get());
+			CALL_MBEDTLS_C_FUNC(mbedtls_mpi_copy, Get(), rhs.Get());
+		}
+	}
+	
+	return *this;
+}
+
+BigNumberBase & BigNumberBase::operator=(BigNumberBase && rhs)
+{
+	ObjBase::operator=(std::forward<ObjBase>(rhs));
 
 	return *this;
 }
 
-BigNumber & BigNumber::operator%=(int64_t rhs)
+bool BigNumberBase::IsPositive() const
 {
-	BigNumber res(*this % rhs);
+	NullCheck();
 
-	this->Swap(res);
-
-	return *this;
+	return Get()->s > 0;
 }
 
-BigNumber & BigNumber::operator<<=(size_t count)
+size_t BigNumberBase::GetSize() const
 {
-	CHECK_MBEDTLS_RET(mbedtls_mpi_shift_l(Get(), count));
-
-	return *this;
+	NullCheck();
+	return mbedtls_mpi_size(Get());
 }
 
-BigNumber & BigNumber::operator>>=(size_t count)
+size_t BigNumberBase::GetBitSize() const
 {
-	CHECK_MBEDTLS_RET(mbedtls_mpi_shift_r(Get(), count));
-
-	return *this;
+	NullCheck();
+	return mbedtls_mpi_bitlen(Get());
 }
 
-bool BigNumber::operator==(const BigNumber & rhs) const
+bool BigNumberBase::GetBit(const size_t pos) const
+{
+	NullCheck();
+
+	return mbedtls_mpi_get_bit(Get(), pos) == 1;
+}
+
+std::string BigNumberBase::ToBigEndianHexStr() const
+{
+	NullCheck();
+
+	return BytesToBigEndianHexStr(Get()->p, Get()->n * sizeof(mbedtls_mpi_uint));
+}
+
+int BigNumberBase::Compare(const BigNumberBase & rhs) const
+{
+	NullCheck();
+	rhs.NullCheck();
+	return mbedtls_mpi_cmp_mpi(Get(), rhs.Get());
+}
+
+bool BigNumberBase::operator==(const BigNumberBase & rhs) const
 {
 	return Compare(rhs) == 0;
 }
 
-bool BigNumber::operator!=(const BigNumber & rhs) const
+bool BigNumberBase::operator!=(const BigNumberBase & rhs) const
 {
 	return Compare(rhs) != 0;
 }
 
-bool BigNumber::operator<(const BigNumber & rhs) const
+bool BigNumberBase::operator<(const BigNumberBase & rhs) const
 {
 	return Compare(rhs) < 0;
 }
 
-bool BigNumber::operator<=(const BigNumber & rhs) const
+bool BigNumberBase::operator<=(const BigNumberBase & rhs) const
 {
 	return Compare(rhs) <= 0;
 }
 
-bool BigNumber::operator>(const BigNumber & rhs) const
+bool BigNumberBase::operator>(const BigNumberBase & rhs) const
 {
 	return Compare(rhs) > 0;
 }
 
-bool BigNumber::operator>=(const BigNumber & rhs) const
+bool BigNumberBase::operator>=(const BigNumberBase & rhs) const
 {
 	return Compare(rhs) >= 0;
 }
 
-size_t BigNumber::GetSize() const
+uint64_t BigNumberBase::operator%(int64_t rhs) const
 {
-	return *this ? mbedtls_mpi_size(Get()) : 0;
+	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit machines.");
+
+	NullCheck();
+
+	uint64_t res = 0;
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_mod_int, &res, Get(), rhs);
+
+	return res;
 }
 
-size_t BigNumber::GetBitSize() const
+BigNumberBase::BigNumberBase(mbedtls_mpi * ptr, FreeFuncType freeFunc) :
+	ObjBase(ptr, freeFunc)
 {
-	return *this ? mbedtls_mpi_bitlen(Get()) : 0;
 }
 
-void BigNumber::ToBinary(void * out, const size_t size) const
+void BigNumberBase::ToBinary(void * out, const size_t size) const
 {
+	NullCheck();
+
 	size_t actualSize = Get()->n * sizeof(mbedtls_mpi_uint);
 	if (actualSize <= size || (actualSize = GetSize()) <= size)
 	{
@@ -394,81 +220,422 @@ void BigNumber::ToBinary(void * out, const size_t size) const
 		return;
 	}
 
-	throw MbedTlsException(__FUNCTION__, MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL);
+	throw MbedTlsException("ConstBigNumber::ToBinary", MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL);
 }
 
-void BigNumber::ToBinary(void * out, const size_t size, const BigEndian &) const
+void BigNumberBase::ToBigEndianBinary(void * out, const size_t size) const
 {
+	NullCheck();
+
 	uint8_t* outByte = static_cast<uint8_t*>(out);
-	CHECK_MBEDTLS_RET(mbedtls_mpi_write_binary(Get(), outByte, size));
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_write_binary, Get(), outByte, size);
 }
 
-std::string BigNumber::ToBigEndianHexStr() const
+//================================================================================================
+//  ConstBigNumber
+//================================================================================================
+
+void ConstBigNumber::FreeDummyMpi(mbedtls_mpi * ptr)
 {
-	return ToHexStr(Get()->p, Get()->n * sizeof(mbedtls_mpi_uint), sk_bigEndian);
+	delete ptr;
 }
 
-bool BigNumber::IsPositive() const
+ConstBigNumber::ConstBigNumber(mbedtls_mpi & ref) :
+	BigNumberBase(&ref, &DoNotFree)
+{}
+
+ConstBigNumber::ConstBigNumber(ConstBigNumber && rhs) :
+	BigNumberBase(std::forward<BigNumberBase>(rhs))
+{}
+
+ConstBigNumber::~ConstBigNumber()
+{}
+
+const mbedtls_mpi * Decent::MbedTlsObj::ConstBigNumber::GetConst() const noexcept
 {
-	return Get()->s > 0;
+	return BigNumberBase::Get();
+}
+
+ConstBigNumber & ConstBigNumber::operator=(ConstBigNumber && rhs)
+{
+	BigNumberBase::operator=(std::forward<BigNumberBase>(rhs));
+
+	return *this;
+}
+
+ConstBigNumber::ConstBigNumber(const void * ptr, const size_t size) :
+	ConstBigNumber(ptr,
+	(size % sizeof(mbedtls_mpi_uint)) == 0 ?
+		size :
+		throw RuntimeException("The size of the buffer given to ConstBigNumber must be a factor of " "8" "."),
+		sk_gen)
+{}
+
+ConstBigNumber::ConstBigNumber(const void * ptr, const size_t size, const Generate &) :
+	BigNumberBase(
+		new mbedtls_mpi{
+			/* s */ 1,
+			/* n */ (size / sizeof(mbedtls_mpi_uint)),
+			/* p */ static_cast<mbedtls_mpi_uint*>(const_cast<void*>(ptr))
+		},
+		&FreeDummyMpi)
+{}
+
+//================================================================================================
+//  BigNumber
+//================================================================================================
+
+BigNumber BigNumber::Rand(size_t size)
+{
+	BigNumber res;
+
+	Drbg drbg;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_fill_random, res.Get(), size, &Drbg::CallBack, &drbg);
+
+	return res;
+}
+
+BigNumber::BigNumber() :
+	BigNumberBase()
+{}
+
+BigNumber::BigNumber(BigNumber && rhs) :
+	BigNumberBase(std::forward<BigNumberBase>(rhs))
+{}
+
+BigNumber::BigNumber(const BigNumberBase & rhs) :
+	BigNumberBase(rhs)
+{}
+
+BigNumber::~BigNumber()
+{
+}
+
+// Protected constructors:
+
+BigNumber::BigNumber(const void * ptr, const size_t size, bool isPositive) :
+	BigNumber()
+{
+	int extraLimb = (size % sizeof(mbedtls_mpi_uint)) ? 1 : 0;
+	size_t totalLimbs = (size / sizeof(mbedtls_mpi_uint)) + extraLimb;
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_grow, Get(), totalLimbs);
+
+	memcpy(Get()->p, ptr, size);
+
+	Get()->s = isPositive ? 1 : -1;
+}
+
+BigNumber::BigNumber(const BigEndian &, const void * ptr, const size_t size, bool isPositive) :
+	BigNumber()
+{
+	const uint8_t* inByte = static_cast<const uint8_t*>(ptr);
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_read_binary, Get(), inByte, size);
+
+	Get()->s = isPositive ? 1 : -1;
+}
+
+//Other methods:
+
+BigNumber & BigNumber::operator=(const BigNumberBase & rhs)
+{
+	BigNumberBase::operator=(rhs);
+	return *this;
+}
+
+BigNumber & BigNumber::operator=(BigNumber && rhs)
+{
+	BigNumberBase::operator=(std::forward<BigNumberBase>(rhs));
+	return *this;
+}
+
+BigNumber& BigNumber::operator+=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this + rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator+=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this + rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator-=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this - rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator-=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this - rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator*=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this * rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator*=(uint64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this * rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator/=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this / rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator/=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this / rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator%=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this % rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator%=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this % rhs);
+
+	this->Swap(res);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator<<=(uint64_t rhs)
+{
+	static_assert(std::is_same<size_t, uint64_t>::value, "Current implementation assume size_t is same as uint64_t.");
+
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_shift_l, Get(), rhs);
+
+	return *this;
+}
+
+BigNumber & BigNumber::operator>>=(uint64_t rhs)
+{
+	static_assert(std::is_same<size_t, uint64_t>::value, "Current implementation assume size_t is same as uint64_t.");
+
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_shift_r, Get(), rhs);
+
+	return *this;
 }
 
 BigNumber& BigNumber::FlipSign()
 {
+	NullCheck();
+
 	Get()->s *= -1;
 	return *this;
 }
 
 BigNumber & BigNumber::SetBit(const size_t pos, bool bit)
 {
-	CHECK_MBEDTLS_RET(mbedtls_mpi_set_bit(Get(), pos, bit ? 1 : 0));
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_set_bit, Get(), pos, bit ? 1 : 0);
 
 	return *this;
 }
 
-bool BigNumber::GetBit(const size_t pos)
+//================================================================================================
+//  Static Operators
+//================================================================================================
+
+BigNumber Decent::MbedTlsObj::operator-(const BigNumberBase & rhs)
 {
-	return mbedtls_mpi_get_bit(Get(), pos) == 1;
+	BigNumber cpy(rhs);
+	cpy.FlipSign();
+	return cpy;
 }
 
-void ConstBigNumber::FreeStruct(mbedtls_mpi * ptr)
+BigNumber Decent::MbedTlsObj::operator+(const BigNumberBase & lhs, const BigNumberBase & rhs)
 {
-	delete ptr;
+	lhs.NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_add_mpi, res.Get(), lhs.Get(), rhs.Get());
+
+	return res;
 }
 
-ConstBigNumber::ConstBigNumber(const BigNumber & ref) noexcept :
-	ConstBigNumber(*ref.Get())
+BigNumber Decent::MbedTlsObj::operator+(const BigNumberBase & lhs, int64_t rhs)
 {
+	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
+
+	lhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_add_int, res.Get(), lhs.Get(), rhs);
+
+	return res;
 }
 
-ConstBigNumber::ConstBigNumber(mbedtls_mpi & ref) noexcept :
-	m_bigNum(&ref, &BigNumber::DoNotFree)
+BigNumber Decent::MbedTlsObj::operator-(const BigNumberBase & lhs, const BigNumberBase & rhs)
 {
+	lhs.NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_sub_mpi, res.Get(), lhs.Get(), rhs.Get());
+
+	return res;
 }
 
-ConstBigNumber::ConstBigNumber(const void * ptr, const size_t size) :
-	ConstBigNumber(ptr,
-	(size % sizeof(mbedtls_mpi_uint)) ?
-		throw RuntimeException("The size of the given big number must be a factor of " + std::to_string(sizeof(mbedtls_mpi_uint)) + ". ") :
-		size,
-		sk_gen)
-{}
-
-ConstBigNumber::operator const BigNumber&() const noexcept
+BigNumber Decent::MbedTlsObj::operator-(const BigNumberBase & lhs, int64_t rhs)
 {
-	return m_bigNum;
+	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
+
+	lhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_sub_int, res.Get(), lhs.Get(), rhs);
+
+	return res;
 }
 
-const BigNumber & ConstBigNumber::Get() const noexcept
+BigNumber Decent::MbedTlsObj::operator*(const BigNumberBase & lhs, const BigNumberBase & rhs)
 {
-	return m_bigNum;
+	lhs.NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_mul_mpi, res.Get(), lhs.Get(), rhs.Get());
+
+	return res;
 }
 
-ConstBigNumber::ConstBigNumber(const void * ptr, const size_t size, const Generate &) noexcept :
-	m_bigNum(new mbedtls_mpi{1, /* s */
-		(size / sizeof(mbedtls_mpi_uint)), /* n */
-		static_cast<mbedtls_mpi_uint*>(const_cast<void*>(ptr)) /* p */
-		}, &ConstBigNumber::FreeStruct)
+BigNumber Decent::MbedTlsObj::operator*(const BigNumberBase & lhs, uint64_t rhs)
 {
+	static_assert(std::is_same<mbedtls_mpi_uint, uint64_t>::value, "Currently, we only consider 64-bit numbers.");
+
+	lhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_mul_int, res.Get(), lhs.Get(), rhs);
+
+	return res;
 }
 
+BigNumber Decent::MbedTlsObj::operator/(const BigNumberBase & lhs, const BigNumberBase & rhs)
+{
+	lhs.NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_div_mpi, res.Get(), nullptr, lhs.Get(), rhs.Get());
+
+	return res;
+}
+
+BigNumber Decent::MbedTlsObj::operator/(const BigNumberBase & lhs, int64_t rhs)
+{
+	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
+
+	lhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_div_int, res.Get(), nullptr, lhs.Get(), rhs);
+
+	return res;
+}
+
+BigNumber Decent::MbedTlsObj::operator%(const BigNumberBase & lhs, const BigNumberBase & rhs)
+{
+	lhs.NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res;
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_mod_mpi, res.Get(), lhs.Get(), rhs.Get());
+
+	return res;
+}
+
+BigNumber Decent::MbedTlsObj::operator<<(const BigNumberBase & lhs, uint64_t rhs)
+{
+	BigNumber res(lhs);
+	res <<= rhs;
+	return res;
+}
+
+BigNumber Decent::MbedTlsObj::operator>>(const BigNumberBase & lhs, uint64_t rhs)
+{
+	BigNumber res(lhs);
+	res >>= rhs;
+	return res;
+}

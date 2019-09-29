@@ -315,7 +315,7 @@ bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const
 	}
 
 	return mbedtls_ecdsa_verify(&grp.m_grp, hash, hashLen, &ecPtr.Q,
-		r.Get().Get(), s.Get().Get()) == MBEDTLS_SUCCESS_RET;
+		r.GetConst(), s.GetConst()) == MBEDTLS_SUCCESS_RET;
 }
 
 std::string ECKeyPublic::ToPubPemString() const
@@ -484,7 +484,7 @@ bool ECKeyPair::GenerateSharedKey(G256BitSecretKeyWrap & outKey, const ECKeyPubl
 	}
 
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-	BigNumber sharedKey(sk_empty);
+	BigNumber sharedKey;
 	EcGroupWarp grp;
 	if (!grp.Copy(ecPtr.grp))
 	{
@@ -500,7 +500,7 @@ bool ECKeyPair::GenerateSharedKey(G256BitSecretKeyWrap & outKey, const ECKeyPubl
 		return false;
 	}
 
-	sharedKey.ToBinary(outKey.m_key, sk_bigEndian);
+	sharedKey.ToBigEndianBinary(outKey.m_key);
 
 	std::reverse(outKey.m_key.begin(), outKey.m_key.end());
 
@@ -515,8 +515,8 @@ bool ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t
 	}
 
 	int mbedRet = 0;
-	BigNumber r(sk_empty);
-	BigNumber s(sk_empty);
+	BigNumber r;
+	BigNumber s;
 	EcGroupWarp grp;
 	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
 
@@ -539,8 +539,8 @@ bool ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t
 		return false;
 	}
 	
-	r.ToBinary(outSign.x, sk_struct);
-	s.ToBinary(outSign.y, sk_struct);
+	r.ToBinary(outSign.x);
+	s.ToBinary(outSign.y);
 
 	return true;
 }

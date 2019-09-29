@@ -37,7 +37,7 @@ namespace Decent
 			* \param 		  	freeFunc	The free function to free the MbedTLS object *AND delete the pointer*.
 			*/
 			ObjBase(T* ptr, FreeFuncType freeFunc) noexcept :
-			m_ptr(ptr),
+				m_ptr(ptr),
 				m_freeFunc(freeFunc)
 			{}
 
@@ -56,33 +56,47 @@ namespace Decent
 				rhs.m_freeFunc = &DoNotFree;
 			}
 
-			virtual ObjBase& operator=(const ObjBase& other) = delete;
-
-			/**
-			* \brief	Move assignment operator
-			*
-			* \param [in,out]	other	The other instance.
-			*
-			* \return	A reference to this object.
-			*/
-			virtual ObjBase& operator=(ObjBase&& other) noexcept
-			{
-				if (this != &other)
-				{
-					//Free the object to prevent memory leak.
-					(*m_freeFunc)(m_ptr);
-
-					m_ptr = other.m_ptr;
-					m_freeFunc = other.m_freeFunc;
-				}
-				return *this;
-			}
-
 			/** \brief	Destructor */
 			virtual ~ObjBase()
 			{
 				(*m_freeFunc)(m_ptr);
 				m_ptr = nullptr;
+			}
+
+			ObjBase& operator=(const ObjBase& other) = delete;
+
+			/**
+			 * \brief	Move assignment operator. The RHS will become null.
+			 *
+			 * \param [in,out]	rhs	The right hand side.
+			 *
+			 * \return	A reference to this object.
+			 */
+			ObjBase& operator=(ObjBase&& rhs) noexcept
+			{
+				if (this != &rhs)
+				{
+					//Free the object to prevent memory leak.
+					Reset();
+
+					m_ptr = rhs.m_ptr;
+					m_freeFunc = rhs.m_freeFunc;
+
+					rhs.m_ptr = nullptr;
+					rhs.m_freeFunc = &DoNotFree;
+				}
+				return *this;
+			}
+
+			/**
+			 * \brief	Swaps the given right hand side
+			 *
+			 * \param [in,out]	rhs	The right hand side.
+			 */
+			void Swap(ObjBase& rhs) noexcept
+			{
+				std::swap(m_ptr, rhs.m_ptr);
+				std::swap(m_freeFunc, rhs.m_freeFunc);
 			}
 
 			/**
@@ -120,13 +134,6 @@ namespace Decent
 				m_freeFunc = &DoNotFree;
 
 				return tmp;
-			}
-
-			void Swap(ObjBase& rhs) noexcept
-			{
-				ObjBase tmp(std::move(rhs));
-				rhs = std::move(*this);
-				*this = std::move(tmp);
 			}
 
 			/**
@@ -169,6 +176,20 @@ namespace Decent
 			void SetPtr(T* ptr) noexcept
 			{
 				m_ptr = ptr;
+			}
+
+			void SetFreeFunc(FreeFuncType freeFunc) noexcept
+			{
+				m_freeFunc = freeFunc;
+			}
+
+			/** \brief	Free the held object and Resets this instance to null state. */
+			void Reset()
+			{
+				(*m_freeFunc)(m_ptr);
+
+				m_ptr = nullptr;
+				m_freeFunc = &DoNotFree;
 			}
 
 		private:

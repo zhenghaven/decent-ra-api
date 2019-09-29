@@ -79,6 +79,38 @@ namespace Decent
 
 		namespace detail
 		{
+			template<class T>
+			struct remove_cvref
+			{
+				typedef typename std::remove_cv<typename std::remove_reference<T>::type >::type type;
+			};
+
+			template<class T, size_t arrLen>
+			struct StaticContainerSize
+			{
+				static constexpr size_t sk_len = arrLen;
+				static constexpr size_t sk_valSize = sizeof(T);
+				static constexpr size_t sk_ctnSize = sk_valSize * sk_len;
+
+				typedef T ValType;
+			};
+
+			template<class ContainerType>
+			struct ContainerPrpt;
+
+			template<class T, size_t arrLen>
+			struct ContainerPrpt<std::array<T, arrLen> >
+				: StaticContainerSize<T, arrLen>
+			{};
+
+			template<class T, size_t arrLen>
+			struct ContainerPrpt<T[arrLen]>
+				: StaticContainerSize<T, arrLen>
+			{};
+		}
+
+		namespace detail
+		{
 			//#################################################
 			//#      std::array
 			//#################################################
