@@ -54,7 +54,7 @@ namespace Decent
 
 		};
 
-		class SessionTicketMgr : public ObjBase<mbedtls_ssl_ticket_context>, virtual public SessionTicketMgrBase
+		class SessionTicketMgr : public ObjBase<mbedtls_ssl_ticket_context>, public SessionTicketMgrBase
 		{
 		public: //static members:
 			/**

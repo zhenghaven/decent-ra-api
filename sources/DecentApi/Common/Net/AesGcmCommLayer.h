@@ -9,7 +9,7 @@ namespace Decent
 	namespace Net
 	{
 		/** \brief	The communications layer that uses 128-bit AES-GCM encryption. */
-		class AesGcmCommLayer : virtual public SecureCommLayer
+		class AesGcmCommLayer : public SecureCommLayer
 		{
 		public: //static members:
 			typedef G128BitSecretKeyWrap KeyType;
