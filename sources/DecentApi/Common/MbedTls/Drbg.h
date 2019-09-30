@@ -66,7 +66,7 @@ namespace Decent
 			}
 		};
 
-		class Drbg : virtual public RbgBase
+		class Drbg : public RbgBase
 		{
 		public:
 			Drbg();

@@ -46,7 +46,7 @@ TlsConfig::TlsConfig(States& state, Mode cntMode, std::shared_ptr<Decent::MbedTl
 		{
 			throw Decent::RuntimeException("Key or certificate stored in the global state are invalid.");
 		}
-		CALL_MBEDTLS_C_FUNC(mbedtls_ssl_conf_own_cert, Get(), m_cert->Get(), m_prvKey->Get());
+		CALL_MBEDTLS_C_FUNC(mbedtls_ssl_conf_own_cert, Get(), m_cert->GetMutable(), m_prvKey->GetMutable());
 		break;
 	case Mode::ClientNoCert:
 	default:
@@ -65,7 +65,7 @@ TlsConfig::TlsConfig(States& state, Mode cntMode, std::shared_ptr<Decent::MbedTl
 		{
 			throw Decent::RuntimeException("Key or certificate stored in the global state are invalid.");
 		}
-		mbedtls_ssl_conf_ca_chain(Get(), m_cert->Get(), nullptr);
+		mbedtls_ssl_conf_ca_chain(Get(), m_cert->GetMutable(), nullptr);
 		mbedtls_ssl_conf_authmode(Get(), MBEDTLS_SSL_VERIFY_REQUIRED);
 	default:
 		break;

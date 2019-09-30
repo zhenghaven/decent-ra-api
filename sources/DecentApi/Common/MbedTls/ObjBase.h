@@ -115,7 +115,17 @@ namespace Decent
 			*
 			* \return	The pointer to the MbedTLS object.
 			*/
-			T* Get() const noexcept
+			const T* Get() const noexcept
+			{
+				return m_ptr;
+			}
+
+			/**
+			* \brief	Gets the pointer to the MbedTLS object.
+			*
+			* \return	The pointer to the MbedTLS object.
+			*/
+			T* Get() noexcept
 			{
 				return m_ptr;
 			}
@@ -170,6 +180,12 @@ namespace Decent
 				{
 					throw RuntimeException("Trying to access a null mbedTLS Cpp object.");
 				}
+			}
+
+			// Will be put into mutable later.
+			T* GetMutable() const noexcept
+			{
+				return m_ptr;
 			}
 
 		protected:

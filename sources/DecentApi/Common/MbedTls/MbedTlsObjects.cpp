@@ -148,7 +148,7 @@ bool PKey::VerifySignSha256(const General256Hash& hash, const void* sign, const 
 		return false;
 	}
 	const uint8_t* signByte = static_cast<const uint8_t*>(sign);
-	return mbedtls_pk_verify(Get(), mbedtls_md_type_t::MBEDTLS_MD_SHA256, hash.data(), hash.size(), signByte, signLen) == MBEDTLS_SUCCESS_RET;
+	return mbedtls_pk_verify(GetMutable(), mbedtls_md_type_t::MBEDTLS_MD_SHA256, hash.data(), hash.size(), signByte, signLen) == MBEDTLS_SUCCESS_RET;
 }
 
 PKey::PKey() :
@@ -165,7 +165,7 @@ std::string PKey::ToPubPemString(const size_t maxBufSize) const
 	}
 
 	std::unique_ptr<char[]> buf = Tools::make_unique<char[]>(maxBufSize);
-	if (mbedtls_pk_write_pubkey_pem(Get(), reinterpret_cast<unsigned char*>(buf.get()), maxBufSize)
+	if (mbedtls_pk_write_pubkey_pem(GetMutable(), reinterpret_cast<unsigned char*>(buf.get()), maxBufSize)
 		!= MBEDTLS_SUCCESS_RET)
 	{
 		return std::string();
@@ -182,7 +182,7 @@ bool PKey::ToPubDerArray(std::vector<uint8_t>& outArray, const size_t maxBufSize
 	}
 
 	outArray.resize(maxBufSize);
-	int len = mbedtls_pk_write_pubkey_der(Get(), outArray.data(), outArray.size());
+	int len = mbedtls_pk_write_pubkey_der(GetMutable(), outArray.data(), outArray.size());
 	if (len <= 0)
 	{
 		outArray.resize(0);
@@ -315,7 +315,7 @@ bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const
 	}
 
 	return mbedtls_ecdsa_verify(&grp.m_grp, hash, hashLen, &ecPtr.Q,
-		r.GetConst(), s.GetConst()) == MBEDTLS_SUCCESS_RET;
+		r.Get(), s.Get()) == MBEDTLS_SUCCESS_RET;
 }
 
 std::string ECKeyPublic::ToPubPemString() const
@@ -553,7 +553,7 @@ std::string ECKeyPair::ToPrvPemString() const
 	}
 
 	std::vector<char> tmpRes(ECP_PRV_PEM_MAX_BYTES);
-	if (mbedtls_pk_write_key_pem(Get(), reinterpret_cast<unsigned char*>(tmpRes.data()), tmpRes.size())
+	if (mbedtls_pk_write_key_pem(GetMutable(), reinterpret_cast<unsigned char*>(tmpRes.data()), tmpRes.size())
 		!= MBEDTLS_SUCCESS_RET)
 	{
 		return std::string();
@@ -570,7 +570,7 @@ bool ECKeyPair::ToPrvDerArray(std::vector<uint8_t>& outArray) const
 	}
 
 	outArray.resize(ECP_PRV_DER_MAX_BYTES);
-	int len = mbedtls_pk_write_key_der(Get(), outArray.data(), outArray.size());
+	int len = mbedtls_pk_write_key_der(GetMutable(), outArray.data(), outArray.size());
 	if (len <= 0)
 	{
 		return false;
@@ -609,7 +609,7 @@ static const std::string CreateX509Pem(const PKey & keyPair, const std::string& 
 	mbedtls_x509write_csr csr;
 	mbedtls_x509write_csr_init(&csr);
 
-	mbedtls_x509write_csr_set_key(&csr, keyPair.Get());
+	mbedtls_x509write_csr_set_key(&csr, keyPair.GetMutable());
 	mbedtls_x509write_csr_set_md_alg(&csr, MBEDTLS_MD_SHA256);
 	if (mbedtls_x509write_csr_set_subject_name(&csr, ("CN=" + commonName).c_str()) != MBEDTLS_SUCCESS_RET)
 	{
@@ -661,7 +661,7 @@ bool X509Req::VerifySignature() const
 
 	bool verifyRes = 
 		(mbedtls_md(mdInfo, Get()->cri.p, Get()->cri.len, hash) == MBEDTLS_SUCCESS_RET) &&
-		(mbedtls_pk_verify_ext(Get()->sig_pk, Get()->sig_opts, &Get()->pk,
+		(mbedtls_pk_verify_ext(Get()->sig_pk, Get()->sig_opts, &GetMutable()->pk,
 			Get()->sig_md, hash, mbedtls_md_get_size(mdInfo),
 			Get()->sig.p, Get()->sig.len) == MBEDTLS_SUCCESS_RET);
 
@@ -865,8 +865,8 @@ static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvK
 
 	mbedtls_x509write_crt_set_version(&cert, MBEDTLS_X509_CRT_VERSION_3);
 	mbedtls_x509write_crt_set_md_alg(&cert, MBEDTLS_MD_SHA256);
-	mbedtls_x509write_crt_set_issuer_key(&cert, prvKey.Get());
-	mbedtls_x509write_crt_set_subject_key(&cert, pubKey.Get());
+	mbedtls_x509write_crt_set_issuer_key(&cert, prvKey.GetMutable());
+	mbedtls_x509write_crt_set_subject_key(&cert, pubKey.GetMutable());
 
 	time_t timerBegin;
 	Tools::GetSystemTime(timerBegin);
@@ -1081,7 +1081,7 @@ bool X509Cert::GetExtensions(std::map<std::string, std::pair<bool, std::string> 
 
 bool X509Cert::VerifySignature() const
 {
-	return *this && VerifySignature(ECKeyPublic(Get()->pk));
+	return *this && VerifySignature(ECKeyPublic(GetMutable()->pk));
 }
 
 bool X509Cert::VerifySignature(const PKey & pubKey) const
@@ -1096,7 +1096,7 @@ bool X509Cert::VerifySignature(const PKey & pubKey) const
 
 	bool verifyRes =
 		(mbedtls_md(mdInfo, Get()->tbs.p, Get()->tbs.len, hash) == MBEDTLS_SUCCESS_RET) &&
-		(mbedtls_pk_verify_ext(Get()->sig_pk, Get()->sig_opts, pubKey.Get(),
+		(mbedtls_pk_verify_ext(Get()->sig_pk, Get()->sig_opts, pubKey.GetMutable(),
 			Get()->sig_md, hash, mbedtls_md_get_size(mdInfo),
 			Get()->sig.p, Get()->sig.len) == MBEDTLS_SUCCESS_RET);
 
@@ -1110,7 +1110,7 @@ bool X509Cert::Verify(const X509Cert & trustedCa, mbedtls_x509_crl* caCrl, const
 		return false;
 	}
 	uint32_t flag = 0;
-	return mbedtls_x509_crt_verify(Get(), trustedCa.Get(), caCrl,
+	return mbedtls_x509_crt_verify(GetMutable(), trustedCa.GetMutable(), caCrl,
 		commonName, &flag, vrfyFunc, vrfyParam) == MBEDTLS_SUCCESS_RET && flag == 0;
 }
 
@@ -1121,7 +1121,7 @@ bool X509Cert::Verify(const X509Cert & trustedCa, mbedtls_x509_crl* caCrl, const
 		return false;
 	}
 	uint32_t flag = 0;
-	return mbedtls_x509_crt_verify_with_profile(Get(), trustedCa.Get(), caCrl, 
+	return mbedtls_x509_crt_verify_with_profile(GetMutable(), trustedCa.GetMutable(), caCrl,
 		&profile, commonName, &flag, vrfyFunc, vrfyParam) == MBEDTLS_SUCCESS_RET && flag == 0;
 }
 

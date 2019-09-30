@@ -16,7 +16,8 @@ int RbgBase::CallBack(void * ctx, unsigned char * buf, size_t len) noexcept
 
 	try
 	{
-		static_cast<RbgBase*>(ctx)->Rand(buf, len);
+		RbgBase* rbgPtr = static_cast<RbgBase*>(ctx);
+		rbgPtr->Rand(buf, len);
 		return MBEDTLS_SUCCESS_RET;
 	}
 	catch (const MbedTlsException& e)

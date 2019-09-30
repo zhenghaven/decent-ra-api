@@ -422,7 +422,10 @@ namespace Decent
 
 			using BigNumberBase::Swap;
 
-			const mbedtls_mpi* GetConst() const noexcept;
+			const mbedtls_mpi* Get() const noexcept
+			{
+				return BigNumberBase::Get();
+			}
 
 			ConstBigNumber& operator=(const ConstBigNumber& rhs) = delete;
 

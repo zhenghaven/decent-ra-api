@@ -251,11 +251,6 @@ ConstBigNumber::ConstBigNumber(ConstBigNumber && rhs) :
 ConstBigNumber::~ConstBigNumber()
 {}
 
-const mbedtls_mpi * Decent::MbedTlsObj::ConstBigNumber::GetConst() const noexcept
-{
-	return BigNumberBase::Get();
-}
-
 ConstBigNumber & ConstBigNumber::operator=(ConstBigNumber && rhs)
 {
 	BigNumberBase::operator=(std::forward<BigNumberBase>(rhs));
