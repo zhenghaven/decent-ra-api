@@ -240,10 +240,6 @@ void ConstBigNumber::FreeDummyMpi(mbedtls_mpi * ptr)
 	delete ptr;
 }
 
-ConstBigNumber::ConstBigNumber(mbedtls_mpi & ref) :
-	BigNumberBase(&ref, &DoNotFree)
-{}
-
 ConstBigNumber::ConstBigNumber(ConstBigNumber && rhs) :
 	BigNumberBase(std::forward<BigNumberBase>(rhs))
 {}
@@ -634,3 +630,10 @@ BigNumber Decent::MbedTlsObj::operator>>(const BigNumberBase & lhs, uint64_t rhs
 	res >>= rhs;
 	return res;
 }
+
+BigNumberRef::BigNumberRef(mbedtls_mpi & ref) :
+	BigNumberBase(&ref, &DoNotFree)
+{}
+
+BigNumberRef::~BigNumberRef()
+{}

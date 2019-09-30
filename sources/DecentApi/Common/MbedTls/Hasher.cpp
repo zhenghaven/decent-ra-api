@@ -3,33 +3,14 @@
 #include <mbedtls/md.h>
 
 #include "MbedTlsException.h"
+#include "Internal/Hasher.h"
 
 using namespace Decent;
 using namespace Decent::MbedTlsObj;
 
-namespace
-{
-	mbedtls_md_type_t GetMsgDigestType(HashType type)
-	{
-		switch (type)
-		{
-		case HashType::SHA224:
-			return mbedtls_md_type_t::MBEDTLS_MD_SHA224;
-		case HashType::SHA256:
-			return mbedtls_md_type_t::MBEDTLS_MD_SHA256;
-		case HashType::SHA384:
-			return mbedtls_md_type_t::MBEDTLS_MD_SHA384;
-		case HashType::SHA512:
-			return mbedtls_md_type_t::MBEDTLS_MD_SHA512;
-		default:
-			throw MbedTlsObj::RuntimeException("Invalid hash type is given!");
-		}
-	}
-}
-
 const mbedtls_md_info_t& MbedTlsObj::GetMsgDigestInfo(HashType type)
 {
-	const mbedtls_md_info_t* res = mbedtls_md_info_from_type(GetMsgDigestType(type));
+	const mbedtls_md_info_t* res = mbedtls_md_info_from_type(detail::GetMsgDigestType(type));
 	if (res)
 	{
 		return *res;

@@ -72,7 +72,7 @@ namespace Decent
 			 *
 			 * \return	A reference to this object.
 			 */
-			ObjBase& operator=(ObjBase&& rhs) noexcept
+			ObjBase& operator=(ObjBase&& rhs)
 			{
 				if (this != &rhs)
 				{
@@ -151,7 +151,7 @@ namespace Decent
 			*
 			* \return	True if it's, false if not.
 			*/
-			virtual bool IsOwner() const noexcept
+			virtual bool IsOwner() const
 			{
 				return m_freeFunc != &DoNotFree;
 			}
@@ -161,7 +161,7 @@ namespace Decent
 			 *
 			 * \return	True if null, false if not.
 			 */
-			virtual bool IsNull() const noexcept
+			virtual bool IsNull() const
 			{
 				return m_ptr == nullptr;
 			}

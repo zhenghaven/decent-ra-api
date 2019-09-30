@@ -70,6 +70,35 @@ namespace Decent
 			GCM,
 		};
 
+		/** \brief	Values that represent asymmetric algorithm types */
+		enum class AsymAlgmType
+		{
+			EC,
+			RSA,
+		};
+		
+		/** \brief	Values that represent asymmetric key types */
+		enum class AsymKeyType
+		{
+			Public,
+			Private,
+		};
+
+		enum class EcKeyType
+		{
+			SECP192R1,
+			SECP224R1,
+			SECP256R1,
+			SECP384R1,
+			SECP521R1,
+			BP256R1,
+			BP384R1,
+			BP512R1,
+			SECP192K1,
+			SECP224K1,
+			SECP256K1,
+		};
+
 		/** \brief	An item in data list, which is used in batched calculations. */
 		struct DataListItem
 		{

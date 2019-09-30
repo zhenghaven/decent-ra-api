@@ -76,7 +76,7 @@ namespace Decent
 			 *
 			 * \return	A reference to this object.
 			 */
-			virtual PKey& operator=(PKey&& other) noexcept
+			virtual PKey& operator=(PKey&& other)
 			{
 				ObjBase::operator=(std::forward<ObjBase>(other));
 				return  *this;

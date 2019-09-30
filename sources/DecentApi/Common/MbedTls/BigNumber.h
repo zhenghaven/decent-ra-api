@@ -302,13 +302,13 @@ namespace Decent
 			 *
 			 * \return	The result of the operation.
 			 */
-			uint64_t operator%(int64_t rhs) const;
-			uint32_t operator%(int32_t rhs) const { return static_cast<uint32_t>(this->operator%(static_cast<int64_t>(rhs))); }
-			uint16_t operator%(int16_t rhs) const { return static_cast<uint16_t>(this->operator%(static_cast<int64_t>(rhs))); }
-			uint8_t operator%(int8_t rhs) const { return static_cast<uint8_t>(this->operator%(static_cast<int64_t>(rhs))); }
-			uint32_t operator%(uint32_t rhs) const { return static_cast<uint32_t>(this->operator%(static_cast<int64_t>(rhs))); }
-			uint16_t operator%(uint16_t rhs) const { return static_cast<uint16_t>(this->operator%(static_cast<int64_t>(rhs))); }
-			uint8_t operator%(uint8_t rhs) const { return static_cast<uint8_t>(this->operator%(static_cast<int64_t>(rhs))); }
+			uint64_t operator%(int64_t  rhs) const;
+			uint32_t operator%(int32_t  rhs) const { return static_cast<uint32_t>(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
+			uint16_t operator%(int16_t  rhs) const { return static_cast<uint16_t>(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
+			uint8_t  operator%(int8_t   rhs) const { return static_cast<uint8_t >(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
+			uint32_t operator%(uint32_t rhs) const { return static_cast<uint32_t>(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
+			uint16_t operator%(uint16_t rhs) const { return static_cast<uint16_t>(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
+			uint8_t  operator%(uint8_t  rhs) const { return static_cast<uint8_t >(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
 
 		protected:
 
@@ -347,6 +347,14 @@ namespace Decent
 
 		};
 
+		/**
+		 * \brief	A constant big number class, which wraps around mbedTLS's MPI object. This class is
+		 * 			built for using existing binary, but not actual MPI object, with mbedTLS MPI
+		 * 			functions. The existing binary could be a C array, std::array, or std::vector. Since
+		 * 			it is mimicking a MPI object, there some restriction to the existing binary: the life
+		 * 			time of the binary must be longer than the instance of this class; the total size of
+		 * 			the binary must be proportional sizeof(uint64_t).
+		 */
 		class ConstBigNumber : public BigNumberBase
 		{
 		public: // static members:
@@ -354,14 +362,6 @@ namespace Decent
 
 		public:
 			ConstBigNumber() = delete;
-
-			/**
-			 * \brief	Constructor that accept a reference to mbedtls_mpi object, thus, this instance
-			 * 			doesn't has the ownership.
-			 *
-			 * \param [in,out]	ref	The reference.
-			 */
-			ConstBigNumber(mbedtls_mpi& ref);
 
 			/**
 			 * \brief	Construct a big number by referencing an existing binary data in little-endian. NOTE:
@@ -464,6 +464,11 @@ namespace Decent
 
 		};
 
+		/**
+		 * \brief	A big number class, which wraps around mbedTLS's MPI object. This class is built to
+		 * 			achieve fast calculation, so that please be CAREFUL that the internal pointer to the
+		 * 			MPI object may get CHANGED during some operations!
+		 */
 		class BigNumber : public BigNumberBase
 		{
 		public: //static members:
@@ -690,13 +695,13 @@ namespace Decent
 			 *
 			 * \return	The result of the operation.
 			 */
-			BigNumber& operator+=(int64_t rhs);
-			BigNumber& operator+=(int32_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator+=(int16_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator+=(int8_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator+=(uint32_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator+=(uint16_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator+=(uint8_t rhs) { return this->operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(int64_t  rhs);
+			BigNumber& operator+=(int32_t  rhs) { return BigNumber::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(int16_t  rhs) { return BigNumber::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(int8_t   rhs) { return BigNumber::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint32_t rhs) { return BigNumber::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint16_t rhs) { return BigNumber::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator+=(uint8_t  rhs) { return BigNumber::operator+=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Subtraction assignment operator
@@ -720,13 +725,13 @@ namespace Decent
 			 *
 			 * \return	The result of the operation.
 			 */
-			BigNumber& operator-=(int64_t rhs);
-			BigNumber& operator-=(int32_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator-=(int16_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator-=(int8_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator-=(uint32_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator-=(uint16_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator-=(uint8_t rhs) { return this->operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(int64_t  rhs);
+			BigNumber& operator-=(int32_t  rhs) { return BigNumber::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(int16_t  rhs) { return BigNumber::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(int8_t   rhs) { return BigNumber::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint32_t rhs) { return BigNumber::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint16_t rhs) { return BigNumber::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator-=(uint8_t  rhs) { return BigNumber::operator-=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Multiplication assignment operator
@@ -751,9 +756,9 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator*=(uint64_t rhs);
-			BigNumber& operator*=(uint32_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
-			BigNumber& operator*=(uint16_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
-			BigNumber& operator*=(uint8_t rhs) { return this->operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator*=(uint32_t rhs) { return BigNumber::operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator*=(uint16_t rhs) { return BigNumber::operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator*=(uint8_t  rhs) { return BigNumber::operator*=(static_cast<uint64_t>(rhs)); }
 
 			/**
 			 * \brief	Division assignment operator
@@ -777,13 +782,13 @@ namespace Decent
 			 *
 			 * \return	The result of the operation.
 			 */
-			BigNumber& operator/=(int64_t rhs);
-			BigNumber& operator/=(int32_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator/=(int16_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator/=(int8_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator/=(uint32_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator/=(uint16_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator/=(uint8_t rhs) { return this->operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(int64_t  rhs);
+			BigNumber& operator/=(int32_t  rhs) { return BigNumber::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(int16_t  rhs) { return BigNumber::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(int8_t   rhs) { return BigNumber::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint32_t rhs) { return BigNumber::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint16_t rhs) { return BigNumber::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator/=(uint8_t  rhs) { return BigNumber::operator/=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Modulus assignment operator
@@ -807,13 +812,13 @@ namespace Decent
 			 *
 			 * \return	The result of the operation.
 			 */
-			BigNumber& operator%=(int64_t rhs);
-			BigNumber& operator%=(int32_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator%=(int16_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator%=(int8_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator%=(uint32_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator%=(uint16_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
-			BigNumber& operator%=(uint8_t rhs) { return this->operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(int64_t  rhs);
+			BigNumber& operator%=(int32_t  rhs) { return BigNumber::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(int16_t  rhs) { return BigNumber::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(int8_t   rhs) { return BigNumber::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint32_t rhs) { return BigNumber::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint16_t rhs) { return BigNumber::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator%=(uint8_t  rhs) { return BigNumber::operator%=(static_cast<int64_t>(rhs)); }
 
 			/**
 			 * \brief	Bitwise left shift assignment operator
@@ -826,9 +831,9 @@ namespace Decent
 			 * \return	The result of the operation.
 			 */
 			BigNumber& operator<<=(uint64_t rhs);
-			BigNumber& operator<<=(uint32_t rhs) { return this->operator<<=(static_cast<uint64_t>(rhs)); }
-			BigNumber& operator<<=(uint16_t rhs) { return this->operator<<=(static_cast<uint64_t>(rhs)); }
-			BigNumber& operator<<=(uint8_t  rhs) { return this->operator<<=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator<<=(uint32_t rhs) { return BigNumber::operator<<=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator<<=(uint16_t rhs) { return BigNumber::operator<<=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator<<=(uint8_t  rhs) { return BigNumber::operator<<=(static_cast<uint64_t>(rhs)); }
 
 			/**
 			 * \brief	Bitwise right shift assignment operator
@@ -836,14 +841,14 @@ namespace Decent
 			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
 			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
 			 *
-			 * \param	count	Number of.
+			 * \param	rhs	The right hand side.
 			 *
 			 * \return	The result of the operation.
 			 */
-			BigNumber& operator>>=(uint64_t count);
-			BigNumber& operator>>=(uint32_t rhs) { return this->operator>>=(static_cast<uint64_t>(rhs)); }
-			BigNumber& operator>>=(uint16_t rhs) { return this->operator>>=(static_cast<uint64_t>(rhs)); }
-			BigNumber& operator>>=(uint8_t  rhs) { return this->operator>>=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator>>=(uint64_t rhs);
+			BigNumber& operator>>=(uint32_t rhs) { return BigNumber::operator>>=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator>>=(uint16_t rhs) { return BigNumber::operator>>=(static_cast<uint64_t>(rhs)); }
+			BigNumber& operator>>=(uint8_t  rhs) { return BigNumber::operator>>=(static_cast<uint64_t>(rhs)); }
 
 			/**
 			 * \brief	Flip sign (i.e. negative to positive, or positive to negative.)
@@ -867,6 +872,273 @@ namespace Decent
 			 */
 			BigNumber& SetBit(const size_t pos, bool bit);
 
+		};
+
+		/**
+		 * \brief	A big number reference class which wraps around mbedTLS's MPI object. This class is
+		 * 			built for helper for MPI object. Thus, it accept an existing MPI object. The existing
+		 * 			MPI object must be a real MPI object. It's guaranteed that the internal pointer of
+		 * 			MPI object won't be changed. However, the calculation speed may be slower, since
+		 * 			there will be copy operation within some operations. NOTE: the life time of the MPI
+		 * 			object must be longer than the instance of this class
+		 */
+		class BigNumberRef : public BigNumberBase
+		{
+		public:
+
+			/**
+			 * \brief	Constructor that constructs BigNumberRef from a existing mbedTLS MPI object.
+			 *
+			 * \param [in,out]	ref	The reference to a existing mbedTLS MPI object.
+			 */
+			BigNumberRef(mbedtls_mpi& ref);
+
+			/**
+			 * \brief	Constructor. Deep copy.
+			 *
+			 * \param	rhs	The right hand side.
+			 */
+			BigNumberRef(const BigNumberBase& rhs);
+
+			/**
+			 * \brief	Copy constructor. Deep copy.
+			 *
+			 * \param	rhs	The right hand side.
+			 */
+			BigNumberRef(const BigNumberRef& rhs) :
+				BigNumberRef(static_cast<BigNumberBase>(rhs))
+			{}
+
+			BigNumberRef(BigNumberRef&& rhs) = delete;
+
+			/** \brief	Destructor */
+			virtual ~BigNumberRef();
+
+		public:
+
+			/**
+			 * \brief	Assignment operator (deep copy).
+			 *
+			 * \exception: MbedTlsObj::MbedTlsException
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	A reference to this instance.
+			 */
+			BigNumberRef& operator=(const BigNumberBase& rhs);
+
+			BigNumberRef& operator=(BigNumberRef&& rhs) = delete;
+
+			BigNumberRef& operator=(int64_t  rhs);
+			BigNumberRef& operator=(int32_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator=(int16_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator=(int8_t   rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator=(uint32_t rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator=(uint16_t rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator=(uint8_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
+
+			/**
+			 * \brief	Addition assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator+=(const BigNumberBase& rhs);
+
+			/**
+			 * \brief	Addition assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator+=(int64_t  rhs);
+			BigNumberRef& operator+=(int32_t  rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator+=(int16_t  rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator+=(int8_t   rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator+=(uint32_t rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator+=(uint16_t rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator+=(uint8_t  rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
+
+			/**
+			 * \brief	Subtraction assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator-=(const BigNumberBase& rhs);
+
+			/**
+			 * \brief	Subtraction assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator-=(int64_t  rhs);
+			BigNumberRef& operator-=(int32_t  rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator-=(int16_t  rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator-=(int8_t   rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator-=(uint32_t rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator-=(uint16_t rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator-=(uint8_t  rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
+
+			/**
+			 * \brief	Multiplication assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator*=(const BigNumberBase& rhs);
+
+			/**
+			 * \brief	Multiplication assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator*=(uint64_t rhs);
+			BigNumberRef& operator*=(uint32_t rhs) { return BigNumberRef::operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumberRef& operator*=(uint16_t rhs) { return BigNumberRef::operator*=(static_cast<uint64_t>(rhs)); }
+			BigNumberRef& operator*=(uint8_t  rhs) { return BigNumberRef::operator*=(static_cast<uint64_t>(rhs)); }
+
+			/**
+			 * \brief	Division assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator/=(const BigNumberBase& rhs);
+
+			/**
+			 * \brief	Division assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator/=(int64_t  rhs);
+			BigNumberRef& operator/=(int32_t  rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator/=(int16_t  rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator/=(int8_t   rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator/=(uint32_t rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator/=(uint16_t rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator/=(uint8_t  rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
+
+			/**
+			 * \brief	Modulus assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator%=(const BigNumberBase& rhs);
+
+			/**
+			 * \brief	Modulus assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator%=(int64_t  rhs);
+			BigNumberRef& operator%=(int32_t  rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator%=(int16_t  rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator%=(int8_t   rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator%=(uint32_t rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator%=(uint16_t rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
+			BigNumberRef& operator%=(uint8_t  rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
+
+			/**
+			 * \brief	Bitwise left shift assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	count	Number of.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator<<=(uint64_t rhs);
+			BigNumberRef& operator<<=(uint32_t rhs) { return BigNumberRef::operator<<=(static_cast<uint64_t>(rhs)); }
+			BigNumberRef& operator<<=(uint16_t rhs) { return BigNumberRef::operator<<=(static_cast<uint64_t>(rhs)); }
+			BigNumberRef& operator<<=(uint8_t  rhs) { return BigNumberRef::operator<<=(static_cast<uint64_t>(rhs)); }
+
+			/**
+			 * \brief	Bitwise right shift assignment operator
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	count	Number of.
+			 *
+			 * \return	The result of the operation.
+			 */
+			BigNumberRef& operator>>=(uint64_t rhs);
+			BigNumberRef& operator>>=(uint32_t rhs) { return BigNumberRef::operator>>=(static_cast<uint64_t>(rhs)); }
+			BigNumberRef& operator>>=(uint16_t rhs) { return BigNumberRef::operator>>=(static_cast<uint64_t>(rhs)); }
+			BigNumberRef& operator>>=(uint8_t  rhs) { return BigNumberRef::operator>>=(static_cast<uint64_t>(rhs)); }
+
+			/**
+			 * \brief	Flip sign (i.e. negative to positive, or positive to negative.)
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \return	A reference to a this instance.
+			 */
+			BigNumberRef& FlipSign();
+
+			/**
+			 * \brief	Sets a bit
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
+			 *
+			 * \param	pos	The position; start from zero.
+			 * \param	bit	True for 1; false for 0.
+			 *
+			 * \return	A reference to this instance.
+			 */
+			BigNumberRef& SetBit(const size_t pos, bool bit);
+
+		private:
+
+			using ObjBase::Swap;
 		};
 
 		/**
