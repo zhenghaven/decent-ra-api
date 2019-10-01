@@ -60,30 +60,10 @@ namespace Decent
 			 */
 			BigNumberBase(BigNumberBase&& rhs);
 
-			/**
-			 * \brief	Make a deep copy (by using mbedtls_mpi_copy) of a mbedTLS MPI object.
-			 *
-			 * \exception	MbedTlsException	Error return by mbedTLS C function calls.
-			 *
-			 * \param	rhs	The right hand side.
-			 */
-			BigNumberBase(const mbedtls_mpi& rhs);
-
 			/** \brief	Destructor */
 			virtual ~BigNumberBase();
 
-			/**
-			 * \brief	Assignment operator. Make a deep copy (by using mbedtls_mpi_copy) of a mbedTLS MPI
-			 * 			object to this instance. But, if rhs is null, then this instance will become null as
-			 * 			well.
-			 *
-			 * \exception	MbedTlsException	Error return by mbedTLS C function calls.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	A reference to this instance.
-			 */
-			BigNumberBase& operator=(const BigNumberBase& rhs);
+			BigNumberBase& operator=(const BigNumberBase& rhs) = delete;
 
 			/**
 			 * \brief	Move assignment operator. Note: object held by this instance will be free first, and
@@ -465,9 +445,8 @@ namespace Decent
 		};
 
 		/**
-		 * \brief	A big number class, which wraps around mbedTLS's MPI object. This class is built to
-		 * 			achieve fast calculation, so that please be CAREFUL that the internal pointer to the
-		 * 			MPI object may get CHANGED during some operations!
+		 * \brief	A big number class, which wraps around mbedTLS's MPI object. Unlike ConstBigNumber,
+		 * 			this class is built to access and manipulate real MPI object.
 		 */
 		class BigNumber : public BigNumberBase
 		{
@@ -492,6 +471,8 @@ namespace Decent
 			/**
 			 * \brief	Move constructor. Move the mbedTLS MPI object of RHS to this new instance. The MPI
 			 * 			object originally held by this instance will be emptied.
+			 *
+			 * \warning	The pointer to the MPI structure held by the RHS instance WILL BE affected.
 			 *
 			 * \param [in,out]	rhs	The right hand side.
 			 */
@@ -518,6 +499,13 @@ namespace Decent
 			 * \param	rhs	The right hand side.
 			 */
 			BigNumber(const BigNumberBase& rhs);
+
+			/**
+			 * \brief	Constructor that constructs BigNumber that refer to a existing mbedTLS MPI object.
+			 *
+			 * \param [in,out]	ref	The reference to a existing mbedTLS MPI object.
+			 */
+			BigNumber(mbedtls_mpi& ref);
 
 			/**
 			 * \brief	Constructor that constructs BigNumber from uint64_t.
@@ -651,6 +639,11 @@ namespace Decent
 			
 		public:
 
+			/**
+			 * \brief	Inherited from BigNumberBase.
+			 *
+			 * \warning	The pointer to the MPI structure held by this instance WILL BE affected.
+			 */
 			using BigNumberBase::Swap;
 
 			/**
@@ -667,11 +660,21 @@ namespace Decent
 			/**
 			 * \brief	Move assignment operator
 			 *
+			 * \warning	The pointer to the MPI structure held by this AND the RHS instance WILL BE affected.
+			 *
 			 * \param [in,out]	rhs	The right hand side.
 			 *
 			 * \return	A reference to this instance.
 			 */
 			BigNumber& operator=(BigNumber&& rhs);
+
+			/**
+			 * \brief	Only swap the content (inside of MPI structure) of the big number, so that the pointer to
+			 * 			the MPI object held by this wrapper will not be affected.
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			void SwapContent(BigNumber& other);
 
 			/**
 			 * \brief	Assignment operator. Assign primitive integer to this instance.
@@ -890,289 +893,6 @@ namespace Decent
 			 */
 			BigNumber& SetBit(const size_t pos, bool bit);
 
-		};
-
-		/**
-		 * \brief	A big number reference class which wraps around mbedTLS's MPI object. This class is
-		 * 			built for helper for MPI object. Thus, it accept an existing MPI object. The existing
-		 * 			MPI object must be a real MPI object. It's guaranteed that the internal pointer of
-		 * 			MPI object won't be changed. However, the calculation speed may be slower, since
-		 * 			there will be copy operation within some operations. NOTE: the life time of the MPI
-		 * 			object must be longer than the instance of this class
-		 */
-		class BigNumberRef : public BigNumberBase
-		{
-		public:
-
-			/**
-			 * \brief	Constructor that constructs BigNumberRef from a existing mbedTLS MPI object.
-			 *
-			 * \param [in,out]	ref	The reference to a existing mbedTLS MPI object.
-			 */
-			BigNumberRef(mbedtls_mpi& ref);
-
-			BigNumberRef(const BigNumberRef& rhs) = delete;
-
-			BigNumberRef(BigNumberRef&& rhs) = delete;
-
-			/** \brief	Destructor */
-			virtual ~BigNumberRef();
-
-		public:
-
-			/**
-			 * \brief	Assignment operator (deep copy).
-			 *
-			 * \exception: MbedTlsObj::MbedTlsException
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	A reference to this instance.
-			 */
-			BigNumberRef& operator=(const BigNumberBase& rhs);
-
-			BigNumberRef& operator=(BigNumberRef&& rhs) = delete;
-
-			/**
-			 * \brief	Assignment operator. Assign primitive integer to this instance.
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	A reference to this instance.
-			 */
-			BigNumberRef& operator=(int64_t  rhs);
-			BigNumberRef& operator=(int32_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator=(int16_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator=(int8_t   rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator=(uint32_t rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator=(uint16_t rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator=(uint8_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
-
-			/**
-			 * \brief	Swaps the internal content with the given other instance.
-			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or other is in null
-			 * 												state.
-			 *
-			 * \param [in,out]	other	The other.
-			 */
-			void Swap(BigNumberRef& other);
-
-			/**
-			 * \brief	Swaps the internal content with the given other instance.
-			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or other is in null
-			 * 												state.
-			 *
-			 * \param [in,out]	other	The other.
-			 */
-			void Swap(BigNumber& other);
-
-			/**
-			 * \brief	Addition assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator+=(const BigNumberBase& rhs);
-
-			/**
-			 * \brief	Addition assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator+=(int64_t  rhs);
-			BigNumberRef& operator+=(int32_t  rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator+=(int16_t  rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator+=(int8_t   rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator+=(uint32_t rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator+=(uint16_t rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator+=(uint8_t  rhs) { return BigNumberRef::operator+=(static_cast<int64_t>(rhs)); }
-
-			/**
-			 * \brief	Subtraction assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator-=(const BigNumberBase& rhs);
-
-			/**
-			 * \brief	Subtraction assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator-=(int64_t  rhs);
-			BigNumberRef& operator-=(int32_t  rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator-=(int16_t  rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator-=(int8_t   rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator-=(uint32_t rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator-=(uint16_t rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator-=(uint8_t  rhs) { return BigNumberRef::operator-=(static_cast<int64_t>(rhs)); }
-
-			/**
-			 * \brief	Multiplication assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator*=(const BigNumberBase& rhs);
-
-			/**
-			 * \brief	Multiplication assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator*=(uint64_t rhs);
-			BigNumberRef& operator*=(uint32_t rhs) { return BigNumberRef::operator*=(static_cast<uint64_t>(rhs)); }
-			BigNumberRef& operator*=(uint16_t rhs) { return BigNumberRef::operator*=(static_cast<uint64_t>(rhs)); }
-			BigNumberRef& operator*=(uint8_t  rhs) { return BigNumberRef::operator*=(static_cast<uint64_t>(rhs)); }
-
-			/**
-			 * \brief	Division assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator/=(const BigNumberBase& rhs);
-
-			/**
-			 * \brief	Division assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator/=(int64_t  rhs);
-			BigNumberRef& operator/=(int32_t  rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator/=(int16_t  rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator/=(int8_t   rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator/=(uint32_t rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator/=(uint16_t rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator/=(uint8_t  rhs) { return BigNumberRef::operator/=(static_cast<int64_t>(rhs)); }
-
-			/**
-			 * \brief	Modulus assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator%=(const BigNumberBase& rhs);
-
-			/**
-			 * \brief	Modulus assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	rhs	The right hand side.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator%=(int64_t  rhs);
-			BigNumberRef& operator%=(int32_t  rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator%=(int16_t  rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator%=(int8_t   rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator%=(uint32_t rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator%=(uint16_t rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
-			BigNumberRef& operator%=(uint8_t  rhs) { return BigNumberRef::operator%=(static_cast<int64_t>(rhs)); }
-
-			/**
-			 * \brief	Bitwise left shift assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	count	Number of.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator<<=(uint64_t rhs);
-			BigNumberRef& operator<<=(uint32_t rhs) { return BigNumberRef::operator<<=(static_cast<uint64_t>(rhs)); }
-			BigNumberRef& operator<<=(uint16_t rhs) { return BigNumberRef::operator<<=(static_cast<uint64_t>(rhs)); }
-			BigNumberRef& operator<<=(uint8_t  rhs) { return BigNumberRef::operator<<=(static_cast<uint64_t>(rhs)); }
-
-			/**
-			 * \brief	Bitwise right shift assignment operator
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	count	Number of.
-			 *
-			 * \return	The result of the operation.
-			 */
-			BigNumberRef& operator>>=(uint64_t rhs);
-			BigNumberRef& operator>>=(uint32_t rhs) { return BigNumberRef::operator>>=(static_cast<uint64_t>(rhs)); }
-			BigNumberRef& operator>>=(uint16_t rhs) { return BigNumberRef::operator>>=(static_cast<uint64_t>(rhs)); }
-			BigNumberRef& operator>>=(uint8_t  rhs) { return BigNumberRef::operator>>=(static_cast<uint64_t>(rhs)); }
-
-			/**
-			 * \brief	Flip sign (i.e. negative to positive, or positive to negative.)
-			 *
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \return	A reference to a this instance.
-			 */
-			BigNumberRef& FlipSign();
-
-			/**
-			 * \brief	Sets a bit
-			 *
-			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
-			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance is in null state.
-			 *
-			 * \param	pos	The position; start from zero.
-			 * \param	bit	True for 1; false for 0.
-			 *
-			 * \return	A reference to this instance.
-			 */
-			BigNumberRef& SetBit(const size_t pos, bool bit);
-
-		private:
-
-			using ObjBase::Swap;
 		};
 
 		/**

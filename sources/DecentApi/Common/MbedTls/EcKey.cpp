@@ -173,9 +173,9 @@ EcPublicKeyBase::EcPublicKeyBase(EcKeyType ecType, const BigNumberBase & x, cons
 	EcPublicKeyBase(ecType)
 {
 	auto& ecCtx = GetEcContext();
-	BigNumberRef ctxX = ecCtx.Q.X;
-	BigNumberRef ctxY = ecCtx.Q.Y;
-	BigNumberRef ctxZ = ecCtx.Q.Z;
+	BigNumber ctxX = ecCtx.Q.X;
+	BigNumber ctxY = ecCtx.Q.Y;
+	BigNumber ctxZ = ecCtx.Q.Z;
 
 	ctxX = x;
 	ctxY = y;
@@ -280,8 +280,8 @@ void EcPublicKeyBase::ToPublicBinary(void * xPtr, size_t xSize, void * yPtr, siz
 {
 	auto& ecCtx = GetEcContext();
 
-	const BigNumberRef ctxX = const_cast<mbedtls_mpi&>(ecCtx.Q.X);
-	const BigNumberRef ctxY = const_cast<mbedtls_mpi&>(ecCtx.Q.Y);
+	const BigNumber ctxX = const_cast<mbedtls_mpi&>(ecCtx.Q.X);
+	const BigNumber ctxY = const_cast<mbedtls_mpi&>(ecCtx.Q.Y);
 
 	ctxX.InternalToBinary(xPtr, xSize);
 	ctxY.InternalToBinary(yPtr, ySize);
@@ -343,7 +343,7 @@ EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r) :
 	EcPublicKeyBase(ecType)
 {
 	auto& ecCtx = GetEcContext();
-	BigNumberRef ctxR = ecCtx.d;
+	BigNumber ctxR = ecCtx.d;
 
 	ctxR = r;
 
@@ -355,7 +355,7 @@ EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r, const Bi
 	EcPublicKeyBase(ecType, x, y)
 {
 	auto& ecCtx = GetEcContext();
-	BigNumberRef ctxR = ecCtx.d;
+	BigNumber ctxR = ecCtx.d;
 
 	ctxR = r;
 
@@ -430,7 +430,7 @@ void EcKeyPairBase::ToPrivateBinary(void * rPtr, size_t rSize) const
 {
 	auto& ecCtx = GetEcContext();
 
-	const BigNumberRef ctxR = const_cast<mbedtls_mpi&>(ecCtx.d);
+	const BigNumber ctxR = const_cast<mbedtls_mpi&>(ecCtx.d);
 
 	ctxR.InternalToBinary(rPtr, rSize);
 }
