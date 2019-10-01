@@ -206,7 +206,7 @@ BigNumberBase::BigNumberBase(mbedtls_mpi * ptr, FreeFuncType freeFunc) :
 {
 }
 
-void BigNumberBase::ToBinary(void * out, const size_t size) const
+void BigNumberBase::InternalToBinary(void * out, const size_t size) const
 {
 	NullCheck();
 
@@ -223,7 +223,7 @@ void BigNumberBase::ToBinary(void * out, const size_t size) const
 	throw MbedTlsException("ConstBigNumber::ToBinary", MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL);
 }
 
-void BigNumberBase::ToBigEndianBinary(void * out, const size_t size) const
+void BigNumberBase::InternalToBigEndianBinary(void * out, const size_t size) const
 {
 	NullCheck();
 
@@ -337,6 +337,17 @@ BigNumber & BigNumber::operator=(const BigNumberBase & rhs)
 BigNumber & BigNumber::operator=(BigNumber && rhs)
 {
 	BigNumberBase::operator=(std::forward<BigNumberBase>(rhs));
+	return *this;
+}
+
+BigNumber & BigNumber::operator=(int64_t rhs)
+{
+	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
+
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_lset, Get(), rhs);
+
 	return *this;
 }
 
@@ -495,6 +506,214 @@ BigNumber & BigNumber::SetBit(const size_t pos, bool bit)
 }
 
 //================================================================================================
+//  BigNumberRef
+//================================================================================================
+
+BigNumberRef::BigNumberRef(mbedtls_mpi & ref) :
+	BigNumberBase(&ref, &DoNotFree)
+{}
+
+BigNumberRef::~BigNumberRef()
+{}
+
+BigNumberRef & BigNumberRef::operator=(const BigNumberBase & rhs)
+{
+	if (this != &rhs)
+	{
+		NullCheck();
+		rhs.NullCheck();
+
+		CALL_MBEDTLS_C_FUNC(mbedtls_mpi_copy, Get(), rhs.Get());
+	}
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator=(int64_t rhs)
+{
+	static_assert(std::is_same<mbedtls_mpi_sint, int64_t>::value, "Currently, we only consider 64-bit numbers.");
+
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_lset, Get(), rhs);
+
+	return *this;
+}
+
+void BigNumberRef::Swap(BigNumberRef & other)
+{
+	if (this != &other)
+	{
+		NullCheck();
+		other.NullCheck();
+
+		mbedtls_mpi_swap(Get(), other.Get());
+	}
+}
+
+void BigNumberRef::Swap(BigNumber & other)
+{
+	NullCheck();
+	other.NullCheck();
+
+	mbedtls_mpi_swap(Get(), other.Get());
+}
+
+BigNumberRef & BigNumberRef::operator+=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this + rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator+=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this + rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator-=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this - rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator-=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this - rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator*=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this * rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator*=(uint64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this * rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator/=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this / rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator/=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this / rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator%=(const BigNumberBase & rhs)
+{
+	NullCheck();
+	rhs.NullCheck();
+
+	BigNumber res = (*this % rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator%=(int64_t rhs)
+{
+	NullCheck();
+
+	BigNumber res = (*this % rhs);
+
+	BigNumberRef::Swap(res);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator<<=(uint64_t rhs)
+{
+	static_assert(std::is_same<size_t, uint64_t>::value, "Current implementation assume size_t is same as uint64_t.");
+
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_shift_l, Get(), rhs);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::operator>>=(uint64_t rhs)
+{
+	static_assert(std::is_same<size_t, uint64_t>::value, "Current implementation assume size_t is same as uint64_t.");
+
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_shift_r, Get(), rhs);
+
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::FlipSign()
+{
+	NullCheck();
+
+	Get()->s *= -1;
+	return *this;
+}
+
+BigNumberRef & BigNumberRef::SetBit(const size_t pos, bool bit)
+{
+	NullCheck();
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_set_bit, Get(), pos, bit ? 1 : 0);
+
+	return *this;
+}
+
+//================================================================================================
 //  Static Operators
 //================================================================================================
 
@@ -630,10 +849,3 @@ BigNumber Decent::MbedTlsObj::operator>>(const BigNumberBase & lhs, uint64_t rhs
 	res >>= rhs;
 	return res;
 }
-
-BigNumberRef::BigNumberRef(mbedtls_mpi & ref) :
-	BigNumberBase(&ref, &DoNotFree)
-{}
-
-BigNumberRef::~BigNumberRef()
-{}

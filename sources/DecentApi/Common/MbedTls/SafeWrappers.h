@@ -2,6 +2,8 @@
 
 #include <array>
 
+#include "MbedTlsCppDefs.h"
+
 namespace Decent
 {
 	namespace MbedTlsObj
@@ -21,8 +23,8 @@ namespace Decent
 		template<typename Container>
 		inline void ZeroizeContainer(Container& cnt)
 		{
-			using namespace ArrayPtrAndSize;
-			detail::MemZeroize(GetPtr(cnt), GetSize(cnt));
+			using namespace detail;
+			MemZeroize(GetPtr(cnt), GetSize(cnt));
 		}
 
 		/**

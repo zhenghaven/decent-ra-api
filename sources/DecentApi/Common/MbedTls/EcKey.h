@@ -5,12 +5,14 @@
 #include <memory>
 
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
+typedef struct mbedtls_ecp_group mbedtls_ecp_group;
 
 namespace Decent
 {
 	namespace MbedTlsObj
 	{
 		class BigNumberBase;
+		class BigNumber;
 
 		/**
 		 * \brief	Gets Elliptic Curve size in Byte
@@ -60,26 +62,77 @@ namespace Decent
 			return GetCurveByteSize(type);
 		}
 
-		class EcPublicKeyBase : public AsymKeyBase
+		class EcGroup : public ObjBase<mbedtls_ecp_group>
 		{
 		public:
-			EcPublicKeyBase() = delete;
 
+			/**
+			 * \brief	Function that frees MbedTLS object and delete the pointer.
+			 *
+			 * \param [in,out]	ptr	If non-null, the pointer.
+			 */
+			static void FreeObject(mbedtls_ecp_group* ptr);
+
+		public:
+
+			/** \brief	Default constructor. Construct non-null, valid, but empty. */
+			EcGroup();
+
+			EcGroup(const EcGroup& rhs);
+
+			EcGroup(EcGroup&& rhs);
+
+			EcGroup(const mbedtls_ecp_group& rhs);
+
+			virtual ~EcGroup();
+
+		};
+
+		class EcPublicKeyBase : public AsymKeyBase
+		{
+		public: //static member:
+
+			/**
+			 * \brief	Check whether or not the key pair has public key.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown if the key pair doesn't have public key.
+			 *
+			 * \param	ctx	The context.
+			 */
+			static void CheckHasPublicKey(const mbedtls_ecp_keypair& ctx);
+
+		public:
 			EcPublicKeyBase(const EcPublicKeyBase& rhs) = delete;
 
 			EcPublicKeyBase(EcPublicKeyBase&& rhs);
 
 			/**
-			 * \brief	Constructor that obtain the ownership of a existing mbedTLS PK context object.
+			 * \brief	Constructor that obtain the ownership of a existing mbedTLS PK context object. The
+			 * 			ownership will be taken even if the type check is unsuccessful and a exception has
+			 * 			been thrown.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC key).
 			 *
 			 * \param	other	The other.
 			 */
-			EcPublicKeyBase(std::unique_ptr<mbedtls_pk_context> other);
+			EcPublicKeyBase(AsymKeyBase other);
+
+			/**
+			 * \brief	Constructor that obtain the ownership of a existing mbedTLS PK context object. The
+			 * 			ownership will be taken after the type check is successful.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC key).
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			EcPublicKeyBase(AsymKeyBase& other);
 
 			/**
 			 * \brief	Constructs public key by referring to a existing mbedTLS PK context object. NOTE:
 			 * 			this instance DOES NOT has the ownership! That means, the existing mbedTLS PK context
 			 * 			object must have longer life time than this instance!
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC key).
 			 *
 			 * \param [in,out]	other	The other.
 			 */
@@ -88,6 +141,8 @@ namespace Decent
 			/**
 			 * \brief	Constructs public key by reading PEM from a string.
 			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC key).
+			 *
 			 * \param	pem	The PEM.
 			 */
 			EcPublicKeyBase(const std::string& pem);
@@ -95,12 +150,16 @@ namespace Decent
 			/**
 			 * \brief	Constructs public key by reading DER from a byte array.
 			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC key).
+			 *
 			 * \param	der	The DER.
 			 */
 			EcPublicKeyBase(const std::vector<uint8_t>& der);
 
 			/**
 			 * \brief	Constructor from public key's X and Y values (Z is 1).
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when the given binary is not valid point on the curve.
 			 *
 			 * \param	ecType	The type of Elliptic Curve.
 			 * \param	x	  	Elliptic Curve public key's X value.
@@ -111,7 +170,15 @@ namespace Decent
 			/** \brief	Destructor */
 			virtual ~EcPublicKeyBase();
 
+		protected: //static members:
+
+			static void CheckIsAlgmTypeMatch(mbedtls_pk_context* ctx);
+
+			static AsymKeyBase CheckIsAlgmAndKeyTypeMatch(AsymKeyBase& other);
+
 		protected: //protected (de-)con-structors:
+
+			EcPublicKeyBase();
 
 			EcPublicKeyBase(EcKeyType ecType);
 
@@ -127,6 +194,14 @@ namespace Decent
 			 * \return	A shallow copy of this object.
 			 */
 			EcPublicKeyBase& operator=(EcPublicKeyBase&& rhs);
+
+			/**
+			 * \brief	Query if this object is null. True if key type is not EC key, or the EC pair context
+			 * 			is null.
+			 *
+			 * \return	True if null, false if not.
+			 */
+			virtual bool IsNull() const override;
 
 			/**
 			 * \brief	Gets asymmetric key algorithm type.
@@ -214,26 +289,53 @@ namespace Decent
 
 		class EcKeyPairBase : public EcPublicKeyBase
 		{
+		public: //static member:
+
+			/**
+			 * \brief	Check whether or not the key pair has private key.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown if the key pair doesn't have private key.
+			 *
+			 * \param	ctx	The context.
+			 */
+			static void CheckHasPrivateKey(const mbedtls_ecp_keypair& ctx);
+
 		public:
 			EcKeyPairBase() = delete;
 
-			EcKeyPairBase(const Generate&);
+			EcKeyPairBase(const Generate&, EcKeyType ecType);
 
 			EcKeyPairBase(const EcKeyPairBase& rhs) = delete;
 
 			EcKeyPairBase(EcKeyPairBase&& rhs);
 
 			/**
-			 * \brief	Constructor that obtain the ownership of a existing mbedTLS PK context object.
+			 * \brief	Constructor that obtain the ownership of a existing mbedTLS PK context object. The
+			 * 			ownership will be taken even if the type check is unsuccessful and a exception has
+			 * 			been thrown.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC private key).
 			 *
 			 * \param	other	The other.
 			 */
-			EcKeyPairBase(std::unique_ptr<mbedtls_pk_context> other);
+			EcKeyPairBase(AsymKeyBase other);
+
+			/**
+			 * \brief	Constructor that obtain the ownership of a existing mbedTLS PK context object. The
+			 * 			ownership will be taken after the type check is successful.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC private key).
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			EcKeyPairBase(AsymKeyBase& other);
 
 			/**
 			 * \brief	Constructs public key by referring to a existing mbedTLS PK context object. NOTE:
 			 * 			this instance DOES NOT has the ownership! That means, the existing mbedTLS PK context
 			 * 			object must have longer life time than this instance!
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC private key).
 			 *
 			 * \param [in,out]	other	The other.
 			 */
@@ -242,6 +344,8 @@ namespace Decent
 			/**
 			 * \brief	Constructs public key by reading PEM from a string.
 			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC private key).
+			 *
 			 * \param	pem	The PEM.
 			 */
 			EcKeyPairBase(const std::string& pem);
@@ -249,12 +353,16 @@ namespace Decent
 			/**
 			 * \brief	Constructs public key by reading DER from a byte array.
 			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC private key).
+			 *
 			 * \param	der	The DER.
 			 */
 			EcKeyPairBase(const std::vector<uint8_t>& der);
 
 			/**
-			 * \brief	Constructor from public key's X and Y values (Z is 1).
+			 * \brief	Constructor from private key's R value.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when the given binary is not valid point on the curve.
 			 *
 			 * \param	ecType	The type of Elliptic Curve.
 			 * \param	r	  	Elliptic Curve private key's R value.
@@ -262,7 +370,11 @@ namespace Decent
 			EcKeyPairBase(EcKeyType ecType, const BigNumberBase& r);
 
 			/**
-			 * \brief	Constructor from public key's X and Y values (Z is 1).
+			 * \brief	Constructor from private key's R value and public key's X and Y values (Z is 1).
+			 * 			NOTE: this constructor does not check if the private and public key are matched!
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when the given binary is not valid point
+			 * 												on the curve.
 			 *
 			 * \param	ecType	The type of Elliptic Curve.
 			 * \param	r	  	Elliptic Curve private key's R value.
@@ -272,6 +384,10 @@ namespace Decent
 			EcKeyPairBase(EcKeyType ecType, const BigNumberBase& r, const BigNumberBase& x, const BigNumberBase& y);
 
 			virtual ~EcKeyPairBase();
+
+		protected: //static members:
+
+			static AsymKeyBase& CheckHasPrivateKey(AsymKeyBase& other);
 
 		public:
 
@@ -296,16 +412,16 @@ namespace Decent
 			/**
 			 * \brief	Gets private key encoded in DER
 			 *
-			 * \return	The DER encoded private key stored in byte array.
+			 * \param [in,out]	out	The output.
 			 */
-			virtual std::vector<uint8_t> GetPrivateDer() const;
+			virtual void GetPrivateDer(std::vector<uint8_t>& out) const;
 
 			/**
 			 * \brief	Gets private key encoded in PEM
 			 *
-			 * \return	The PEM encoded private key stored in string.
+			 * \param [in,out]	out	The output.
 			 */
-			virtual std::string GetPrivatePem() const;
+			virtual void GetPrivatePem(std::string& out) const;
 
 			/**
 			 * \brief	Verify signature.
@@ -354,11 +470,15 @@ namespace Decent
 
 		protected:
 
+			void Sign(HashType hashType, const void* hashBuf, size_t hashSize, BigNumber& r, BigNumber& s) const;
+
 			void Sign(HashType hashType, const void* hashBuf, size_t hashSize, void* rPtr, size_t rSize, void* sPtr, size_t sSize) const;
 
 			void ToPrivateBinary(void* rPtr, size_t rSize) const;
 
-			void DeriveSharedKey(void* bufPtr, size_t bufSize, const EcPublicKeyBase& pubKey) const;
+			void DeriveSharedKey(BigNumber& key, const EcPublicKeyBase& pubKey) const;
+
+			void DeriveSharedKey(void* keyPtr, size_t keySize, const EcPublicKeyBase& pubKey) const;
 
 		};
 	}

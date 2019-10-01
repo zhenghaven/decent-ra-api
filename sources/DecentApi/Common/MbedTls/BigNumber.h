@@ -152,7 +152,7 @@ namespace Decent
 			template<typename ContainerType>
 			void ToBinary(ContainerType& out) const
 			{
-				return ToBinary(detail::GetPtr(out), detail::GetSize(out));
+				return InternalToBinary(detail::GetPtr(out), detail::GetSize(out));
 			}
 
 			/**
@@ -168,7 +168,7 @@ namespace Decent
 			template<typename StructType>
 			void ToBinaryStruct(StructType& out) const
 			{
-				return ToBinary(&out, sizeof(StructType));
+				return InternalToBinary(&out, sizeof(StructType));
 			}
 
 			/**
@@ -184,7 +184,7 @@ namespace Decent
 			template<typename ContainerType>
 			void ToBigEndianBinary(ContainerType& out) const
 			{
-				return ToBigEndianBinary(detail::GetPtr(out), detail::GetSize(out));
+				return InternalToBigEndianBinary(detail::GetPtr(out), detail::GetSize(out));
 			}
 
 			/**
@@ -202,7 +202,7 @@ namespace Decent
 			template<typename StructType>
 			void ToBigEndianBinaryStruct(StructType& out) const
 			{
-				return ToBigEndianBinary(&out, sizeof(StructType));
+				return InternalToBigEndianBinary(&out, sizeof(StructType));
 			}
 
 			/**
@@ -310,17 +310,6 @@ namespace Decent
 			uint16_t operator%(uint16_t rhs) const { return static_cast<uint16_t>(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
 			uint8_t  operator%(uint8_t  rhs) const { return static_cast<uint8_t >(BigNumberBase::operator%(static_cast<int64_t>(rhs))); }
 
-		protected:
-
-			/**
-			 * \brief	Constructor with more flexibility. Only pass pointer and free function to the ObjBase;
-			 * 			no other instructions after that.
-			 *
-			 * \param [in,out]	ptr			The pointer to the mbedTLS MPI object.
-			 * \param 		  	freeFunc	The free function used to free the mbedTLS MPI object.
-			 */
-			BigNumberBase(mbedtls_mpi* ptr, FreeFuncType freeFunc);
-
 			/**
 			 * \brief	Converts this big number to a little endian binary
 			 *
@@ -331,7 +320,7 @@ namespace Decent
 			 * \param [in,out]	out 	If non-null, the output buffer.
 			 * \param 		  	size	The size of the output buffer.
 			 */
-			void ToBinary(void* out, const size_t size) const;
+			void InternalToBinary(void* out, const size_t size) const;
 
 			/**
 			 * \brief	Converts this big number to a big endian binary
@@ -343,7 +332,18 @@ namespace Decent
 			 * \param [in,out]	out 	If non-null, the output buffer.
 			 * \param 		  	size	The size of the output buffer.
 			 */
-			void ToBigEndianBinary(void* out, const size_t size) const;
+			void InternalToBigEndianBinary(void* out, const size_t size) const;
+
+		protected:
+
+			/**
+			 * \brief	Constructor with more flexibility. Only pass pointer and free function to the ObjBase;
+			 * 			no other instructions after that.
+			 *
+			 * \param [in,out]	ptr			The pointer to the mbedTLS MPI object.
+			 * \param 		  	freeFunc	The free function used to free the mbedTLS MPI object.
+			 */
+			BigNumberBase(mbedtls_mpi* ptr, FreeFuncType freeFunc);
 
 		};
 
@@ -674,6 +674,24 @@ namespace Decent
 			BigNumber& operator=(BigNumber&& rhs);
 
 			/**
+			 * \brief	Assignment operator. Assign primitive integer to this instance.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	A reference to this instance.
+			 */
+			BigNumber& operator=(int64_t  rhs);
+			BigNumber& operator=(int32_t  rhs) { return BigNumber::operator=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator=(int16_t  rhs) { return BigNumber::operator=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator=(int8_t   rhs) { return BigNumber::operator=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator=(uint32_t rhs) { return BigNumber::operator=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator=(uint16_t rhs) { return BigNumber::operator=(static_cast<int64_t>(rhs)); }
+			BigNumber& operator=(uint8_t  rhs) { return BigNumber::operator=(static_cast<int64_t>(rhs)); }
+
+			/**
 			 * \brief	Addition assignment operator
 			 *
 			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
@@ -893,21 +911,7 @@ namespace Decent
 			 */
 			BigNumberRef(mbedtls_mpi& ref);
 
-			/**
-			 * \brief	Constructor. Deep copy.
-			 *
-			 * \param	rhs	The right hand side.
-			 */
-			BigNumberRef(const BigNumberBase& rhs);
-
-			/**
-			 * \brief	Copy constructor. Deep copy.
-			 *
-			 * \param	rhs	The right hand side.
-			 */
-			BigNumberRef(const BigNumberRef& rhs) :
-				BigNumberRef(static_cast<BigNumberBase>(rhs))
-			{}
+			BigNumberRef(const BigNumberRef& rhs) = delete;
 
 			BigNumberRef(BigNumberRef&& rhs) = delete;
 
@@ -929,6 +933,16 @@ namespace Decent
 
 			BigNumberRef& operator=(BigNumberRef&& rhs) = delete;
 
+			/**
+			 * \brief	Assignment operator. Assign primitive integer to this instance.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when a MbedTls error returned.
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or RHS is in null state.
+			 *
+			 * \param	rhs	The right hand side.
+			 *
+			 * \return	A reference to this instance.
+			 */
 			BigNumberRef& operator=(int64_t  rhs);
 			BigNumberRef& operator=(int32_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
 			BigNumberRef& operator=(int16_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
@@ -936,6 +950,26 @@ namespace Decent
 			BigNumberRef& operator=(uint32_t rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
 			BigNumberRef& operator=(uint16_t rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
 			BigNumberRef& operator=(uint8_t  rhs) { return BigNumberRef::operator=(static_cast<int64_t>(rhs)); }
+
+			/**
+			 * \brief	Swaps the internal content with the given other instance.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or other is in null
+			 * 												state.
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			void Swap(BigNumberRef& other);
+
+			/**
+			 * \brief	Swaps the internal content with the given other instance.
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when this instance or other is in null
+			 * 												state.
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			void Swap(BigNumber& other);
 
 			/**
 			 * \brief	Addition assignment operator

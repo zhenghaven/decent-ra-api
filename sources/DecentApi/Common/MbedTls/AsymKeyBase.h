@@ -6,6 +6,8 @@
 #include <string>
 
 typedef struct mbedtls_pk_context mbedtls_pk_context;
+typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
+typedef struct mbedtls_rsa_context mbedtls_rsa_context;
 
 namespace Decent
 {
@@ -22,6 +24,57 @@ namespace Decent
 			 */
 			static void FreeObject(mbedtls_pk_context* ptr);
 
+			/**
+			 * \brief	Gets key algorithm type from context
+			 *
+			 * \param [in,out]	ctx	The context.
+			 *
+			 * \return	The algorithm type from context.
+			 */
+			static AsymAlgmType GetAlgmTypeFromContext(const mbedtls_pk_context& ctx);
+
+			/**
+			 * \brief	Gets key type (either public or private) from context.
+			 *
+			 * \param [in,out]	ctx	The context.
+			 *
+			 * \return	The key type from context.
+			 */
+			static AsymKeyType GetKeyTypeFromContext(mbedtls_pk_context& ctx);
+			static AsymKeyType GetKeyTypeFromContext(mbedtls_ecp_keypair& ctx);
+			static AsymKeyType GetKeyTypeFromContext(mbedtls_rsa_context& ctx);
+			static AsymKeyType GetKeyTypeFromContext(const mbedtls_pk_context& ctx);
+			static AsymKeyType GetKeyTypeFromContext(const mbedtls_ecp_keypair& ctx);
+			static AsymKeyType GetKeyTypeFromContext(const mbedtls_rsa_context& ctx);
+
+			/**
+			 * \brief	Check public key in context is valid or not
+			 *
+			 * \param	ctx	The context.
+			 *
+			 * \return	True if it succeeds, false if it fails.
+			 */
+			static bool CheckPublicKeyInContext(const mbedtls_ecp_keypair& ctx);
+			static bool CheckPublicKeyInContext(const mbedtls_rsa_context& ctx);
+
+			/**
+			 * \brief	Check private key in context is valid or not
+			 *
+			 * \param	ctx	The context.
+			 *
+			 * \return	True if it succeeds, false if it fails.
+			 */
+			static bool CheckPrivateKeyInContext(const mbedtls_ecp_keypair& ctx);
+			static bool CheckPrivateKeyInContext(const mbedtls_rsa_context& ctx);
+
+			/**
+			 * \brief	Complete public key in context based on the existing private key.
+			 *
+			 * \param [in,out]	ctx	The context.
+			 */
+			static void CompletePublicKeyInContext(mbedtls_ecp_keypair& ctx);
+			static void CompletePublicKeyInContext(mbedtls_rsa_context& ctx);
+
 		public:
 
 			/** \brief	Default constructor. Constructs a non-null, initialized, but empty Public Key context. */
@@ -35,6 +88,20 @@ namespace Decent
 			 * \param [in,out]	rhs	The right hand side.
 			 */
 			AsymKeyBase(AsymKeyBase&& rhs);
+
+			/**
+			 * \brief	Constructs public key by reading PEM from a string.
+			 *
+			 * \param	pem	The PEM.
+			 */
+			AsymKeyBase(const std::string& pem);
+
+			/**
+			 * \brief	Constructs public key by reading DER from a byte array.
+			 *
+			 * \param	der	The DER.
+			 */
+			AsymKeyBase(const std::vector<uint8_t>& der);
 
 			/** \brief	Destructor */
 			virtual ~AsymKeyBase();
@@ -65,14 +132,14 @@ namespace Decent
 			 *
 			 * \return	The asymmetric key algorithm type.
 			 */
-			virtual AsymAlgmType GetAlgmType() const = 0;
+			virtual AsymAlgmType GetAlgmType() const;
 
 			/**
 			 * \brief	Gets asymmetric key type (either public or private).
 			 *
 			 * \return	The asymmetric key type.
 			 */
-			virtual AsymKeyType GetKeyType() const = 0;
+			virtual AsymKeyType GetKeyType() const;
 
 			/**
 			 * \brief	Verify DER encoded signature
@@ -99,6 +166,10 @@ namespace Decent
 			virtual std::vector<uint8_t> GetPublicDer(size_t maxBufSize) const;
 
 			virtual std::string GetPublicPem(size_t maxBufSize) const;
+
+			virtual void GetPrivateDer(std::vector<uint8_t>& out, size_t maxBufSize) const;
+
+			virtual void GetPrivatePem(std::string& out, size_t maxBufSize) const;
 		};
 	}
 }
