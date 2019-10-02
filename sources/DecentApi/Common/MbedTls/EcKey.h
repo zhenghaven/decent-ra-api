@@ -4,6 +4,10 @@
 
 #include <memory>
 
+#include "BigNumber.h"
+#include "DataSizeGetters.h"
+#include "Internal/EcKeySizes.h"
+
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
 typedef struct mbedtls_ecp_group mbedtls_ecp_group;
 
@@ -11,9 +15,6 @@ namespace Decent
 {
 	namespace MbedTlsObj
 	{
-		class BigNumberBase;
-		class BigNumber;
-
 		/**
 		 * \brief	Gets Elliptic Curve size in Byte
 		 *
@@ -44,6 +45,31 @@ namespace Decent
 				return 64U;
 			case Decent::MbedTlsObj::EcKeyType::SECP521R1:
 				return 66U;
+			default:
+				throw MbedTlsObj::RuntimeException("Invalid Elliptic Curve type is given!");
+			}
+		}
+
+		inline constexpr size_t GetCurveByteSizeFitsBigNum(EcKeyType type)
+		{
+			switch (type)
+			{
+			case Decent::MbedTlsObj::EcKeyType::SECP192R1:
+			case Decent::MbedTlsObj::EcKeyType::SECP192K1:
+				return 24U;
+			case Decent::MbedTlsObj::EcKeyType::SECP224R1:
+			case Decent::MbedTlsObj::EcKeyType::SECP224K1:
+			case Decent::MbedTlsObj::EcKeyType::SECP256R1:
+			case Decent::MbedTlsObj::EcKeyType::SECP256K1:
+			case Decent::MbedTlsObj::EcKeyType::BP256R1:
+				return 32U;
+			case Decent::MbedTlsObj::EcKeyType::SECP384R1:
+			case Decent::MbedTlsObj::EcKeyType::BP384R1:
+				return 48U;
+			case Decent::MbedTlsObj::EcKeyType::BP512R1:
+				return 64U;
+			case Decent::MbedTlsObj::EcKeyType::SECP521R1:
+				return 72U;
 			default:
 				throw MbedTlsObj::RuntimeException("Invalid Elliptic Curve type is given!");
 			}
@@ -176,6 +202,10 @@ namespace Decent
 
 			static AsymKeyBase CheckIsAlgmAndKeyTypeMatch(AsymKeyBase& other);
 
+			static void CheckIsEcTypeMatch(mbedtls_pk_context* ctx, EcKeyType ecType);
+
+			static AsymKeyBase& CheckIsEcTypeMatch(AsymKeyBase& other, EcKeyType ecType);
+
 		protected: //protected (de-)con-structors:
 
 			EcPublicKeyBase();
@@ -306,14 +336,6 @@ namespace Decent
 		public:
 			EcKeyPairBase() = delete;
 
-			/**
-			 * \brief	Constructs a new EC key pair, based on the given random source
-			 *
-			 * \param 		  	ecType	Type of the ec.
-			 * \param [in,out]	rbg   	The Random Bit Generator.
-			 */
-			EcKeyPairBase(EcKeyType ecType, RbgBase& rbg);
-
 			EcKeyPairBase(const EcKeyPairBase& rhs) = delete;
 
 			/**
@@ -322,6 +344,22 @@ namespace Decent
 			 * \param [in,out]	rhs	The right hand side.
 			 */
 			EcKeyPairBase(EcKeyPairBase&& rhs);
+
+			/**
+			 * \brief	Constructs a new EC key pair, based on the given random source
+			 *
+			 * \param 		  	ecType	Type of the ec.
+			 * \param [in,out]	rbg   	The Random Bit Generator.
+			 */
+			EcKeyPairBase(EcKeyType ecType, RbgBase& rbg);
+
+			/**
+			 * \brief	Constructs a new EC key pair, based on the given random source
+			 *
+			 * \param	ecType	Type of the ec.
+			 * \param	rbg   	The Random Bit Generator.
+			 */
+			EcKeyPairBase(EcKeyType ecType, std::unique_ptr<RbgBase> rbg);
 
 			/**
 			 * \brief	Constructor that obtain the ownership of a existing mbedTLS PK context object. The
@@ -382,6 +420,16 @@ namespace Decent
 			 * \param	r	  	Elliptic Curve private key's R value.
 			 */
 			EcKeyPairBase(EcKeyType ecType, const BigNumberBase& r, RbgBase& rbg);
+
+			/**
+			 * \brief	Constructor from private key's R value.
+			 *
+			 * \exception	MbedTlsObj::MbedTlsException	Thrown when the given binary is not valid point on the curve.
+			 *
+			 * \param	ecType	The type of Elliptic Curve.
+			 * \param	r	  	Elliptic Curve private key's R value.
+			 */
+			EcKeyPairBase(EcKeyType ecType, const BigNumberBase& r, std::unique_ptr<RbgBase> rbg);
 
 			/**
 			 * \brief	Constructor from private key's R value and public key's X and Y values (Z is 1).
@@ -448,11 +496,12 @@ namespace Decent
 			 * \param [out]	r			Elliptic Curve signature's R value.
 			 * \param [out]	s			Elliptic Curve signature's S value.
 			 */
-			template<typename containerHType, typename containerRType, typename containerSType,
-				typename std::enable_if<detail::ContainerPrpt<containerHType>::sk_isSprtCtn &&
+			template<HashType hashType,
+				typename containerHType, typename containerRType, typename containerSType,
+				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<containerHType, GetHashByteSize(hashType)>::value &&
 				detail::ContainerPrpt<containerRType>::sk_isSprtCtn &&
 				detail::ContainerPrpt<containerSType>::sk_isSprtCtn, int>::type = 0>
-			void Sign(HashType hashType, const containerHType& hash, containerRType& r, containerSType& s) const
+			void Sign(const containerHType& hash, containerRType& r, containerSType& s) const
 			{
 				return Sign(hashType, detail::GetPtr(hash), detail::GetSize(hash),
 					detail::GetPtr(r), detail::GetSize(r), detail::GetPtr(s), detail::GetSize(s));
@@ -499,6 +548,256 @@ namespace Decent
 
 			void DeriveSharedKey(void* keyPtr, size_t keySize, const EcPublicKeyBase& pubKey, RbgBase& rbg) const;
 
+		};
+
+		template<EcKeyType ecType>
+		class EcPublicKey : public EcPublicKeyBase
+		{
+		public:
+			EcPublicKey() = delete;
+
+			EcPublicKey(const EcPublicKey& rhs) = delete;
+
+			EcPublicKey(EcPublicKey&& rhs) :
+				EcPublicKeyBase(std::forward<EcPublicKeyBase>(rhs))
+			{}
+
+			EcPublicKey(AsymKeyBase other) :
+				EcPublicKeyBase(std::move(other))
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcPublicKey(AsymKeyBase& other) :
+				EcPublicKeyBase(CheckIsEcTypeMatch(other, ecType))
+			{}
+
+			EcPublicKey(mbedtls_pk_context& other) :
+				EcPublicKeyBase(other)
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcPublicKey(const std::string& pem) :
+				EcPublicKeyBase(pem)
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcPublicKey(const std::vector<uint8_t>& der) :
+				EcPublicKeyBase(der)
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcPublicKey(const BigNumberBase& x, const BigNumberBase& y) :
+				EcPublicKeyBase(ecType, x, y)
+			{}
+
+			template<typename ContainerXType, typename ContainerYType,
+				typename std::enable_if<detail::StatCtnWithSize<ContainerXType, GetCurveByteSizeFitsBigNum(ecType)>::value &&
+					detail::StatCtnWithSize<ContainerYType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
+			EcPublicKey(const ContainerXType& x, const ContainerYType& y) :
+				EcPublicKey(x, y)
+			{}
+
+			virtual ~EcPublicKey()
+			{}
+
+			EcPublicKey& operator=(const EcPublicKey& rhs) = delete;
+
+			EcPublicKey& operator=(EcPublicKey&& rhs)
+			{
+				EcPublicKeyBase::operator=(std::forward<EcPublicKeyBase>(rhs));
+				return *this;
+			}
+
+			virtual EcKeyType GetCurveType() const override
+			{
+				return ecType;
+			}
+
+			virtual std::vector<uint8_t> GetPublicDer() const override
+			{
+				static constexpr size_t maxPubDerSize = detail::CalcEcpPubDerSize(GetCurveByteSize(ecType));
+				return AsymKeyBase::GetPublicDer(maxPubDerSize);
+			}
+
+			virtual std::string GetPublicPem() const override
+			{
+				static constexpr size_t maxPubDerSize = detail::CalcEcpPubDerSize(GetCurveByteSize(ecType));
+				static constexpr size_t maxPubPemSize = detail::CalcEcpPemMaxBytes(maxPubDerSize);
+				return AsymKeyBase::GetPublicPem(maxPubPemSize);
+			}
+
+			template<typename containerType,
+				typename containerRType,
+				typename containerSType,
+				typename std::enable_if<detail::ContainerPrpt<containerType>::sk_isSprtCtn &&
+					detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSizeFitsBigNum(ecType)>::value &&
+					detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
+			void VerifySign(const containerType& hash, const containerRType& r, const containerSType& s) const
+			{
+				return EcPublicKeyBase::VerifySign(hash, r, s);
+			}
+
+			template<typename containerXType, typename containerYType,
+				typename std::enable_if<(detail::DynCtnOrStatCtnWithSize<containerXType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerXType, GetCurveByteSizeFitsBigNum(ecType)>::value) &&
+				(detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
+				void ToPublicBinary(containerXType& x, containerYType& y) const
+			{
+				detail::ContainerPrpt<containerXType>::ResizeIfDyn(x, GetCurveByteSize(ecType));
+				detail::ContainerPrpt<containerYType>::ResizeIfDyn(y, GetCurveByteSize(ecType));
+				return EcPublicKeyBase::ToPublicBinary(x, y);
+			}
+		};
+
+		template<EcKeyType ecType>
+		class EcKeyPair : EcKeyPairBase
+		{
+		public:
+			EcKeyPair() = delete;
+
+			EcKeyPair(const EcKeyPair& rhs) = delete;
+
+			EcKeyPair(EcKeyPair&& rhs) :
+				EcKeyPairBase(std::forward<EcKeyPairBase>(rhs))
+			{}
+
+			EcKeyPair(RbgBase& rbg) :
+				EcKeyPairBase(ecType, rbg)
+			{}
+
+			EcKeyPair(std::unique_ptr<RbgBase> rbg) :
+				EcKeyPairBase(ecType, std::move(rbg))
+			{}
+
+			EcKeyPair(AsymKeyBase other) :
+				EcKeyPairBase(std::move(other))
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcKeyPair(AsymKeyBase& other) :
+				EcKeyPairBase(CheckIsEcTypeMatch(other, ecType))
+			{}
+
+			EcKeyPair(mbedtls_pk_context& other) :
+				EcKeyPairBase(other)
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcKeyPair(const std::string& pem) :
+				EcKeyPairBase(pem)
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcKeyPair(const std::vector<uint8_t>& der) :
+				EcKeyPairBase(der)
+			{
+				CheckIsEcTypeMatch(Get(), ecType);
+			}
+
+			EcKeyPair(const BigNumberBase& r, RbgBase& rbg) :
+				EcKeyPairBase(ecType, r, rbg)
+			{}
+
+			EcKeyPair(const BigNumberBase& r, std::unique_ptr<RbgBase> rbg) :
+				EcKeyPairBase(ecType, r, std::move(rbg))
+			{}
+
+			EcKeyPair(const BigNumberBase& r, const BigNumberBase& x, const BigNumberBase& y) :
+				EcKeyPairBase(ecType, r, x, y)
+			{}
+
+			virtual ~EcKeyPair()
+			{}
+
+			EcKeyPair& operator=(const EcKeyPair& rhs) = delete;
+
+			EcKeyPair& operator=(EcKeyPair&& rhs)
+			{
+				EcKeyPairBase::operator=(std::forward<EcKeyPairBase>(rhs));
+				return *this;
+			}
+
+			virtual EcKeyType GetCurveType() const override
+			{
+				return ecType;
+			}
+
+			virtual std::vector<uint8_t> GetPublicDer() const override
+			{
+				static constexpr size_t maxPubDerSize = detail::CalcEcpPubDerSize(GetCurveByteSize(ecType));
+				return AsymKeyBase::GetPublicDer(maxPubDerSize);
+			}
+
+			virtual std::string GetPublicPem() const override
+			{
+				static constexpr size_t maxPubDerSize = detail::CalcEcpPubDerSize(GetCurveByteSize(ecType));
+				static constexpr size_t maxPubPemSize = detail::CalcEcpPemMaxBytes(maxPubDerSize);
+				return AsymKeyBase::GetPublicPem(maxPubPemSize);
+			}
+
+			virtual void GetPrivateDer(std::vector<uint8_t>& out) const override
+			{
+				static constexpr size_t maxPrvDerSize = detail::CalcEcpPrvDerSize(GetCurveByteSize(ecType));
+				return AsymKeyBase::GetPrivateDer(out, maxPrvDerSize);
+			}
+
+			virtual void GetPrivatePem(std::string& out) const override
+			{
+				static constexpr size_t maxPrvDerSize = detail::CalcEcpPrvDerSize(GetCurveByteSize(ecType));
+				static constexpr size_t maxPrvPemSize = detail::CalcEcpPemMaxBytes(maxPrvDerSize);
+				return AsymKeyBase::GetPrivatePem(out, maxPrvPemSize);
+			}
+
+			template<typename containerType,
+				typename containerRType,
+				typename containerSType,
+				typename std::enable_if<detail::ContainerPrpt<containerType>::sk_isSprtCtn &&
+					detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSizeFitsBigNum(ecType)>::value &&
+					detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
+			void VerifySign(const containerType& hash, const containerRType& r, const containerSType& s) const
+			{
+				return EcKeyPairBase::VerifySign(hash, r, s);
+			}
+
+			template<typename containerXType, typename containerYType,
+				typename std::enable_if<(detail::DynCtnOrStatCtnWithSize<containerXType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerXType, GetCurveByteSizeFitsBigNum(ecType)>::value) &&
+				(detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
+				void ToPublicBinary(containerXType& x, containerYType& y) const
+			{
+				detail::ContainerPrpt<containerXType>::ResizeIfDyn(x, GetCurveByteSize(ecType));
+				detail::ContainerPrpt<containerYType>::ResizeIfDyn(y, GetCurveByteSize(ecType));
+				return EcKeyPairBase::ToPublicBinary(x, y);
+			}
+
+			template<HashType hashType,
+				typename containerHType, typename containerRType, typename containerSType,
+				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<containerHType, GetHashByteSize(hashType)>::value &&
+					(detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSizeFitsBigNum(ecType)>::value) &&
+					(detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
+			void Sign(const containerHType& hash, containerRType& r, containerSType& s) const
+			{
+				return EcKeyPairBase::Sign<hashType>(hash, r, s);
+			}
+
+			template<typename containerRType,
+				typename std::enable_if<(detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
+			void ToPrivateBinary(containerRType& r) const
+			{
+				return EcKeyPairBase::ToPrivateBinary(r);
+			}
+
+			template<typename containerType,
+				typename std::enable_if<(detail::DynCtnOrStatCtnWithSize<containerType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
+			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey) const
+			{
+				return EcKeyPairBase::DeriveSharedKey(key, pubKey);
+			}
 		};
 	}
 }

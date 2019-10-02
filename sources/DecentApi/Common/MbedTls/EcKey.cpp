@@ -204,6 +204,26 @@ AsymKeyBase EcPublicKeyBase::CheckIsAlgmAndKeyTypeMatch(AsymKeyBase& other)
 	return std::move(other);
 }
 
+void EcPublicKeyBase::CheckIsEcTypeMatch(mbedtls_pk_context * ctx, EcKeyType ecType)
+{
+	if (!ctx ||
+		!IsEcKeyType(mbedtls_pk_get_type(ctx)) ||
+		GetEcGroupId(mbedtls_pk_ec(*ctx)->grp.id) != ecType)
+	{
+		throw RuntimeException("The Elliptic Curve type does not match the expected type.");
+	}
+}
+
+AsymKeyBase& EcPublicKeyBase::CheckIsEcTypeMatch(AsymKeyBase & other, EcKeyType ecType)
+{
+	EcPublicKeyBase::CheckIsAlgmTypeMatch(other.Get());
+	if (GetEcGroupId(mbedtls_pk_ec(*other.Get())->grp.id) != ecType)
+	{
+		throw RuntimeException("The Elliptic Curve type does not match the expected type.");
+	}
+	return other;
+}
+
 EcPublicKeyBase::EcPublicKeyBase() :
 	AsymKeyBase()
 {
@@ -292,6 +312,11 @@ void EcKeyPairBase::CheckHasPrivateKey(const mbedtls_ecp_keypair & ctx)
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_check_privkey, &ctx.grp, &ctx.d)
 }
 
+EcKeyPairBase::EcKeyPairBase(EcKeyPairBase && rhs) :
+	EcPublicKeyBase(std::forward<EcPublicKeyBase>(rhs))
+{
+}
+
 EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, RbgBase& rbg) :
 	EcPublicKeyBase()
 {
@@ -300,8 +325,8 @@ EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, RbgBase& rbg) :
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_gen_key, GetEcGroupId(ecType), ecp, &RbgBase::CallBack, &rbg);
 }
 
-EcKeyPairBase::EcKeyPairBase(EcKeyPairBase && rhs) :
-	EcPublicKeyBase(std::forward<EcPublicKeyBase>(rhs))
+EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, std::unique_ptr<RbgBase> rbg) :
+	EcKeyPairBase(ecType, *rbg)
 {
 }
 
@@ -348,6 +373,11 @@ EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r, RbgBase&
 
 	//This will also check the private key:
 	AsymKeyBase::CompletePublicKeyInContext(*mbedtls_pk_ec(*Get()), rbg);
+}
+
+EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r, std::unique_ptr<RbgBase> rbg) :
+	EcKeyPairBase(ecType, r, *rbg)
+{
 }
 
 EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r, const BigNumberBase & x, const BigNumberBase & y) :

@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "ObjBase.h"
+#include "DataSizeGetters.h"
 #include "MbedTlsException.h"
 
 struct mbedtls_md_info_t; 
@@ -22,33 +23,6 @@ namespace Decent
 		 * \return	A reference to MbedTls's const mbedtls_md_info_t.
 		 */
 		const mbedtls_md_info_t& GetMsgDigestInfo(HashType type);
-
-		/**
-		 * \brief	Gets hash size in Byte
-		 *
-		 * \exception	MbedTlsObj::RuntimeException	Thrown when a nonexistent hash type is given.
-		 *
-		 * \tparam	type	Type of the hash.
-		 *
-		 * \return	The hash size in Byte.
-		 */
-		template<HashType type>
-		inline constexpr uint8_t GetHashByteSize()
-		{
-			switch (type)
-			{
-			case HashType::SHA224:
-				return (224 / BITS_PER_BYTE);
-			case HashType::SHA256:
-				return (256 / BITS_PER_BYTE);
-			case HashType::SHA384:
-				return (384 / BITS_PER_BYTE);
-			case HashType::SHA512:
-				return (512 / BITS_PER_BYTE);
-			default:
-				throw MbedTlsObj::RuntimeException("Invalid hash type is given!");
-			}
-		}
 
 		/** \brief	A hash calculator. */
 		class MsgDigestBase : public ObjBase<mbedtls_md_context_t>
@@ -123,7 +97,7 @@ namespace Decent
 		class Hasher : public HasherBase
 		{
 		public: //static members:
-			static constexpr size_t sk_hashByteSize = GetHashByteSize<hType>();
+			static constexpr size_t sk_hashByteSize = GetHashByteSize(hType);
 
 		public:
 			Hasher() :

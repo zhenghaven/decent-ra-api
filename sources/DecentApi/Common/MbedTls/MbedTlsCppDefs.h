@@ -156,12 +156,18 @@ namespace Decent
 			template<typename T, size_t arrLen>
 			struct StaticContainerPrpt<std::array<T, arrLen> >
 				: StaticContainerSize<T, arrLen>
-			{};
+			{
+				static inline void ResizeIfDyn(std::array<T, arrLen>& ctn, size_t size)
+				{}
+			};
 
 			template<typename T, size_t arrLen>
 			struct StaticContainerPrpt<T[arrLen]>
 				: StaticContainerSize<T, arrLen>
-			{};
+			{
+				static inline void ResizeIfDyn(T(&ctn)[arrLen], size_t size)
+				{}
+			};
 
 			//#################################################
 			//#      Dynamic Container Properties
@@ -171,14 +177,28 @@ namespace Decent
 			struct DynContainerPrpt;
 
 			template<typename T>
-			struct StaticContainerPrpt<std::vector<T> >
+			struct DynContainerPrpt<std::vector<T> >
 				: DynContainerSize<T>
-			{};
+			{
+				static inline void ResizeIfDyn(std::vector<T>& ctn, size_t size)
+				{
+					ctn.resize(size);
+				}
+			};
 
 			template<class _Elem, class _Traits, class _Alloc>
-			struct StaticContainerPrpt<std::basic_string<_Elem, _Traits, _Alloc> >
+			struct DynContainerPrpt<std::basic_string<_Elem, _Traits, _Alloc> >
 				: DynContainerSize<typename std::basic_string<_Elem, _Traits, _Alloc>::value_type>
-			{};
+			{
+				static inline void ResizeIfDyn(std::basic_string<_Elem, _Traits, _Alloc>& ctn, size_t size)
+				{
+					constexpr size_t valSize = sizeof(typename std::basic_string<_Elem, _Traits, _Alloc>::value_type);
+
+					size_t sizeNeeded = (size / valSize) + (size % valSize == 0 ? 0 : 1);
+
+					return ctn.resize(sizeNeeded);
+				}
+			};
 
 			//#################################################
 			//#      Combined Container Properties
@@ -196,12 +216,32 @@ namespace Decent
 			{};
 
 			template<typename T>
-			struct ContainerPrpt<std::vector<T> > : DynContainerSize<std::vector<T> >
+			struct ContainerPrpt<std::vector<T> > : DynContainerPrpt<std::vector<T> >
 			{};
 
 			template<class _Elem, class _Traits, class _Alloc>
-			struct ContainerPrpt<std::basic_string<_Elem, _Traits, _Alloc> > : DynContainerSize<std::basic_string<_Elem, _Traits, _Alloc> >
+			struct ContainerPrpt<std::basic_string<_Elem, _Traits, _Alloc> > : DynContainerPrpt<std::basic_string<_Elem, _Traits, _Alloc> >
 			{};
+
+			//#################################################
+			//#      Some Helpers
+			//#################################################
+
+			template<typename T, size_t expectedSize>
+			struct DynCtnOrStatCtnWithSize
+			{
+				static constexpr bool value = ContainerPrpt<T>::sk_isSprtCtn && // It's supported type
+					(!ContainerPrpt<T>::sk_isStaticSize || // It's dynamic container
+						ContainerPrpt<T>::sk_ctnSize == expectedSize); // OR, it is static container with expected size.
+			};
+
+			template<typename T, size_t expectedSize>
+			struct StatCtnWithSize
+			{
+				static constexpr bool value = ContainerPrpt<T>::sk_isSprtCtn && // It's supported type
+					(ContainerPrpt<T>::sk_isStaticSize && // It's static container
+						ContainerPrpt<T>::sk_ctnSize == expectedSize); // AND, it has expected size.
+			};
 		}
 
 		namespace detail
