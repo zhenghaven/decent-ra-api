@@ -6,7 +6,7 @@ namespace Decent
 {
 	namespace MbedTlsObj
 	{
-		class ECKeyPair;
+		class EcKeyPairBase;
 		class X509Cert;
 	}
 
@@ -64,7 +64,7 @@ namespace Decent
 
 		private:
 			States& m_state;
-			std::shared_ptr<const MbedTlsObj::ECKeyPair> m_prvKey;
+			std::shared_ptr<const MbedTlsObj::EcKeyPairBase> m_prvKey;
 			std::shared_ptr<const MbedTlsObj::X509Cert> m_cert;
 		};
 	}

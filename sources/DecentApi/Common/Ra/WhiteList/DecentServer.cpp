@@ -22,7 +22,7 @@ DecentServer::~DecentServer()
 
 bool DecentServer::AddTrustedNode(States& decentState, const ServerX509 & cert)
 {
-	std::string pubKeyPem = cert.GetEcPublicKey().ToPubPemString();
+	std::string pubKeyPem = cert.GetEcPublicKey().GetPublicPem();
 	
 	if (IsNodeTrusted(pubKeyPem))
 	{

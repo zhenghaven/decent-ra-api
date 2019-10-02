@@ -316,7 +316,13 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 	bool signVerRes = false;
 	do
 	{
-		signVerRes = reportCertChain.GetPublicKey().VerifySignSha256(hash, signBinBuf);
+		try
+		{
+			reportCertChain.GetPublicKey().VerifyDerSign(HashType::SHA256, hash, signBinBuf);
+			signVerRes = true;
+		}
+		catch (const std::exception&)
+		{}
 	} while (!signVerRes && reportCertChain.NextCert());
 
 	if (!signVerRes)

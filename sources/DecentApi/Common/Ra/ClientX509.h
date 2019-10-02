@@ -19,8 +19,8 @@ namespace Decent
 				Decent::Ra::AppX509(cert)
 			{}
 
-			ClientX509(const Decent::MbedTlsObj::ECKeyPublic& pub,
-				const Decent::Ra::AppX509& verifierCert, const Decent::MbedTlsObj::ECKeyPair& verifierPrvKey,
+			ClientX509(const MbedTlsObj::EcPublicKeyBase& pub,
+				const Decent::Ra::AppX509& verifierCert, const MbedTlsObj::EcKeyPairBase& verifierPrvKey,
 				const std::string& userName, const std::string& identity);
 
 			ClientX509(ClientX509&& other) :

@@ -8,10 +8,6 @@
 #include <string>
 #include <algorithm>
 
-#include <mbedtls/pk.h>
-#include <mbedtls/md.h>
-#include <mbedtls/md_internal.h>
-#include <mbedtls/ecp.h>
 #include <mbedtls/ecdh.h>
 #include <mbedtls/pem.h>
 #include <mbedtls/asn1write.h>
@@ -39,37 +35,8 @@
 using namespace Decent::MbedTlsObj;
 using namespace Decent;
 
-#ifdef ENCLAVE_ENVIRONMENT
-
-namespace std
-{
-	template<class T, size_t Size>
-	inline reverse_iterator<T *> rbegin(T(&_Array)[Size])
-	{	// get beginning of reversed array
-		return (reverse_iterator<T *>(_Array + Size));
-	}
-
-	template<class T, size_t Size>
-	inline reverse_iterator<T *> rend(T(&_Array)[Size])
-	{	// get end of reversed array
-		return (reverse_iterator<T *>(_Array));
-	}
-}
-
-#endif // ENCLAVE_ENVIRONMENT
-
 namespace
 {
-	static constexpr mbedtls_ecp_group_id SECP256R1_CURVE_ID = mbedtls_ecp_group_id::MBEDTLS_ECP_DP_SECP256R1;
-
-	static constexpr char const PEM_BEGIN_PUBLIC_KEY[] = "-----BEGIN PUBLIC KEY-----\n";
-	static constexpr char const PEM_END_PUBLIC_KEY[] = "-----END PUBLIC KEY-----\n";
-
-	//static constexpr char const PEM_BEGIN_PRIVATE_KEY_RSA[] = "-----BEGIN RSA PRIVATE KEY-----\n";
-	//static constexpr char const PEM_END_PRIVATE_KEY_RSA[] = "-----END RSA PRIVATE KEY-----\n";
-	static constexpr char const PEM_BEGIN_PRIVATE_KEY_EC[] = "-----BEGIN EC PRIVATE KEY-----\n";
-	static constexpr char const PEM_END_PRIVATE_KEY_EC[] = "-----END EC PRIVATE KEY-----\n";
-
 	static constexpr char const PEM_BEGIN_CSR[] = "-----BEGIN CERTIFICATE REQUEST-----\n";
 	static constexpr char const PEM_END_CSR[] = "-----END CERTIFICATE REQUEST-----\n";
 	static constexpr char const PEM_BEGIN_CRT[] = "-----BEGIN CERTIFICATE-----\n";
@@ -77,13 +44,8 @@ namespace
 	static constexpr char const PEM_BEGIN_CRL[] = "-----BEGIN X509 CRL-----\n";
 	static constexpr char const PEM_END_CRL[] = "-----END X509 CRL-----\n";
 
-	static constexpr size_t ECP_PUB_DER_MAX_BYTES = (30 + 2 * MBEDTLS_ECP_MAX_BYTES);
-	static constexpr size_t ECP_PRV_DER_MAX_BYTES = (29 + 3 * MBEDTLS_ECP_MAX_BYTES);
-	static constexpr size_t RSA_PUB_DER_MAX_BYTES = (38 + 2 * MBEDTLS_MPI_MAX_SIZE);
 	static constexpr size_t X509_REQ_DER_MAX_BYTES = 4096; //From x509write_csr.c
 	static constexpr size_t X509_CRT_DER_MAX_BYTES = 4096; //From x509write_crt.c
-
-	static constexpr size_t PUB_DER_MAX_BYTES = ECP_PUB_DER_MAX_BYTES > RSA_PUB_DER_MAX_BYTES ? ECP_PUB_DER_MAX_BYTES : RSA_PUB_DER_MAX_BYTES;
 
 	static constexpr size_t CalcPemMaxBytes(size_t derMaxSize, size_t headerSize, size_t footerSize)
 	{
@@ -94,491 +56,11 @@ namespace
 			1;                   //null terminator
 	}
 
-	static constexpr size_t ECP_PUB_PEM_MAX_BYTES = 
-		CalcPemMaxBytes(ECP_PUB_DER_MAX_BYTES, sizeof(PEM_BEGIN_PUBLIC_KEY) - 1, sizeof(PEM_END_PUBLIC_KEY) - 1);
-
-	static constexpr size_t RSA_PUB_PEM_MAX_BYTES = 
-		CalcPemMaxBytes(RSA_PUB_DER_MAX_BYTES, sizeof(PEM_BEGIN_PUBLIC_KEY) - 1, sizeof(PEM_END_PUBLIC_KEY) - 1);
-
-	static constexpr size_t PUB_PEM_MAX_BYTES = ECP_PUB_PEM_MAX_BYTES > RSA_PUB_PEM_MAX_BYTES ? ECP_PUB_PEM_MAX_BYTES : RSA_PUB_PEM_MAX_BYTES;
-
-	static constexpr size_t ECP_PRV_PEM_MAX_BYTES =
-		CalcPemMaxBytes(ECP_PRV_DER_MAX_BYTES, sizeof(PEM_BEGIN_PRIVATE_KEY_EC) - 1, sizeof(PEM_END_PRIVATE_KEY_EC) - 1);
-
 	static constexpr size_t X509_REQ_PEM_MAX_BYTES =
 		CalcPemMaxBytes(X509_REQ_DER_MAX_BYTES, sizeof(PEM_BEGIN_CSR) - 1, sizeof(PEM_END_CSR) - 1);
 
 	static constexpr size_t X509_CRT_PEM_MAX_BYTES =
 		CalcPemMaxBytes(X509_CRT_DER_MAX_BYTES, sizeof(PEM_BEGIN_CRT) - 1, sizeof(PEM_END_CRT) - 1);
-
-
-
-	struct EcGroupWarp
-	{
-		mbedtls_ecp_group m_grp;
-
-		EcGroupWarp()
-		{
-			mbedtls_ecp_group_init(&m_grp);
-		}
-
-		~EcGroupWarp()
-		{
-			mbedtls_ecp_group_free(&m_grp);
-		}
-
-		bool Copy(const mbedtls_ecp_group& grp)
-		{
-			return mbedtls_ecp_group_copy(&m_grp, &grp) == MBEDTLS_SUCCESS_RET;
-		}
-	};
-}
-
-
-void PKey::FreeObject(mbedtls_pk_context * ptr)
-{
-	mbedtls_pk_free(ptr);
-	delete ptr;
-}
-
-bool PKey::VerifySignSha256(const General256Hash& hash, const void* sign, const size_t signLen) const
-{
-	if (!*this || !sign)
-	{
-		return false;
-	}
-	const uint8_t* signByte = static_cast<const uint8_t*>(sign);
-	return mbedtls_pk_verify(GetMutable(), mbedtls_md_type_t::MBEDTLS_MD_SHA256, hash.data(), hash.size(), signByte, signLen) == MBEDTLS_SUCCESS_RET;
-}
-
-PKey::PKey() :
-	ObjBase(new mbedtls_pk_context, &FreeObject)
-{
-	mbedtls_pk_init(Get());
-}
-
-std::string PKey::ToPubPemString(const size_t maxBufSize) const
-{
-	if (!*this)
-	{
-		return std::string();
-	}
-
-	std::unique_ptr<char[]> buf = Tools::make_unique<char[]>(maxBufSize);
-	if (mbedtls_pk_write_pubkey_pem(GetMutable(), reinterpret_cast<unsigned char*>(buf.get()), maxBufSize)
-		!= MBEDTLS_SUCCESS_RET)
-	{
-		return std::string();
-	}
-
-	return std::string(buf.get());
-}
-
-bool PKey::ToPubDerArray(std::vector<uint8_t>& outArray, const size_t maxBufSize) const
-{
-	if (!*this)
-	{
-		return false;
-	}
-
-	outArray.resize(maxBufSize);
-	int len = mbedtls_pk_write_pubkey_der(GetMutable(), outArray.data(), outArray.size());
-	if (len <= 0)
-	{
-		outArray.resize(0);
-		return false;
-	}
-
-	outArray.resize(len);
-	return true;
-}
-
-std::string PKey::ToPubPemString() const
-{
-	return PKey::ToPubPemString(PUB_PEM_MAX_BYTES);
-}
-
-bool PKey::ToPubDerArray(std::vector<uint8_t>& outArray) const
-{
-	return PKey::ToPubDerArray(outArray, PUB_DER_MAX_BYTES);
-}
-
-ECKeyPublic ECKeyPublic::FromPemDer(const void* ptr, size_t size)
-{
-	ECKeyPublic res;
-
-	if (mbedtls_pk_parse_public_key(res.Get(), static_cast<const uint8_t*>(ptr), size) != MBEDTLS_SUCCESS_RET ||
-		!res)
-	{
-		return ECKeyPublic(nullptr, ObjBase::DoNotFree);
-	}
-
-	return res;
-}
-
-ECKeyPublic ECKeyPublic::FromPemString(const std::string & pemStr)
-{
-	return FromPemDer(pemStr.c_str(), pemStr.size() + 1);
-}
-
-static bool SetEcPubFromGeneral(const mbedtls_ecp_group& grp, mbedtls_ecp_point& dest, const general_secp256r1_public_t & pub)
-{
-	std::vector<uint8_t> tmpBuf(std::rbegin(pub.x), std::rend(pub.x));
-	if (mbedtls_mpi_read_binary(&dest.X, tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET)
-	{
-		return false;
-	}
-
-	tmpBuf.assign(std::rbegin(pub.y), std::rend(pub.y));
-
-	return (mbedtls_mpi_read_binary(&dest.Y, tmpBuf.data(), tmpBuf.size()) == MBEDTLS_SUCCESS_RET) &&
-		(mbedtls_mpi_lset(&dest.Z, 1) == MBEDTLS_SUCCESS_RET) &&
-		(mbedtls_ecp_check_pubkey(&grp, &dest) == MBEDTLS_SUCCESS_RET);
-}
-
-ECKeyPublic ECKeyPublic::FromGeneral(const general_secp256r1_public_t & pub)
-{
-	ECKeyPublic res;
-
-	mbedtls_ecp_keypair* ecPtr = nullptr;
-
-	if (mbedtls_pk_setup(res.Get(), mbedtls_pk_info_from_type(mbedtls_pk_type_t::MBEDTLS_PK_ECKEY))	!= MBEDTLS_SUCCESS_RET ||
-		!(ecPtr = mbedtls_pk_ec(*res.Get())) ||
-		mbedtls_ecp_group_load(&ecPtr->grp, SECP256R1_CURVE_ID) != MBEDTLS_SUCCESS_RET ||
-		!SetEcPubFromGeneral(ecPtr->grp, ecPtr->Q, pub))
-	{
-		return ECKeyPublic(nullptr, ObjBase::DoNotFree);
-	}
-
-	return res;
-}
-
-ECKeyPublic::operator bool() const noexcept
-{
-	return PKey::operator bool() &&
-		mbedtls_pk_get_type(Get()) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY;
-}
-
-bool ECKeyPublic::ToGeneralPubKey(general_secp256r1_public_t & outKey) const
-{
-	if (!*this)
-	{
-		return false;
-	}
-	
-	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-	
-	if (mbedtls_mpi_write_binary(&ecPtr.Q.X, outKey.x, sizeof(outKey.x)) != MBEDTLS_SUCCESS_RET ||
-		mbedtls_mpi_write_binary(&ecPtr.Q.Y, outKey.y, sizeof(outKey.y)) != MBEDTLS_SUCCESS_RET)
-	{
-		return false;
-	}
-	
-	std::reverse(std::begin(outKey.x), std::end(outKey.x));
-	std::reverse(std::begin(outKey.y), std::end(outKey.y));
-	
-	return true;
-}
-
-std::unique_ptr<general_secp256r1_public_t> ECKeyPublic::ToGeneralPubKey() const
-{
-	std::unique_ptr<general_secp256r1_public_t> pubKey = Tools::make_unique<general_secp256r1_public_t>();
-	if (!pubKey || !ToGeneralPubKey(*pubKey))
-	{
-		return nullptr;
-	}
-	return std::move(pubKey);
-}
-
-general_secp256r1_public_t ECKeyPublic::ToGeneralPubKeyChecked() const
-{
-	general_secp256r1_public_t pubKey;
-	ToGeneralPubKey(pubKey);
-	return pubKey;
-}
-
-bool ECKeyPublic::VerifySign(const general_secp256r1_signature_t & inSign, const uint8_t * hash, const size_t hashLen) const
-{
-	if (!*this || !hash || hashLen <= 0)
-	{
-		return false;
-	}
-	const ConstBigNumber r(inSign.x);
-	const ConstBigNumber s(inSign.y);
-	EcGroupWarp grp;
-
-	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-
-	if (!grp.Copy(ecPtr.grp))
-	{
-		return false;
-	}
-
-	return mbedtls_ecdsa_verify(&grp.m_grp, hash, hashLen, &ecPtr.Q,
-		r.Get(), s.Get()) == MBEDTLS_SUCCESS_RET;
-}
-
-std::string ECKeyPublic::ToPubPemString() const
-{
-	return PKey::ToPubPemString(ECP_PUB_PEM_MAX_BYTES);
-}
-
-bool ECKeyPublic::ToPubDerArray(std::vector<uint8_t>& outArray) const
-{
-	return PKey::ToPubDerArray(outArray, ECP_PUB_DER_MAX_BYTES);
-}
-
-mbedtls_ecp_keypair * ECKeyPublic::GetEcKeyPtr()
-{
-	return *this ? mbedtls_pk_ec(*Get()) : nullptr;
-}
-
-const mbedtls_ecp_keypair * ECKeyPublic::GetEcKeyPtr() const
-{
-	return *this ? mbedtls_pk_ec(*Get()) : nullptr;
-}
-
-ECKeyPair ECKeyPair::FromPemDer(const void* ptr, size_t size)
-{
-	ECKeyPair res;
-
-	if (mbedtls_pk_parse_key(res.Get(), static_cast<const uint8_t*>(ptr), size, nullptr, 0) != MBEDTLS_SUCCESS_RET ||
-		!res)
-	{
-		return ECKeyPair(nullptr, ObjBase::DoNotFree);
-	}
-
-	return res;
-}
-
-ECKeyPair ECKeyPair::FromPemString(const std::string & pemStr)
-{
-	return FromPemDer(pemStr.c_str(), pemStr.size() + 1);
-}
-
-static bool CheckPublicAndPrivatePair(const mbedtls_ecp_keypair* pair)
-{
-	mbedtls_ecp_point Q;
-	mbedtls_ecp_group grp;
-
-	mbedtls_ecp_point_init(&Q);
-	mbedtls_ecp_group_init(&grp);
-
-	mbedtls_ecp_group_copy(&grp, &pair->grp);
-
-	Drbg drbg;
-	int mbedRet = mbedtls_ecp_mul(&grp, &Q, &pair->d, &grp.G, &Drbg::CallBack, &drbg);
-
-	bool negRes = (mbedRet != MBEDTLS_SUCCESS_RET) ||
-		mbedtls_mpi_cmp_mpi(&Q.X, &pair->Q.X) ||
-		mbedtls_mpi_cmp_mpi(&Q.Y, &pair->Q.Y) ||
-		mbedtls_mpi_cmp_mpi(&Q.Z, &pair->Q.Z);
-
-	mbedtls_ecp_point_free(&Q);
-	mbedtls_ecp_group_free(&grp);
-
-	return !negRes;
-}
-
-ECKeyPair ECKeyPair::FromGeneral(const general_secp256r1_private_t & prv, const general_secp256r1_public_t* pubPtr)
-{
-	ECKeyPair res;
-	ECKeyPair fail(nullptr, ObjBase::DoNotFree);
-
-	mbedtls_ecp_keypair* ecPtr = nullptr;
-
-	std::vector<uint8_t> tmpBuf(std::rbegin(prv.r), std::rend(prv.r));
-	if (mbedtls_pk_setup(res.Get(), mbedtls_pk_info_from_type(mbedtls_pk_type_t::MBEDTLS_PK_ECKEY))
-		!= MBEDTLS_SUCCESS_RET ||
-		!(ecPtr = mbedtls_pk_ec(*res.Get())) ||
-		mbedtls_ecp_group_load(&ecPtr->grp, SECP256R1_CURVE_ID) != MBEDTLS_SUCCESS_RET ||
-		mbedtls_mpi_read_binary(&ecPtr->d, tmpBuf.data(), tmpBuf.size()) != MBEDTLS_SUCCESS_RET ||
-		mbedtls_ecp_check_privkey(&ecPtr->grp, &ecPtr->d) != MBEDTLS_SUCCESS_RET)
-	{
-		return fail;
-	}
-
-	if (pubPtr)
-	{
-		if (!SetEcPubFromGeneral(ecPtr->grp, ecPtr->Q, *pubPtr) ||
-			!CheckPublicAndPrivatePair(ecPtr))
-		{
-			return fail;
-		}
-	}
-	else
-	{
-		Drbg drbg;
-		if (mbedtls_ecp_mul(&ecPtr->grp, &ecPtr->Q, &ecPtr->d, &ecPtr->grp.G, &Drbg::CallBack, &drbg)
-			!= MBEDTLS_SUCCESS_RET)
-		{
-			return fail;
-		}
-	}
-
-	return res;
-}
-
-ECKeyPair ECKeyPair::GenerateNewKey()
-{
-	ECKeyPair res;
-
-	Drbg drbg;
-
-	CHECK_MBEDTLS_RET(mbedtls_pk_setup(res.Get(), mbedtls_pk_info_from_type(mbedtls_pk_type_t::MBEDTLS_PK_ECKEY)), ECKeyPair::GenerateNewKey);
-
-	mbedtls_ecp_keypair* ecPtr = mbedtls_pk_ec(*res.Get());
-	if (!ecPtr)
-	{
-		throw RuntimeException("In ECKeyPair::GenerateNewKey, failed to retrieve EC key pointer.");
-	}
-
-	CHECK_MBEDTLS_RET(mbedtls_ecp_gen_key(SECP256R1_CURVE_ID, ecPtr, &Drbg::CallBack, &drbg), ECKeyPair::GenerateNewKey);
-	
-	return res;
-}
-
-bool ECKeyPair::ToGeneralPrvKey(PrivateKeyWrap & outKey) const
-{
-	if (!*this)
-	{
-		return false;
-	}
-
-	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-	if (mbedtls_mpi_write_binary(&ecPtr.d, outKey.m_prvKey.r, sizeof(outKey.m_prvKey.r)) != MBEDTLS_SUCCESS_RET)
-	{
-		return false;
-	}
-	std::reverse(std::begin(outKey.m_prvKey.r), std::end(outKey.m_prvKey.r));
-
-	return true;
-}
-
-std::unique_ptr<PrivateKeyWrap> ECKeyPair::ToGeneralPrvKey() const
-{
-	std::unique_ptr<PrivateKeyWrap> prvKey = Tools::make_unique<PrivateKeyWrap>();
-	if (!prvKey || !ToGeneralPrvKey(*prvKey))
-	{
-		return nullptr;
-	}
-	return std::move(prvKey);
-}
-
-PrivateKeyWrap ECKeyPair::ToGeneralPrvKeyChecked() const
-{
-	PrivateKeyWrap prvKey;
-	if (ToGeneralPrvKey(prvKey))
-	{
-		return prvKey;
-	}
-
-	return PrivateKeyWrap();
-}
-
-bool ECKeyPair::GenerateSharedKey(G256BitSecretKeyWrap & outKey, const ECKeyPublic & peerPubKey)
-{
-	if (!*this || !peerPubKey)
-	{
-		return false;
-	}
-
-	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-	BigNumber sharedKey;
-	EcGroupWarp grp;
-	if (!grp.Copy(ecPtr.grp))
-	{
-		return false;
-	}
-
-	Drbg drbg;
-
-	if (mbedtls_ecdh_compute_shared(&grp.m_grp, sharedKey.Get(),
-		&peerPubKey.GetEcKeyPtr()->Q, &ecPtr.d,
-		&Drbg::CallBack, &drbg) != MBEDTLS_SUCCESS_RET)
-	{
-		return false;
-	}
-
-	sharedKey.ToBigEndianBinary(outKey.m_key);
-
-	std::reverse(outKey.m_key.begin(), outKey.m_key.end());
-
-	return true;
-}
-
-bool ECKeyPair::EcdsaSign(general_secp256r1_signature_t & outSign, const uint8_t * hash, const size_t hashLen, const mbedtls_md_info_t* mdInfo) const
-{
-	if (!*this || !hash || !mdInfo || hashLen != mdInfo->size)
-	{
-		return false;
-	}
-
-	int mbedRet = 0;
-	BigNumber r;
-	BigNumber s;
-	EcGroupWarp grp;
-	const mbedtls_ecp_keypair& ecPtr = *GetEcKeyPtr();
-
-	if (!grp.Copy(ecPtr.grp))
-	{
-		return false;
-	}
-
-#ifdef MBEDTLS_ECDSA_DETERMINISTIC
-	mbedRet = mbedtls_ecdsa_sign_det(&grp.m_grp, r.Get(), s.Get(), 
-		&ecPtr.d, hash, hashLen, mdInfo->type);
-#else
-	Drbg drbg;
-	mbedRet = mbedtls_ecdsa_sign(&grp.m_grp, r.Get(), s.Get(),
-		&ecPtr.d, hash, hashLen, &Drbg::CallBack, &drbg);
-#endif 
-
-	if (mbedRet != MBEDTLS_SUCCESS_RET)
-	{
-		return false;
-	}
-	
-	r.ToBinary(outSign.x);
-	s.ToBinary(outSign.y);
-
-	return true;
-}
-
-std::string ECKeyPair::ToPrvPemString() const
-{
-	if (!*this)
-	{
-		return std::string();
-	}
-
-	std::vector<char> tmpRes(ECP_PRV_PEM_MAX_BYTES);
-	if (mbedtls_pk_write_key_pem(GetMutable(), reinterpret_cast<unsigned char*>(tmpRes.data()), tmpRes.size())
-		!= MBEDTLS_SUCCESS_RET)
-	{
-		return std::string();
-	}
-
-	return std::string(tmpRes.data());
-}
-
-bool ECKeyPair::ToPrvDerArray(std::vector<uint8_t>& outArray) const
-{
-	if (!*this)
-	{
-		return false;
-	}
-
-	outArray.resize(ECP_PRV_DER_MAX_BYTES);
-	int len = mbedtls_pk_write_key_der(GetMutable(), outArray.data(), outArray.size());
-	if (len <= 0)
-	{
-		return false;
-	}
-
-	outArray.resize(len);
-
-	return true;
 }
 
 X509Req X509Req::FromPemDer(const void* ptr, size_t size)
@@ -599,7 +81,7 @@ X509Req X509Req::FromPem(const std::string & pemStr)
 	return FromPemDer(pemStr.c_str(), pemStr.size() + 1);
 }
 
-static const std::string CreateX509Pem(const PKey & keyPair, const std::string& commonName)
+static const std::string CreateX509Pem(const AsymKeyBase & keyPair, const std::string& commonName)
 {
 	if (!keyPair)
 	{
@@ -639,7 +121,7 @@ void X509Req::FreeObject(mbedtls_x509_csr * ptr)
 	delete ptr;
 }
 
-X509Req::X509Req(const PKey & keyPair, const std::string& commonName) :
+X509Req::X509Req(const AsymKeyBase & keyPair, const std::string& commonName) :
 	X509Req(CreateX509Pem(keyPair, commonName))
 {
 }
@@ -668,7 +150,7 @@ bool X509Req::VerifySignature() const
 	return verifyRes;
 }
 
-const PKey & X509Req::GetPublicKey() const
+const AsymKeyBase & X509Req::GetPublicKey() const
 {
 	return m_pubKey;
 }
@@ -697,7 +179,7 @@ X509Req::X509Req() :
 
 X509Req::X509Req(mbedtls_x509_csr * ptr, FreeFuncType freeFunc) :
 	ObjBase(ptr, freeFunc),
-	m_pubKey(ptr ? ptr->pk : PKey::Empty())
+	m_pubKey(ptr ? ptr->pk : AsymKeyBase())
 {
 }
 
@@ -849,7 +331,7 @@ static std::string GetFormatedTime(const time_t& timer)
 	return res;
 }
 
-static std::string ConstructNewX509Cert(const X509Cert* caCert, const PKey& prvKey, const PKey& pubKey,
+static std::string ConstructNewX509Cert(const X509Cert* caCert, const AsymKeyBase& prvKey, const AsymKeyBase& pubKey,
 	const BigNumber& serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string& x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap)
 {
@@ -968,11 +450,11 @@ X509Cert::X509Cert() :
 
 X509Cert::X509Cert(mbedtls_x509_crt * ptr, FreeFuncType freeFunc) :
 	ObjBase(ptr, freeFunc),
-	m_pubKey(ptr ? ptr->pk : PKey::Empty())
+	m_pubKey(ptr ? ptr->pk : AsymKeyBase())
 {
 }
 
-X509Cert::X509Cert(const X509Cert & caCert, const PKey & prvKey, const PKey & pubKey,
+X509Cert::X509Cert(const X509Cert & caCert, const AsymKeyBase & prvKey, const AsymKeyBase & pubKey,
 	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
 	X509Cert(ConstructNewX509Cert(&caCert, prvKey, pubKey, 
@@ -981,7 +463,7 @@ X509Cert::X509Cert(const X509Cert & caCert, const PKey & prvKey, const PKey & pu
 {
 }
 
-X509Cert::X509Cert(const PKey & prvKey,
+X509Cert::X509Cert(const AsymKeyBase & prvKey,
 	const BigNumber & serialNum, int64_t validTime, bool isCa, int maxChainDepth, unsigned int keyUsage, unsigned char nsType,
 	const std::string & x509NameList, const std::map<std::string, std::pair<bool, std::string> >& extMap) :
 	X509Cert(ConstructNewX509Cert(nullptr, prvKey, prvKey, 
@@ -1081,10 +563,10 @@ bool X509Cert::GetExtensions(std::map<std::string, std::pair<bool, std::string> 
 
 bool X509Cert::VerifySignature() const
 {
-	return *this && VerifySignature(ECKeyPublic(GetMutable()->pk));
+	return *this && VerifySignature(AsymKeyBase(GetMutable()->pk));
 }
 
-bool X509Cert::VerifySignature(const PKey & pubKey) const
+bool X509Cert::VerifySignature(const AsymKeyBase & pubKey) const
 {
 	if (!*this || !pubKey)
 	{
@@ -1125,7 +607,7 @@ bool X509Cert::Verify(const X509Cert & trustedCa, mbedtls_x509_crl* caCrl, const
 		&profile, commonName, &flag, vrfyFunc, vrfyParam) == MBEDTLS_SUCCESS_RET && flag == 0;
 }
 
-const PKey & X509Cert::GetPublicKey() const
+const AsymKeyBase & X509Cert::GetPublicKey() const
 {
 	return m_pubKey;
 }
@@ -1174,7 +656,7 @@ bool X509Cert::NextCert()
 	{
 		m_certStack.push_back(Get());
 		SetPtr(Get()->next);
-		m_pubKey = PKey(Get()->pk);
+		m_pubKey = AsymKeyBase(Get()->pk);
 		return true;
 	}
 	return false;
@@ -1185,7 +667,7 @@ bool X509Cert::PreviousCert()
 	if (m_certStack.size() > 0)
 	{
 		SetPtr(m_certStack.back());
-		m_pubKey = PKey(Get()->pk);
+		m_pubKey = AsymKeyBase(Get()->pk);
 		m_certStack.pop_back();
 		return true;
 	}
@@ -1197,7 +679,7 @@ void X509Cert::SwitchToFirstCert()
 	if (m_certStack.size() > 0)
 	{
 		SetPtr(m_certStack[0]);
-		m_pubKey = PKey(Get()->pk);
+		m_pubKey = AsymKeyBase(Get()->pk);
 		m_certStack.clear();
 	}
 }

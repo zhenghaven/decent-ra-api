@@ -151,7 +151,7 @@ EcPublicKeyBase::EcPublicKeyBase(AsymKeyBase & other) :
 }
 
 EcPublicKeyBase::EcPublicKeyBase(mbedtls_pk_context & other) :
-	AsymKeyBase(&other, &DoNotFree)
+	AsymKeyBase(other)
 {
 	CheckIsAlgmTypeMatch(Get());
 	EcPublicKeyBase::CheckHasPublicKey(*mbedtls_pk_ec(*Get()));
@@ -475,6 +475,11 @@ void EcKeyPairBase::DeriveSharedKey(BigNumber & key, const EcPublicKeyBase & pub
 		&RbgBase::CallBack, &rbg);
 }
 
+void EcKeyPairBase::DeriveSharedKey(BigNumber & key, const EcPublicKeyBase & pubKey, std::unique_ptr<RbgBase> rbg) const
+{
+	return DeriveSharedKey(key, pubKey, *rbg);
+}
+
 void EcKeyPairBase::DeriveSharedKey(void * keyPtr, size_t keySize, const EcPublicKeyBase & pubKey, RbgBase& rbg) const
 {
 	BigNumber key;
@@ -482,4 +487,9 @@ void EcKeyPairBase::DeriveSharedKey(void * keyPtr, size_t keySize, const EcPubli
 	DeriveSharedKey(key, pubKey, rbg);
 
 	key.InternalToBinary(keyPtr, keySize);
+}
+
+void EcKeyPairBase::DeriveSharedKey(void * keyPtr, size_t keySize, const EcPublicKeyBase & pubKey, std::unique_ptr<RbgBase> rbg) const
+{
+	return DeriveSharedKey(keyPtr, keySize, pubKey, *rbg);
 }

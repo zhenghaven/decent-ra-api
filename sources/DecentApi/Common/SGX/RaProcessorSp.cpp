@@ -17,8 +17,9 @@
 #include "../Tools/Crypto.h"
 #include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/Kdf.h"
-#include "../MbedTls/Hasher.h"
 #include "../MbedTls/Drbg.h"
+#include "../MbedTls/EcKey.h"
+#include "../MbedTls/Hasher.h"
 
 #include "sgx_structs.h"
 #include "IasReport.h"
@@ -60,7 +61,7 @@ const RaProcessorSp::SgxReportDataVerifier RaProcessorSp::sk_defaultRpDataVrfy([
 #endif // SIMULATING_ENCLAVE
 });
 
-RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::ECKeyPair> mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
+RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::EcKeyPair<EcKeyType::SECP256R1> > mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
 	SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig) :
 	m_raConfig(raConfig),
 	m_spid(spidPtr),
@@ -115,17 +116,18 @@ RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
 
 void RaProcessorSp::Init()
 {
-	m_encrKeyPair = Tools::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::ECKeyPair::GenerateNewKey());
+	m_encrKeyPair = Tools::make_unique<MbedTlsObj::EcKeyPair<EcKeyType::SECP256R1> >(Tools::make_unique<Drbg>());
 
 	m_nonce = ConstructNonce(IAS_REQUEST_NONCE_SIZE);
 
 	m_iasReport = Tools::make_unique<sgx_ias_report_t>();
 
-	if (!m_encrKeyPair || !*m_encrKeyPair || !m_mySignKey || !*m_mySignKey ||
-		!m_encrKeyPair->ToGeneralPubKey(m_myEncrKey))
+	if (!m_encrKeyPair || !m_mySignKey)
 	{
 		throw RuntimeException("Failed to init RaProcessorSp, because keys are invalid.");
 	}
+
+	m_encrKeyPair->ToPublicBinary(m_myEncrKey.x, m_myEncrKey.y);
 
 	if (!Ias::CheckRaConfigValidaty(m_raConfig))
 	{
@@ -164,11 +166,8 @@ void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 	Hasher<HashType::SHA256>().Batched(hashToBeSigned,
 		std::array<DataListItem, 1>{{&m_myEncrKey, 2 * sizeof(sgx_ec256_public_t)}});
 
-	if (!m_mySignKey->EcdsaSign(SgxEc256Type2General(msg2Ref.sign_gb_ga), hashToBeSigned,
-		mbedtls_md_info_from_type(mbedtls_md_type_t::MBEDTLS_MD_SHA256)))
-	{
-		throw RuntimeException("RaProcessorSp::ProcessMsg1 failed to ECDSA sign.");
-	}
+	Drbg drbg;
+	m_mySignKey->Sign<HashType::SHA256>(hashToBeSigned, msg2Ref.sign_gb_ga.x, msg2Ref.sign_gb_ga.y, drbg);
 
 	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
 
@@ -305,10 +304,7 @@ void RaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
 {
 	msg0r.ra_config = m_raConfig;
 
-	if (!m_mySignKey->ToGeneralPubKey(SgxEc256Type2General(msg0r.sp_pub_key)))
-	{
-		throw RuntimeException("Failed to generate MSG 0 RESP.");
-	}
+	m_mySignKey->ToPublicBinary(msg0r.sp_pub_key.gx, msg0r.sp_pub_key.gy);
 }
 
 const std::string & RaProcessorSp::GetIasReportStr() const
@@ -340,17 +336,10 @@ void RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrP
 {
 	m_peerEncrKey = inEncrPubKey;
 
-	MbedTlsObj::ECKeyPublic peerEncrKey = MbedTlsObj::ECKeyPublic::FromGeneral(inEncrPubKey);
-	if (!peerEncrKey)
-	{
-		throw RuntimeException("In RaProcessorSp::SetPeerEncrPubKey, failed to parse public key.");
-	}
+	MbedTlsObj::EcPublicKey<EcKeyType::SECP256R1> peerEncrKey(inEncrPubKey.x, inEncrPubKey.y);
 
 	G256BitSecretKeyWrap sharedKey;
-	if (!m_encrKeyPair->GenerateSharedKey(sharedKey, peerEncrKey))
-	{
-		throw RuntimeException("In RaProcessorSp::SetPeerEncrPubKey, failed to calculate shared secret.");
-	}
+	m_encrKeyPair->DeriveSharedKey(sharedKey.m_key, peerEncrKey, Tools::make_unique<MbedTlsObj::Drbg>());
 
 	CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(sharedKey, "SMK", m_smk);
 	CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(sharedKey, "MK", m_mk);

@@ -50,15 +50,13 @@ std::string Decent::Ra::GetHashFromAppId(const std::string & platformType, const
 
 X509Req::X509Req(const std::string & pemStr) :
 	MbedTlsObj::X509Req(pemStr),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 }
 
-X509Req::X509Req(const MbedTlsObj::ECKeyPublic & keyPair, const std::string & commonName) :
+X509Req::X509Req(const MbedTlsObj::EcPublicKeyBase & keyPair, const std::string & commonName) :
 	MbedTlsObj::X509Req(keyPair, commonName),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 }
 
@@ -69,21 +67,19 @@ X509Req::operator bool() const noexcept
 
 ServerX509::ServerX509(const std::string & pemStr) :
 	MbedTlsObj::X509Cert(pemStr),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
 ServerX509::ServerX509(mbedtls_x509_crt & cert) :
 	MbedTlsObj::X509Cert(cert),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
-ServerX509::ServerX509(const MbedTlsObj::ECKeyPair & prvKey, const std::string & enclaveHash, const std::string & platformType, const std::string & selfRaReport) :
+ServerX509::ServerX509(const MbedTlsObj::EcKeyPairBase & prvKey, const std::string & enclaveHash, const std::string & platformType, const std::string & selfRaReport) :
 	MbedTlsObj::X509Cert(prvKey, MbedTlsObj::BigNumber::Rand<MbedTlsObj::Drbg>(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
 		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
 		MBEDTLS_X509_NS_CERT_TYPE_SSL_CA | MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT | MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER,
@@ -95,8 +91,7 @@ ServerX509::ServerX509(const MbedTlsObj::ECKeyPair & prvKey, const std::string &
 	),
 	m_platformType(platformType),
 	m_selfRaReport(selfRaReport),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 }
 
@@ -122,29 +117,27 @@ ServerX509::operator bool() const noexcept
 
 AppX509::AppX509(const std::string & pemStr) :
 	MbedTlsObj::X509Cert(pemStr),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
 AppX509::AppX509(mbedtls_x509_crt & cert) :
 	MbedTlsObj::X509Cert(cert),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
-AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey, 
-	const ServerX509 & caCert, const MbedTlsObj::ECKeyPair & serverPrvKey, 
+AppX509::AppX509(const MbedTlsObj::EcPublicKeyBase & pubKey,
+	const ServerX509 & caCert, const MbedTlsObj::EcKeyPairBase & serverPrvKey, 
 	const std::string & enclaveHash, const std::string & platformType, const std::string & appId, const std::string& whiteList) :
 	AppX509(pubKey, static_cast<const MbedTlsObj::X509Cert &>(caCert), serverPrvKey, enclaveHash, platformType, appId, whiteList)
 {
 }
 
-AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey, 
-	const MbedTlsObj::X509Cert & caCert, const MbedTlsObj::ECKeyPair & serverPrvKey, 
+AppX509::AppX509(const MbedTlsObj::EcPublicKeyBase & pubKey,
+	const MbedTlsObj::X509Cert & caCert, const MbedTlsObj::EcKeyPairBase & serverPrvKey, 
 	const std::string & commonName, const std::string & platformType, const std::string & appId, const std::string & whiteList) :
 	MbedTlsObj::X509Cert(caCert, serverPrvKey, pubKey, MbedTlsObj::BigNumber::Rand<MbedTlsObj::Drbg>(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
 		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
@@ -159,8 +152,7 @@ AppX509::AppX509(const MbedTlsObj::ECKeyPublic & pubKey,
 	m_platformType(platformType),
 	m_appId(appId),
 	m_whiteList(whiteList),
-	m_ecPubKey(Get() && mbedtls_pk_get_type(&Get()->pk) == mbedtls_pk_type_t::MBEDTLS_PK_ECKEY
-		? Get()->pk : MbedTlsObj::ECKeyPublic::Empty())
+	m_ecPubKey(Get()->pk)
 {
 }
 

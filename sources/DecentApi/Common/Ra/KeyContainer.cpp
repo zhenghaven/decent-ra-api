@@ -12,40 +12,48 @@
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
-using namespace Decent;
+using namespace Decent::Tools;
+using namespace Decent::MbedTlsObj;
 
 namespace
 {
-	static std::unique_ptr<ECKeyPair> CosntructKeyPair(const std::shared_ptr<const general_secp256r1_public_t>& pub, const std::shared_ptr<const PrivateKeyWrap>& prv)
+	static std::unique_ptr<EcKeyPair<EcKeyType::SECP256R1> > CosntructKeyPair(const std::shared_ptr<const general_secp256r1_public_t>& pub, const std::shared_ptr<const Decent::PrivateKeyWrap>& prv)
 	{
-		std::unique_ptr<ECKeyPair> keyPair;
-		if (pub && prv)
+		std::unique_ptr<EcKeyPair<EcKeyType::SECP256R1> > keyPair;
+		if (!pub || !prv)
 		{
-			keyPair = Tools::make_unique<ECKeyPair>(ECKeyPair::FromGeneral(prv->m_prvKey, *pub));
+			throw Decent::RuntimeException("Null pointer received.");
 		}
 
-		if (!keyPair || !*keyPair)
-		{
-			LOGW("Failed to create new key pair!");
-			throw std::runtime_error("Failed to create new key pair!"); //If error happened, this should be thrown at the program startup.
-		}
+		return make_unique<EcKeyPair<EcKeyType::SECP256R1> >(prv->m_prvKey.r, pub->x, pub->y);
+	}
 
-		return std::move(keyPair);
+	static general_secp256r1_public_t ConstructPublicKey(const EcKeyPair<EcKeyType::SECP256R1>& keyPair)
+	{
+		general_secp256r1_public_t res;
+		keyPair.ToPublicBinary(res.x, res.y);
+		return res;
+	}
+
+	static Decent::PrivateKeyWrap ConstructPrivateKey(const EcKeyPair<EcKeyType::SECP256R1>& keyPair)
+	{
+		Decent::PrivateKeyWrap res;
+		keyPair.ToPrivateBinary(res.m_prvKey.r);
+		return res;
 	}
 }
 
-KeyContainer::KeyContainer(std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<PrivateKeyWrap> > keyPair) :
+KeyContainer::KeyContainer(std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<Decent::PrivateKeyWrap> > keyPair) :
 	m_signPubKey(std::move(keyPair.first)),
 	m_signPrvKey(std::move(keyPair.second)),
 	m_signPrvKeyObj(std::move(CosntructKeyPair(m_signPubKey, m_signPrvKey)))
 {
 }
 
-KeyContainer::KeyContainer(std::unique_ptr<ECKeyPair> keyPair) :
-	m_signPubKey(std::make_shared<general_secp256r1_public_t>(keyPair->ToGeneralPubKeyChecked())),
-	m_signPrvKey(std::make_shared<PrivateKeyWrap>(keyPair->ToGeneralPrvKeyChecked())),
+KeyContainer::KeyContainer(std::unique_ptr<EcKeyPair<EcKeyType::SECP256R1> > keyPair) :
+	m_signPubKey(std::make_shared<general_secp256r1_public_t>(ConstructPublicKey(*keyPair))),
+	m_signPrvKey(std::make_shared<Decent::PrivateKeyWrap>(ConstructPrivateKey(*keyPair))),
 	m_signPrvKeyObj(std::move(keyPair))
 {
 }
@@ -54,7 +62,7 @@ KeyContainer::~KeyContainer()
 {
 }
 
-std::shared_ptr<const PrivateKeyWrap> KeyContainer::GetSignPrvKey() const
+std::shared_ptr<const Decent::PrivateKeyWrap> KeyContainer::GetSignPrvKey() const
 {
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	return std::atomic_load(&m_signPrvKey);
@@ -72,7 +80,7 @@ std::shared_ptr<const general_secp256r1_public_t> KeyContainer::GetSignPubKey() 
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-std::shared_ptr<const ECKeyPair> KeyContainer::GetSignKeyPair() const
+std::shared_ptr<const EcKeyPair<EcKeyType::SECP256R1> > KeyContainer::GetSignKeyPair() const
 {
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	return std::atomic_load(&m_signPrvKeyObj);
@@ -81,7 +89,7 @@ std::shared_ptr<const ECKeyPair> KeyContainer::GetSignKeyPair() const
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-void KeyContainer::SetSignPrvKey(std::shared_ptr<const PrivateKeyWrap> key)
+void KeyContainer::SetSignPrvKey(std::shared_ptr<const Decent::PrivateKeyWrap> key)
 {
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPrvKey, key);
@@ -99,7 +107,7 @@ void KeyContainer::SetSignPubKey(std::shared_ptr<const general_secp256r1_public_
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-void KeyContainer::SetSignKeyPair(std::shared_ptr<const MbedTlsObj::ECKeyPair> key)
+void KeyContainer::SetSignKeyPair(std::shared_ptr<const EcKeyPair<EcKeyType::SECP256R1> > key)
 {
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	std::atomic_store(&m_signPrvKeyObj, key);

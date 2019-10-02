@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "../MbedTls/EcKey.h"
 #include "../MbedTls/MbedTlsObjects.h"
 
 namespace Decent
@@ -22,7 +23,7 @@ namespace Decent
 		public:
 			X509Req() = delete;
 			X509Req(const std::string& pemStr);
-			X509Req(const MbedTlsObj::ECKeyPublic& keyPair, const std::string& commonName);
+			X509Req(const MbedTlsObj::EcPublicKeyBase& keyPair, const std::string& commonName);
 
 			X509Req(X509Req&& other) :
 				MbedTlsObj::X509Req(std::forward<MbedTlsObj::X509Req>(other)),
@@ -46,10 +47,10 @@ namespace Decent
 
 			virtual operator bool() const noexcept override;
 
-			const MbedTlsObj::ECKeyPublic& GetEcPublicKey() const { return m_ecPubKey; }
+			const MbedTlsObj::EcPublicKeyBase& GetEcPublicKey() const { return m_ecPubKey; }
 
 		private:
-			MbedTlsObj::ECKeyPublic m_ecPubKey;
+			MbedTlsObj::EcPublicKeyBase m_ecPubKey;
 		};
 
 		class ServerX509 : public MbedTlsObj::X509Cert
@@ -58,7 +59,7 @@ namespace Decent
 			ServerX509() = delete;
 			ServerX509(const std::string& pemStr);
 			ServerX509(mbedtls_x509_crt& cert);
-			ServerX509(const MbedTlsObj::ECKeyPair& prvKey, const std::string& enclaveHash, const std::string& platformType, const std::string& selfRaReport);
+			ServerX509(const MbedTlsObj::EcKeyPairBase& prvKey, const std::string& enclaveHash, const std::string& platformType, const std::string& selfRaReport);
 
 			ServerX509(ServerX509&& other) :
 				m_platformType(std::move(other.m_platformType)),
@@ -88,14 +89,14 @@ namespace Decent
 			const std::string& GetPlatformType() const { return m_platformType; }
 			const std::string& GetSelfRaReport() const { return m_selfRaReport; }
 
-			const MbedTlsObj::ECKeyPublic& GetEcPublicKey() const { return m_ecPubKey; }
+			const MbedTlsObj::EcPublicKeyBase& GetEcPublicKey() const { return m_ecPubKey; }
 
 		private:
 			void ParseExtensions();
 
 			std::string m_platformType;
 			std::string m_selfRaReport;
-			MbedTlsObj::ECKeyPublic m_ecPubKey;
+			MbedTlsObj::EcPublicKeyBase m_ecPubKey;
 		};
 
 		class AppX509 : public MbedTlsObj::X509Cert
@@ -104,8 +105,8 @@ namespace Decent
 			AppX509() = delete;
 			AppX509(const std::string & pemStr);
 			AppX509(mbedtls_x509_crt& cert);
-			AppX509(const MbedTlsObj::ECKeyPublic& pubKey,
-				const ServerX509& caCert, const MbedTlsObj::ECKeyPair& serverPrvKey,
+			AppX509(const MbedTlsObj::EcPublicKeyBase& pubKey,
+				const ServerX509& caCert, const MbedTlsObj::EcKeyPairBase& serverPrvKey,
 				const std::string& enclaveHash, const std::string& platformType, const std::string& appId, const std::string& whiteList);
 
 			AppX509(AppX509&& other) :
@@ -139,11 +140,11 @@ namespace Decent
 			const std::string& GetAppId() const { return m_appId; }
 			const std::string& GetWhiteList() const { return m_whiteList; }
 
-			const MbedTlsObj::ECKeyPublic& GetEcPublicKey() const { return m_ecPubKey; }
+			const MbedTlsObj::EcPublicKeyBase& GetEcPublicKey() const { return m_ecPubKey; }
 
 		protected:
-			AppX509(const MbedTlsObj::ECKeyPublic& pubKey,
-				const MbedTlsObj::X509Cert& caCert, const MbedTlsObj::ECKeyPair& serverPrvKey,
+			AppX509(const MbedTlsObj::EcPublicKeyBase& pubKey,
+				const MbedTlsObj::X509Cert& caCert, const MbedTlsObj::EcKeyPairBase& serverPrvKey,
 				const std::string& commonName, const std::string& platformType, const std::string& appId, const std::string& whiteList);
 
 		private:
@@ -152,7 +153,7 @@ namespace Decent
 			std::string m_platformType;
 			std::string m_appId;
 			std::string m_whiteList;
-			MbedTlsObj::ECKeyPublic m_ecPubKey;
+			MbedTlsObj::EcPublicKeyBase m_ecPubKey;
 		};
 	}
 }

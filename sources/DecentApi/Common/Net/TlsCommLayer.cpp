@@ -189,7 +189,7 @@ std::string TlsCommLayer::GetPublicKeyPem() const
 		throw ConnectionNotEstablished();
 	}
 	//We just need the non-const pointer, and then we will return the PEM string.
-	return Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).GetPublicKey().ToPubPemString();
+	return Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).GetPublicKey().GetPublicPem();
 }
 
 bool TlsCommLayer::IsValid() const

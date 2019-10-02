@@ -5,23 +5,18 @@
 
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
-#include "../../Common/MbedTls/MbedTlsObjects.h"
+#include "../../Common/MbedTls/EcKey.h"
+#include "../../Common/MbedTls/Drbg.h"
 
-using namespace Decent;
 using namespace Decent::Ra;
+using namespace Decent::Tools;
+using namespace Decent::MbedTlsObj;
 
 namespace
 {
-	static std::unique_ptr<MbedTlsObj::ECKeyPair> ConstructNewKey()
+	static std::unique_ptr<EcKeyPair<EcKeyType::SECP256R1> > ConstructNewKey()
 	{
-		std::unique_ptr<MbedTlsObj::ECKeyPair> key = Tools::make_unique<MbedTlsObj::ECKeyPair>(MbedTlsObj::ECKeyPair::GenerateNewKey());
-		if (!key || !*key)
-		{
-			LOGW("Failed to create new key pair!");
-			throw std::runtime_error("Failed to create new key pair!"); //If error happened, this should be thrown at the program startup.
-		}
-
-		return std::move(key);
+		return make_unique<EcKeyPair<EcKeyType::SECP256R1> >(EcKeyPair<EcKeyType::SECP256R1>(make_unique<Drbg>()));
 	}
 }
 

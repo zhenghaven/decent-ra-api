@@ -273,14 +273,14 @@ namespace Decent
 			 *
 			 * \return	The DER encoded public key stored in byte array.
 			 */
-			virtual std::vector<uint8_t> GetPublicDer() const;
+			virtual std::vector<uint8_t> GetPublicDer() const override;
 
 			/**
 			 * \brief	Gets public key encoded in PEM
 			 *
 			 * \return	The PEM encoded public key stored in string.
 			 */
-			virtual std::string GetPublicPem() const;
+			virtual std::string GetPublicPem() const override;
 
 			/**
 			 * \brief	Verify signature.
@@ -501,10 +501,10 @@ namespace Decent
 				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<containerHType, GetHashByteSize(hashType)>::value &&
 				detail::ContainerPrpt<containerRType>::sk_isSprtCtn &&
 				detail::ContainerPrpt<containerSType>::sk_isSprtCtn, int>::type = 0>
-			void Sign(const containerHType& hash, containerRType& r, containerSType& s) const
+			void Sign(const containerHType& hash, containerRType& r, containerSType& s, RbgBase& rbg) const
 			{
 				return Sign(hashType, detail::GetPtr(hash), detail::GetSize(hash),
-					detail::GetPtr(r), detail::GetSize(r), detail::GetPtr(s), detail::GetSize(s));
+					detail::GetPtr(r), detail::GetSize(r), detail::GetPtr(s), detail::GetSize(s), rbg);
 			}
 
 			/**
@@ -526,15 +526,35 @@ namespace Decent
 			 * \brief	Derive shared key
 			 *
 			 * \tparam	containerType	Type of the container.
-			 * \param [out]	key   	The derived key.
-			 * \param 	   	pubKey	The public key.
+			 * \param [out]	  	key   	The derived key.
+			 * \param 		  	pubKey	The public key.
+			 * \param [in,out]	rbg   	The rbg.
 			 */
 			template<typename containerType,
 				typename std::enable_if<detail::ContainerPrpt<containerType>::sk_isSprtCtn, int>::type = 0>
-			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey) const
+			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey, RbgBase& rbg) const
 			{
-				return DeriveSharedKey(detail::GetPtr(key), detail::GetSize(key), pubKey);
+				return DeriveSharedKey(detail::GetPtr(key), detail::GetSize(key), pubKey, rbg);
 			}
+
+			/**
+			 * \brief	Derive shared key
+			 *
+			 * \tparam	containerType	Type of the container.
+			 * \param [out]	key   	The derived key.
+			 * \param 	   	pubKey	The public key.
+			 * \param 	   	rbg   	The rbg.
+			 */
+			template<typename containerType,
+				typename std::enable_if<detail::ContainerPrpt<containerType>::sk_isSprtCtn, int>::type = 0>
+			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey, std::unique_ptr<RbgBase> rbg) const
+			{
+				return DeriveSharedKey(detail::GetPtr(key), detail::GetSize(key), pubKey, std::move(rbg));
+			}
+
+			void DeriveSharedKey(BigNumber& key, const EcPublicKeyBase& pubKey, RbgBase& rbg) const;
+
+			void DeriveSharedKey(BigNumber& key, const EcPublicKeyBase& pubKey, std::unique_ptr<RbgBase> rbg) const;
 
 		protected:
 
@@ -544,9 +564,9 @@ namespace Decent
 
 			void ToPrivateBinary(void* rPtr, size_t rSize) const;
 
-			void DeriveSharedKey(BigNumber& key, const EcPublicKeyBase& pubKey, RbgBase& rbg) const;
-
 			void DeriveSharedKey(void* keyPtr, size_t keySize, const EcPublicKeyBase& pubKey, RbgBase& rbg) const;
+
+			void DeriveSharedKey(void* keyPtr, size_t keySize, const EcPublicKeyBase& pubKey, std::unique_ptr<RbgBase> rbg) const;
 
 		};
 
@@ -595,10 +615,10 @@ namespace Decent
 			{}
 
 			template<typename ContainerXType, typename ContainerYType,
-				typename std::enable_if<detail::StatCtnWithSize<ContainerXType, GetCurveByteSizeFitsBigNum(ecType)>::value &&
-					detail::StatCtnWithSize<ContainerYType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
+				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<ContainerXType, GetCurveByteSizeFitsBigNum(ecType)>::value &&
+					detail::DynCtnOrStatCtnWithSize<ContainerYType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
 			EcPublicKey(const ContainerXType& x, const ContainerYType& y) :
-				EcPublicKey(x, y)
+				EcPublicKeyBase(ecType, ConstBigNumber(x), ConstBigNumber(y))
 			{}
 
 			virtual ~EcPublicKey()
@@ -626,7 +646,7 @@ namespace Decent
 			virtual std::string GetPublicPem() const override
 			{
 				static constexpr size_t maxPubDerSize = detail::CalcEcpPubDerSize(GetCurveByteSize(ecType));
-				static constexpr size_t maxPubPemSize = detail::CalcEcpPemMaxBytes(maxPubDerSize);
+				static constexpr size_t maxPubPemSize = detail::CalcEcpPemMaxBytes(maxPubDerSize, detail::PEM_EC_PUBLIC_HEADER_SIZE, detail::PEM_EC_PUBLIC_FOOTER_SIZE);
 				return AsymKeyBase::GetPublicPem(maxPubPemSize);
 			}
 
@@ -638,7 +658,7 @@ namespace Decent
 					detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
 			void VerifySign(const containerType& hash, const containerRType& r, const containerSType& s) const
 			{
-				return EcPublicKeyBase::VerifySign(hash, r, s);
+				return EcPublicKeyBase::VerifySign(hash, ConstBigNumber(r), ConstBigNumber(s));
 			}
 
 			template<typename containerXType, typename containerYType,
@@ -653,7 +673,7 @@ namespace Decent
 		};
 
 		template<EcKeyType ecType>
-		class EcKeyPair : EcKeyPairBase
+		class EcKeyPair : public EcKeyPairBase
 		{
 		public:
 			EcKeyPair() = delete;
@@ -712,6 +732,26 @@ namespace Decent
 				EcKeyPairBase(ecType, r, x, y)
 			{}
 
+			template<typename ContainerType,
+				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<ContainerType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
+			EcKeyPair(const ContainerType& r, RbgBase& rbg) :
+				EcKeyPairBase(ecType, ConstBigNumber(r), rbg)
+			{}
+
+			template<typename ContainerType,
+				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<ContainerType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
+			EcKeyPair(const ContainerType& r, std::unique_ptr<RbgBase> rbg) :
+				EcKeyPairBase(ecType, ConstBigNumber(r), std::move(rbg))
+			{}
+
+			template<typename ContainerRType, typename ContainerXType, typename ContainerYType,
+				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<ContainerRType, GetCurveByteSizeFitsBigNum(ecType)>::value &&
+					detail::DynCtnOrStatCtnWithSize<ContainerXType, GetCurveByteSizeFitsBigNum(ecType)>::value &&
+					detail::DynCtnOrStatCtnWithSize<ContainerYType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
+			EcKeyPair(const ContainerRType& r, const ContainerXType& x, const ContainerYType& y) :
+				EcKeyPairBase(ecType, ConstBigNumber(r), ConstBigNumber(x), ConstBigNumber(y))
+			{}
+
 			virtual ~EcKeyPair()
 			{}
 
@@ -736,8 +776,9 @@ namespace Decent
 
 			virtual std::string GetPublicPem() const override
 			{
-				static constexpr size_t maxPubDerSize = detail::CalcEcpPubDerSize(GetCurveByteSize(ecType));
-				static constexpr size_t maxPubPemSize = detail::CalcEcpPemMaxBytes(maxPubDerSize);
+				using namespace detail;
+				static constexpr size_t maxPubDerSize = CalcEcpPubDerSize(GetCurveByteSize(ecType));
+				static constexpr size_t maxPubPemSize = CalcEcpPemMaxBytes(maxPubDerSize, PEM_EC_PUBLIC_HEADER_SIZE, PEM_EC_PUBLIC_FOOTER_SIZE);
 				return AsymKeyBase::GetPublicPem(maxPubPemSize);
 			}
 
@@ -749,8 +790,9 @@ namespace Decent
 
 			virtual void GetPrivatePem(std::string& out) const override
 			{
-				static constexpr size_t maxPrvDerSize = detail::CalcEcpPrvDerSize(GetCurveByteSize(ecType));
-				static constexpr size_t maxPrvPemSize = detail::CalcEcpPemMaxBytes(maxPrvDerSize);
+				using namespace detail;
+				static constexpr size_t maxPrvDerSize = CalcEcpPrvDerSize(GetCurveByteSize(ecType));
+				static constexpr size_t maxPrvPemSize = CalcEcpPemMaxBytes(maxPrvDerSize, PEM_EC_PRIVATE_HEADER_SIZE, PEM_EC_PRIVATE_FOOTER_SIZE);
 				return AsymKeyBase::GetPrivatePem(out, maxPrvPemSize);
 			}
 
@@ -767,8 +809,8 @@ namespace Decent
 
 			template<typename containerXType, typename containerYType,
 				typename std::enable_if<(detail::DynCtnOrStatCtnWithSize<containerXType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerXType, GetCurveByteSizeFitsBigNum(ecType)>::value) &&
-				(detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
-				void ToPublicBinary(containerXType& x, containerYType& y) const
+					(detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerYType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
+			void ToPublicBinary(containerXType& x, containerYType& y) const
 			{
 				detail::ContainerPrpt<containerXType>::ResizeIfDyn(x, GetCurveByteSize(ecType));
 				detail::ContainerPrpt<containerYType>::ResizeIfDyn(y, GetCurveByteSize(ecType));
@@ -780,9 +822,9 @@ namespace Decent
 				typename std::enable_if<detail::DynCtnOrStatCtnWithSize<containerHType, GetHashByteSize(hashType)>::value &&
 					(detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerRType, GetCurveByteSizeFitsBigNum(ecType)>::value) &&
 					(detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
-			void Sign(const containerHType& hash, containerRType& r, containerSType& s) const
+			void Sign(const containerHType& hash, containerRType& r, containerSType& s, RbgBase& rbg) const
 			{
-				return EcKeyPairBase::Sign<hashType>(hash, r, s);
+				return EcKeyPairBase::Sign<hashType>(hash, r, s, rbg);
 			}
 
 			template<typename containerRType,
@@ -794,9 +836,16 @@ namespace Decent
 
 			template<typename containerType,
 				typename std::enable_if<(detail::DynCtnOrStatCtnWithSize<containerType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
-			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey) const
+			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey, RbgBase& rbg) const
 			{
-				return EcKeyPairBase::DeriveSharedKey(key, pubKey);
+				return EcKeyPairBase::DeriveSharedKey(key, pubKey, rbg);
+			}
+
+			template<typename containerType,
+				typename std::enable_if<(detail::DynCtnOrStatCtnWithSize<containerType, GetCurveByteSize(ecType)>::value || detail::DynCtnOrStatCtnWithSize<containerType, GetCurveByteSizeFitsBigNum(ecType)>::value), int>::type = 0>
+			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey, std::unique_ptr<RbgBase> rbg) const
+			{
+				return EcKeyPairBase::DeriveSharedKey(key, pubKey, std::move(rbg));
 			}
 		};
 	}

@@ -92,6 +92,17 @@ namespace Decent
 			AsymKeyBase(AsymKeyBase&& rhs);
 
 			/**
+			 * \brief	Constructs public key by referring to a existing mbedTLS PK context object. NOTE:
+			 * 			this instance DOES NOT has the ownership! That means, the existing mbedTLS PK context
+			 * 			object must have longer life time than this instance!
+			 *
+			 * \exception	MbedTlsObj::RuntimeException	Thrown when the key type doesn't match this class (EC key).
+			 *
+			 * \param [in,out]	other	The other.
+			 */
+			AsymKeyBase(mbedtls_pk_context& other);
+
+			/**
 			 * \brief	Constructs public key by reading PEM from a string.
 			 *
 			 * \param	pem	The PEM.
@@ -158,6 +169,20 @@ namespace Decent
 				return VrfyDerSignNoBufferCheck(hashType, detail::GetPtr(hash), detail::GetSize(hash),
 					detail::GetPtr(sign), detail::GetSize(sign));
 			}
+
+			/**
+			 * \brief	Gets public key encoded in DER
+			 *
+			 * \return	The DER encoded public key stored in byte array.
+			 */
+			virtual std::vector<uint8_t> GetPublicDer() const;
+
+			/**
+			 * \brief	Gets public key encoded in PEM
+			 *
+			 * \return	The PEM encoded public key stored in string.
+			 */
+			virtual std::string GetPublicPem() const;
 
 		protected:
 

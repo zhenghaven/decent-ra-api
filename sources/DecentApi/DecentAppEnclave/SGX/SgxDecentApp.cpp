@@ -63,7 +63,7 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		commLayer.SetConnectionPtr(cnt);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
-		std::shared_ptr<const MbedTlsObj::ECKeyPair> signKeyPair = keyContainer.GetSignKeyPair();
+		std::shared_ptr<const MbedTlsObj::EcKeyPairBase> signKeyPair = keyContainer.GetSignKeyPair();
 		X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 		if (!certReq)
 		{

@@ -8,6 +8,7 @@
 #include "SafeWrappers.h"
 #include "MbedTlsException.h"
 #include "Internal/Hasher.h"
+#include "Internal/AsymKeyBase.h"
 
 using namespace Decent::MbedTlsObj;
 
@@ -193,6 +194,11 @@ AsymKeyBase::AsymKeyBase(AsymKeyBase && rhs) :
 {
 }
 
+AsymKeyBase::AsymKeyBase(mbedtls_pk_context & other) :
+	ObjBase(&other, &DoNotFree)
+{
+}
+
 AsymKeyBase::AsymKeyBase(const std::string & pem) :
 	AsymKeyBase()
 {
@@ -233,6 +239,16 @@ AsymKeyType AsymKeyBase::GetKeyType() const
 {
 	NullCheck();
 	return GetKeyTypeFromContext(*Get());
+}
+
+std::vector<uint8_t> AsymKeyBase::GetPublicDer() const
+{
+	return GetPublicDer(detail::PUB_DER_MAX_BYTES);
+}
+
+std::string AsymKeyBase::GetPublicPem() const
+{
+	return GetPublicPem(detail::PUB_PEM_MAX_BYTES);
 }
 
 AsymKeyBase::AsymKeyBase(mbedtls_pk_context * ptr, FreeFuncType freeFunc) :

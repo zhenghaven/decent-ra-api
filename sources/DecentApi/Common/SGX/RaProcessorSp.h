@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../GeneralKeyTypes.h"
+#include "../MbedTls/EcKey.h"
 #include "sgx_structs.h"
 
 typedef struct _sgx_ra_msg0r_t sgx_ra_msg0r_t;
@@ -21,11 +22,6 @@ typedef struct _spid_t sgx_spid_t;
 
 namespace Decent
 {
-	namespace MbedTlsObj
-	{
-		class ECKeyPair;
-	}
-
 	namespace Sgx
 	{
 		class RaProcessorSp
@@ -46,7 +42,7 @@ namespace Decent
 			};
 
 		public:
-			RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::ECKeyPair> mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
+			RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
 				SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig = sk_defaultRaConfig);
 
 			virtual ~RaProcessorSp();
@@ -85,9 +81,9 @@ namespace Decent
 			std::shared_ptr<const sgx_spid_t> m_spid;
 
 			const void* m_iasConnectorPtr;
-			std::shared_ptr<const MbedTlsObj::ECKeyPair> m_mySignKey;
+			std::shared_ptr<const MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > m_mySignKey;
 
-			std::unique_ptr<MbedTlsObj::ECKeyPair> m_encrKeyPair;
+			std::unique_ptr<MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > m_encrKeyPair;
 
 			//Do not move the following members:
 			general_secp256r1_public_t m_myEncrKey;
