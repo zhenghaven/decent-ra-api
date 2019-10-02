@@ -4,7 +4,7 @@
 #include <mbedtls/ecp.h>
 #include <mbedtls/rsa.h>
 
-#include "Drbg.h"
+#include "RbgBase.h"
 #include "SafeWrappers.h"
 #include "MbedTlsException.h"
 #include "Internal/Hasher.h"
@@ -36,7 +36,7 @@ AsymAlgmType AsymKeyBase::GetAlgmTypeFromContext(const mbedtls_pk_context & ctx)
 	}
 }
 
-AsymKeyType AsymKeyBase::GetKeyTypeFromContext(mbedtls_pk_context & ctx)
+AsymKeyType AsymKeyBase::GetKeyTypeFromContext(mbedtls_pk_context & ctx, RbgBase& rbg)
 {
 	AsymAlgmType algmType = GetAlgmTypeFromContext(ctx);
 
@@ -50,7 +50,7 @@ AsymKeyType AsymKeyBase::GetKeyTypeFromContext(mbedtls_pk_context & ctx)
 	}
 }
 
-AsymKeyType AsymKeyBase::GetKeyTypeFromContext(mbedtls_ecp_keypair & ctx)
+AsymKeyType AsymKeyBase::GetKeyTypeFromContext(mbedtls_ecp_keypair & ctx, RbgBase& rbg)
 {
 	if (CheckPublicKeyInContext(ctx))
 	{
@@ -63,7 +63,7 @@ AsymKeyType AsymKeyBase::GetKeyTypeFromContext(mbedtls_ecp_keypair & ctx)
 	{
 		// Public key is not in context, probably a private key?
 		
-		CompletePublicKeyInContext(ctx); //Try to fill in the public key.
+		CompletePublicKeyInContext(ctx, rbg); //Try to fill in the public key.
 
 		return CheckPrivateKeyInContext(ctx) ? AsymKeyType::Private :
 			throw RuntimeException("Invalid EC key context. Both private key and public key are invalid.");
@@ -156,10 +156,9 @@ bool AsymKeyBase::CheckPrivateKeyInContext(const mbedtls_ecp_keypair & ctx)
 			throw MbedTlsException("mbedtls_ecp_check_privkey", res));
 }
 
-void AsymKeyBase::CompletePublicKeyInContext(mbedtls_ecp_keypair & ctx)
+void AsymKeyBase::CompletePublicKeyInContext(mbedtls_ecp_keypair & ctx, RbgBase& rbg)
 {
-	Drbg drbg;
-	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_mul, &ctx.grp, &ctx.Q, &ctx.d, &ctx.grp.G, &Drbg::CallBack, &drbg);
+	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_mul, &ctx.grp, &ctx.Q, &ctx.d, &ctx.grp.G, &RbgBase::CallBack, &rbg);
 }
 
 bool AsymKeyBase::CheckPublicKeyInContext(const mbedtls_rsa_context & ctx)

@@ -260,7 +260,8 @@ namespace Decent
 			 * \param	r   	Elliptic Curve signature's R value.
 			 * \param	s   	Elliptic Curve signature's S value.
 			 */
-			template<typename containerType>
+			template<typename containerType,
+				typename std::enable_if<detail::ContainerPrpt<containerType>::sk_isSprtCtn, int>::type = 0>
 			void VerifySign(const containerType& hash, const BigNumberBase& r, const BigNumberBase& s) const
 			{
 				return VerifySign(detail::GetPtr(hash), detail::GetSize(hash), r, s);
@@ -274,7 +275,9 @@ namespace Decent
 			 * \param [out]	x	Elliptic Curve public key's X value.
 			 * \param [out]	y	Elliptic Curve public key's Y value.
 			 */
-			template<typename containerXType, typename containerYType>
+			template<typename containerXType, typename containerYType,
+				typename std::enable_if<detail::ContainerPrpt<containerXType>::sk_isSprtCtn &&
+				detail::ContainerPrpt<containerYType>::sk_isSprtCtn, int>::type = 0>
 			void ToPublicBinary(containerXType& x, containerYType& y) const
 			{
 				return ToPublicBinary(detail::GetPtr(x), detail::GetSize(x), detail::GetPtr(y), detail::GetSize(y));
@@ -303,10 +306,21 @@ namespace Decent
 		public:
 			EcKeyPairBase() = delete;
 
-			EcKeyPairBase(const Generate&, EcKeyType ecType);
+			/**
+			 * \brief	Constructs a new EC key pair, based on the given random source
+			 *
+			 * \param 		  	ecType	Type of the ec.
+			 * \param [in,out]	rbg   	The Random Bit Generator.
+			 */
+			EcKeyPairBase(EcKeyType ecType, RbgBase& rbg);
 
 			EcKeyPairBase(const EcKeyPairBase& rhs) = delete;
 
+			/**
+			 * \brief	Move constructor
+			 *
+			 * \param [in,out]	rhs	The right hand side.
+			 */
 			EcKeyPairBase(EcKeyPairBase&& rhs);
 
 			/**
@@ -367,7 +381,7 @@ namespace Decent
 			 * \param	ecType	The type of Elliptic Curve.
 			 * \param	r	  	Elliptic Curve private key's R value.
 			 */
-			EcKeyPairBase(EcKeyType ecType, const BigNumberBase& r);
+			EcKeyPairBase(EcKeyType ecType, const BigNumberBase& r, RbgBase& rbg);
 
 			/**
 			 * \brief	Constructor from private key's R value and public key's X and Y values (Z is 1).
@@ -434,7 +448,10 @@ namespace Decent
 			 * \param [out]	r			Elliptic Curve signature's R value.
 			 * \param [out]	s			Elliptic Curve signature's S value.
 			 */
-			template<typename containerHType, typename containerRType, typename containerSType>
+			template<typename containerHType, typename containerRType, typename containerSType,
+				typename std::enable_if<detail::ContainerPrpt<containerHType>::sk_isSprtCtn &&
+				detail::ContainerPrpt<containerRType>::sk_isSprtCtn &&
+				detail::ContainerPrpt<containerSType>::sk_isSprtCtn, int>::type = 0>
 			void Sign(HashType hashType, const containerHType& hash, containerRType& r, containerSType& s) const
 			{
 				return Sign(hashType, detail::GetPtr(hash), detail::GetSize(hash),
@@ -449,7 +466,8 @@ namespace Decent
 			 * \param [out]	x	Elliptic Curve public key's X value.
 			 * \param [out]	y	Elliptic Curve public key's Y value.
 			 */
-			template<typename containerRType>
+			template<typename containerRType,
+				typename std::enable_if<detail::ContainerPrpt<containerRType>::sk_isSprtCtn, int>::type = 0>
 			void ToPrivateBinary(containerRType& r) const
 			{
 				return ToPrivateBinary(detail::GetPtr(r), detail::GetSize(r));
@@ -462,7 +480,8 @@ namespace Decent
 			 * \param [out]	key   	The derived key.
 			 * \param 	   	pubKey	The public key.
 			 */
-			template<typename containerType>
+			template<typename containerType,
+				typename std::enable_if<detail::ContainerPrpt<containerType>::sk_isSprtCtn, int>::type = 0>
 			void DeriveSharedKey(containerType& key, const EcPublicKeyBase& pubKey) const
 			{
 				return DeriveSharedKey(detail::GetPtr(key), detail::GetSize(key), pubKey);
@@ -470,15 +489,15 @@ namespace Decent
 
 		protected:
 
-			void Sign(HashType hashType, const void* hashBuf, size_t hashSize, BigNumber& r, BigNumber& s) const;
+			void Sign(HashType hashType, const void* hashBuf, size_t hashSize, BigNumber& r, BigNumber& s, RbgBase& rbg) const;
 
-			void Sign(HashType hashType, const void* hashBuf, size_t hashSize, void* rPtr, size_t rSize, void* sPtr, size_t sSize) const;
+			void Sign(HashType hashType, const void* hashBuf, size_t hashSize, void* rPtr, size_t rSize, void* sPtr, size_t sSize, RbgBase& rbg) const;
 
 			void ToPrivateBinary(void* rPtr, size_t rSize) const;
 
-			void DeriveSharedKey(BigNumber& key, const EcPublicKeyBase& pubKey) const;
+			void DeriveSharedKey(BigNumber& key, const EcPublicKeyBase& pubKey, RbgBase& rbg) const;
 
-			void DeriveSharedKey(void* keyPtr, size_t keySize, const EcPublicKeyBase& pubKey) const;
+			void DeriveSharedKey(void* keyPtr, size_t keySize, const EcPublicKeyBase& pubKey, RbgBase& rbg) const;
 
 		};
 	}

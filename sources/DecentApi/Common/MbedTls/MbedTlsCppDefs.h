@@ -114,9 +114,21 @@ namespace Decent
 				typedef typename std::remove_cv<typename std::remove_reference<T>::type >::type type;
 			};
 
-			template<class T, size_t arrLen>
-			struct StaticContainerSize
+			struct NotSupportedContainerType
 			{
+				static constexpr bool sk_isSprtCtn = false;
+			};
+
+			struct SupportedContainerType
+			{
+				static constexpr bool sk_isSprtCtn = true;
+			};
+
+			template<class T, size_t arrLen>
+			struct StaticContainerSize : SupportedContainerType
+			{
+				static constexpr bool sk_isStaticSize = true;
+
 				static constexpr size_t sk_len = arrLen;
 				static constexpr size_t sk_valSize = sizeof(T);
 				static constexpr size_t sk_ctnSize = sk_valSize * sk_len;
@@ -124,17 +136,71 @@ namespace Decent
 				typedef T ValType;
 			};
 
-			template<class ContainerType>
-			struct ContainerPrpt;
+			template<class T>
+			struct DynContainerSize : SupportedContainerType
+			{
+				static constexpr bool sk_isStaticSize = false;
 
-			template<class T, size_t arrLen>
-			struct ContainerPrpt<std::array<T, arrLen> >
+				static constexpr size_t sk_valSize = sizeof(T);
+
+				typedef T ValType;
+			};
+
+			//#################################################
+			//#      Static Container Properties
+			//#################################################
+			
+			template<class ContainerType>
+			struct StaticContainerPrpt;
+
+			template<typename T, size_t arrLen>
+			struct StaticContainerPrpt<std::array<T, arrLen> >
 				: StaticContainerSize<T, arrLen>
 			{};
 
-			template<class T, size_t arrLen>
-			struct ContainerPrpt<T[arrLen]>
+			template<typename T, size_t arrLen>
+			struct StaticContainerPrpt<T[arrLen]>
 				: StaticContainerSize<T, arrLen>
+			{};
+
+			//#################################################
+			//#      Dynamic Container Properties
+			//#################################################
+
+			template<class ContainerType>
+			struct DynContainerPrpt;
+
+			template<typename T>
+			struct StaticContainerPrpt<std::vector<T> >
+				: DynContainerSize<T>
+			{};
+
+			template<class _Elem, class _Traits, class _Alloc>
+			struct StaticContainerPrpt<std::basic_string<_Elem, _Traits, _Alloc> >
+				: DynContainerSize<typename std::basic_string<_Elem, _Traits, _Alloc>::value_type>
+			{};
+
+			//#################################################
+			//#      Combined Container Properties
+			//#################################################
+
+			template<typename ContainerType>
+			struct ContainerPrpt : NotSupportedContainerType {};
+
+			template<typename T, size_t arrLen>
+			struct ContainerPrpt<std::array<T, arrLen> > : StaticContainerPrpt<std::array<T, arrLen> >
+			{};
+
+			template<typename T, size_t arrLen>
+			struct ContainerPrpt<T[arrLen]> : StaticContainerPrpt<T[arrLen]>
+			{};
+
+			template<typename T>
+			struct ContainerPrpt<std::vector<T> > : DynContainerSize<std::vector<T> >
+			{};
+
+			template<class _Elem, class _Traits, class _Alloc>
+			struct ContainerPrpt<std::basic_string<_Elem, _Traits, _Alloc> > : DynContainerSize<std::basic_string<_Elem, _Traits, _Alloc> >
 			{};
 		}
 

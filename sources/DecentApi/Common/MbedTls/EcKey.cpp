@@ -4,7 +4,7 @@
 #include <mbedtls/ecp.h>
 #include <mbedtls/ecdh.h>
 
-#include "Drbg.h"
+#include "RbgBase.h"
 #include "BigNumber.h"
 #include "MbedTlsException.h"
 
@@ -292,13 +292,12 @@ void EcKeyPairBase::CheckHasPrivateKey(const mbedtls_ecp_keypair & ctx)
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_check_privkey, &ctx.grp, &ctx.d)
 }
 
-EcKeyPairBase::EcKeyPairBase(const Generate &, EcKeyType ecType) :
+EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, RbgBase& rbg) :
 	EcPublicKeyBase()
 {
 	mbedtls_ecp_keypair* ecp = mbedtls_pk_ec(*Get());
-	Drbg drbg;
 
-	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_gen_key, GetEcGroupId(ecType), ecp, &Drbg::CallBack, &drbg);
+	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_gen_key, GetEcGroupId(ecType), ecp, &RbgBase::CallBack, &rbg);
 }
 
 EcKeyPairBase::EcKeyPairBase(EcKeyPairBase && rhs) :
@@ -339,7 +338,7 @@ EcKeyPairBase::EcKeyPairBase(const std::vector<uint8_t>& der) :
 	EcKeyPairBase::CheckHasPrivateKey(*mbedtls_pk_ec(*Get()));
 }
 
-EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r) :
+EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r, RbgBase& rbg) :
 	EcPublicKeyBase(ecType)
 {
 	auto& ecCtx = GetEcContext();
@@ -348,7 +347,7 @@ EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r) :
 	ctxR = r;
 
 	//This will also check the private key:
-	AsymKeyBase::CompletePublicKeyInContext(*mbedtls_pk_ec(*Get()));
+	AsymKeyBase::CompletePublicKeyInContext(*mbedtls_pk_ec(*Get()), rbg);
 }
 
 EcKeyPairBase::EcKeyPairBase(EcKeyType ecType, const BigNumberBase & r, const BigNumberBase & x, const BigNumberBase & y) :
@@ -394,7 +393,7 @@ void EcKeyPairBase::GetPrivatePem(std::string & out) const
 	return AsymKeyBase::GetPrivatePem(out, detail::ECP_PRV_PEM_MAX_BYTES);
 }
 
-void EcKeyPairBase::Sign(HashType hashType, const void * hashBuf, size_t hashSize, BigNumber & r, BigNumber & s) const
+void EcKeyPairBase::Sign(HashType hashType, const void * hashBuf, size_t hashSize, BigNumber & r, BigNumber & s, RbgBase& rbg) const
 {
 	if (!hashBuf)
 	{
@@ -409,18 +408,17 @@ void EcKeyPairBase::Sign(HashType hashType, const void * hashBuf, size_t hashSiz
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecdsa_sign_det, ecGrp.Get(), r.Get(), s.Get(),
 		&ecCtx.d, static_cast<const uint8_t*>(hashBuf), hashSize, detail::GetMsgDigestType(hashType));
 #else
-	Drbg drbg;
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecdsa_sign, ecGrp.Get(), r.Get(), s.Get(),
-		&ecCtx.d, static_cast<const uint8_t*>(hashBuf), hashSize, &Drbg::CallBack, &drbg);
+		&ecCtx.d, static_cast<const uint8_t*>(hashBuf), hashSize, &RbgBase::CallBack, &rbg);
 #endif
 }
 
-void EcKeyPairBase::Sign(HashType hashType, const void * hashBuf, size_t hashSize, void * rPtr, size_t rSize, void * sPtr, size_t sSize) const
+void EcKeyPairBase::Sign(HashType hashType, const void * hashBuf, size_t hashSize, void * rPtr, size_t rSize, void * sPtr, size_t sSize, RbgBase& rbg) const
 {
 	BigNumber r;
 	BigNumber s;
 
-	EcKeyPairBase::Sign(hashType, hashBuf, hashSize, r, s);
+	EcKeyPairBase::Sign(hashType, hashBuf, hashSize, r, s, rbg);
 
 	r.InternalToBinary(rPtr, rSize);
 	s.InternalToBinary(sPtr, sSize);
@@ -435,25 +433,23 @@ void EcKeyPairBase::ToPrivateBinary(void * rPtr, size_t rSize) const
 	ctxR.InternalToBinary(rPtr, rSize);
 }
 
-void EcKeyPairBase::DeriveSharedKey(BigNumber & key, const EcPublicKeyBase & pubKey) const
+void EcKeyPairBase::DeriveSharedKey(BigNumber & key, const EcPublicKeyBase & pubKey, RbgBase& rbg) const
 {
 	auto& ecCtx = GetEcContext();
 	auto& pubEcCtx = pubKey.GetEcContext();
 
 	EcGroup ecGrp = ecCtx.grp;
 
-	Drbg drbg;
-
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecdh_compute_shared, ecGrp.Get(), key.Get(),
 		&(pubEcCtx.Q), &ecCtx.d,
-		&Drbg::CallBack, &drbg);
+		&RbgBase::CallBack, &rbg);
 }
 
-void EcKeyPairBase::DeriveSharedKey(void * keyPtr, size_t keySize, const EcPublicKeyBase & pubKey) const
+void EcKeyPairBase::DeriveSharedKey(void * keyPtr, size_t keySize, const EcPublicKeyBase & pubKey, RbgBase& rbg) const
 {
 	BigNumber key;
 
-	DeriveSharedKey(key, pubKey);
+	DeriveSharedKey(key, pubKey, rbg);
 
 	key.InternalToBinary(keyPtr, keySize);
 }

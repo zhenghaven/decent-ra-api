@@ -7,7 +7,7 @@
 #include <mbedtls/bignum.h>
 
 #include "MbedTlsException.h"
-#include "Drbg.h"
+#include "RbgBase.h"
 
 using namespace Decent::MbedTlsObj;
 
@@ -250,17 +250,6 @@ ConstBigNumber::ConstBigNumber(const void * ptr, const size_t size, const Genera
 //  BigNumber
 //================================================================================================
 
-BigNumber BigNumber::Rand(size_t size)
-{
-	BigNumber res;
-
-	Drbg drbg;
-
-	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_fill_random, res.Get(), size, &Drbg::CallBack, &drbg);
-
-	return res;
-}
-
 BigNumber::BigNumber() :
 	BigNumberBase()
 {}
@@ -275,6 +264,17 @@ BigNumber::BigNumber(const BigNumberBase & rhs) :
 
 BigNumber::BigNumber(mbedtls_mpi & ref) :
 	BigNumberBase(&ref, &DoNotFree)
+{
+}
+
+BigNumber::BigNumber(size_t size, RbgBase & rbg) :
+	BigNumber()
+{
+	CALL_MBEDTLS_C_FUNC(mbedtls_mpi_fill_random, Get(), size, &RbgBase::CallBack, &rbg);
+}
+
+BigNumber::BigNumber(size_t size, std::unique_ptr<RbgBase> rbg) :
+	BigNumber(size, *rbg)
 {
 }
 

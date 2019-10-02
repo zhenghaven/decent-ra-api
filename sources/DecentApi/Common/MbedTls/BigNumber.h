@@ -4,9 +4,12 @@
 
 #include <cstdint>
 
+#include <type_traits>
 #include <string>
 #include <array>
 #include <vector>
+
+#include "Internal/make_unique.h"
 
 typedef struct mbedtls_mpi mbedtls_mpi;
 typedef uint64_t mbedtls_mpi_uint;
@@ -15,6 +18,7 @@ namespace Decent
 {
 	namespace MbedTlsObj
 	{
+		class RbgBase;
 
 		class BigNumberBase : public ObjBase<mbedtls_mpi>
 		{
@@ -129,7 +133,8 @@ namespace Decent
 			 * \tparam	ContainerType	Type of the container.
 			 * \param [in,out]	out	The output.
 			 */
-			template<typename ContainerType>
+			template<typename ContainerType,
+				typename std::enable_if<detail::ContainerPrpt<ContainerType>::sk_isSprtCtn, int>::type = 0>
 			void ToBinary(ContainerType& out) const
 			{
 				return InternalToBinary(detail::GetPtr(out), detail::GetSize(out));
@@ -161,7 +166,8 @@ namespace Decent
 			 * \tparam	ContainerType	Type of the container.
 			 * \param [in,out]	out	The output.
 			 */
-			template<typename ContainerType>
+			template<typename ContainerType,
+				typename std::enable_if<detail::ContainerPrpt<ContainerType>::sk_isSprtCtn, int>::type = 0>
 			void ToBigEndianBinary(ContainerType& out) const
 			{
 				return InternalToBigEndianBinary(detail::GetPtr(out), detail::GetSize(out));
@@ -348,15 +354,15 @@ namespace Decent
 			 * 			REFERENCE ONLY, there is no copy operation, so make sure the referenced data's life
 			 * 			time!
 			 *
-			 * \tparam	ArrayType	Generic type parameter.
-			 * \tparam	size	 	Size of the array.
-			 * \param	in	The input.
+			 * \tparam	ContainerType	Type of the container.
+			 * \param	ctn	The input container.
 			 */
-			template<typename ArrayType, size_t size>
-			ConstBigNumber(const ArrayType(&in)[size]) :
-				ConstBigNumber(detail::GetPtr(in), detail::GetSize(in), sk_gen)
+			template<typename ContainerType,
+				typename std::enable_if<detail::ContainerPrpt<ContainerType>::sk_isSprtCtn && detail::ContainerPrpt<ContainerType>::sk_isStaticSize, int>::type = 0>
+			ConstBigNumber(const ContainerType& ctn) :
+				ConstBigNumber(detail::GetPtr(ctn), detail::GetSize(ctn), sk_gen)
 			{
-				static_assert((detail::ContainerPrpt<detail::remove_cvref<decltype(in)>::type>::sk_ctnSize % sizeof(mbedtls_mpi_uint)) == 0,
+				static_assert((detail::ContainerPrpt<ContainerType>::sk_ctnSize % sizeof(mbedtls_mpi_uint)) == 0,
 					"The size of the given big number must be a factor of 8-Byte (64-bit).");
 			}
 
@@ -364,28 +370,13 @@ namespace Decent
 			 * \brief	Construct a big number by referencing an existing binary data in little-endian.
 			 * 			NOTE: REFERENCE ONLY, there is no copy operation, so make sure the referenced data's life time!
 			 *
-			 * \tparam	T   	Generic type parameter.
-			 * \tparam	size	Size of the array.
-			 * \param	in	The input.
+			 * \tparam	ContainerType	Type of the container.
+			 * \param	ctn	The input container.
 			 */
-			template<typename T, size_t size>
-			ConstBigNumber(const std::array<T, size>& in) :
-				ConstBigNumber(detail::GetPtr(in), detail::GetSize(in), sk_gen)
-			{
-				static_assert((detail::ContainerPrpt<detail::remove_cvref<decltype(in)>::type>::sk_ctnSize % sizeof(mbedtls_mpi_uint)) == 0,
-					"The size of the given big number must be a factor of 8-Byte (64-bit).");
-			}
-
-			/**
-			 * \brief	Construct a big number by referencing an existing binary data in little-endian.
-			 * 			NOTE: REFERENCE ONLY, there is no copy operation, so make sure the referenced data's life time!
-			 *
-			 * \tparam	T	Generic type parameter.
-			 * \param	in	The input.
-			 */
-			template<typename T>
-			ConstBigNumber(const std::vector<T>& in) :
-				ConstBigNumber(detail::GetPtr(in), detail::GetSize(in))
+			template<typename ContainerType,
+				typename std::enable_if<detail::ContainerPrpt<ContainerType>::sk_isSprtCtn && !detail::ContainerPrpt<ContainerType>::sk_isStaticSize, int>::type = 0>
+			ConstBigNumber(const ContainerType& ctn) :
+				ConstBigNumber(detail::GetPtr(ctn), detail::GetSize(ctn))
 			{}
 
 			ConstBigNumber(const ConstBigNumber& rhs) = delete;
@@ -450,18 +441,14 @@ namespace Decent
 		 */
 		class BigNumber : public BigNumberBase
 		{
-		public: //static members:
+		public:
 
-			/**
-			 * \brief	Generates a random number with specific size.
-			 * 
-			 * \exception: MbedTlsObj::MbedTlsException
-			 *
-			 * \param	size	The size.
-			 *
-			 * \return	The random number.
-			 */
-			static BigNumber Rand(size_t size);
+			template<class RbgType,
+				typename std::enable_if<std::is_base_of<RbgBase, RbgType>::value, int>::type = 0>
+			static inline BigNumber Rand(size_t size)
+			{
+				return BigNumber(size, detail::make_unique<RbgType>());
+			}
 
 		public:
 
@@ -506,6 +493,22 @@ namespace Decent
 			 * \param [in,out]	ref	The reference to a existing mbedTLS MPI object.
 			 */
 			BigNumber(mbedtls_mpi& ref);
+
+			/**
+			 * \brief	Constructs a random big number.
+			 *
+			 * \param [in,out]	rbg 	The Random Bit Generator.
+			 * \param 		  	size	The size of the random number, in Bytes.
+			 */
+			BigNumber(size_t size, RbgBase& rbg);
+
+			/**
+			 * \brief	Constructs a random big number.
+			 *
+			 * \param	rbg 	The Random Bit Generator.
+			 * \param	size	The size of the random number, in Bytes.
+			 */
+			BigNumber(size_t size, std::unique_ptr<RbgBase> rbg);
 
 			/**
 			 * \brief	Constructor that constructs BigNumber from uint64_t.
@@ -559,7 +562,8 @@ namespace Decent
 			 * \param	arr		  	The array.
 			 * \param	isPositive	True if is positive, false if not.
 			 */
-			template<typename ContainerType>
+			template<typename ContainerType,
+				typename std::enable_if<detail::ContainerPrpt<ContainerType>::sk_isSprtCtn, int>::type = 0>
 			BigNumber(const ContainerType& arr, bool isPositive) :
 				BigNumber(detail::GetPtr(arr), detail::GetSize(arr), isPositive)
 			{}
@@ -589,7 +593,8 @@ namespace Decent
 			 * \param	arr		  	The array.
 			 * \param	isPositive	True if is positive, false if not.
 			 */
-			template<typename ContainerType>
+			template<typename ContainerType,
+				typename std::enable_if<detail::ContainerPrpt<ContainerType>::sk_isSprtCtn, int>::type = 0>
 			BigNumber(const BigEndian&, const ContainerType& arr, bool isPositive) :
 				BigNumber(detail::GetPtr(arr), detail::GetSize(arr), sk_bigEndian, isPositive)
 			{}

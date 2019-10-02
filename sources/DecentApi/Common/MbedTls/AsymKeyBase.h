@@ -13,6 +13,8 @@ namespace Decent
 {
 	namespace MbedTlsObj
 	{
+		class RbgBase;
+
 		class AsymKeyBase : public ObjBase<mbedtls_pk_context>
 		{
 		public: //static member:
@@ -40,8 +42,8 @@ namespace Decent
 			 *
 			 * \return	The key type from context.
 			 */
-			static AsymKeyType GetKeyTypeFromContext(mbedtls_pk_context& ctx);
-			static AsymKeyType GetKeyTypeFromContext(mbedtls_ecp_keypair& ctx);
+			static AsymKeyType GetKeyTypeFromContext(mbedtls_pk_context& ctx, RbgBase& rbg);
+			static AsymKeyType GetKeyTypeFromContext(mbedtls_ecp_keypair& ctx, RbgBase& rbg);
 			static AsymKeyType GetKeyTypeFromContext(mbedtls_rsa_context& ctx);
 			static AsymKeyType GetKeyTypeFromContext(const mbedtls_pk_context& ctx);
 			static AsymKeyType GetKeyTypeFromContext(const mbedtls_ecp_keypair& ctx);
@@ -72,7 +74,7 @@ namespace Decent
 			 *
 			 * \param [in,out]	ctx	The context.
 			 */
-			static void CompletePublicKeyInContext(mbedtls_ecp_keypair& ctx);
+			static void CompletePublicKeyInContext(mbedtls_ecp_keypair& ctx, RbgBase& rbg);
 			static void CompletePublicKeyInContext(mbedtls_rsa_context& ctx);
 
 		public:

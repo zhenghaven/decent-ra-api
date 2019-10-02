@@ -1,8 +1,7 @@
-#include "Drbg.h"
+#include "RbgBase.h"
 
 #include <mbedtls/cipher.h>
 
-#include "MbedTlsCppDefs.h"
 #include "MbedTlsException.h"
 
 using namespace Decent::MbedTlsObj;
