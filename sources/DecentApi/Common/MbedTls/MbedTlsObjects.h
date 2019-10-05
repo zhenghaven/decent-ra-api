@@ -19,7 +19,6 @@ typedef struct mbedtls_entropy_context mbedtls_entropy_context;
 typedef struct mbedtls_pk_context mbedtls_pk_context;
 typedef struct mbedtls_ecp_keypair mbedtls_ecp_keypair;
 typedef struct mbedtls_x509_crt mbedtls_x509_crt;
-typedef struct mbedtls_x509_csr mbedtls_x509_csr;
 typedef struct mbedtls_x509_crl mbedtls_x509_crl;
 typedef struct mbedtls_x509_crt_profile mbedtls_x509_crt_profile;
 typedef struct mbedtls_md_info_t mbedtls_md_info_t;
@@ -34,99 +33,7 @@ namespace Decent
 	namespace MbedTlsObj
 	{
 		class Drbg;
-
-		class X509Req : public ObjBase<mbedtls_x509_csr>
-		{
-		public:
-			/**
-			* \brief	Function that frees MbedTLS object and delete the pointer.
-			*
-			* \param [in,out]	ptr	If non-null, the pointer.
-			*/
-			static void FreeObject(mbedtls_x509_csr* ptr);
-			static X509Req FromPem(const std::string & pemStr);
-
-		public:
-			X509Req(const std::string& pemStr);
-			X509Req(const AsymKeyBase& keyPair, const std::string& commonName);
-
-			X509Req(X509Req&& other) : 
-				ObjBase(std::forward<ObjBase>(other)),
-				m_pubKey(std::move(other.m_pubKey))
-			{}
-
-			X509Req(const X509Req& other) = delete;
-
-			virtual ~X509Req() {}
-
-			virtual X509Req& operator=(const X509Req& other) = delete;
-
-			virtual X509Req& operator=(X509Req&& other) noexcept
-			{
-				ObjBase::operator=(std::forward<ObjBase>(other));
-				if (this != &other)
-				{
-					m_pubKey = std::move(other.m_pubKey);
-				}
-				return *this;
-			}
-
-			virtual operator bool() const noexcept override;
-
-			bool VerifySignature() const;
-			const AsymKeyBase& GetPublicKey() const;
-
-			std::string ToPemString() const;
-
-		protected:
-			static X509Req FromPemDer(const void* ptr, size_t size);
-
-			X509Req();
-
-			X509Req(mbedtls_x509_csr* ptr, FreeFuncType freeFunc);
-
-		private:
-			AsymKeyBase m_pubKey;
-		};
-
-		class X509Crl : public ObjBase<mbedtls_x509_crl>
-		{
-		public:
-			/**
-			* \brief	Function that frees MbedTLS object and delete the pointer.
-			*
-			* \param [in,out]	ptr	If non-null, the pointer.
-			*/
-			static void FreeObject(mbedtls_x509_crl* ptr);
-
-			static X509Crl FromPem(const std::string & pemStr);
-
-		public:
-			X509Crl(const std::string& pemStr) :
-				X509Crl(FromPem(pemStr))
-			{}
-
-			X509Crl(X509Crl&& other) noexcept :
-				ObjBase(std::forward<ObjBase>(other))
-			{}
-
-			X509Crl(const X509Crl& other) = delete;
-
-			virtual ~X509Crl() {}
-
-
-			std::string ToPemString() const;
-		
-		protected:
-			static X509Crl FromPemDer(const void* ptr, size_t size);
-
-			X509Crl();
-
-			X509Crl(mbedtls_x509_crl* ptr, FreeFuncType freeFunc) :
-				ObjBase(ptr, freeFunc)
-			{}
-
-		};
+		class X509Req;
 
 		class X509Cert : public ObjBase<mbedtls_x509_crt>
 		{

@@ -15,7 +15,6 @@
 #include <mbedtls/x509.h>
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/x509_crt.h>
-#include <mbedtls/x509_crl.h>
 #include <mbedtls/base64.h>
 #include <mbedtls/entropy.h>
 
@@ -29,6 +28,7 @@
 //#include "BigNumber.h"
 #include "Drbg.h"
 #include "MbedTlsException.h"
+#include "X509Crl.h"
 
 #define CHECK_MBEDTLS_RET(VAL, FUNCSTR) {int retVal = VAL; if(retVal != MBEDTLS_SUCCESS_RET) { throw MbedTlsException(#FUNCSTR, retVal); } }
 
@@ -37,12 +37,8 @@ using namespace Decent;
 
 namespace
 {
-	static constexpr char const PEM_BEGIN_CSR[] = "-----BEGIN CERTIFICATE REQUEST-----\n";
-	static constexpr char const PEM_END_CSR[] = "-----END CERTIFICATE REQUEST-----\n";
 	static constexpr char const PEM_BEGIN_CRT[] = "-----BEGIN CERTIFICATE-----\n";
 	static constexpr char const PEM_END_CRT[] = "-----END CERTIFICATE-----\n";
-	static constexpr char const PEM_BEGIN_CRL[] = "-----BEGIN X509 CRL-----\n";
-	static constexpr char const PEM_END_CRL[] = "-----END X509 CRL-----\n";
 
 	static constexpr size_t X509_REQ_DER_MAX_BYTES = 4096; //From x509write_csr.c
 	static constexpr size_t X509_CRT_DER_MAX_BYTES = 4096; //From x509write_crt.c
@@ -56,131 +52,8 @@ namespace
 			1;                   //null terminator
 	}
 
-	static constexpr size_t X509_REQ_PEM_MAX_BYTES =
-		CalcPemMaxBytes(X509_REQ_DER_MAX_BYTES, sizeof(PEM_BEGIN_CSR) - 1, sizeof(PEM_END_CSR) - 1);
-
 	static constexpr size_t X509_CRT_PEM_MAX_BYTES =
 		CalcPemMaxBytes(X509_CRT_DER_MAX_BYTES, sizeof(PEM_BEGIN_CRT) - 1, sizeof(PEM_END_CRT) - 1);
-}
-
-X509Req X509Req::FromPemDer(const void* ptr, size_t size)
-{
-	X509Req res;
-
-	const uint8_t* ptrByte = static_cast<const uint8_t*>(ptr);
-	if(mbedtls_x509_csr_parse(res.Get(), ptrByte, size) != MBEDTLS_SUCCESS_RET)
-	{
-		return X509Req(nullptr, &ObjBase::DoNotFree);
-	}
-
-	return res;
-}
-
-X509Req X509Req::FromPem(const std::string & pemStr)
-{
-	return FromPemDer(pemStr.c_str(), pemStr.size() + 1);
-}
-
-static const std::string CreateX509Pem(const AsymKeyBase & keyPair, const std::string& commonName)
-{
-	if (!keyPair)
-	{
-		return std::string();
-	}
-
-	mbedtls_x509write_csr csr;
-	mbedtls_x509write_csr_init(&csr);
-
-	mbedtls_x509write_csr_set_key(&csr, keyPair.GetMutable());
-	mbedtls_x509write_csr_set_md_alg(&csr, MBEDTLS_MD_SHA256);
-	if (mbedtls_x509write_csr_set_subject_name(&csr, ("CN=" + commonName).c_str()) != MBEDTLS_SUCCESS_RET)
-	{
-		mbedtls_x509write_csr_free(&csr);
-		return std::string();
-	}
-
-	Drbg drbg;
-
-	std::vector<char> tmpRes(X509_REQ_PEM_MAX_BYTES);
-	int mbedRet = mbedtls_x509write_csr_pem(&csr, 
-		reinterpret_cast<unsigned char*>(tmpRes.data()), tmpRes.size(), 
-		&Drbg::CallBack, &drbg);
-
-	mbedtls_x509write_csr_free(&csr);
-	return mbedRet == MBEDTLS_SUCCESS_RET ? std::string(tmpRes.data()) : std::string();
-}
-
-X509Req::X509Req(const std::string & pemStr) :
-	X509Req(FromPem(pemStr))
-{
-}
-
-void X509Req::FreeObject(mbedtls_x509_csr * ptr)
-{
-	mbedtls_x509_csr_free(ptr);
-	delete ptr;
-}
-
-X509Req::X509Req(const AsymKeyBase & keyPair, const std::string& commonName) :
-	X509Req(CreateX509Pem(keyPair, commonName))
-{
-}
-
-X509Req::operator bool() const noexcept
-{
-	return ObjBase::operator bool() && m_pubKey;
-}
-
-bool X509Req::VerifySignature() const
-{
-	if (!*this)
-	{
-		return false;
-	}
-
-	const mbedtls_md_info_t *mdInfo = mbedtls_md_info_from_type(Get()->sig_md);
-	unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-
-	bool verifyRes = 
-		(mbedtls_md(mdInfo, Get()->cri.p, Get()->cri.len, hash) == MBEDTLS_SUCCESS_RET) &&
-		(mbedtls_pk_verify_ext(Get()->sig_pk, Get()->sig_opts, &GetMutable()->pk,
-			Get()->sig_md, hash, mbedtls_md_get_size(mdInfo),
-			Get()->sig.p, Get()->sig.len) == MBEDTLS_SUCCESS_RET);
-
-	return verifyRes;
-}
-
-const AsymKeyBase & X509Req::GetPublicKey() const
-{
-	return m_pubKey;
-}
-
-std::string X509Req::ToPemString() const
-{
-	size_t useLen = CalcPemMaxBytes(Get()->raw.len, sizeof(PEM_BEGIN_CSR) - 1, sizeof(PEM_END_CSR) - 1);
-	
-	std::string res(useLen, 0);
-	if (mbedtls_pem_write_buffer(PEM_BEGIN_CSR, PEM_END_CSR, Get()->raw.p, Get()->raw.len, 
-		reinterpret_cast<uint8_t*>(&res[0]), res.size(), &useLen) != MBEDTLS_SUCCESS_RET)
-	{
-		return std::string();
-	}
-
-	res.pop_back();
-	return res;
-}
-
-X509Req::X509Req() :
-	ObjBase(new mbedtls_x509_csr, &FreeObject),
-	m_pubKey(Get()->pk)
-{
-	mbedtls_x509_csr_init(Get());
-}
-
-X509Req::X509Req(mbedtls_x509_csr * ptr, FreeFuncType freeFunc) :
-	ObjBase(ptr, freeFunc),
-	m_pubKey(ptr ? ptr->pk : AsymKeyBase())
-{
 }
 
 static int x509_write_time(unsigned char **p, unsigned char *start,
@@ -682,51 +555,6 @@ void X509Cert::SwitchToFirstCert()
 		m_pubKey = AsymKeyBase(Get()->pk);
 		m_certStack.clear();
 	}
-}
-
-X509Crl X509Crl::FromPemDer(const void* ptr, size_t size)
-{
-	X509Crl res;
-	const uint8_t* ptrByte = static_cast<const uint8_t*>(ptr);
-
-	if (mbedtls_x509_crl_parse(res.Get(), ptrByte, size) != MBEDTLS_SUCCESS_RET)
-	{
-		return X509Crl(nullptr, &ObjBase::DoNotFree);
-	}
-
-	return res;
-}
-
-X509Crl X509Crl::FromPem(const std::string & pemStr)
-{
-	return FromPemDer(pemStr.c_str(), pemStr.size() + 1);
-}
-
-void X509Crl::FreeObject(mbedtls_x509_crl * ptr)
-{
-	mbedtls_x509_crl_free(ptr);
-	delete ptr;
-}
-
-std::string X509Crl::ToPemString() const
-{
-	size_t useLen = CalcPemMaxBytes(Get()->raw.len, sizeof(PEM_BEGIN_CRL) - 1, sizeof(PEM_END_CRL) - 1);
-
-	std::string res(useLen, 0);
-	if (mbedtls_pem_write_buffer(PEM_BEGIN_CRL, PEM_END_CRL, Get()->raw.p, Get()->raw.len,
-		reinterpret_cast<uint8_t*>(&res[0]), res.size(), &useLen) != MBEDTLS_SUCCESS_RET)
-	{
-		return std::string();
-	}
-
-	res.pop_back();
-	return res;
-}
-
-X509Crl::X509Crl() :
-	ObjBase(new mbedtls_x509_crl, &FreeObject)
-{
-	mbedtls_x509_crl_init(Get());
 }
 
 void EntropyCtx::FreeObject(mbedtls_entropy_context * ptr)

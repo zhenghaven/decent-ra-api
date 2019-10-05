@@ -14,9 +14,9 @@
 
 #include "RaReport.h"
 
-using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Tools;
+using namespace Decent::MbedTlsObj;
 
 namespace
 {
@@ -48,39 +48,22 @@ std::string Decent::Ra::GetHashFromAppId(const std::string & platformType, const
 	return std::string();
 }
 
-X509Req::X509Req(const std::string & pemStr) :
-	MbedTlsObj::X509Req(pemStr),
-	m_ecPubKey(Get()->pk)
-{
-}
-
-X509Req::X509Req(const MbedTlsObj::EcPublicKeyBase & keyPair, const std::string & commonName) :
-	MbedTlsObj::X509Req(keyPair, commonName),
-	m_ecPubKey(Get()->pk)
-{
-}
-
-X509Req::operator bool() const noexcept
-{
-	return MbedTlsObj::X509Req::operator bool() && m_ecPubKey;
-}
-
 ServerX509::ServerX509(const std::string & pemStr) :
-	MbedTlsObj::X509Cert(pemStr),
+	X509Cert(pemStr),
 	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
 ServerX509::ServerX509(mbedtls_x509_crt & cert) :
-	MbedTlsObj::X509Cert(cert),
+	X509Cert(cert),
 	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
-ServerX509::ServerX509(const MbedTlsObj::EcKeyPairBase & prvKey, const std::string & enclaveHash, const std::string & platformType, const std::string & selfRaReport) :
-	MbedTlsObj::X509Cert(prvKey, MbedTlsObj::BigNumber::Rand<MbedTlsObj::Drbg>(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
+ServerX509::ServerX509(const EcKeyPairBase & prvKey, const std::string & enclaveHash, const std::string & platformType, const std::string & selfRaReport) :
+	X509Cert(prvKey, BigNumber::Rand<Drbg>(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
 		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
 		MBEDTLS_X509_NS_CERT_TYPE_SSL_CA | MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT | MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER,
 		("CN=" + enclaveHash).c_str(),
@@ -112,34 +95,34 @@ void ServerX509::ParseExtensions()
 
 ServerX509::operator bool() const noexcept
 {
-	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_selfRaReport.size() > 0;
+	return X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_selfRaReport.size() > 0;
 }
 
 AppX509::AppX509(const std::string & pemStr) :
-	MbedTlsObj::X509Cert(pemStr),
+	X509Cert(pemStr),
 	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
 AppX509::AppX509(mbedtls_x509_crt & cert) :
-	MbedTlsObj::X509Cert(cert),
+	X509Cert(cert),
 	m_ecPubKey(Get()->pk)
 {
 	ParseExtensions();
 }
 
-AppX509::AppX509(const MbedTlsObj::EcPublicKeyBase & pubKey,
-	const ServerX509 & caCert, const MbedTlsObj::EcKeyPairBase & serverPrvKey, 
+AppX509::AppX509(const EcPublicKeyBase & pubKey,
+	const ServerX509 & caCert, const EcKeyPairBase & serverPrvKey, 
 	const std::string & enclaveHash, const std::string & platformType, const std::string & appId, const std::string& whiteList) :
-	AppX509(pubKey, static_cast<const MbedTlsObj::X509Cert &>(caCert), serverPrvKey, enclaveHash, platformType, appId, whiteList)
+	AppX509(pubKey, static_cast<const X509Cert &>(caCert), serverPrvKey, enclaveHash, platformType, appId, whiteList)
 {
 }
 
-AppX509::AppX509(const MbedTlsObj::EcPublicKeyBase & pubKey,
-	const MbedTlsObj::X509Cert & caCert, const MbedTlsObj::EcKeyPairBase & serverPrvKey, 
+AppX509::AppX509(const EcPublicKeyBase & pubKey,
+	const X509Cert & caCert, const EcKeyPairBase & serverPrvKey, 
 	const std::string & commonName, const std::string & platformType, const std::string & appId, const std::string & whiteList) :
-	MbedTlsObj::X509Cert(caCert, serverPrvKey, pubKey, MbedTlsObj::BigNumber::Rand<MbedTlsObj::Drbg>(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
+	X509Cert(caCert, serverPrvKey, pubKey, BigNumber::Rand<Drbg>(GENERAL_256BIT_32BYTE_SIZE), gsk_apprOneHundYears, true, -1,
 		MBEDTLS_X509_KU_NON_REPUDIATION | MBEDTLS_X509_KU_DIGITAL_SIGNATURE | MBEDTLS_X509_KU_KEY_AGREEMENT | MBEDTLS_X509_KU_KEY_CERT_SIGN | MBEDTLS_X509_KU_CRL_SIGN,
 		MBEDTLS_X509_NS_CERT_TYPE_SSL_CA | MBEDTLS_X509_NS_CERT_TYPE_SSL_CLIENT | MBEDTLS_X509_NS_CERT_TYPE_SSL_SERVER,
 		("CN=" + commonName).c_str(),
@@ -158,7 +141,7 @@ AppX509::AppX509(const MbedTlsObj::EcPublicKeyBase & pubKey,
 
 AppX509::operator bool() const noexcept
 {
-	return MbedTlsObj::X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0;
+	return X509Cert::operator bool() && m_ecPubKey && m_platformType.size() > 0 && m_appId.size() > 0;
 }
 
 void AppX509::ParseExtensions()

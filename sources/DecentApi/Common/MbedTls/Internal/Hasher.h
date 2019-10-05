@@ -26,6 +26,23 @@ namespace Decent
 					throw MbedTlsObj::RuntimeException("Invalid hash type is given!");
 				}
 			}
+
+			inline constexpr HashType GetMsgDigestType(mbedtls_md_type_t type)
+			{
+				switch (type)
+				{
+				case mbedtls_md_type_t::MBEDTLS_MD_SHA224:
+					return HashType::SHA224;
+				case mbedtls_md_type_t::MBEDTLS_MD_SHA256:
+					return HashType::SHA256;
+				case mbedtls_md_type_t::MBEDTLS_MD_SHA384:
+					return HashType::SHA384;
+				case mbedtls_md_type_t::MBEDTLS_MD_SHA512:
+					return HashType::SHA512;
+				default:
+					throw MbedTlsObj::RuntimeException("Invalid hash type is given!");
+				}
+			}
 		}
 	}
 }

@@ -7,6 +7,12 @@
 
 namespace Decent
 {
+	namespace MbedTlsObj
+	{
+		class EcKeyPairBase;
+		class EcPublicKeyBase;
+	}
+
 	namespace Ra
 	{
 		constexpr char const gsk_x509PlatformTypeOid[] = "2.25.294010332531314719175946865483017979201";
@@ -17,41 +23,6 @@ namespace Decent
 		const mbedtls_x509_crt_profile& GetX509Profile();
 
 		std::string GetHashFromAppId(const std::string& platformType, const std::string& appIdStr);
-
-		class X509Req : public MbedTlsObj::X509Req
-		{
-		public:
-			X509Req() = delete;
-			X509Req(const std::string& pemStr);
-			X509Req(const MbedTlsObj::EcPublicKeyBase& keyPair, const std::string& commonName);
-
-			X509Req(X509Req&& other) :
-				MbedTlsObj::X509Req(std::forward<MbedTlsObj::X509Req>(other)),
-				m_ecPubKey(std::move(other.m_ecPubKey))
-			{}
-
-			X509Req(const X509Req& other) = delete;
-			virtual ~X509Req() {}
-
-			virtual X509Req& operator=(const X509Req& other) = delete;
-
-			virtual X509Req& operator=(X509Req&& other) noexcept
-			{
-				MbedTlsObj::X509Req::operator=(std::forward<MbedTlsObj::X509Req>(other));
-				if (this != &other)
-				{
-					m_ecPubKey = std::move(other.m_ecPubKey);
-				}
-				return *this;
-			}
-
-			virtual operator bool() const noexcept override;
-
-			const MbedTlsObj::EcPublicKeyBase& GetEcPublicKey() const { return m_ecPubKey; }
-
-		private:
-			MbedTlsObj::EcPublicKeyBase m_ecPubKey;
-		};
 
 		class ServerX509 : public MbedTlsObj::X509Cert
 		{

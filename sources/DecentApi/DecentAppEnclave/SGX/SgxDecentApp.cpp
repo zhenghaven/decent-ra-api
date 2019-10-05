@@ -10,8 +10,14 @@
 #include "../../CommonEnclave/Ra/TlsConfigSameEnclave.h"
 
 #include "../../Common/Common.h"
+
 #include "../../Common/Tools/DataCoding.h"
+
+#include "../../Common/MbedTls/Drbg.h"
+#include "../../Common/MbedTls/EcKey.h"
+
 #include "../../Common/Ra/Crypto.h"
+#include "../../Common/Ra/AppX509Req.h"
 #include "../../Common/Ra/KeyContainer.h"
 #include "../../Common/Ra/WhiteList/LoadedList.h"
 #include "../../Common/Ra/WhiteList/DecentServer.h"
@@ -19,9 +25,10 @@
 #include "../AppStatesSingleton.h"
 #include "../AppCertContainer.h"
 
-using namespace Decent;
 using namespace Decent::Net;
 using namespace Decent::Ra;
+using namespace Decent::Tools;
+using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra::WhiteList;
 
 namespace
@@ -55,22 +62,19 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 	{
 		const KeyContainer& keyContainer = gs_appStates.GetKeyContainer();
 
-		PRINT_I("Initializing Decent App with hash:    %s\n", Tools::GetSelfHashBase64().c_str());
-		PRINT_I("                      & with pub key: %s\n", Tools::SerializeStruct(*keyContainer.GetSignPubKey()).c_str());
+		PRINT_I("Initializing Decent App with hash:    %s\n", GetSelfHashBase64().c_str());
+		PRINT_I("                      & with pub key: %s\n", SerializeStruct(*keyContainer.GetSignPubKey()).c_str());
 
 		EnclaveCntTranslator cnt(connection);
 		Decent::Sgx::LocAttCommLayer commLayer(cnt, false);
 		commLayer.SetConnectionPtr(cnt);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
-		std::shared_ptr<const MbedTlsObj::EcKeyPairBase> signKeyPair = keyContainer.GetSignKeyPair();
-		X509Req certReq(*signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
-		if (!certReq)
-		{
-			return SGX_ERROR_UNEXPECTED;
-		}
+		EcKeyPair<EcKeyType::SECP256R1> signKeyPair = *keyContainer.GetSignKeyPair();
+		AppX509ReqWriter certReqWrt(HashType::SHA256, signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 
-		commLayer.SendContainer(certReq.ToPemString());
+		Drbg drbg;
+		commLayer.SendContainer(certReqWrt.GeneratePem(drbg));
 		std::string plainMsg = commLayer.RecvContainer<std::string>();
 
 		//Process X509 Message:
@@ -87,7 +91,7 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 		gs_appStates.GetAppCertContainer().SetAppCert(cert);
 
-		TlsConfigSameEnclave tlsCfg(gs_appStates, TlsConfig::Mode::ClientHasCert, nullptr);
+		TlsConfigSameEnclave tlsCfg(gs_appStates, Decent::Ra::TlsConfig::Mode::ClientHasCert, nullptr);
 		//if (!cert->Verify(, nullptr, nullptr, &TlsConfigSameEnclave::CertVerifyCallBack, tlsCfg))
 		//{
 		//	PRINT_I("Could not verify the identity of the Decent Server.");

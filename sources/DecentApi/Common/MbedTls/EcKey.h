@@ -128,8 +128,19 @@ namespace Decent
 			static void CheckHasPublicKey(const mbedtls_ecp_keypair& ctx);
 
 		public:
-			EcPublicKeyBase(const EcPublicKeyBase& rhs) = delete;
 
+			/**
+			 * \brief	Copy constructor
+			 *
+			 * \param	rhs	The right hand side.
+			 */
+			EcPublicKeyBase(const EcPublicKeyBase& rhs);
+
+			/**
+			 * \brief	Move constructor
+			 *
+			 * \param [in,out]	rhs	The right hand side.
+			 */
 			EcPublicKeyBase(EcPublicKeyBase&& rhs);
 
 			/**
@@ -276,13 +287,6 @@ namespace Decent
 			virtual std::vector<uint8_t> GetPublicDer() const override;
 
 			/**
-			 * \brief	Gets public key encoded in PEM
-			 *
-			 * \return	The PEM encoded public key stored in string.
-			 */
-			virtual std::string GetPublicPem() const override;
-
-			/**
 			 * \brief	Verify signature.
 			 *
 			 * \tparam	containerType	Type of the container for the hash.
@@ -336,7 +340,12 @@ namespace Decent
 		public:
 			EcKeyPairBase() = delete;
 
-			EcKeyPairBase(const EcKeyPairBase& rhs) = delete;
+			/**
+			 * \brief	Copy constructor
+			 *
+			 * \param	rhs	The right hand side.
+			 */
+			EcKeyPairBase(const EcKeyPairBase& rhs);
 
 			/**
 			 * \brief	Move constructor
@@ -479,13 +488,6 @@ namespace Decent
 			virtual void GetPrivateDer(std::vector<uint8_t>& out) const;
 
 			/**
-			 * \brief	Gets private key encoded in PEM
-			 *
-			 * \param [in,out]	out	The output.
-			 */
-			virtual void GetPrivatePem(std::string& out) const;
-
-			/**
 			 * \brief	Verify signature.
 			 *
 			 * \tparam	containerHType	Type of the container for the hash.
@@ -576,7 +578,9 @@ namespace Decent
 		public:
 			EcPublicKey() = delete;
 
-			EcPublicKey(const EcPublicKey& rhs) = delete;
+			EcPublicKey(const EcPublicKey& rhs) :
+				EcPublicKeyBase(rhs)
+			{}
 
 			EcPublicKey(EcPublicKey&& rhs) :
 				EcPublicKeyBase(std::forward<EcPublicKeyBase>(rhs))
@@ -643,13 +647,6 @@ namespace Decent
 				return AsymKeyBase::GetPublicDer(maxPubDerSize);
 			}
 
-			virtual std::string GetPublicPem() const override
-			{
-				static constexpr size_t maxPubDerSize = detail::CalcEcpPubDerSize(GetCurveByteSize(ecType));
-				static constexpr size_t maxPubPemSize = detail::CalcEcpPemMaxBytes(maxPubDerSize, detail::PEM_EC_PUBLIC_HEADER_SIZE, detail::PEM_EC_PUBLIC_FOOTER_SIZE);
-				return AsymKeyBase::GetPublicPem(maxPubPemSize);
-			}
-
 			template<typename containerType,
 				typename containerRType,
 				typename containerSType,
@@ -678,7 +675,9 @@ namespace Decent
 		public:
 			EcKeyPair() = delete;
 
-			EcKeyPair(const EcKeyPair& rhs) = delete;
+			EcKeyPair(const EcKeyPair& rhs) :
+				EcKeyPairBase(rhs)
+			{}
 
 			EcKeyPair(EcKeyPair&& rhs) :
 				EcKeyPairBase(std::forward<EcKeyPairBase>(rhs))
@@ -774,26 +773,10 @@ namespace Decent
 				return AsymKeyBase::GetPublicDer(maxPubDerSize);
 			}
 
-			virtual std::string GetPublicPem() const override
-			{
-				using namespace detail;
-				static constexpr size_t maxPubDerSize = CalcEcpPubDerSize(GetCurveByteSize(ecType));
-				static constexpr size_t maxPubPemSize = CalcEcpPemMaxBytes(maxPubDerSize, PEM_EC_PUBLIC_HEADER_SIZE, PEM_EC_PUBLIC_FOOTER_SIZE);
-				return AsymKeyBase::GetPublicPem(maxPubPemSize);
-			}
-
 			virtual void GetPrivateDer(std::vector<uint8_t>& out) const override
 			{
 				static constexpr size_t maxPrvDerSize = detail::CalcEcpPrvDerSize(GetCurveByteSize(ecType));
 				return AsymKeyBase::GetPrivateDer(out, maxPrvDerSize);
-			}
-
-			virtual void GetPrivatePem(std::string& out) const override
-			{
-				using namespace detail;
-				static constexpr size_t maxPrvDerSize = CalcEcpPrvDerSize(GetCurveByteSize(ecType));
-				static constexpr size_t maxPrvPemSize = CalcEcpPemMaxBytes(maxPrvDerSize, PEM_EC_PRIVATE_HEADER_SIZE, PEM_EC_PRIVATE_FOOTER_SIZE);
-				return AsymKeyBase::GetPrivatePem(out, maxPrvPemSize);
 			}
 
 			template<typename containerType,

@@ -133,6 +133,19 @@ void EcPublicKeyBase::CheckHasPublicKey(const mbedtls_ecp_keypair & ctx)
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_check_pubkey, &ctx.grp, &ctx.Q);
 }
 
+EcPublicKeyBase::EcPublicKeyBase(const EcPublicKeyBase & rhs) :
+	EcPublicKeyBase()
+{
+	if (!rhs.IsNull())
+	{
+		auto& rhsEcCtx = rhs.GetEcContext();
+		auto& ecCtx = GetEcContext();
+
+		CALL_MBEDTLS_C_FUNC(mbedtls_ecp_group_copy, &ecCtx.grp, &rhsEcCtx.grp);
+		CALL_MBEDTLS_C_FUNC(mbedtls_ecp_copy, &ecCtx.Q, &rhsEcCtx.Q);
+	}
+}
+
 EcPublicKeyBase::EcPublicKeyBase(EcPublicKeyBase && rhs) :
 	AsymKeyBase(std::forward<AsymKeyBase>(rhs))
 {
@@ -282,11 +295,6 @@ std::vector<uint8_t> EcPublicKeyBase::GetPublicDer() const
 	return AsymKeyBase::GetPublicDer(detail::ECP_PUB_DER_MAX_BYTES);
 }
 
-std::string EcPublicKeyBase::GetPublicPem() const
-{
-	return AsymKeyBase::GetPublicPem(detail::ECP_PUB_PEM_MAX_BYTES);
-}
-
 void EcPublicKeyBase::VerifySign(const void * hashBuf, size_t hashSize, const BigNumberBase & r, const BigNumberBase & s) const
 {
 	auto& ecCtx = GetEcContext();
@@ -310,6 +318,18 @@ void EcPublicKeyBase::ToPublicBinary(void * xPtr, size_t xSize, void * yPtr, siz
 void EcKeyPairBase::CheckHasPrivateKey(const mbedtls_ecp_keypair & ctx)
 {
 	CALL_MBEDTLS_C_FUNC(mbedtls_ecp_check_privkey, &ctx.grp, &ctx.d)
+}
+
+EcKeyPairBase::EcKeyPairBase(const EcKeyPairBase & rhs) :
+	EcPublicKeyBase(rhs)
+{
+	if (!rhs.IsNull())
+	{
+		auto& rhsEcCtx = rhs.GetEcContext();
+		auto& ecCtx = GetEcContext();
+
+		CALL_MBEDTLS_C_FUNC(mbedtls_mpi_copy, &ecCtx.d, &rhsEcCtx.d);
+	}
 }
 
 EcKeyPairBase::EcKeyPairBase(EcKeyPairBase && rhs) :
@@ -416,11 +436,6 @@ AsymKeyType EcKeyPairBase::GetKeyType() const
 void EcKeyPairBase::GetPrivateDer(std::vector<uint8_t>& out) const
 {
 	return AsymKeyBase::GetPrivateDer(out, detail::ECP_PUB_DER_MAX_BYTES);
-}
-
-void EcKeyPairBase::GetPrivatePem(std::string & out) const
-{
-	return AsymKeyBase::GetPrivatePem(out, detail::ECP_PRV_PEM_MAX_BYTES);
 }
 
 void EcKeyPairBase::Sign(HashType hashType, const void * hashBuf, size_t hashSize, BigNumber & r, BigNumber & s, RbgBase& rbg) const

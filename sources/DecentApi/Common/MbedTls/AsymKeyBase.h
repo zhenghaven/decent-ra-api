@@ -77,6 +77,10 @@ namespace Decent
 			static void CompletePublicKeyInContext(mbedtls_ecp_keypair& ctx, RbgBase& rbg);
 			static void CompletePublicKeyInContext(mbedtls_rsa_context& ctx);
 
+			static size_t EstimatePublicKeyDerSize(const mbedtls_pk_context& key);
+			static size_t EstimatePrivateKeyDerSize(const mbedtls_pk_context& key);
+			static size_t EstimateDerSignatureSize(const mbedtls_pk_context& ctx, size_t hashLen);
+
 		public:
 
 			/** \brief	Default constructor. Constructs a non-null, initialized, but empty Public Key context. */
@@ -190,13 +194,13 @@ namespace Decent
 
 			virtual void VrfyDerSignNoBufferCheck(HashType hashType, const void* hashBuf, size_t hashSize, const void* signBuf, size_t signSize) const;
 
-			virtual std::vector<uint8_t> GetPublicDer(size_t maxBufSize) const;
+			virtual std::vector<uint8_t> GetPublicDer(size_t maxDerBufSize) const;
 
-			virtual std::string GetPublicPem(size_t maxBufSize) const;
+			virtual std::string GetPublicPem(size_t maxDerBufSize) const;
 
-			virtual void GetPrivateDer(std::vector<uint8_t>& out, size_t maxBufSize) const;
+			virtual void GetPrivateDer(std::vector<uint8_t>& out, size_t maxDerBufSize) const;
 
-			virtual void GetPrivatePem(std::string& out, size_t maxBufSize) const;
+			virtual void GetPrivatePem(std::string& out, size_t maxDerBufSize) const;
 		};
 	}
 }
