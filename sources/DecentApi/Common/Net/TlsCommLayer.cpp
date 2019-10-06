@@ -3,19 +3,20 @@
 #include <memory>
 
 #include <mbedtls/ssl.h>
+#include <mbedtls/x509_crt.h>
 
 #include "../Common.h"
 #include "../make_unique.h"
 
-#include "../MbedTls/MbedTlsObjects.h"
-#include "../MbedTls/TlsConfig.h"
 #include "../MbedTls/Session.h"
+#include "../MbedTls/X509Cert.h"
+#include "../MbedTls/TlsConfig.h"
+#include "../MbedTls/AsymKeyBase.h"
 #include "../MbedTls/MbedTlsException.h"
 
 #include "NetworkException.h"
 #include "ConnectionBase.h"
 
-using namespace Decent;
 using namespace Decent::Net;
 using namespace Decent::MbedTlsObj;
 
@@ -32,7 +33,7 @@ namespace
 	}
 }
 
-TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig> tlsConfig, bool reqPeerCert, std::shared_ptr<const MbedTlsObj::Session> session) :
+TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig> tlsConfig, bool reqPeerCert, std::shared_ptr<const Session> session) :
 	m_sslCtx(Tools::make_unique<mbedtls_ssl_context>()),
 	m_tlsConfig(tlsConfig)
 {
@@ -161,9 +162,9 @@ void TlsCommLayer::SetConnectionPtr(ConnectionBase& cnt)
 	mbedtls_ssl_set_bio(m_sslCtx.get(), &cnt, &MbedTlsSslSend, &MbedTlsSslRecv, nullptr);
 }
 
-std::shared_ptr<MbedTlsObj::Session> TlsCommLayer::GetSessionCopy() const
+std::shared_ptr<Session> TlsCommLayer::GetSessionCopy() const
 {
-	std::shared_ptr<MbedTlsObj::Session> res = std::make_shared<MbedTlsObj::Session>();
+	std::shared_ptr<Session> res = std::make_shared<Session>();
 	CALL_MBEDTLS_C_FUNC(mbedtls_ssl_get_session, m_sslCtx.get(), res->Get());
 	return res;
 }
@@ -177,7 +178,7 @@ std::string TlsCommLayer::GetPeerCertPem() const
 		throw ConnectionNotEstablished();
 	}
 	//We just need the non-const pointer, and then we will return the PEM string.
-	return Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).ToPemString();
+	return X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).GetCurrPem();
 }
 
 std::string TlsCommLayer::GetPublicKeyPem() const
@@ -189,7 +190,8 @@ std::string TlsCommLayer::GetPublicKeyPem() const
 		throw ConnectionNotEstablished();
 	}
 	//We just need the non-const pointer, and then we will return the PEM string.
-	return Decent::MbedTlsObj::X509Cert(*const_cast<mbedtls_x509_crt*>(crtPtr)).GetPublicKey().GetPublicPem();
+	
+	return AsymKeyBase(const_cast<mbedtls_pk_context&>(crtPtr->pk)).GetPublicPem();
 }
 
 bool TlsCommLayer::IsValid() const

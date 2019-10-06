@@ -14,7 +14,7 @@
 #include "../../Tools/JsonTools.h"
 #include "../../MbedTls/Hasher.h"
 
-#include "../Crypto.h"
+#include "../AppX509Cert.h"
 
 using namespace Decent::Ra;
 using namespace Decent::Tools;
@@ -95,7 +95,7 @@ LoadedList::LoadedList(LoadedList&& rhs) :
 	m_listHash(std::forward<std::string>(rhs.m_listHash))
 {}
 
-LoadedList::LoadedList(const AppX509& certPtr) :
+LoadedList::LoadedList(const AppX509Cert& certPtr) :
 	LoadedList(certPtr.GetWhiteList())
 {
 }

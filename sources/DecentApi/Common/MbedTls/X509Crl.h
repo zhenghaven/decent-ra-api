@@ -13,7 +13,7 @@ namespace Decent
 	{
 		class X509Crl : public ObjBase<mbedtls_x509_crl>
 		{
-		public:
+		public: //static member:
 			/**
 			* \brief	Function that frees MbedTLS object and delete the pointer.
 			*

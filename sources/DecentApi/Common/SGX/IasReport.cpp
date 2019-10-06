@@ -3,6 +3,8 @@
 #include <map>
 #include <string>
 
+#include <mbedtls/x509_crt.h>
+
 #include <cppcodec/hex_default_upper.hpp>
 #include <cppcodec/base64_rfc4648.hpp>
 
@@ -14,10 +16,15 @@
 
 #include "../Common.h"
 #include "../consttime_memequal.h"
+#include "../GeneralKeyTypes.h"
+
 #include "../Tools/JsonTools.h"
 #include "../Tools/DataCoding.h"
-#include "../MbedTls/MbedTlsObjects.h"
+
 #include "../MbedTls/Hasher.h"
+#include "../MbedTls/X509Cert.h"
+#include "../MbedTls/AsymKeyBase.h"
+
 #include "IasReportCert.h"
 #include "sgx_structs.h"
 
@@ -166,6 +173,18 @@ namespace
 	constexpr char const gsk_repLblNonce[]     = "nonce";
 	constexpr char const gsk_repLblEpidPsy[]   = "epidPseudonym";
 	constexpr char const gsk_repLblQuoteBody[] = "isvEnclaveQuoteBody";
+
+	const mbedtls_x509_crt_profile gsk_iasVrfyProfile =
+	{
+		MBEDTLS_X509_ID_FLAG(MBEDTLS_MD_SHA256) |
+		MBEDTLS_X509_ID_FLAG(MBEDTLS_MD_SHA384),
+
+		0xFFFFFFF, /* Any PK alg    */
+
+		0, /* No EC Curve */
+
+		2048,
+	};
 }
 
 #define REP_STAT_EQ_QOT(status, value) (status == static_cast<uint8_t>(IasQuoteStatus::value))
@@ -298,15 +317,12 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 {
 	using namespace Decent::MbedTlsObj;
 
-	MbedTlsObj::X509Cert trustedIasCert(Ias::gsk_IasReportCert);
-	MbedTlsObj::X509Cert reportCertChain(reportCert);
+	X509Cert trustedIasCert(Ias::gsk_IasReportCert);
+	X509Cert reportCertChain(reportCert);
 
 	//Verify the certificate chain came from the report.
-	if (!reportCertChain.Verify(trustedIasCert, nullptr, nullptr, nullptr, nullptr))
-	{
-		//LOGI("Certificate chain came from the report is invalid!");
-		return false;
-	}
+	uint32_t flags = 0;
+	reportCertChain.VerifyChainWithCa(trustedIasCert, nullptr, nullptr, flags, gsk_iasVrfyProfile, nullptr, nullptr);
 
 	std::vector<uint8_t> signBinBuf = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
 
@@ -314,16 +330,17 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 	Hasher<HashType::SHA256>().Calc(hash, iasReportStr);
 
 	bool signVerRes = false;
+	reportCertChain.GoToLastCert();
 	do
 	{
 		try
 		{
-			reportCertChain.GetPublicKey().VerifyDerSign(HashType::SHA256, hash, signBinBuf);
+			AsymKeyBase(reportCertChain.GetCurrPublicKey()).VerifyDerSign(HashType::SHA256, hash, signBinBuf);
 			signVerRes = true;
 		}
 		catch (const std::exception&)
 		{}
-	} while (!signVerRes && reportCertChain.NextCert());
+	} while (!signVerRes && reportCertChain.PrevCert());
 
 	if (!signVerRes)
 	{

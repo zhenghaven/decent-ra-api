@@ -9,7 +9,7 @@ namespace Decent
 {
 	namespace Ra
 	{
-		class ServerX509;
+		class ServerX509Cert;
 		class States;
 		
 		namespace WhiteList
@@ -38,7 +38,7 @@ namespace Decent
 				 * \return	True if it the given certificate has been accepted before, or is accepted first time
 				 * 			and the node is added to the white list, otherwise, false is returned.
 				 */
-				virtual bool AddTrustedNode(States& decentState, const ServerX509& cert);
+				virtual bool AddTrustedNode(States& decentState, const ServerX509Cert& cert);
 
 				/**
 				 * \brief	Query if a public key held by a Decent Server is existing in the trusted Decent
@@ -84,7 +84,7 @@ namespace Decent
 				 *
 				 * \return	True if it succeeds, false if it fails.
 				 */
-				virtual bool VerifyCertFirstTime(States& decentState, const ServerX509& cert, const std::string& pubKeyPem, std::string& serverHash, report_timestamp_t& timestamp);
+				virtual bool VerifyCertFirstTime(States& decentState, const ServerX509Cert& cert, const std::string& pubKeyPem, std::string& serverHash, report_timestamp_t& timestamp);
 
 				/**
 				 * \brief	Verify the certificate as it has been verified before with the VerifyCertFirstTime.
@@ -97,7 +97,7 @@ namespace Decent
 				 *
 				 * \return	True if it succeeds, false if it fails.
 				 */
-				virtual bool VerifyCertAfterward(States& decentState, const ServerX509& cert);
+				virtual bool VerifyCertAfterward(States& decentState, const ServerX509Cert& cert);
 
 				/**
 				 * \brief	Add the node to white list map. Usually this is called after a node has been
@@ -114,7 +114,7 @@ namespace Decent
 				 *
 				 * \return	True if it succeeds, false if it fails.
 				 */
-				virtual bool AddToWhiteListMap(States& decentState, const ServerX509& cert, const std::string& pubKeyPem, const std::string& serverHash, const report_timestamp_t& timestamp);
+				virtual bool AddToWhiteListMap(States& decentState, const ServerX509Cert& cert, const std::string& pubKeyPem, const std::string& serverHash, const report_timestamp_t& timestamp);
 
 			private:
 				std::map<std::string, report_timestamp_t> m_acceptedNodes;

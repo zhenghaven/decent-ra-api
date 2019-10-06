@@ -6,7 +6,7 @@ namespace Decent
 {
 	namespace Ra
 	{
-		class ClientX509;
+		class ClientX509Cert;
 
 		class TlsConfigClient : public TlsConfigWithName
 		{
@@ -28,7 +28,7 @@ namespace Decent
 		protected:
 			virtual int VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const override;
 
-			virtual int VerifyClientCert(const ClientX509& cert, int depth, uint32_t& flag) const;
+			virtual int VerifyClientCert(const ClientX509Cert& cert, int depth, uint32_t& flag) const;
 
 		private:
 		};

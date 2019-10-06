@@ -18,7 +18,7 @@ namespace Decent
 
 		class X509ReqWriter : public ObjBase<mbedtls_x509write_csr>
 		{
-		public:
+		public: //static member:
 			/**
 			* \brief	Function that frees MbedTLS object and delete the pointer.
 			*
@@ -26,6 +26,13 @@ namespace Decent
 			*/
 			static void FreeObject(mbedtls_x509write_csr* ptr);
 
+			/**
+			 * \brief	Estimate the memory space needed to store DER encoded X509 CSR.
+			 *
+			 * \param [in,out]	ctx	The context.
+			 *
+			 * \return	A size_t.
+			 */
 			static size_t EstimateX509ReqDerSize(mbedtls_x509write_csr& ctx);
 
 		public:
@@ -38,9 +45,10 @@ namespace Decent
 			 *
 			 * \param 		  	hashType  	Type of the hash.
 			 * \param [in,out]	keyPair   	The key pair.
-			 * \param 		  	commonName	Common Name.
+			 * \param 		  	commonName	Subject name for a Certificate. A comma-separated list of OID
+			 * 								types and values (e.g. "C=UK,O=ARM,CN=mbed TLS Server 1").
 			 */
-			X509ReqWriter(HashType hashType, AsymKeyBase & keyPair, const std::string& commonName);
+			X509ReqWriter(HashType hashType, AsymKeyBase & keyPair, const std::string& subjName);
 
 			X509ReqWriter(const X509ReqWriter& rhs) = delete;
 
@@ -74,7 +82,7 @@ namespace Decent
 
 		class X509Req : public ObjBase<mbedtls_x509_csr>
 		{
-		public:
+		public: //static member:
 			/**
 			* \brief	Function that frees MbedTLS object and delete the pointer.
 			*
@@ -143,18 +151,23 @@ namespace Decent
 			HashType GetHashType() const;
 
 			/**
-			 * \brief	Verifies this certificate request with the given public key.
+			 * \brief	Only verifies this certificate request with the given public key.
 			 *
-			 * \param	pubKey	The pub key.
+			 * \param 		  	hashType	Type of the hash.
+			 * \param [in,out]	pubKey  	The pub key.
 			 */
-			void Verify(HashType hashType, AsymKeyBase& pubKey) const;
+			void VerifySignature(AsymKeyBase& pubKey) const;
 
-			/** \brief	Verifies this certificate request with the public key stored inside. */
-			void Verify(HashType hashType);
+			/**
+			 * \brief	Only verifies this certificate request with the public key stored inside.
+			 *
+			 * \param	hashType	Type of the hash.
+			 */
+			void VerifySignature();
 
 		protected:
 
-			/** \brief	Default constructor that constructs non-null, valid, but empty X509 CRL object. */
+			/** \brief	Default constructor that constructs non-null, valid, but empty X509 CSR object. */
 			X509Req();
 
 			X509Req(mbedtls_x509_csr* ptr, FreeFuncType freeFunc);

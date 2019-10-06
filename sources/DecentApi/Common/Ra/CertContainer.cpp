@@ -4,10 +4,11 @@
 #include <atomic>
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-#include "../MbedTls/MbedTlsObjects.h"
+#include "../MbedTls/X509Cert.h"
 #include "../Common.h"
 
 using namespace Decent::Ra;
+using namespace Decent::MbedTlsObj;
 
 CertContainer::CertContainer() noexcept
 {
@@ -17,7 +18,7 @@ CertContainer::~CertContainer() noexcept
 {
 }
 
-std::shared_ptr<const Decent::MbedTlsObj::X509Cert> CertContainer::GetCert() const noexcept
+std::shared_ptr<const X509Cert> CertContainer::GetCert() const noexcept
 {
 #ifdef DECENT_THREAD_SAFETY_HIGH
 	return std::atomic_load(&m_cert);
@@ -26,7 +27,7 @@ std::shared_ptr<const Decent::MbedTlsObj::X509Cert> CertContainer::GetCert() con
 #endif // DECENT_THREAD_SAFETY_HIGH
 }
 
-bool CertContainer::SetCert(std::shared_ptr<const Decent::MbedTlsObj::X509Cert> cert) noexcept
+bool CertContainer::SetCert(std::shared_ptr<const X509Cert> cert) noexcept
 {
 	if (!cert || !*cert)
 	{
@@ -38,7 +39,7 @@ bool CertContainer::SetCert(std::shared_ptr<const Decent::MbedTlsObj::X509Cert> 
 	m_cert = cert;
 #endif // DECENT_THREAD_SAFETY_HIGH
 
-	LOGI("Saved Cert: \n %s \n", cert->ToPemString().c_str());
+	LOGI("Saved Cert: \n %s \n", cert->GetPemChain().c_str());
 
 	return true;
 }

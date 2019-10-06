@@ -6,7 +6,7 @@ namespace Decent
 {
 	namespace Ra
 	{
-		class AppX509;
+		class AppX509Cert;
 
 		class AppCertContainer : public CertContainer
 		{
@@ -14,12 +14,12 @@ namespace Decent
 			AppCertContainer() noexcept;
 			virtual ~AppCertContainer() noexcept;
 
-			std::shared_ptr<const AppX509> GetAppCert() const noexcept;
+			std::shared_ptr<const AppX509Cert> GetAppCert() const noexcept;
 
-			bool SetAppCert(std::shared_ptr<const AppX509> cert) noexcept;
+			bool SetAppCert(std::shared_ptr<const AppX509Cert> cert) noexcept;
 
 		private:
-			std::shared_ptr<const AppX509> m_cert;
+			std::shared_ptr<const AppX509Cert> m_cert;
 		};
 	}
 }

@@ -7,7 +7,7 @@ using namespace Decent::Ra;
 using namespace Decent::MbedTlsObj;
 
 AppX509ReqWriter::AppX509ReqWriter(HashType hashType, EcKeyPairBase & keyPair, const std::string & commonName) :
-	X509ReqWriter(hashType, keyPair, commonName)
+	X509ReqWriter(hashType, keyPair, ("CN=" + commonName))
 {
 }
 

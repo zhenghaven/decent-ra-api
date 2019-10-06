@@ -77,8 +77,32 @@ namespace Decent
 			static void CompletePublicKeyInContext(mbedtls_ecp_keypair& ctx, RbgBase& rbg);
 			static void CompletePublicKeyInContext(mbedtls_rsa_context& ctx);
 
+			/**
+			 * \brief	Estimate the memory space needed to store DER encoded public key.
+			 *
+			 * \param	key	The key.
+			 *
+			 * \return	A size_t.
+			 */
 			static size_t EstimatePublicKeyDerSize(const mbedtls_pk_context& key);
+
+			/**
+			 * \brief	Estimate the memory space needed to store DER encoded private key.
+			 *
+			 * \param	key	The key.
+			 *
+			 * \return	A size_t.
+			 */
 			static size_t EstimatePrivateKeyDerSize(const mbedtls_pk_context& key);
+
+			/**
+			 * \brief	Estimate the memory space needed to store DER encoded signature.
+			 *
+			 * \param	ctx	   	The context.
+			 * \param	hashLen	Length of the hash.
+			 *
+			 * \return	A size_t.
+			 */
 			static size_t EstimateDerSignatureSize(const mbedtls_pk_context& ctx, size_t hashLen);
 
 		public:

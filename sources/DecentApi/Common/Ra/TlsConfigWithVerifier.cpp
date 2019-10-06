@@ -1,26 +1,27 @@
-#include "TlsConfig.h"
+#include "TlsConfigWithVerifier.h"
 
 #include <mbedtls/ssl.h>
 
-#include "../States.h"
-#include "../WhiteList/LoadedList.h"
-
+#include "States.h"
 #include "Crypto.h"
+#include "ServerX509Cert.h"
+#include "VerifiedAppX509Cert.h"
+#include "WhiteList/LoadedList.h"
 
-using namespace Decent::Ra::Verifier;
+using namespace Decent::Ra;
 
-TlsConfig::TlsConfig(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName, std::shared_ptr<Decent::MbedTlsObj::SessionTicketMgrBase> ticketMgr) :
+TlsConfigWithVerifier::TlsConfigWithVerifier(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName, std::shared_ptr<Decent::MbedTlsObj::SessionTicketMgrBase> ticketMgr) :
 	Decent::Ra::TlsConfigWithName(state, cntMode, expectedVerifierName, ticketMgr),
 	m_expectedVerifiedAppName(expectedAppName)
 {
 }
 
-TlsConfig::TlsConfig(TlsConfig&& other) :
+TlsConfigWithVerifier::TlsConfigWithVerifier(TlsConfigWithVerifier&& other) :
 	Decent::Ra::TlsConfigWithName(std::forward<Decent::Ra::TlsConfigWithName>(other)),
 	m_expectedVerifiedAppName(std::move(other.m_expectedVerifiedAppName))
 {}
 
-int TlsConfig::VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const
+int TlsConfigWithVerifier::VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const
 {
 	using namespace Decent::MbedTlsObj;
 
@@ -28,34 +29,19 @@ int TlsConfig::VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) con
 	{
 	case 0: //Decent App Cert
 	{
-		Decent::Ra::Verifier::AppX509 appCert(cert);
-		if (!appCert)
-		{
-			flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
-			return MBEDTLS_SUCCESS_RET;
-		}
+		VerifiedAppX509Cert appCert(cert);
 
 		return VerifyDecentVerifiedAppCert(appCert, depth, flag);
 	}
 	case 1: //Decent Verifier Cert
 	{
-		Decent::Ra::AppX509 verifierCert(cert);
-		if (!verifierCert)
-		{
-			flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
-			return MBEDTLS_SUCCESS_RET;
-		}
+		AppX509Cert verifierCert(cert);
 
 		return VerifyDecentAppCert(verifierCert, depth, flag);
 	}
 	case 2: //Decent Server Cert
 	{
-		const ServerX509 serverCert(cert);
-		if (!serverCert)
-		{
-			flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
-			return MBEDTLS_SUCCESS_RET;
-		}
+		const ServerX509Cert serverCert(cert);
 
 		return VerifyDecentServerCert(serverCert, depth, flag);
 	}
@@ -64,7 +50,7 @@ int TlsConfig::VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) con
 	}
 }
 
-int TlsConfig::VerifyDecentAppCert(const Decent::Ra::AppX509 & cert, int depth, uint32_t & flag) const
+int TlsConfigWithVerifier::VerifyDecentAppCert(const AppX509Cert & cert, int depth, uint32_t & flag) const
 {
 	using namespace Decent::Ra::WhiteList;
 	using namespace Decent::MbedTlsObj;
@@ -75,7 +61,7 @@ int TlsConfig::VerifyDecentAppCert(const Decent::Ra::AppX509 & cert, int depth, 
 	}
 
 	//Check peer's hash is in the white list, and the app name is matched.
-	std::string peerHash = Decent::Ra::GetHashFromAppId(cert.GetPlatformType(), cert.GetAppId());
+	std::string peerHash = GetHashFromAppId(cert.GetPlatformType(), cert.GetAppId());
 	if (!GetState().GetLoadedWhiteList().CheckHashAndName(peerHash, GetExpectedAppName()))
 	{
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
@@ -93,7 +79,7 @@ int TlsConfig::VerifyDecentAppCert(const Decent::Ra::AppX509 & cert, int depth, 
 	return MBEDTLS_SUCCESS_RET;
 }
 
-int TlsConfig::VerifyDecentVerifiedAppCert(const Decent::Ra::Verifier::AppX509& cert, int depth, uint32_t& flag) const
+int TlsConfigWithVerifier::VerifyDecentVerifiedAppCert(const VerifiedAppX509Cert& cert, int depth, uint32_t& flag) const
 {
 	using namespace Decent::Ra::WhiteList;
 	using namespace Decent::MbedTlsObj;
@@ -112,7 +98,7 @@ int TlsConfig::VerifyDecentVerifiedAppCert(const Decent::Ra::Verifier::AppX509& 
 	}
 
 	//Check peer's common name is same as expected.
-	if (cert.GetCommonName() != m_expectedVerifiedAppName)
+	if (cert.GetCurrCommonName() != m_expectedVerifiedAppName)
 	{
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
 		return MBEDTLS_SUCCESS_RET;

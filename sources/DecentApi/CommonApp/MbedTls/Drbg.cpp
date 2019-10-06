@@ -1,10 +1,8 @@
-#include "../../Common/MbedTls/MbedTlsHelpers.h"
-
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 
 #include "../../Common/MbedTls/Drbg.h"
-#include "../../Common/MbedTls/MbedTlsObjects.h"
+#include "../../Common/MbedTls/Entropy.h"
 #include "../../Common/MbedTls/MbedTlsException.h"
 
 #ifndef MBEDTLS_THREADING_C
@@ -15,12 +13,6 @@ using namespace Decent::MbedTlsObj;
 
 namespace
 {
-	EntropyCtx& GetEntropy()
-	{
-		static EntropyCtx entropy;
-		return entropy;
-	}
-
 	static inline mbedtls_ctr_drbg_context* CastCtx(void* state)
 	{
 		return static_cast<mbedtls_ctr_drbg_context*>(state);
@@ -30,7 +22,7 @@ namespace
 Drbg::Drbg() :
 	m_state(new mbedtls_ctr_drbg_context)
 {
-	EntropyCtx& entropy = GetEntropy();
+	Entropy& entropy = Entropy::InitSharedEntropy();
 
 	mbedtls_ctr_drbg_init(CastCtx(m_state));
 	CALL_MBEDTLS_C_FUNC(mbedtls_ctr_drbg_seed, CastCtx(m_state), &mbedtls_entropy_func, entropy.Get(), nullptr, 0);

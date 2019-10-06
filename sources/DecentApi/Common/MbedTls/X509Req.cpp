@@ -117,15 +117,13 @@ X509ReqWriter::X509ReqWriter() :
 	mbedtls_x509write_csr_init(Get());
 }
 
-X509ReqWriter::X509ReqWriter(HashType hashType, AsymKeyBase & keyPair, const std::string & commonName) :
+X509ReqWriter::X509ReqWriter(HashType hashType, AsymKeyBase & keyPair, const std::string & subjName) :
 	X509ReqWriter()
 {
 	mbedtls_x509write_csr_set_key(Get(), keyPair.Get());
 	mbedtls_x509write_csr_set_md_alg(Get(), detail::GetMsgDigestType(hashType));
 
-	std::string subName = "CN=" + commonName;
-
-	CALL_MBEDTLS_C_FUNC(mbedtls_x509write_csr_set_subject_name, Get(), subName.c_str());
+	CALL_MBEDTLS_C_FUNC(mbedtls_x509write_csr_set_subject_name, Get(), subjName.c_str());
 }
 
 X509ReqWriter::~X509ReqWriter()
@@ -242,7 +240,7 @@ HashType X509Req::GetHashType() const
 	return detail::GetMsgDigestType(mbedtls_md_get_type(mbedtls_md_info_from_type(Get()->sig_md)));
 }
 
-void X509Req::Verify(HashType hashType, AsymKeyBase & pubKey) const
+void X509Req::VerifySignature(AsymKeyBase & pubKey) const
 {
 	NullCheck();
 
@@ -253,15 +251,21 @@ void X509Req::Verify(HashType hashType, AsymKeyBase & pubKey) const
 
 	CALL_MBEDTLS_C_FUNC(mbedtls_md, mdInfo, Get()->cri.p, Get()->cri.len, tmpHash.get());
 	CALL_MBEDTLS_C_FUNC(mbedtls_pk_verify_ext, Get()->sig_pk, Get()->sig_opts, pubKey.Get(),
-		Get()->sig_md, tmpHash.get(), mdSize,
-		Get()->sig.p, Get()->sig.len);
+		Get()->sig_md, tmpHash.get(), mdSize, Get()->sig.p, Get()->sig.len);
 }
 
-void X509Req::Verify(HashType hashType)
+void X509Req::VerifySignature()
 {
-	AsymKeyBase tmpPubKey(GetPublicKey());
+	NullCheck();
 
-	Verify(hashType, tmpPubKey);
+	const mbedtls_md_info_t *mdInfo = mbedtls_md_info_from_type(Get()->sig_md);
+	const size_t mdSize = mbedtls_md_get_size(mdInfo);
+
+	std::unique_ptr<uint8_t[]> tmpHash = detail::make_unique<uint8_t[]>(mdSize);
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_md, mdInfo, Get()->cri.p, Get()->cri.len, tmpHash.get());
+	CALL_MBEDTLS_C_FUNC(mbedtls_pk_verify_ext, Get()->sig_pk, Get()->sig_opts, &Get()->pk,
+		Get()->sig_md, tmpHash.get(), mdSize, Get()->sig.p, Get()->sig.len);
 }
 
 X509Req::X509Req() :

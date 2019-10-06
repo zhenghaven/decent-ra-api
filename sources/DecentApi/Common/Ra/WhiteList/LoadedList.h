@@ -6,7 +6,7 @@ namespace Decent
 {
 	namespace Ra
 	{
-		class AppX509;
+		class AppX509Cert;
 
 		namespace WhiteList
 		{
@@ -24,7 +24,7 @@ namespace Decent
 			public:
 				LoadedList();
 
-				LoadedList(const Decent::Ra::AppX509& certPtr);
+				LoadedList(const Ra::AppX509Cert& certPtr);
 
 				LoadedList(const std::string& whiteListJson);
 

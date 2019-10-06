@@ -2,21 +2,22 @@
 
 #include <mbedtls/ssl.h>
 
-#include "Crypto.h"
 #include "States.h"
+#include "Crypto.h"
+#include "AppX509Cert.h"
 #include "WhiteList/LoadedList.h"
 
 using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
 
 TlsConfigWithName::TlsConfigWithName(States & state, Mode cntMode, const std::string& expectedAppName, std::shared_ptr<SessionTicketMgrBase> ticketMgr) :
-	TlsConfig(state, cntMode, ticketMgr),
+	TlsConfigBase(state, cntMode, ticketMgr),
 	m_expectedAppName(expectedAppName)
 {
 }
 
 TlsConfigWithName::TlsConfigWithName(TlsConfigWithName && rhs) :
-	TlsConfig(std::forward<TlsConfig>(rhs)),
+	TlsConfigBase(std::forward<TlsConfigBase>(rhs)),
 	m_expectedAppName(std::move(rhs.m_expectedAppName))
 {
 }
@@ -25,7 +26,7 @@ TlsConfigWithName::~TlsConfigWithName()
 {
 }
 
-int TlsConfigWithName::VerifyDecentAppCert(const AppX509 & cert, int depth, uint32_t & flag) const
+int TlsConfigWithName::VerifyDecentAppCert(const AppX509Cert & cert, int depth, uint32_t & flag) const
 {
 	using namespace Decent::Ra::WhiteList;
 	using namespace Decent::MbedTlsObj;

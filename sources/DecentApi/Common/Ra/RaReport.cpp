@@ -9,17 +9,18 @@
 #include "../consttime_memequal.h"
 #include "../Common.h"
 #include "../RuntimeException.h"
+#include "../GeneralKeyTypes.h"
+
 #include "../Net/CommonMessages.h"
 
 #include "../Tools/DataCoding.h"
 #include "../Tools/JsonTools.h"
+
 #include "../MbedTls/Hasher.h"
+
 #include "../SGX/IasReport.h"
 #include "../SGX/sgx_structs.h" /*TODO: remove this dependency.*/
 
-#include "Crypto.h"
-
-using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::Tools;
 
@@ -33,7 +34,7 @@ bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const ui
 		return false;
 	}
 
-	General256Hash hashRes;
+	Decent::General256Hash hashRes;
 	Hasher<HashType::SHA256>().Batched(hashRes,
 		std::array<DataListItem, 2>
 		{

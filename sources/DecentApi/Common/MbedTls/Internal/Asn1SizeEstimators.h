@@ -244,6 +244,29 @@ namespace Decent
 
 				return len;
 			}
+
+			inline size_t x509_write_time_est_size(const char *t, size_t size)
+			{
+				size_t len = 0;
+
+				/*
+				 * write MBEDTLS_ASN1_UTC_TIME if year < 2050 (2 bytes shorter)
+				 */
+				if (t[0] == '2' && t[1] == '0' && t[2] < '5')
+				{
+					len += mbedtls_asn1_write_raw_buffer_est_size((const unsigned char *)t + 2, size - 2);
+					len += mbedtls_asn1_write_len_est_size(len);
+					len += mbedtls_asn1_write_tag_est_size(MBEDTLS_ASN1_UTC_TIME);
+				}
+				else
+				{
+					len += mbedtls_asn1_write_raw_buffer_est_size((const unsigned char *)t, size);
+					len += mbedtls_asn1_write_len_est_size(len);
+					len += mbedtls_asn1_write_tag_est_size(MBEDTLS_ASN1_GENERALIZED_TIME);
+				}
+
+				return len;
+			}
 		}
 	}
 }

@@ -16,7 +16,7 @@
 #include "../../Common/MbedTls/Drbg.h"
 #include "../../Common/MbedTls/EcKey.h"
 
-#include "../../Common/Ra/Crypto.h"
+#include "../../Common/Ra/AppX509Cert.h"
 #include "../../Common/Ra/AppX509Req.h"
 #include "../../Common/Ra/KeyContainer.h"
 #include "../../Common/Ra/WhiteList/LoadedList.h"
@@ -39,12 +39,12 @@ namespace
 extern "C" size_t ecall_decent_ra_app_get_x509_pem(char* buf, size_t buf_len)
 {
 	auto cert = gs_appStates.GetCertContainer().GetCert();
-	if (!cert || !(*cert))
+	if (!cert)
 	{
 		return 0;
 	}
 
-	std::string x509Pem = cert->ToPemString();
+	std::string x509Pem = cert->GetPemChain();
 	std::memcpy(buf, x509Pem.data(), buf_len >= x509Pem.size() ? x509Pem.size() : buf_len);
 
 	return x509Pem.size();
@@ -79,8 +79,8 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 		//Process X509 Message:
 
-		std::shared_ptr<AppX509> cert = std::make_shared<AppX509>(plainMsg);
-		if (!cert || !*cert)
+		std::shared_ptr<AppX509Cert> cert = std::make_shared<AppX509Cert>(plainMsg);
+		if (!cert)
 		{
 			return SGX_ERROR_UNEXPECTED;
 		}
@@ -91,7 +91,7 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 
 		gs_appStates.GetAppCertContainer().SetAppCert(cert);
 
-		TlsConfigSameEnclave tlsCfg(gs_appStates, Decent::Ra::TlsConfig::Mode::ClientHasCert, nullptr);
+		TlsConfigSameEnclave tlsCfg(gs_appStates, TlsConfig::Mode::ClientHasCert, nullptr);
 		//if (!cert->Verify(, nullptr, nullptr, &TlsConfigSameEnclave::CertVerifyCallBack, tlsCfg))
 		//{
 		//	PRINT_I("Could not verify the identity of the Decent Server.");

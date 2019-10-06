@@ -2,16 +2,17 @@
 
 #include <mbedtls/ssl.h>
 
-#include "Crypto.h"
 #include "States.h"
+#include "Crypto.h"
+#include "AppX509Cert.h"
 #include "WhiteList/LoadedList.h"
 
 using namespace Decent::Ra;
+using namespace Decent::MbedTlsObj;
 
-int TlsConfigAnyWhiteListed::VerifyDecentAppCert(const AppX509 & cert, int depth, uint32_t & flag) const
+int TlsConfigAnyWhiteListed::VerifyDecentAppCert(const AppX509Cert & cert, int depth, uint32_t & flag) const
 {
 	using namespace Decent::Ra::WhiteList;
-	using namespace Decent::MbedTlsObj;
 
 	if (flag != MBEDTLS_SUCCESS_RET)
 	{//App cert is invalid! Directly return.
@@ -19,7 +20,7 @@ int TlsConfigAnyWhiteListed::VerifyDecentAppCert(const AppX509 & cert, int depth
 	}
 
 	//Check peer's hash is in the white list, while the app name is ignored.
-	std::string peerHash = Decent::Ra::GetHashFromAppId(cert.GetPlatformType(), cert.GetAppId());
+	std::string peerHash = GetHashFromAppId(cert.GetPlatformType(), cert.GetAppId());
 	std::string appName;
 	if (!GetState().GetLoadedWhiteList().CheckHash(peerHash, appName))
 	{

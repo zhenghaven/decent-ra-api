@@ -2,13 +2,15 @@
 
 #include "../../Common.h"
 
-#include "../Crypto.h"
+#include "../../MbedTls/AsymKeyBase.h"
+
+#include "../ServerX509Cert.h"
 #include "../RaReport.h"
 #include "../States.h"
 
 #include "LoadedList.h"
 
-using namespace Decent;
+using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
 using namespace Decent::Ra::WhiteList;
 
@@ -20,9 +22,9 @@ DecentServer::~DecentServer()
 {
 }
 
-bool DecentServer::AddTrustedNode(States& decentState, const ServerX509 & cert)
+bool DecentServer::AddTrustedNode(States& decentState, const ServerX509Cert & cert)
 {
-	std::string pubKeyPem = cert.GetEcPublicKey().GetPublicPem();
+	std::string pubKeyPem = AsymKeyBase(const_cast<ServerX509Cert&>(cert).GetCurrPublicKey()).GetPublicPem();
 	
 	if (IsNodeTrusted(pubKeyPem))
 	{
@@ -55,7 +57,7 @@ bool DecentServer::GetAcceptedTimestamp(const std::string & key, report_timestam
 	return isFound;
 }
 
-bool DecentServer::VerifyCertFirstTime(States& decentState, const ServerX509 & cert, const std::string& pubKeyPem, std::string& serverHash, report_timestamp_t& timestamp)
+bool DecentServer::VerifyCertFirstTime(States& decentState, const ServerX509Cert & cert, const std::string& pubKeyPem, std::string& serverHash, report_timestamp_t& timestamp)
 {
 	bool verifyRes = RaReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
 		cert.GetSelfRaReport(), serverHash, timestamp);
@@ -69,12 +71,12 @@ bool DecentServer::VerifyCertFirstTime(States& decentState, const ServerX509 & c
 #endif // !DEBUG
 }
 
-bool DecentServer::VerifyCertAfterward(States& decentState, const ServerX509 & cert)
+bool DecentServer::VerifyCertAfterward(States& decentState, const ServerX509Cert & cert)
 {
 	return true;
 }
 
-bool DecentServer::AddToWhiteListMap(States & decentState, const ServerX509 & cert, const std::string & pubKeyPem, const std::string & serverHash, const report_timestamp_t & timestamp)
+bool DecentServer::AddToWhiteListMap(States & decentState, const ServerX509Cert & cert, const std::string & pubKeyPem, const std::string & serverHash, const report_timestamp_t & timestamp)
 {
 	std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
 	m_acceptedNodes[pubKeyPem] = timestamp;
