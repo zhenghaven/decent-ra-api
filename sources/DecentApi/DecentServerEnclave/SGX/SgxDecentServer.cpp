@@ -143,11 +143,6 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 		std::string whiteList = gs_serverState.GetAppWhiteListsManager().GetWhiteList(key);
 		AppX509CertWriter appX509(appPubKey, *serverCert, signKey, SerializeStruct(identity.mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(identity), whiteList);
 
-		if (!appX509)
-		{
-			return SGX_ERROR_UNEXPECTED;
-		}
-
 		Drbg drbg;
 		commLayer.SendContainer(appX509.GeneratePemChain(drbg));
 	}

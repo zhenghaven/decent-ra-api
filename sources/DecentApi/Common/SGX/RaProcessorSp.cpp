@@ -14,11 +14,16 @@
 #include "../Common.h"
 #include "../make_unique.h"
 #include "../consttime_memequal.h"
+
 #include "../Tools/Crypto.h"
+
 #include "../MbedTls/Kdf.h"
 #include "../MbedTls/Drbg.h"
 #include "../MbedTls/EcKey.h"
 #include "../MbedTls/Hasher.h"
+#include "../MbedTls/X509Cert.h"
+
+#include "../SGX/IasReportCert.h"
 
 #include "sgx_structs.h"
 #include "IasReport.h"
@@ -233,8 +238,19 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	do
 	{
 		if (!StatConnector::GetQuoteReport(m_iasConnectorPtr, msg3, msg3Len, m_nonce, m_raConfig.enable_pse,
-			m_iasReportStr, m_reportSign, m_reportCert) ||
-			!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data) ||
+			m_iasReportStr, m_reportSign, m_reportCert))
+		{
+			break;
+		}
+
+		X509Cert trustedIasCert(Ias::gsk_IasReportCert);
+		X509Cert reportCertChain(m_reportCert);
+
+		reportCertChain.ShrinkChain(trustedIasCert);
+
+		m_reportCert = reportCertChain.GetPemChain();
+
+		if (!CheckIasReport(*m_iasReport, m_iasReportStr, m_reportCert, m_reportSign, report_data) ||
 #ifndef SIMULATING_ENCLAVE
 			!consttime_memequal(&quoteInMsg3, &m_iasReport->m_quote, sizeof(sgx_quote_t) - sizeof(sgx_quote_t::signature_len))
 #else

@@ -332,6 +332,17 @@ namespace Decent
 				const mbedtls_x509_crt_profile& prof, VerifyFunc vrfyFunc, void* vrfyParam);
 
 			/**
+			 * \brief	Shrink the chain based on the given CA, so that any certificate in the chain that is
+			 * 			exactly same (by comparing RAW DER) as any certificate in the CA list will be removed.
+			 *
+			 * \warning	The current certificate will be switched back to the first one after the function
+			 * 			call.
+			 *
+			 * \param	ca	The CA list.
+			 */
+			void ShrinkChain(const X509Cert& ca);
+
+			/**
 			 * \brief	Go to the next certificate in the chain.
 			 *
 			 * \return	True if it succeeds, false if there is no next one.

@@ -832,6 +832,67 @@ void X509Cert::VerifyChainWithCa(X509Cert & ca, mbedtls_x509_crl * crl, const ch
 		&prof, cn, &flags, vrfyFunc, vrfyParam);
 }
 
+void X509Cert::ShrinkChain(const X509Cert & ca)
+{
+	NullCheck();
+	ca.NullCheck();
+
+	mbedtls_x509_crt* prev = nullptr;
+	mbedtls_x509_crt* curr = Get();
+
+	bool found = false;
+
+	while (curr != nullptr)
+	{
+		const mbedtls_x509_crt* currCa = ca.Get();
+		while (currCa != nullptr && !found)
+		{
+			if (curr->raw.len == currCa->raw.len &&
+				std::memcmp(curr->raw.p, currCa->raw.p, currCa->raw.len) == 0)
+			{
+				// Found
+				found = true;
+			}
+
+			currCa = currCa->next;
+		}
+
+		if (found)
+		{
+			// The current one is duplicated. Free it.
+			
+			mbedtls_x509_crt* toBeFree = curr;
+
+			if (prev == nullptr)
+			{
+				// This is the first one on chain.
+				
+				SetPtr(curr->next);
+				curr->next = nullptr;
+
+				curr = Get();
+			}
+			else
+			{
+				prev->next = curr->next;
+				curr->next = nullptr;
+
+				curr = prev->next;
+			}
+
+			mbedtls_x509_crt_free(toBeFree);
+			found = false;
+		}
+		else
+		{
+			prev = curr;
+			curr = curr->next;
+		}
+	}
+
+	GoToFirstCert();
+}
+
 bool X509Cert::NextCert()
 {
 	if (m_currCert != nullptr && m_currCert->next != nullptr)
@@ -856,7 +917,8 @@ bool X509Cert::PrevCert()
 
 void X509Cert::GoToFirstCert()
 {
-	while (PrevCert()) {}
+	m_currCert = Get();
+	m_certStack.resize(0);
 }
 
 void X509Cert::GoToLastCert()
