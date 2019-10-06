@@ -515,7 +515,7 @@ std::vector<uint8_t> AsymKeyBase::GetPublicDer() const
 
 std::string AsymKeyBase::GetPublicPem() const
 {
-	return GetPublicPem(EstimatePrivateKeyDerSize(*Get()));
+	return GetPublicPem(EstimatePublicKeyDerSize(*Get()));
 }
 
 AsymKeyBase::AsymKeyBase(mbedtls_pk_context * ptr, FreeFuncType freeFunc) :
