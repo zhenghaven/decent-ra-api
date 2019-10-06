@@ -571,6 +571,8 @@ std::string AsymKeyBase::GetPublicPem(size_t maxDerBufSize) const
 
 	pem.resize(olen);
 
+	for (; pem.size() > 0 && pem.back() == '\0'; pem.pop_back());
+
 	return pem;
 }
 
@@ -638,7 +640,7 @@ void AsymKeyBase::GetPrivatePem(std::string & out, size_t maxDerBufSize) const
 
 	out.resize(olen);
 
-	std::memcpy(&out[0], pem.c_str(), olen);
+	std::memcpy(&out[0], pem.c_str(), std::strlen(pem.c_str()));
 
 	ZeroizeContainer(pem);
 }

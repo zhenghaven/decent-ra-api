@@ -18,12 +18,12 @@ namespace Decent
 			 * 			requirements, here is just an example used for experiment purpose only.
 			 *
 			 * \param [in,out]	pubKey   	The client's public key.
-			 * \param [in,out]	appCert  	The DECENT App's certificate.
+			 * \param 		  	appCert  	The DECENT App's certificate.
 			 * \param [in,out]	appPrvKey	The DECENT App's key pair including the private key.
 			 * \param 		  	userName 	The client's user name.
 			 * \param 		  	identity 	The client's identity.
 			 */
-			ClientX509CertWriter(MbedTlsObj::EcPublicKeyBase& pubKey, AppX509Cert& appCert, MbedTlsObj::EcKeyPairBase& appPrvKey,
+			ClientX509CertWriter(MbedTlsObj::EcPublicKeyBase& pubKey, const AppX509Cert& appCert, MbedTlsObj::EcKeyPairBase& appPrvKey,
 				const std::string& userName, const std::string& identity);
 
 			/** \brief	Destructor */

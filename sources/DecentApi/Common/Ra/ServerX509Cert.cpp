@@ -53,6 +53,13 @@ ServerX509CertWriter::~ServerX509CertWriter()
 {
 }
 
+ServerX509Cert::ServerX509Cert(const ServerX509Cert & rhs) :
+	X509Cert(rhs),
+	m_platformType(rhs.m_platformType),
+	m_selfRaReport(rhs.m_selfRaReport)
+{
+}
+
 ServerX509Cert::ServerX509Cert(ServerX509Cert && rhs) :
 	X509Cert(std::forward<X509Cert>(rhs)),
 	m_platformType(std::move(rhs.m_platformType)),

@@ -369,7 +369,8 @@ size_t X509CertWriter::EstimateX509CertDerSize(mbedtls_x509write_cert & ctx)
 }
 
 X509CertWriter::X509CertWriter() :
-	ObjBase(new mbedtls_x509write_cert, &FreeObject)
+	ObjBase(new mbedtls_x509write_cert, &FreeObject),
+	m_ca()
 {
 	mbedtls_x509write_crt_init(Get());
 }
@@ -392,12 +393,14 @@ X509CertWriter::X509CertWriter(HashType hashType, AsymKeyBase & prvKey, const st
 }
 
 // Issue certificate
-X509CertWriter::X509CertWriter(HashType hashType, X509Cert & caCert, AsymKeyBase & prvKey, AsymKeyBase & pubKey, const std::string & subjName) :
+X509CertWriter::X509CertWriter(HashType hashType, const X509Cert & caCert, AsymKeyBase & prvKey, AsymKeyBase & pubKey, const std::string & subjName) :
 	X509CertWriter()
 {
 	caCert.NullCheck();
 	prvKey.NullCheck();
 	pubKey.NullCheck();
+
+	m_ca = detail::make_unique<X509Cert>(caCert);
 
 	mbedtls_x509write_crt_set_version(Get(), MBEDTLS_X509_CRT_VERSION_3);
 
@@ -485,13 +488,41 @@ std::string X509CertWriter::GeneratePem(RbgBase & rbg)
 
 	pem.resize(olen);
 
+	for (; pem.size() > 0 && pem.back() == '\0'; pem.pop_back());
+
 	return pem;
+}
+
+std::string X509CertWriter::GeneratePemChain(RbgBase & rbg)
+{
+	if (m_ca)
+	{
+		return GeneratePem(rbg) + m_ca->GetPemChain();
+	}
+	else
+	{
+		return GeneratePem(rbg);
+	};
 }
 
 void X509Cert::FreeObject(mbedtls_x509_crt * ptr)
 {
 	mbedtls_x509_crt_free(ptr);
 	delete ptr;
+}
+
+X509Cert::X509Cert(const X509Cert & rhs) :
+	X509Cert()
+{
+	rhs.NullCheck();
+
+	const mbedtls_x509_crt* rhsCurr = rhs.Get();
+
+	while (rhsCurr != nullptr)
+	{
+		CALL_MBEDTLS_C_FUNC(mbedtls_x509_crt_parse_der, Get(), rhsCurr->raw.p, rhsCurr->raw.len);
+		rhsCurr = rhsCurr->next;
+	}
 }
 
 X509Cert::X509Cert(X509Cert && rhs) :

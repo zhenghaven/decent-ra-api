@@ -45,7 +45,7 @@ namespace Decent
 
 			ServerX509Cert() = delete;
 
-			ServerX509Cert(const ServerX509Cert& rhs) = delete;
+			ServerX509Cert(const ServerX509Cert& rhs);
 
 			ServerX509Cert(ServerX509Cert&& rhs);
 

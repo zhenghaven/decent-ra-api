@@ -30,15 +30,15 @@ namespace Decent
 			/**
 			 * \brief	Constructs DECENT App certificate, issued by DECENT Server.
 			 *
-			 * \param 		  	pubKey			The DECENT App's public key.
-			 * \param [in,out]	svrCert			The DECENT Server's certificate.
-			 * \param 		  	svrPrvKey   	The DECENT Server's key pair including the private key.
+			 * \param [in,out]	pubKey			The DECENT App's public key.
+			 * \param 		  	svrCert			The DECENT Server's certificate.
+			 * \param [in,out]	svrPrvKey   	The DECENT Server's key pair including the private key.
 			 * \param 		  	enclaveHash 	The hash of the DECENT App enclave.
 			 * \param 		  	platformType	Type of the platform.
 			 * \param 		  	appId			The identity of the DECENT App.
 			 * \param 		  	whiteList   	DECENT Whitelist.
 			 */
-			AppX509CertWriter(MbedTlsObj::EcPublicKeyBase& pubKey, ServerX509Cert& svrCert, MbedTlsObj::EcKeyPairBase& svrPrvKey,
+			AppX509CertWriter(MbedTlsObj::EcPublicKeyBase& pubKey, const ServerX509Cert& svrCert, MbedTlsObj::EcKeyPairBase& svrPrvKey,
 				const std::string& enclaveHash, const std::string& platformType, const std::string& appId, const std::string& whiteList);
 
 			/** \brief	Destructor */
@@ -46,7 +46,7 @@ namespace Decent
 
 		protected:
 
-			AppX509CertWriter(MbedTlsObj::EcPublicKeyBase& pubKey, MbedTlsObj::X509Cert& svrCert, MbedTlsObj::EcKeyPairBase& svrPrvKey,
+			AppX509CertWriter(MbedTlsObj::EcPublicKeyBase& pubKey, const MbedTlsObj::X509Cert& svrCert, MbedTlsObj::EcKeyPairBase& svrPrvKey,
 				const std::string& enclaveHash, const std::string& platformType, const std::string& appId, const std::string& whiteList);
 		};
 

@@ -15,7 +15,6 @@
 #include "../make_unique.h"
 #include "../consttime_memequal.h"
 #include "../Tools/Crypto.h"
-#include "../MbedTls/MbedTlsObjects.h"
 #include "../MbedTls/Kdf.h"
 #include "../MbedTls/Drbg.h"
 #include "../MbedTls/EcKey.h"

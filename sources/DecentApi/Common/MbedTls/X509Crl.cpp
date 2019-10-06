@@ -71,6 +71,8 @@ std::string X509Crl::GetPem() const
 
 	pem.resize(olen);
 
+	for (; pem.size() > 0 && pem.back() == '\0'; pem.pop_back());
+
 	return pem;
 }
 
