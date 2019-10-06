@@ -212,6 +212,20 @@ namespace Decent
 			 */
 			virtual std::string GetPublicPem() const;
 
+			/**
+			 * \brief	Gets private key encoded in DER
+			 *
+			 * \param [in,out]	out	The output. DER encoded private key stored in byte array.
+			 */
+			virtual void GetPrivateDer(std::vector<uint8_t>& out) const;
+
+			/**
+			 * \brief	Gets private key encoded in PEM
+			 *
+			 * \param [in,out]	out	The output. PEM encoded private key stored in string.
+			 */
+			virtual void GetPrivatePem(std::string& out) const;
+
 		protected:
 
 			AsymKeyBase(mbedtls_pk_context* ptr, FreeFuncType freeFunc);
@@ -225,6 +239,8 @@ namespace Decent
 			virtual void GetPrivateDer(std::vector<uint8_t>& out, size_t maxDerBufSize) const;
 
 			virtual void GetPrivatePem(std::string& out, size_t maxDerBufSize) const;
+
+			virtual void GetPrivatePem(std::string& out, const std::vector<uint8_t>& der) const;
 		};
 	}
 }

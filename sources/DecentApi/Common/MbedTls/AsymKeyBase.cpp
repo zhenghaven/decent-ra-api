@@ -518,6 +518,23 @@ std::string AsymKeyBase::GetPublicPem() const
 	return GetPublicPem(EstimatePublicKeyDerSize(*Get()));
 }
 
+void AsymKeyBase::GetPrivateDer(std::vector<uint8_t>& out) const
+{
+	return GetPrivateDer(out, EstimatePrivateKeyDerSize(*Get()));
+}
+
+void AsymKeyBase::GetPrivatePem(std::string & out) const
+{
+	using namespace detail;
+
+	std::vector<uint8_t> der;
+	GetPrivateDer(der);
+
+	GetPrivatePem(out, der);
+
+	ZeroizeContainer(der);
+}
+
 AsymKeyBase::AsymKeyBase(mbedtls_pk_context * ptr, FreeFuncType freeFunc) :
 	ObjBase(ptr, freeFunc)
 {
@@ -599,10 +616,17 @@ void AsymKeyBase::GetPrivateDer(std::vector<uint8_t>& out, size_t maxDerBufSize)
 
 void AsymKeyBase::GetPrivatePem(std::string & out, size_t maxDerBufSize) const
 {
-	using namespace detail;
-
 	std::vector<uint8_t> der;
 	GetPrivateDer(der, maxDerBufSize);
+
+	GetPrivatePem(out, der);
+
+	ZeroizeContainer(der);
+}
+
+void AsymKeyBase::GetPrivatePem(std::string & out, const std::vector<uint8_t>& der) const
+{
+	using namespace detail;
 
 	const char *begin = nullptr, *end = nullptr;
 	size_t beginSize = 0, endSize = 0;
