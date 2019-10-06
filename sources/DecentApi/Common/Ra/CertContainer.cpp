@@ -29,7 +29,7 @@ std::shared_ptr<const X509Cert> CertContainer::GetCert() const noexcept
 
 bool CertContainer::SetCert(std::shared_ptr<const X509Cert> cert) noexcept
 {
-	if (!cert || !*cert)
+	if (!cert)
 	{
 		return false;
 	}

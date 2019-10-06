@@ -74,12 +74,12 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		AppX509ReqWriter certReqWrt(HashType::SHA256, signKeyPair, "DecentAppX509Req"); //The name here shouldn't have any effect since it's just a dummy name for the requirement of X509 Req.
 
 		Drbg drbg;
-		commLayer.SendContainer(certReqWrt.GeneratePem(drbg));
-		std::string plainMsg = commLayer.RecvContainer<std::string>();
+		commLayer.SendContainer(certReqWrt.GenerateDer(drbg));
+		std::string appCertPemStr = commLayer.RecvContainer<std::string>();
 
 		//Process X509 Message:
 
-		std::shared_ptr<AppX509Cert> cert = std::make_shared<AppX509Cert>(plainMsg);
+		std::shared_ptr<AppX509Cert> cert = std::make_shared<AppX509Cert>(appCertPemStr);
 		if (!cert)
 		{
 			return SGX_ERROR_UNEXPECTED;

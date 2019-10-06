@@ -18,7 +18,7 @@ using namespace Decent::MbedTlsObj;
 
 TlsConfigBase::TlsConfigBase(States& state, Mode cntMode, std::shared_ptr<SessionTicketMgrBase> ticketMgr) :
 	TlsConfig(true, cntMode, MBEDTLS_SSL_PRESET_SUITEB, make_unique<Decent::MbedTlsObj::Drbg>(),
-		m_state.GetCertContainer().GetCert(), m_state.GetCertContainer().GetCert(), m_state.GetKeyContainer().GetSignKeyPair(),
+		state.GetCertContainer().GetCert(), state.GetCertContainer().GetCert(), state.GetKeyContainer().GetSignKeyPair(),
 		ticketMgr),
 	m_state(state)
 {
