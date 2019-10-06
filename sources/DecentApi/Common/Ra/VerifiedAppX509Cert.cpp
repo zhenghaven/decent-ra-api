@@ -8,14 +8,16 @@
 using namespace Decent::Ra;
 using namespace Decent::MbedTlsObj;
 
-VerifiedAppX509CertWriter::VerifiedAppX509CertWriter(AppX509Cert & oriCert, AppX509Cert & verifierCert, EcKeyPairBase & verifierPrvKey,
+VerifiedAppX509CertWriter::VerifiedAppX509CertWriter(const AppX509Cert & oriCert, const AppX509Cert & verifierCert, EcKeyPairBase & verifierPrvKey,
 	const std::string & appName) :
-	VerifiedAppX509CertWriter(oriCert, EcPublicKeyBase(oriCert.GetCurrPublicKey()), verifierCert, verifierPrvKey,
+	VerifiedAppX509CertWriter(oriCert,
+		EcPublicKeyBase(const_cast<AppX509Cert&>(oriCert).GetCurrPublicKey()),
+		verifierCert, verifierPrvKey,
 		appName)
 {
 }
 
-Decent::Ra::VerifiedAppX509CertWriter::VerifiedAppX509CertWriter(AppX509Cert & oriCert, EcPublicKeyBase pubKey, AppX509Cert & verifierCert,
+Decent::Ra::VerifiedAppX509CertWriter::VerifiedAppX509CertWriter(const AppX509Cert & oriCert, EcPublicKeyBase pubKey, const AppX509Cert & verifierCert,
 	EcKeyPairBase & verifierPrvKey, const std::string & appName) :
 	AppX509CertWriter(pubKey, verifierCert, verifierPrvKey,
 		appName, oriCert.GetPlatformType(), oriCert.GetAppId(), oriCert.GetWhiteList())

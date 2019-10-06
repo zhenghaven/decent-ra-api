@@ -7,9 +7,13 @@
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/Tools/DataCoding.h"
-#include "../../Common/Ra/Crypto.h"
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
+#include "../../Common/Ra/AppX509Req.h"
+#include "../../Common/Ra/AppX509Cert.h"
+#include "../../Common/Ra/ServerX509Cert.h"
+#include "../../Common/MbedTls/Drbg.h"
+#include "../../Common/MbedTls/EcKey.h"
 
 #include "../../Common/SGX/SgxCryptoConversions.h"
 
@@ -27,6 +31,7 @@ using namespace Decent::Ra;
 using namespace Decent::Net;
 using namespace Decent::Tools;
 using namespace Decent::RaSgx;
+using namespace Decent::MbedTlsObj;
 
 namespace
 {
@@ -60,12 +65,11 @@ extern "C" void ecall_decent_ra_server_terminate()
 extern "C" sgx_status_t ecall_decent_ra_server_gen_x509(const void * const ias_connector, const uint64_t enclave_Id)
 {
 	const KeyContainer& keyContainer = gs_serverState.GetKeyContainer();
-	std::shared_ptr<const general_secp256r1_public_t> signPub = keyContainer.GetSignPubKey();
-	std::shared_ptr<const MbedTlsObj::ECKeyPair> signkeyPair = keyContainer.GetSignKeyPair();
+	auto signkeyPair = keyContainer.GetSignKeyPair();
 
 	try
 	{
-		std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, GeneralEc256Type2Sgx(*signPub), gs_spid, gs_serverState);
+		std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, *signkeyPair, gs_spid, gs_serverState);
 		std::unique_ptr<RaProcessorClient> clientProcessor = Tools::make_unique<RaProcessorClient>(
 			enclave_Id,
 			[](const sgx_ec256_public_t& pubKey) {
@@ -90,13 +94,13 @@ extern "C" sgx_status_t ecall_decent_ra_server_gen_x509(const void * const ias_c
 extern "C" size_t ecall_decent_ra_server_get_x509_pem(char* buf, size_t buf_len)
 {
 	auto serverCert = gs_serverState.GetServerCertContainer().GetServerCert();
-	if (!serverCert || !(*serverCert))
+	if (!serverCert)
 	{
 		return 0;
 	}
 	try
 	{
-		const std::string& x509Pem = serverCert->ToPemString();
+		const std::string& x509Pem = serverCert->GetPemChain();
 
 		std::memcpy(buf, x509Pem.data(), buf_len >= x509Pem.size() ? x509Pem.size() : buf_len);
 
@@ -128,31 +132,24 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 		Decent::Sgx::LocAttCommLayer commLayer(cnt, true);
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
-		std::string plainMsg = commLayer.RecvContainer<std::string>();
-		X509Req appX509Req(plainMsg);
-		if (!appX509Req || !appX509Req.VerifySignature())
-		{
-			return SGX_ERROR_INVALID_PARAMETER;
-		}
+		std::vector<uint8_t> appX509ReqDer = commLayer.RecvContainer<std::vector<uint8_t> >();
+		AppX509Req appX509Req(appX509ReqDer);
+		appX509Req.VerifySignature();
+		EcPublicKey<EcKeyType::SECP256R1> appPubKey(appX509Req.GetPublicKey());
 
-		std::shared_ptr<const MbedTlsObj::ECKeyPair> signKey = gs_serverState.GetKeyContainer().GetSignKeyPair();
-		std::shared_ptr<const ServerX509> serverCert = gs_serverState.GetServerCertContainer().GetServerCert();
-
-		if (!serverCert || !*serverCert ||
-			!signKey || !*signKey)
-		{
-			return SGX_ERROR_UNEXPECTED;
-		}
+		EcKeyPair<EcKeyType::SECP256R1> signKey = *gs_serverState.GetKeyContainer().GetSignKeyPair();
+		auto serverCert = gs_serverState.GetServerCertContainer().GetServerCert();
 
 		std::string whiteList = gs_serverState.GetAppWhiteListsManager().GetWhiteList(key);
-		AppX509 appX509(appX509Req.GetEcPublicKey(), *serverCert, *signKey, SerializeStruct(identity.mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(identity), whiteList);
+		AppX509CertWriter appX509(appPubKey, *serverCert, signKey, SerializeStruct(identity.mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(identity), whiteList);
 
 		if (!appX509)
 		{
 			return SGX_ERROR_UNEXPECTED;
 		}
 
-		commLayer.SendContainer(appX509.ToPemString());
+		Drbg drbg;
+		commLayer.SendContainer(appX509.GeneratePemChain(drbg));
 	}
 	catch (const std::exception&)
 	{

@@ -3,7 +3,7 @@
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/MbedTls/Hasher.h"
-#include "../../Common/MbedTls/MbedTlsObjects.h"
+#include "../../Common/MbedTls/EcKey.h"
 #include "../../Common/Ra/States.h"
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
@@ -19,8 +19,9 @@
 #include "edl_decent_ra_server.h"
 
 using namespace Decent;
-using namespace Decent::RaSgx;
 using namespace Decent::Ra;
+using namespace Decent::RaSgx;
+using namespace Decent::MbedTlsObj;
 
 const Decent::Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) -> bool
@@ -75,13 +76,9 @@ void RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_
 	sgx_status_t ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, 
 		[this](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
 		{
-			std::shared_ptr<const MbedTlsObj::ECKeyPublic> signPub = m_decentStates.GetKeyContainer().GetSignKeyPair();
+			auto signPub = m_decentStates.GetKeyContainer().GetSignKeyPair();
 
-			std::string pubKeyPem = signPub->ToPubPemString();
-			if (pubKeyPem.size() == 0)
-			{
-				return false;
-			}
+			std::string pubKeyPem = signPub->GetPublicPem();
 
 			General256Hash reportDataHash;
 			Hasher<HashType::SHA256>().Batched(reportDataHash,
@@ -136,16 +133,14 @@ const Decent::Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQ
 );
 
 std::unique_ptr<Decent::Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr,
-	const sgx_ec256_public_t & peerSignkey, std::shared_ptr<const sgx_spid_t> spidPtr, const States& decentStates)
+	const MbedTlsObj::EcPublicKeyBase & peerSignkey, std::shared_ptr<const sgx_spid_t> spidPtr, const States& decentStates)
 {
-	sgx_ec256_public_t signKey(peerSignkey);
+	std::string pubKeyPem = peerSignkey.GetPublicPem();
 
 	return Tools::make_unique<Sgx::RaProcessorSp>(iasConnectorPtr, decentStates.GetKeyContainer().GetSignKeyPair(),
 		spidPtr,
-		[signKey](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
+		[pubKeyPem](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
 	{
-		MbedTlsObj::ECKeyPublic pubKey = MbedTlsObj::ECKeyPublic::FromGeneral(SgxEc256Type2General(signKey));
-		std::string pubKeyPem = pubKey.ToPubPemString();
 		if (pubKeyPem.size() == 0)
 		{
 			return false;

@@ -52,13 +52,13 @@ namespace Decent
 			 * \brief	Issue certificate with the given public key.
 			 *
 			 * \param 		  	hashType	Type of the hash.
-			 * \param [in,out]	caCert  	The certificate of the CA.
+			 * \param 		  	caCert  	The certificate of the CA.
 			 * \param [in,out]	prvKey  	The key pair including private key.
 			 * \param [in,out]	pubKey  	The public key.
 			 * \param 		  	subjName	Subject name for a Certificate. A comma-separated list of OID
 			 * 								types and values (e.g. "C=UK,O=ARM,CN=mbed TLS Server 1").
 			 */
-			X509CertWriter(HashType hashType, X509Cert& caCert, AsymKeyBase& prvKey, AsymKeyBase& pubKey, const std::string& subjName);
+			X509CertWriter(HashType hashType, const X509Cert& caCert, AsymKeyBase& prvKey, AsymKeyBase& pubKey, const std::string& subjName);
 
 			X509CertWriter(const X509CertWriter& rhs) = delete;
 
@@ -135,6 +135,18 @@ namespace Decent
 			 * \return	The PEM encoded X509 Cert.
 			 */
 			std::string GeneratePem(RbgBase& rbg);
+
+			/**
+			 * \brief	Generates a certificate chain including the CA.
+			 *
+			 * \param [in,out]	rbg	The Random Bit Generator.
+			 *
+			 * \return	The PEM encoded X509 Cert chain.
+			 */
+			std::string GeneratePemChain(RbgBase& rbg);
+
+		private:
+			std::unique_ptr<X509Cert> m_ca;
 		};
 
 		class X509Cert : public ObjBase<mbedtls_x509_crt>
@@ -152,7 +164,12 @@ namespace Decent
 
 		public:
 
-			X509Cert(const X509Cert& rhs) = delete;
+			/**
+			 * \brief	Copy constructor
+			 *
+			 * \param	rhs	The right hand side.
+			 */
+			X509Cert(const X509Cert& rhs);
 
 			/**
 			 * \brief	Move constructor

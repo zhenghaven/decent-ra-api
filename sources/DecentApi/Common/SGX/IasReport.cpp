@@ -330,7 +330,6 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 	Hasher<HashType::SHA256>().Calc(hash, iasReportStr);
 
 	bool signVerRes = false;
-	reportCertChain.GoToLastCert();
 	do
 	{
 		try

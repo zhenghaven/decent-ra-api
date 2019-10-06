@@ -16,9 +16,9 @@ using namespace Decent::Ra;
 using namespace Decent::Tools;
 using namespace Decent::MbedTlsObj;
 
-AppX509CertWriter::AppX509CertWriter(EcPublicKeyBase & pubKey, ServerX509Cert & svrCert, EcKeyPairBase & svrPrvKey,
+AppX509CertWriter::AppX509CertWriter(EcPublicKeyBase & pubKey, const ServerX509Cert & svrCert, EcKeyPairBase & svrPrvKey,
 	const std::string & enclaveHash, const std::string & platformType, const std::string & appId, const std::string & whiteList) :
-	AppX509CertWriter(pubKey, static_cast<X509Cert&>(svrCert), svrPrvKey, enclaveHash, platformType, appId, whiteList)
+	AppX509CertWriter(pubKey, static_cast<const X509Cert&>(svrCert), svrPrvKey, enclaveHash, platformType, appId, whiteList)
 {
 }
 
@@ -26,7 +26,7 @@ AppX509CertWriter::~AppX509CertWriter()
 {
 }
 
-AppX509CertWriter::AppX509CertWriter(EcPublicKeyBase & pubKey, X509Cert & svrCert, EcKeyPairBase & svrPrvKey,
+AppX509CertWriter::AppX509CertWriter(EcPublicKeyBase & pubKey, const X509Cert & svrCert, EcKeyPairBase & svrPrvKey,
 	const std::string & enclaveHash, const std::string & platformType, const std::string & appId, const std::string & whiteList) :
 	X509CertWriter(HashType::SHA256, svrCert, svrPrvKey, pubKey, ("CN=" + enclaveHash))
 {

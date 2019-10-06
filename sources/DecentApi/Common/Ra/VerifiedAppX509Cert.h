@@ -20,26 +20,26 @@ namespace Decent
 			/**
 			 * \brief	Issue a certificate to a verified (not directly listed in the whitelist) DECENT App.
 			 *
-			 * \param [in,out]	oriCert		  	The original DECENT App certificate issued by the DECENT
+			 * \param 		  	oriCert		  	The original DECENT App certificate issued by the DECENT
 			 * 									Server.
-			 * \param [in,out]	verifierCert  	The DECENT Verifier's certificate.
+			 * \param 		  	verifierCert  	The DECENT Verifier's certificate.
 			 * \param [in,out]	verifierPrvKey	The DECENT Verifier's key pair including the private key.
 			 * \param 		  	appName		  	The name of the DECENT App.
 			 */
-			VerifiedAppX509CertWriter(AppX509Cert& oriCert, AppX509Cert& verifierCert, MbedTlsObj::EcKeyPairBase& verifierPrvKey,
+			VerifiedAppX509CertWriter(const AppX509Cert& oriCert, const AppX509Cert& verifierCert, MbedTlsObj::EcKeyPairBase& verifierPrvKey,
 				const std::string& appName);
 
 			/**
 			 * \brief	Issue a certificate to a verified (not directly listed in the whitelist) DECENT App.
 			 *
-			 * \param [in,out]	oriCert		  	The original DECENT App certificate issued by the DECENT
+			 * \param 		  	oriCert		  	The original DECENT App certificate issued by the DECENT
 			 * 									Server.
-			 * \param [in,out]	pubKey		  	The DECENT App's public key.
-			 * \param [in,out]	verifierCert  	The DECENT Verifier's certificate.
+			 * \param 		  	pubKey		  	The DECENT App's public key.
+			 * \param 		  	verifierCert  	The DECENT Verifier's certificate.
 			 * \param [in,out]	verifierPrvKey	The DECENT Verifier's key pair including the private key.
 			 * \param 		  	appName		  	The name of the DECENT App.
 			 */
-			VerifiedAppX509CertWriter(AppX509Cert& oriCert, MbedTlsObj::EcPublicKeyBase pubKey, AppX509Cert& verifierCert, MbedTlsObj::EcKeyPairBase& verifierPrvKey,
+			VerifiedAppX509CertWriter(const AppX509Cert& oriCert, MbedTlsObj::EcPublicKeyBase pubKey, const AppX509Cert& verifierCert, MbedTlsObj::EcKeyPairBase& verifierPrvKey,
 				const std::string& appName);
 
 			/** \brief	Destructor */

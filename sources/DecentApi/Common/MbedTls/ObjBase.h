@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include "Initializer.h"
 #include "MbedTlsCppDefs.h"
 #include "RuntimeException.h"
 
@@ -38,7 +39,8 @@ namespace Decent
 			*/
 			ObjBase(T* ptr, FreeFuncType freeFunc) noexcept :
 				m_ptr(ptr),
-				m_freeFunc(freeFunc)
+				m_freeFunc(freeFunc),
+				m_mbedInit(Initializer::Init())
 			{}
 
 			ObjBase(const ObjBase& other) = delete;
@@ -50,7 +52,8 @@ namespace Decent
 			*/
 			ObjBase(ObjBase&& rhs) noexcept :
 				m_ptr(rhs.m_ptr),
-				m_freeFunc(rhs.m_freeFunc)
+				m_freeFunc(rhs.m_freeFunc),
+				m_mbedInit(Initializer::Init())
 			{
 				rhs.m_ptr = nullptr;
 				rhs.m_freeFunc = &DoNotFree;
@@ -211,6 +214,8 @@ namespace Decent
 		private:
 			T * m_ptr;
 			FreeFuncType m_freeFunc;
+
+			const Initializer& m_mbedInit;
 		};
 	}
 }

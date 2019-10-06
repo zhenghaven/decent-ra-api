@@ -6,7 +6,9 @@
 
 #include "../Common.h"
 #include "../make_unique.h"
-#include "../MbedTls/MbedTlsObjects.h"
+#include "../RuntimeException.h"
+
+#include "../MbedTls/EcKey.h"
 
 #ifdef DECENT_THREAD_SAFETY_HIGH
 #include <atomic>

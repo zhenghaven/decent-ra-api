@@ -3,7 +3,7 @@
 using namespace Decent::Ra;
 using namespace Decent::MbedTlsObj;
 
-ClientX509CertWriter::ClientX509CertWriter(EcPublicKeyBase & pubKey, AppX509Cert & appCert, EcKeyPairBase & appPrvKey,
+ClientX509CertWriter::ClientX509CertWriter(EcPublicKeyBase & pubKey, const AppX509Cert & appCert, EcKeyPairBase & appPrvKey,
 	const std::string & userName, const std::string & identity) :
 	AppX509CertWriter(pubKey, appCert, appPrvKey, userName, "DecentClient", identity, "{}")
 {

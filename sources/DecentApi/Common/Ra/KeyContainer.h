@@ -4,10 +4,16 @@
 #include <string>
 
 #include "../GeneralKeyTypes.h"
-#include "../MbedTls/EcKey.h"
+#include "../MbedTls/MbedTlsCppDefs.h"
 
 namespace Decent
 {
+	namespace MbedTlsObj
+	{
+		template<EcKeyType>
+		class EcKeyPair;
+	}
+
 	namespace Ra
 	{
 		class KeyContainer
