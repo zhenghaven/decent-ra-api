@@ -103,17 +103,6 @@ namespace Decent
 			}
 
 			/**
-			* \brief	Cast that converts this instance to a bool
-			* 			This function basically check whether or not the pointer m_ptr is null.
-			*
-			* \return	True if m_ptr is not null, otherwise, false.
-			*/
-			virtual operator bool() const noexcept
-			{
-				return m_ptr != nullptr;
-			}
-
-			/**
 			* \brief	Gets the pointer to the MbedTLS object.
 			*
 			* \return	The pointer to the MbedTLS object.
@@ -183,12 +172,6 @@ namespace Decent
 				{
 					throw RuntimeException("Trying to access a null mbedTLS Cpp object.");
 				}
-			}
-
-			// Will be put into mutable later.
-			T* GetMutable() const noexcept
-			{
-				return m_ptr;
 			}
 
 		protected:

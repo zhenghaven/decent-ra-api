@@ -529,7 +529,7 @@ void AsymKeyBase::VrfyDerSignNoBufferCheck(HashType hashType, const void * hashB
 
 	const uint8_t* hashBufByte = static_cast<const uint8_t*>(hashBuf);
 	const uint8_t* signBufByte = static_cast<const uint8_t*>(signBuf);
-	CALL_MBEDTLS_C_FUNC(mbedtls_pk_verify, GetMutable(), detail::GetMsgDigestType(hashType),
+	CALL_MBEDTLS_C_FUNC(mbedtls_pk_verify, const_cast<mbedtls_pk_context*>(Get()), detail::GetMsgDigestType(hashType),
 		hashBufByte, hashSize, signBufByte, signSize);
 }
 
@@ -539,7 +539,7 @@ std::vector<uint8_t> AsymKeyBase::GetPublicDer(size_t maxDerBufSize) const
 
 	std::vector<uint8_t> der(maxDerBufSize);
 
-	int len = mbedtls_pk_write_pubkey_der(GetMutable(), der.data(), der.size());
+	int len = mbedtls_pk_write_pubkey_der(const_cast<mbedtls_pk_context*>(Get()), der.data(), der.size());
 	if (len < 0)
 	{
 		throw Decent::MbedTlsObj::MbedTlsException("mbedtls_pk_write_pubkey_der", len);
@@ -582,7 +582,7 @@ void AsymKeyBase::GetPrivateDer(std::vector<uint8_t>& out, size_t maxDerBufSize)
 
 	std::vector<uint8_t> der(maxDerBufSize);
 
-	int len = mbedtls_pk_write_key_der(GetMutable(), der.data(), der.size());
+	int len = mbedtls_pk_write_key_der(const_cast< mbedtls_pk_context*>(Get()), der.data(), der.size());
 	if (len <= 0)
 	{
 		throw Decent::MbedTlsObj::MbedTlsException("mbedtls_pk_write_pubkey_der", len);

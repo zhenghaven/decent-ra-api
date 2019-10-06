@@ -37,10 +37,12 @@ TlsCommLayer::TlsCommLayer(ConnectionBase& cnt, std::shared_ptr<const TlsConfig>
 	m_sslCtx(Tools::make_unique<mbedtls_ssl_context>()),
 	m_tlsConfig(tlsConfig)
 {
-	if (!tlsConfig || !*tlsConfig)
+	if (!tlsConfig)
 	{
 		throw Exception("The parameter given to the TLS Communication Layer is invalid.");
 	}
+
+	tlsConfig->NullCheck();
 
 	mbedtls_ssl_init(m_sslCtx.get());
 
@@ -196,5 +198,5 @@ std::string TlsCommLayer::GetPublicKeyPem() const
 
 bool TlsCommLayer::IsValid() const
 {
-	return m_sslCtx != nullptr && m_tlsConfig && *m_tlsConfig;
+	return m_sslCtx != nullptr && m_tlsConfig && !m_tlsConfig->IsNull();
 }
