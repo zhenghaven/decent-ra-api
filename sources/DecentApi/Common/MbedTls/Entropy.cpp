@@ -2,8 +2,6 @@
 
 #include <mbedtls/entropy.h>
 
-#include "Initializer.h"
-
 using namespace Decent::MbedTlsObj;
 
 void Entropy::FreeObject(mbedtls_entropy_context * ptr)
@@ -19,8 +17,7 @@ Entropy & Entropy::InitSharedEntropy()
 }
 
 Entropy::Entropy() :
-	ObjBase(new mbedtls_entropy_context, &FreeObject),
-	m_mbedTlsInit(Initializer::Init())
+	ObjBase(new mbedtls_entropy_context, &FreeObject)
 {
 	mbedtls_entropy_init(Get());
 }
