@@ -10,16 +10,20 @@
 
 using namespace Decent::Ra;
 
+TlsConfigWithVerifier::TlsConfigWithVerifier(TlsConfigWithVerifier&& other) :
+	Decent::Ra::TlsConfigWithName(std::forward<Decent::Ra::TlsConfigWithName>(other)),
+	m_expectedVerifiedAppName(std::move(other.m_expectedVerifiedAppName))
+{}
+
 TlsConfigWithVerifier::TlsConfigWithVerifier(Decent::Ra::States& state, Mode cntMode, const std::string& expectedVerifierName, const std::string & expectedAppName, std::shared_ptr<Decent::MbedTlsObj::SessionTicketMgrBase> ticketMgr) :
 	Decent::Ra::TlsConfigWithName(state, cntMode, expectedVerifierName, ticketMgr),
 	m_expectedVerifiedAppName(expectedAppName)
 {
 }
 
-TlsConfigWithVerifier::TlsConfigWithVerifier(TlsConfigWithVerifier&& other) :
-	Decent::Ra::TlsConfigWithName(std::forward<Decent::Ra::TlsConfigWithName>(other)),
-	m_expectedVerifiedAppName(std::move(other.m_expectedVerifiedAppName))
-{}
+TlsConfigWithVerifier::~TlsConfigWithVerifier()
+{
+}
 
 int TlsConfigWithVerifier::VerifyCert(mbedtls_x509_crt& cert, int depth, uint32_t& flag) const
 {
