@@ -213,7 +213,8 @@ if(DECENT_API_DECENT_APP)
 	target_include_directories(DecentRa_App_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
 	                                                INTERFACE ${DECENT_API_INCLUDE_DIR})
 	#defines:
-	target_compile_definitions(DecentRa_App_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
+	target_compile_definitions(DecentRa_App_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES}
+	                                                PUBLIC RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024)
 	#compiler flags:
 	target_compile_options(DecentRa_App_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
@@ -255,9 +256,10 @@ if(DECENT_API_DECENT_SERVER)
 	#includes:
 	target_include_directories(DecentRa_Server_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIRS})
 	target_include_directories(DecentRa_Server_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
-	                                                INTERFACE ${DECENT_API_INCLUDE_DIR})
+	                                                   INTERFACE ${DECENT_API_INCLUDE_DIR})
 	#defines:
-	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES})
+	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES}
+	                                                   PUBLIC RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024)
 	#compiler flags:
 	target_compile_options(DecentRa_Server_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
