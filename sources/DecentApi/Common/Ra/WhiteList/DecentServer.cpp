@@ -10,6 +10,8 @@
 
 #include "LoadedList.h"
 
+#define WHITELIST_DECENT_SERVER_NO_CACHING
+
 using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
 using namespace Decent::Ra::WhiteList;
@@ -25,7 +27,15 @@ DecentServer::~DecentServer()
 bool DecentServer::AddTrustedNode(States& decentState, const ServerX509Cert & cert)
 {
 	std::string pubKeyPem = AsymKeyBase(const_cast<ServerX509Cert&>(cert).GetCurrPublicKey()).GetPublicPem();
-	
+
+#ifdef WHITELIST_DECENT_SERVER_NO_CACHING
+
+	report_timestamp_t timestamp;
+	std::string serverHash;
+	return VerifyCertFirstTime(decentState, cert, pubKeyPem, serverHash, timestamp);
+
+#else
+
 	if (IsNodeTrusted(pubKeyPem))
 	{
 		return VerifyCertAfterward(decentState, cert);
@@ -34,9 +44,12 @@ bool DecentServer::AddTrustedNode(States& decentState, const ServerX509Cert & ce
 	{
 		report_timestamp_t timestamp;
 		std::string serverHash;
-		return VerifyCertFirstTime(decentState, cert, pubKeyPem, serverHash, timestamp) && 
+		return VerifyCertFirstTime(decentState, cert, pubKeyPem, serverHash, timestamp) &&
 			AddToWhiteListMap(decentState, cert, pubKeyPem, serverHash, timestamp);
 	}
+
+#endif // WHITELIST_DECENT_SERVER_NO_CACHING
+
 }
 
 bool DecentServer::IsNodeTrusted(const std::string & key) const
