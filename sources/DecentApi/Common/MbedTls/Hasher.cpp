@@ -68,3 +68,33 @@ void HasherBase::Finish(void * output)
 {
 	CALL_MBEDTLS_C_FUNC(mbedtls_md_finish, Get(), static_cast<unsigned char*>(output));
 }
+
+HMACerBase::~HMACerBase()
+{
+}
+
+HMACerBase::HMACerBase(const mbedtls_md_info_t & mdInfo, const void * key, const size_t keySize) :
+	MsgDigestBase(mdInfo, true)
+{
+	CALL_MBEDTLS_C_FUNC(mbedtls_md_hmac_starts, Get(), static_cast<const unsigned char*>(key), (keySize * BITS_PER_BYTE));
+}
+
+void HMACerBase::Update(const void * data, const size_t dataSize)
+{
+	if (dataSize > 0 && !data)
+	{
+		throw RuntimeException("Invalid parameter(s) given to HMACerBase::Update");
+	}
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_md_hmac_update, Get(), static_cast<const unsigned char*>(data), dataSize);
+}
+
+void HMACerBase::Finish(void * output)
+{
+	if (!output)
+	{
+		throw RuntimeException("Invalid parameter(s) given to HMACerBase::Finish");
+	}
+
+	CALL_MBEDTLS_C_FUNC(mbedtls_md_hmac_finish, Get(), static_cast<unsigned char*>(output));
+}

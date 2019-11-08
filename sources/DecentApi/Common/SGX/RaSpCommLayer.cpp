@@ -11,16 +11,17 @@
 #include "../MbedTls/Drbg.h"
 #include "../MbedTls/Hasher.h"
 #include "../MbedTls/SafeWrappers.h"
-#include "../Tools/Crypto.h"
+#include "../MbedTls/TlsPrf.h"
 
 #include "../make_unique.h"
 #include "../consttime_memequal.h"
 #include "RaTicket.h"
 #include "RaProcessorSp.h"
 
-using namespace Decent;
 using namespace Decent::Net;
 using namespace Decent::Sgx;
+using namespace Decent::Tools;
+using namespace Decent::MbedTlsObj;
 
 namespace
 {
@@ -31,6 +32,8 @@ namespace
 	static constexpr uint8_t gsk_noNewTicket = 0;
 
 	static constexpr char const gsk_keyDerLabel[] = "new_session_keys";
+	static constexpr char const gsk_finishLabel[] = "finished";
+	static constexpr size_t gsk_defPrfResSize = 12;
 }
 
 // Server steps:
@@ -42,8 +45,8 @@ namespace
 //        FALL BACK to standard RA...
 //     Else:
 //        2. ---> Send "Accepted" RPC, ("Accepted" || Nonce)
-//        3. Recv verification message, AES-GCM(Hash(Accepted_RPC), key=secret_key, add=(masking_key || Nonce))
-//        4. Send verification message, AES-GCM(Hash(RPC_from_client), key=secret_key, add=(masking_key || client_nonce))
+//        3. Recv verification message, TLS-PRF(key=secret_key, gsk_finishLabel, Hash(Accepted_RPC))
+//        4. Send verification message, TLS-PRF(key=secret_key, gsk_finishLabel, Hash(RPC_from_client))
 //        5. Derive new set of keys: new_secret_key = HKDF(secret_key, label="new_session_keys", salt=(client_nonce || Nonce))
 //                                   new_masking_key = HKDF(masking_key, label="new_session_keys", salt=(client_nonce || Nonce))
 static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, RaSpCommLayer::TicketSealer unsealFunc)
@@ -75,7 +78,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 			std::vector<uint8_t> sessionBin = unsealFunc(std::vector<uint8_t>(ticketSpace.first, ticketSpace.second));
 			peerNonce = rpcResuTicket.GetPrimitiveArg<uint64_t>();
 
-			origSession = Tools::make_unique<RaSession>(sessionBin.cbegin(), sessionBin.cend());
+			origSession = Decent::Tools::make_unique<RaSession>(sessionBin.cbegin(), sessionBin.cend());
 		}
 		catch (const std::exception&)
 		{
@@ -108,18 +111,13 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 
 	// 4. Recv client's verification message:
 	{
-		Decent::MbedTlsObj::SecretKeyWrap<GENERAL_128BIT_16BYTE_SIZE + sizeof(uint64_t)> peerAdd;
-		std::copy(origSession->m_maskingKey.m_key.begin(), origSession->m_maskingKey.m_key.end(), peerAdd.m_key.begin());
-		std::memcpy(peerAdd.m_key.data() + GENERAL_128BIT_16BYTE_SIZE, &selfNonce, sizeof(uint64_t));
+		std::array<uint8_t, gsk_defPrfResSize> selfPrfRes;
+		TlsPrf<HashType::SHA256>(origSession->m_secretKey, gsk_finishLabel, selfMsgHash, selfPrfRes);
 
-		std::vector<uint8_t> peerVrfyMsgEnc = connection.RecvContainer<std::vector<uint8_t> >();
-		std::vector<uint8_t> meta;
-		std::vector<uint8_t> peerVrfyMsg;
-		Decent::Tools::QuickAesGcmUnpack(origSession->m_secretKey.m_key, peerVrfyMsgEnc, peerAdd.m_key,
-			meta, peerVrfyMsg, nullptr, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
+		std::vector<uint8_t> peerVrfyMsg = connection.RecvContainer<std::vector<uint8_t> >();
 
-		if (peerVrfyMsg.size() != selfMsgHash.size() ||
-			!consttime_memequal(peerVrfyMsg.data(), selfMsgHash.data(), selfMsgHash.size()))
+		if (peerVrfyMsg.size() != selfPrfRes.size() ||
+			!consttime_memequal(peerVrfyMsg.data(), selfPrfRes.data(), selfPrfRes.size()))
 		{
 			// At this step, we don't fall back to RA process.
 			throw Decent::Net::Exception("Failed to verify ticket resume message from client.");
@@ -128,14 +126,10 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 
 	// 5. Send server's verification message:
 	{
-		Decent::MbedTlsObj::SecretKeyWrap<GENERAL_128BIT_16BYTE_SIZE + sizeof(uint64_t)> selfAdd;
-		std::copy(origSession->m_maskingKey.m_key.begin(), origSession->m_maskingKey.m_key.end(), selfAdd.m_key.begin());
-		std::memcpy(selfAdd.m_key.data() + GENERAL_128BIT_16BYTE_SIZE, &peerNonce, sizeof(uint64_t));
+		std::array<uint8_t, gsk_defPrfResSize> peerPrfRes;
+		TlsPrf<HashType::SHA256>(origSession->m_secretKey, gsk_finishLabel, peerMsgHash, peerPrfRes);
 
-		std::vector<uint8_t> selfVrfyMsg = Decent::Tools::QuickAesGcmPack(origSession->m_secretKey.m_key,
-			std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), peerMsgHash, selfAdd.m_key, nullptr, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
-
-		connection.SendContainer(selfVrfyMsg);
+		connection.SendContainer(peerPrfRes);
 	}
 
 	// 6. Derive new keys to prevent replay attack:
@@ -161,7 +155,7 @@ static void GenerateAndSendTicket(ConnectionBase& cnt, const RaSession& session,
 		session.ToBinary(sessionBin.begin(), sessionBin.end());
 		neTicket = sealFunc(sessionBin);
 
-		MbedTlsObj::ZeroizeContainer(sessionBin);
+		ZeroizeContainer(sessionBin);
 	}
 	catch (const std::exception&)
 	{
@@ -234,7 +228,7 @@ static std::unique_ptr<RaSession> DoHandShake(ConnectionBase& cnt, std::unique_p
 
 	cnt.SendContainer(msg4);
 
-	neSession = Tools::make_unique<RaSession>();
+	neSession = Decent::Tools::make_unique<RaSession>();
 
 	neSession->m_secretKey = raProcessor->GetSK();
 	neSession->m_maskingKey = raProcessor->GetMK();
@@ -271,7 +265,7 @@ const RaSession & RaSpCommLayer::GetSession() const
 	return *m_session;
 }
 
-RaSpCommLayer::RaSpCommLayer(Net::ConnectionBase& cnt, std::unique_ptr<RaSession> session) :
+RaSpCommLayer::RaSpCommLayer(Decent::Net::ConnectionBase& cnt, std::unique_ptr<RaSession> session) :
 	AesGcmCommLayer(session->m_secretKey, session->m_maskingKey, &cnt),
 	m_session(std::move(session))
 {

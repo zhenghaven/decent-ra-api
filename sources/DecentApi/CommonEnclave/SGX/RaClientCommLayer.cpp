@@ -13,8 +13,7 @@
 #include "../../Common/MbedTls/Kdf.h"
 #include "../../Common/MbedTls/Drbg.h"
 #include "../../Common/MbedTls/Hasher.h"
-
-#include "../../Common/Tools/Crypto.h"
+#include "../../Common/MbedTls/TlsPrf.h"
 
 #include "../../Common/SGX/RaTicket.h"
 
@@ -23,6 +22,7 @@
 
 using namespace Decent::Sgx;
 using namespace Decent::Net;
+using namespace Decent::MbedTlsObj;
 
 namespace
 {
@@ -30,6 +30,8 @@ namespace
 	static constexpr uint8_t gsk_noTicket = 0;
 
 	static constexpr char const gsk_keyDerLabel[] = "new_session_keys";
+	static constexpr char const gsk_finishLabel[] = "finished";
+	static constexpr size_t gsk_defPrfResSize = 12;
 }
 
 // Client steps:
@@ -42,8 +44,8 @@ namespace
 //         If not accepted:
 //             FALL BACK to standard RA handshake...
 //         Else:
-//             3. ---> Send verification message, AES-GCM(Hash(RPC_from_server), key=secret_key, add=(masking_key || server_nonce))
-//             4. <--- Recv verification message, AES-GCM(Hash(HasTicket_RPC), key=secret_key, add=(masking_key || Nonce))
+//             3. ---> Send verification message, TLS-PRF(key=secret_key, gsk_finishLabel, Hash(RPC_from_server))
+//             4. <--- Recv verification message, TLS-PRF(key=secret_key, gsk_finishLabel, Hash(HasTicket_RPC))
 //             5. Derive new set of keys: new_secret_key = HKDF(secret_key, label="new_session_keys", salt=(Nonce || server_nonce))
 //                                        new_masking_key = HKDF(masking_key, label="new_session_keys", salt=(Nonce || server_nonce))
 static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, std::shared_ptr<const RaClientSession> savedSession)
@@ -112,30 +114,21 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 	// ==> Otherwise, the ticket is accepted by the peer:
 	// 4. Generate and send verification message:
 	{
-		Decent::MbedTlsObj::SecretKeyWrap<GENERAL_128BIT_16BYTE_SIZE + sizeof(uint64_t)> selfAdd;
-		std::copy(savedSession->m_session.m_maskingKey.m_key.begin(), savedSession->m_session.m_maskingKey.m_key.end(), selfAdd.m_key.begin());
-		std::memcpy(selfAdd.m_key.data() + GENERAL_128BIT_16BYTE_SIZE, &peerNonce, sizeof(uint64_t));
+		std::array<uint8_t, gsk_defPrfResSize> peerPrfRes;
+		TlsPrf<HashType::SHA256>(savedSession->m_session.m_secretKey, gsk_finishLabel, peerMsgHash, peerPrfRes);
 
-		std::vector<uint8_t> selfVrfyMsg = Decent::Tools::QuickAesGcmPack(savedSession->m_session.m_secretKey.m_key,
-			std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), peerMsgHash, selfAdd.m_key, nullptr, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
-
-		connection.SendContainer(selfVrfyMsg);
+		connection.SendContainer(peerPrfRes);
 	}
 
 	// 5. Recv verification message from peer:
 	{
-		Decent::MbedTlsObj::SecretKeyWrap<GENERAL_128BIT_16BYTE_SIZE + sizeof(uint64_t)> peerAdd;
-		std::copy(savedSession->m_session.m_maskingKey.m_key.begin(), savedSession->m_session.m_maskingKey.m_key.end(), peerAdd.m_key.begin());
-		std::memcpy(peerAdd.m_key.data() + GENERAL_128BIT_16BYTE_SIZE, &selfNonce, sizeof(uint64_t));
+		std::array<uint8_t, gsk_defPrfResSize> selfPrfRes;
+		TlsPrf<HashType::SHA256>(savedSession->m_session.m_secretKey, gsk_finishLabel, selfMsgHash, selfPrfRes);
 
-		std::vector<uint8_t> peerVrfyMsgEnc = connection.RecvContainer<std::vector<uint8_t> >();
-		std::vector<uint8_t> meta;
-		std::vector<uint8_t> peerVrfyMsg;
-		Decent::Tools::QuickAesGcmUnpack(savedSession->m_session.m_secretKey.m_key, peerVrfyMsgEnc, peerAdd.m_key,
-			meta, peerVrfyMsg, nullptr, GENERAL_128BIT_16BYTE_SIZE * GENERAL_BITS_PER_BYTE);
+		std::vector<uint8_t> peerVrfyMsg = connection.RecvContainer<std::vector<uint8_t> >();
 
-		if (peerVrfyMsg.size() != selfMsgHash.size() ||
-			!consttime_memequal(peerVrfyMsg.data(), selfMsgHash.data(), selfMsgHash.size()))
+		if (peerVrfyMsg.size() != selfPrfRes.size() ||
+			!consttime_memequal(peerVrfyMsg.data(), selfPrfRes.data(), selfPrfRes.size()))
 		{
 			// At this step, we don't fall back to RA process.
 			throw Decent::Net::Exception("Failed to verify ticket resume message from server.");
