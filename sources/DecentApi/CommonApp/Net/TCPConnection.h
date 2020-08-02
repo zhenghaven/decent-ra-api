@@ -13,10 +13,16 @@ namespace boost
 {
 	namespace asio 
 	{
+		class executor;
 		class io_context;
 		typedef io_context io_service;
-		template <typename Protocol> class basic_socket_acceptor;
-		template <typename Protocol> class basic_stream_socket;
+
+		template <typename Protocol, typename Executor>
+		class basic_socket_acceptor;
+
+		template <typename Protocol, typename Executor>
+		class basic_stream_socket;
+
 		namespace ip 
 		{
 			class tcp;
@@ -40,8 +46,8 @@ namespace Decent
 		class TCPConnection : public ConnectionBase
 		{
 		public: //static members:
-			typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp> TcpSocketType;
-			typedef boost::asio::basic_socket_acceptor<boost::asio::ip::tcp> TcpAcceptorType;
+			typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::executor> TcpSocketType;
+			typedef boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::executor> TcpAcceptorType;
 
 			/**
 			 * \brief	Gets IP address in 32-bit number from string in form of X.X.X.X

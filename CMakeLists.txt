@@ -128,13 +128,44 @@ set(BUILD_STATIC_LIBS ON)
 set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF)
 
 set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ${HUNTER_BOOST_RUNTIME_STATIC})
+set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_NO_SYSTEM_PATHS ON)
-find_package(Boost CONFIG REQUIRED system filesystem)
 
 #==========================================================
 #   Add submodules
 #==========================================================
+
+## Boost libraries
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/config)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/predef)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/preprocessor)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/assert)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/io)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/core)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/static_assert)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/throw_exception)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/integer)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/move)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/type_traits)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/typeof)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/concept_check)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/detail)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/tuple)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/container_hash)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/intrusive)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/container)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/utility)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/optional)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/smart_ptr)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/conversion)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/mpl)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/function_types)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/fusion)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/iterator)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/exception)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/winapi)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/system)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/filesystem)
 
 ##MbedTLS
 set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
@@ -174,6 +205,14 @@ include(SetupSgxSdkLibs)
 ##Header only libraries
 set(CPPCODEC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/cppcodec)
 set(RAPIDJSON_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/rapidjson/include)
+set(BOOST_TTI_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/tti/include)
+set(BOOST_UUID_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/uuid/include)
+set(BOOST_ASIO_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/asio/include)
+set(BOOST_RANDOM_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/random/include)
+set(BOOST_INTERPROC_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/interprocess/include)
+set(BOOST_UNORDERED_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/unordered/include)
+set(BOOST_DATE_TIME_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/date_time/include)
+set(BOOST_NUMERIC_CONVERSION_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/libs/boost/numeric_conversion/include)
 
 #==========================================================
 #   Add files
@@ -210,8 +249,12 @@ if(DECENT_API_DECENT_APP)
 	add_library(DecentRa_App_Enclave STATIC ${SOURCES_APP_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
 	#includes:
 	target_include_directories(DecentRa_App_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIRS})
-	target_include_directories(DecentRa_App_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
-	                                                INTERFACE ${DECENT_API_INCLUDE_DIR})
+	target_include_directories(DecentRa_App_Enclave
+									PUBLIC
+										${CPPCODEC_INCLUDE_DIR}
+										${RAPIDJSON_INCLUDE_DIR}
+									INTERFACE
+										${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_App_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES}
 	                                                PUBLIC RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024)
@@ -229,9 +272,21 @@ if(DECENT_API_DECENT_APP)
 	
 	add_library(DecentRa_App_App STATIC ${SOURCES_APP_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
 	#includes:
-	target_include_directories(DecentRa_App_App PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIR}
-	                                            PUBLIC ${CPPCODEC_INCLUDE_DIR}
-	                                            INTERFACE ${DECENT_API_INCLUDE_DIR})
+	target_include_directories(DecentRa_App_App 
+									PRIVATE
+										${INTEL_SGX_SDK_INCLUDE_DIR}
+									PUBLIC
+										${CPPCODEC_INCLUDE_DIR}
+										${BOOST_TTI_INCLUDE_DIR}
+										${BOOST_UUID_INCLUDE_DIR}
+										${BOOST_ASIO_INCLUDE_DIR}
+										${BOOST_RANDOM_INCLUDE_DIR}
+										${BOOST_INTERPROC_INCLUDE_DIR}
+										${BOOST_DATE_TIME_INCLUDE_DIR}
+										${BOOST_UNORDERED_INCLUDE_DIR}
+										${BOOST_NUMERIC_CONVERSION_INCLUDE_DIR}
+									INTERFACE
+										${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_App_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
@@ -245,8 +300,11 @@ if(DECENT_API_DECENT_APP)
 		jsoncpp_lib_static 
 		libcurl 
 		mbedtls 
-		Boost::filesystem
+		Boost::container
+		Boost::smart_ptr
+		Boost::exception
 		Boost::system
+		Boost::filesystem
 		${Additional_Sys_Lib}
 	)
 endif()
@@ -255,8 +313,12 @@ if(DECENT_API_DECENT_SERVER)
 	add_library(DecentRa_Server_Enclave STATIC ${SOURCES_SERVER_ENCLAVE} ${SOURCES_COMMON_ENCLAVE} ${SOURCES_COMMON})
 	#includes:
 	target_include_directories(DecentRa_Server_Enclave BEFORE PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIRS})
-	target_include_directories(DecentRa_Server_Enclave PUBLIC ${CPPCODEC_INCLUDE_DIR} ${RAPIDJSON_INCLUDE_DIR}
-	                                                   INTERFACE ${DECENT_API_INCLUDE_DIR})
+	target_include_directories(DecentRa_Server_Enclave
+									PUBLIC
+										${CPPCODEC_INCLUDE_DIR}
+										${RAPIDJSON_INCLUDE_DIR}
+									INTERFACE
+										${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES}
 	                                                   PUBLIC RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024)
@@ -275,9 +337,21 @@ if(DECENT_API_DECENT_SERVER)
 	
 	add_library(DecentRa_Server_App STATIC ${SOURCES_SERVER_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
 	#includes:
-	target_include_directories(DecentRa_Server_App PRIVATE ${INTEL_SGX_SDK_INCLUDE_DIR}
-	                                               PUBLIC ${CPPCODEC_INCLUDE_DIR}
-	                                               INTERFACE ${DECENT_API_INCLUDE_DIR})
+	target_include_directories(DecentRa_Server_App
+									PRIVATE
+										${INTEL_SGX_SDK_INCLUDE_DIR}
+									PUBLIC
+										${CPPCODEC_INCLUDE_DIR}
+										${BOOST_TTI_INCLUDE_DIR}
+										${BOOST_UUID_INCLUDE_DIR}
+										${BOOST_ASIO_INCLUDE_DIR}
+										${BOOST_RANDOM_INCLUDE_DIR}
+										${BOOST_INTERPROC_INCLUDE_DIR}
+										${BOOST_DATE_TIME_INCLUDE_DIR}
+										${BOOST_UNORDERED_INCLUDE_DIR}
+										${BOOST_NUMERIC_CONVERSION_INCLUDE_DIR}
+									INTERFACE
+										${DECENT_API_INCLUDE_DIR})
 	#defines:
 	target_compile_definitions(DecentRa_Server_App PRIVATE ${COMMON_APP_DEFINES})
 	#linker flags:
@@ -291,8 +365,11 @@ if(DECENT_API_DECENT_SERVER)
 		jsoncpp_lib_static 
 		libcurl 
 		mbedtls 
-		Boost::filesystem
+		Boost::container
+		Boost::smart_ptr
+		Boost::exception
 		Boost::system
+		Boost::filesystem
 		${Additional_Sys_Lib}
 	)
 endif()

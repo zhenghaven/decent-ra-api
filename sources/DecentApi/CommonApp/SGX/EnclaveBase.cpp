@@ -48,7 +48,7 @@ namespace
 	{
 		if (!fs::exists(enclavePath))
 		{
-			throw Decent::Base::EnclaveAppException("Enclave program file doesn't exist!");
+			throw Decent::Base::EnclaveAppException("Cannot find enclave binary file.");
 		}
 		if (!fs::exists(tokenPath.parent_path()))
 		{

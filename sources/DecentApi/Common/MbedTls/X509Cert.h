@@ -3,6 +3,7 @@
 #include "ObjBase.h"
 
 #include <map>
+#include <memory>
 #include <vector>
 #include <string>
 

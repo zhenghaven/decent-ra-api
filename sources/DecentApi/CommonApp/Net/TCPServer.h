@@ -10,9 +10,13 @@
 
 namespace boost {
 	namespace asio {
+		class executor;
 		class io_context;
 		typedef io_context io_service;
-		template <typename Protocol> class basic_socket_acceptor;
+
+		template <typename Protocol, typename Executor>
+		class basic_socket_acceptor;
+
 		namespace ip 
 		{
 			class tcp;
@@ -74,7 +78,7 @@ namespace Decent
 
 		protected:
 			std::shared_ptr<boost::asio::io_service> m_serverIO;
-			std::shared_ptr<boost::asio::basic_socket_acceptor<boost::asio::ip::tcp> > m_serverAcc;
+			std::shared_ptr<boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::executor> > m_serverAcc;
 
 			std::atomic<uint8_t> m_isTerminated;
 		};
