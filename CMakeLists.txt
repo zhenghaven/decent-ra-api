@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-
+cmake_policy(SET CMP0026 OLD)
 #==========================================================
 #   Options for Decent Project
 #==========================================================
@@ -177,7 +177,8 @@ set(MBEDTLS_LIBRARY mbedtls)
 set(MBEDCRYPTO_ENCLAVE_LIBRARY mbedcrypto_enclave)
 set(MBEDX509_ENCLAVE_LIBRARY mbedx509_enclave)
 set(MBEDTLS_ENCLAVE_LIBRARY mbedtls_enclave)
-
+set(MBEDTLS_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls/include)
+install(TARGETS mbedcrypto mbedx509 mbedtls EXPORT "CURLTargets")
 
 ##libcurl
 set(BUILD_CURL_EXE OFF CACHE BOOL "Set to ON to build CURL executable." FORCE)
@@ -185,8 +186,8 @@ set(BUILD_TESTING OFF CACHE BOOL "Set to ON to build libcurl test libraries." FO
 set(CURL_STATICLIB ON CACHE BOOL "Set to ON to build libcurl with static linking." FORCE)
 set(CURL_ZLIB OFF CACHE BOOL "Set to ON to enable building curl with zlib support." FORCE)
 set(CMAKE_USE_LIBSSH2 OFF CACHE BOOL "Set to ON to enable building curl with libSSH2 support." FORCE)
-set(CMAKE_USE_OPENSSL ON CACHE BOOL "Set to ON to build libcurl with OpenSSL." FORCE)
-set(CMAKE_USE_MBEDTLS OFF CACHE BOOL "Set to ON to build libcurl with MbedTLS." FORCE)
+set(CMAKE_USE_OPENSSL OFF CACHE BOOL "Set to ON to build libcurl with OpenSSL." FORCE)
+set(CMAKE_USE_MBEDTLS ON CACHE BOOL "Set to ON to build libcurl with MbedTLS." FORCE)
 set(HTTP_ONLY ON CACHE BOOL "Set to ON to build libcurl with only http functionalities." FORCE)
 set(ENABLE_MANUAL OFF CACHE BOOL "Set to ON to build libcurl manual." FORCE)
 set(ENABLE_UNIX_SOCKETS OFF CACHE BOOL "Define if you want Unix domain sockets support" FORCE)

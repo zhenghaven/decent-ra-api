@@ -6,7 +6,7 @@
 	url = https://github.com/tplgy/cppcodec.git
 [submodule "libs/curl"]
 	path = libs/curl
-	url = https://github.com/curl/curl.git
+	url = https://github.com/zhenghaven/curl.git
 [submodule "libs/mbedtls"]
 	path = libs/mbedtls
 	url = https://github.com/zhenghaven/mbedtls.git
