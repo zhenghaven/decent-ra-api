@@ -84,7 +84,7 @@ bool StaticList::CheckHashAndName(const std::string & hashStr, const std::string
 	}
 	else
 	{
-		LOGW("Peer <%s, %s> is not in the AuthList.", hashStr.c_str(), appName.c_str());
+		PRINT_I("Peer <%s, %s> is not in the AuthList.", hashStr.c_str(), appName.c_str());
 		return false;
 	}
 #else
