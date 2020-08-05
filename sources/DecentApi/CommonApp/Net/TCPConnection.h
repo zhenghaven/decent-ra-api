@@ -41,8 +41,6 @@ namespace Decent
 {
 	namespace Net
 	{
-		class SmartMessages;
-
 		class TCPConnection : public ConnectionBase
 		{
 		public: //static members:

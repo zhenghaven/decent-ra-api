@@ -7,6 +7,8 @@
 #include "AppX509Cert.h"
 #include "WhiteList/LoadedList.h"
 
+#include "../Common.h"
+
 using namespace Decent::MbedTlsObj;
 using namespace Decent::Ra;
 
@@ -48,6 +50,7 @@ int TlsConfigWithName::VerifyDecentAppCert(const AppX509Cert & cert, int depth, 
 	StaticList peerLoadedList(LoadedList::ParseWhiteListFromJson(cert.GetWhiteList()));
 	if (peerLoadedList != GetState().GetLoadedWhiteList())
 	{
+		LOGW("Peer's AuthList does not match.\n\tPeer's AuthList %s.\n\tOur AuthList: %s.", cert.GetWhiteList().c_str(), m_expectedAppName.c_str());
 		flag = MBEDTLS_X509_BADCERT_NOT_TRUSTED;
 		return MBEDTLS_SUCCESS_RET;
 	}

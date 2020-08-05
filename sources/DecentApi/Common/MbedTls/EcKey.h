@@ -787,7 +787,7 @@ namespace Decent
 					detail::DynCtnOrStatCtnWithSize<containerSType, GetCurveByteSizeFitsBigNum(ecType)>::value, int>::type = 0>
 			void VerifySign(const containerType& hash, const containerRType& r, const containerSType& s) const
 			{
-				return EcKeyPairBase::VerifySign(hash, r, s);
+				return EcKeyPairBase::VerifySign(hash, ConstBigNumber(r), ConstBigNumber(s));
 			}
 
 			template<typename containerXType, typename containerYType,

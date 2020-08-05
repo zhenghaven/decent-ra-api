@@ -17,6 +17,7 @@
 #include "../../Common/MbedTls/EcKey.h"
 
 #include "../../Common/Ra/AppX509Cert.h"
+#include "../../Common/Ra/ServerX509Cert.h"
 #include "../../Common/Ra/AppX509Req.h"
 #include "../../Common/Ra/KeyContainer.h"
 #include "../../Common/Ra/WhiteList/LoadedList.h"
@@ -80,9 +81,14 @@ extern "C" sgx_status_t ecall_decent_ra_app_init(void* connection)
 		//Process X509 Message:
 
 		std::shared_ptr<AppX509Cert> cert = std::make_shared<AppX509Cert>(appCertPemStr);
-		if (!cert)
+		if (!cert || !cert->NextCert())
 		{
 			return SGX_ERROR_UNEXPECTED;
+		}
+
+		{
+			const ServerX509Cert svrCert(*cert->GetCurr());
+			PRINT_I("Received certificate from Decent Server %s.", svrCert.GetCurrCommonName().c_str());
 		}
 
 		//Set loaded whitelist.

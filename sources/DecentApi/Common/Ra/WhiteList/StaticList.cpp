@@ -78,7 +78,15 @@ bool StaticList::CheckHashAndName(const std::string & hashStr, const std::string
 #ifndef DEBUG
 	auto it = m_listMap.find(hashStr);
 
-	return (it != m_listMap.cend()) && (it->second == appName);
+	if ((it != m_listMap.cend()) && (it->second == appName))
+	{
+		return true;
+	}
+	else
+	{
+		LOGW("Peer <%s, %s> is not in the AuthList.", hashStr.c_str(), appName.c_str());
+		return false;
+	}
 #else
 	LOGW("%s() passed app, %s, with hash, %s,  without checking!", __FUNCTION__, appName.c_str(), hashStr.c_str());
 	return true;
