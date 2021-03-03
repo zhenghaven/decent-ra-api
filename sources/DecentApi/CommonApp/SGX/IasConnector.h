@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include <mbedTLScpp/LibInitializer.hpp>
+
 typedef uint8_t sgx_epid_group_id_t[4];
 typedef struct _ra_msg3_t sgx_ra_msg3_t;
 
@@ -51,6 +53,7 @@ namespace Decent
 			virtual bool GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, std::string& outReport, std::string& outSign, std::string& outCert) const;
 
 		private:
+			mbedTLScpp::LibInitializer& m_libInit;
 			const std::string m_subscriptionKey;
 		};
 	}

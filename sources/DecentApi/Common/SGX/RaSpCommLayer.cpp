@@ -2,16 +2,15 @@
 
 #include <sgx_key_exchange.h>
 
+#include <mbedTLScpp/DefaultRbg.hpp>
+#include <mbedTLScpp/Hash.hpp>
+#include <mbedTLScpp/TlsPrf.hpp>
+#include <mbedTLScpp/Hkdf.hpp>
+
 #include "../Net/RpcWriter.h"
 #include "../Net/RpcParser.h"
 #include "../Net/ConnectionBase.h"
 #include "../Net/NetworkException.h"
-
-#include "../MbedTls/Kdf.h"
-#include "../MbedTls/Drbg.h"
-#include "../MbedTls/Hasher.h"
-#include "../MbedTls/SafeWrappers.h"
-#include "../MbedTls/TlsPrf.h"
 
 #include "../make_unique.h"
 #include "../consttime_memequal.h"
@@ -21,7 +20,6 @@
 using namespace Decent::Net;
 using namespace Decent::Sgx;
 using namespace Decent::Tools;
-using namespace Decent::MbedTlsObj;
 
 namespace
 {
@@ -49,14 +47,16 @@ namespace
 //        4. Send verification message, TLS-PRF(key=secret_key, gsk_finishLabel, Hash(RPC_from_client))
 //        5. Derive new set of keys: new_secret_key = HKDF(secret_key, label="new_session_keys", salt=(client_nonce || Nonce))
 //                                   new_masking_key = HKDF(masking_key, label="new_session_keys", salt=(client_nonce || Nonce))
-static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, RaSpCommLayer::TicketSealer unsealFunc)
+static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, RaSpCommLayer::TicketUnsealer unsealFunc)
 {
+	using namespace mbedTLScpp;
+
 	std::array<uint64_t, 2> nonces;
 	uint64_t& peerNonce = nonces[0]; //Client nonce is at first position
 	uint64_t& selfNonce = nonces[1]; //Server nonce is at second position
 	std::unique_ptr<RaSession> origSession;
-	Decent::General256Hash selfMsgHash;
-	Decent::General256Hash peerMsgHash;
+	Hash<HashType::SHA256> selfMsgHash;
+	Hash<HashType::SHA256> peerMsgHash;
 	
 	// 1. Recv client's RPC
 	{
@@ -71,11 +71,10 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 
 		try
 		{
-			using namespace Decent::MbedTlsObj;
-			Hasher<HashType::SHA256>().Calc(peerMsgHash, rpcResuTicket.GetFullBinary());
+			peerMsgHash = Hasher<HashType::SHA256>().Calc(CtnFullR(rpcResuTicket.GetFullBinary()));
 
 			auto ticketSpace = rpcResuTicket.GetBinaryArg();
-			std::vector<uint8_t> sessionBin = unsealFunc(std::vector<uint8_t>(ticketSpace.first, ticketSpace.second));
+			SecretVector<uint8_t> sessionBin = unsealFunc(std::vector<uint8_t>(ticketSpace.first, ticketSpace.second));
 			peerNonce = rpcResuTicket.GetPrimitiveArg<uint64_t>();
 
 			origSession = Decent::Tools::make_unique<RaSession>(sessionBin.cbegin(), sessionBin.cend());
@@ -93,8 +92,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 	}
 
 	// 2. Generate a nonce:
-	Decent::MbedTlsObj::Drbg drbg;
-	drbg.RandStruct(selfNonce);
+	selfNonce = mbedTLScpp::DefaultRbg().GetRand<uint64_t>();
 
 	// 3. Send resume result:
 	{
@@ -105,14 +103,16 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 		rpcSuccResu.AddPrimitiveArg<uint64_t>() = selfNonce;
 		connection.SendRpc(rpcSuccResu);
 
-		using namespace Decent::MbedTlsObj;
-		Hasher<HashType::SHA256>().Calc(selfMsgHash, rpcSuccResu.GetFullBinary());
+		selfMsgHash = Hasher<HashType::SHA256>().Calc(CtnFullR(rpcSuccResu.GetFullBinary()));
 	}
 
 	// 4. Recv client's verification message:
 	{
-		std::array<uint8_t, gsk_defPrfResSize> selfPrfRes;
-		TlsPrf<HashType::SHA256>(origSession->m_secretKey, gsk_finishLabel, selfMsgHash, selfPrfRes);
+		auto selfPrfRes = TlsPrf<TlsPrfType::SHA256, gsk_defPrfResSize>(
+			CtnFullR(origSession->m_secretKey),
+			gsk_finishLabel,
+			CtnFullR(selfMsgHash)
+		);
 
 		std::vector<uint8_t> peerVrfyMsg = connection.RecvContainer<std::vector<uint8_t> >();
 
@@ -126,18 +126,28 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 
 	// 5. Send server's verification message:
 	{
-		std::array<uint8_t, gsk_defPrfResSize> peerPrfRes;
-		TlsPrf<HashType::SHA256>(origSession->m_secretKey, gsk_finishLabel, peerMsgHash, peerPrfRes);
+		auto peerPrfRes = TlsPrf<TlsPrfType::SHA256, gsk_defPrfResSize>(
+			CtnFullR(origSession->m_secretKey),
+			gsk_finishLabel,
+			CtnFullR(peerMsgHash)
+		);
 
-		connection.SendContainer(peerPrfRes);
+		connection.SendContainer(peerPrfRes.Get());
 	}
 
 	// 6. Derive new keys to prevent replay attack:
 	std::unique_ptr<RaSession> currSession = Decent::Tools::make_unique<RaSession>();
 	{
-		using namespace Decent::MbedTlsObj;
-		HKDF<HashType::SHA256>(origSession->m_secretKey.m_key, gsk_keyDerLabel, nonces, currSession->m_secretKey.m_key);
-		HKDF<HashType::SHA256>(origSession->m_maskingKey.m_key, gsk_keyDerLabel, nonces, currSession->m_maskingKey.m_key);
+		currSession->m_secretKey = Hkdf<HashType::SHA256, 128>(
+			CtnFullR(origSession->m_secretKey),
+			CtnFullR(gsk_keyDerLabel),
+			CtnFullR(nonces)
+		);
+		currSession->m_maskingKey = Hkdf<HashType::SHA256, 128>(
+			CtnFullR(origSession->m_maskingKey),
+			CtnFullR(gsk_keyDerLabel),
+			CtnFullR(nonces)
+		);
 	}
 
 	origSession->m_secretKey = currSession->m_secretKey;
@@ -151,11 +161,11 @@ static void GenerateAndSendTicket(ConnectionBase& cnt, const RaSession& session,
 
 	try
 	{
-		std::vector<uint8_t> sessionBin(session.GetSize());
+		using namespace mbedTLScpp;
+
+		SecretVector<uint8_t> sessionBin(session.GetSize());
 		session.ToBinary(sessionBin.begin(), sessionBin.end());
 		neTicket = sealFunc(sessionBin);
-
-		ZeroizeContainer(sessionBin);
 	}
 	catch (const std::exception&)
 	{
@@ -186,7 +196,7 @@ static void GenerateAndSendTicket(ConnectionBase& cnt, const RaSession& session,
 //         7. ---> Send RA MSG 4
 //         GO TO send ticket
 static std::unique_ptr<RaSession> DoHandShake(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
-	bool& isResumed, RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc)
+	bool& isResumed, RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketUnsealer unsealFunc)
 {
 	if (!raProcessor)
 	{
@@ -240,7 +250,7 @@ static std::unique_ptr<RaSession> DoHandShake(ConnectionBase& cnt, std::unique_p
 }
 
 RaSpCommLayer::RaSpCommLayer(ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
-	bool& isResumed, TicketSealer sealFunc, TicketSealer unsealFunc) :
+	bool& isResumed, TicketSealer sealFunc, TicketUnsealer unsealFunc) :
 	RaSpCommLayer(cnt, DoHandShake(cnt, std::move(raProcessor), isResumed, sealFunc, unsealFunc))
 {
 }

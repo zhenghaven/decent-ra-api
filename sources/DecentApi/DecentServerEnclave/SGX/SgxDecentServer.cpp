@@ -4,6 +4,8 @@
 
 #include <sgx_dh.h>
 
+#include <mbedTLScpp/X509Req.hpp>
+
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/Tools/DataCoding.h"
@@ -12,8 +14,8 @@
 #include "../../Common/Ra/AppX509Req.h"
 #include "../../Common/Ra/AppX509Cert.h"
 #include "../../Common/Ra/ServerX509Cert.h"
-#include "../../Common/MbedTls/Drbg.h"
-#include "../../Common/MbedTls/EcKey.h"
+
+#include "../../Common/Tools/EnclaveId.hpp"
 
 #include "../../Common/SGX/SgxCryptoConversions.h"
 
@@ -31,7 +33,6 @@ using namespace Decent::Ra;
 using namespace Decent::Net;
 using namespace Decent::Tools;
 using namespace Decent::RaSgx;
-using namespace Decent::MbedTlsObj;
 
 namespace
 {
@@ -50,7 +51,7 @@ extern "C" sgx_status_t ecall_decent_ra_server_init(const sgx_spid_t* inSpid)
 
 	gs_spid = std::make_shared<sgx_spid_t>(*inSpid);
 	
-	PRINT_I("Initializing Decent Server with hash: %s\n", Tools::GetSelfHashBase64().c_str());
+	PRINT_I("Initializing Decent Server with hash: %s\n", Tools::GetSelfHashHexStr().c_str());
 
 	return SGX_SUCCESS;
 }
@@ -69,7 +70,8 @@ extern "C" sgx_status_t ecall_decent_ra_server_gen_x509(const void * const ias_c
 
 	try
 	{
-		std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor = RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, *signkeyPair, gs_spid, gs_serverState);
+		std::unique_ptr<Decent::Sgx::RaProcessorSp> spProcesor =
+			RaProcessorSp::GetSgxDecentRaProcessorSp(ias_connector, signkeyPair->GetPublicPem(), gs_spid, gs_serverState);
 		std::unique_ptr<RaProcessorClient> clientProcessor = Tools::make_unique<RaProcessorClient>(
 			enclave_Id,
 			[](const sgx_ec256_public_t& pubKey) {
@@ -80,8 +82,9 @@ extern "C" sgx_status_t ecall_decent_ra_server_gen_x509(const void * const ias_c
 			);
 
 		Decent::RaSgx::SelfRaReportGenerator selfRaReportGener(spProcesor, clientProcessor);
+		Decent::RaSgx::SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener, gs_serverState);
 
-		return Decent::RaSgx::SelfRaReportGenerator::GenerateAndStoreServerX509Cert(selfRaReportGener, gs_serverState) ? SGX_SUCCESS : SGX_ERROR_UNEXPECTED;
+		return SGX_SUCCESS;
 	}
 	catch (const std::exception& e)
 	{
@@ -121,6 +124,8 @@ extern "C" int ecall_decent_ra_server_load_const_loaded_list(const char* key, co
 
 extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key, void* const connection)
 {
+	using namespace mbedTLScpp;
+
 	if (!key || !connection)
 	{
 		return SGX_ERROR_INVALID_PARAMETER;
@@ -133,18 +138,24 @@ extern "C" sgx_status_t ecall_decent_ra_server_proc_app_cert_req(const char* key
 		const sgx_dh_session_enclave_identity_t& identity = commLayer.GetIdentity();
 
 		std::vector<uint8_t> appX509ReqDer = commLayer.RecvContainer<std::vector<uint8_t> >();
-		AppX509Req appX509Req(appX509ReqDer);
+		X509Req appX509Req = X509Req::FromDER(CtnFullR(appX509ReqDer));
 		appX509Req.VerifySignature();
-		EcPublicKey<EcKeyType::SECP256R1> appPubKey(appX509Req.GetPublicKey());
+		EcPublicKey<EcType::SECP256R1> appPubKey = appX509Req.GetPublicKey<EcPublicKey<EcType::SECP256R1> >();
 
-		EcKeyPair<EcKeyType::SECP256R1> signKey = *gs_serverState.GetKeyContainer().GetSignKeyPair();
+		auto signKey    = gs_serverState.GetKeyContainer().GetSignKeyPair();
 		auto serverCert = gs_serverState.GetServerCertContainer().GetServerCert();
 
 		std::string whiteList = gs_serverState.GetAppWhiteListsManager().GetWhiteList(key);
-		AppX509CertWriter appX509(appPubKey, *serverCert, signKey, SerializeStruct(identity.mr_enclave), RaReport::sk_ValueReportTypeSgx, SerializeStruct(identity), whiteList);
+		AppX509CertWriter appX509(
+			appPubKey,
+			*serverCert,
+			*signKey,
+			SerializeStruct(identity.mr_enclave),
+			RaReport::sk_ValueReportTypeSgx,
+			SerializeStruct(identity),
+			whiteList);
 
-		Drbg drbg;
-		commLayer.SendContainer(appX509.GeneratePemChain(drbg));
+		commLayer.SendContainer(serverCert->GetPem() + "\n" + appX509.GetPem());
 	}
 	catch (const std::exception&)
 	{

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Common/RuntimeException.h"
+#include "../../Common/Exceptions.h"
 
 #define DECENT_ASSERT_ENCLAVE_APP_RESULT(X, INFO) if(!(X)) { throw Decent::Base::EnclaveAppException("Failed to " INFO); }
 

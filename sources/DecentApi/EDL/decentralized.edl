@@ -2,7 +2,7 @@ enclave {
 	
 	include "sgx_quote.h"
 	
-	trusted 
+	trusted
 	{
 		public sgx_status_t ecall_decent_sgx_decentralized_init([in] const sgx_spid_t* in_spid);
 	};

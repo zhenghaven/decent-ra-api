@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>
 
-#include "../../Common/GeneralKeyTypes.h"
+#include <mbedTLScpp/SKey.hpp>
 
 typedef struct _sgx_ra_msg0s_t sgx_ra_msg0s_t;
 typedef struct _sgx_ra_msg0r_t sgx_ra_msg0r_t;
@@ -42,15 +42,24 @@ namespace Decent
 			virtual void ProcessMsg4(const std::vector<uint8_t>& msg4Pack);
 
 			bool IsAttested() const;
-			const G128BitSecretKeyWrap& GetMK() const;
-			const G128BitSecretKeyWrap& GetSK() const;
+
+			const mbedTLScpp::SKey<128>& GetMK() const
+			{
+				return m_mk;
+			}
+
+			const mbedTLScpp::SKey<128>& GetSK() const
+			{
+				return m_sk;
+			}
+
 			std::unique_ptr<sgx_ias_report_t> ReleaseIasReport();
 
 		protected:
 			virtual void InitRaContext(const sgx_ra_config& raConfig, const sgx_ec256_public_t& pubKey);
 			virtual void CloseRaContext();
 			virtual bool CheckKeyDerivationFuncId(const uint16_t id) const;
-			virtual void DeriveSharedKeys(G128BitSecretKeyWrap& mk, G128BitSecretKeyWrap& sk);
+			virtual void DeriveSharedKeys(mbedTLScpp::SKey<128>& mk, mbedTLScpp::SKey<128>& sk);
 			virtual void GetMsg1(sgx_ra_msg1_t& msg1);
 
 			uint64_t m_enclaveId;
@@ -61,8 +70,8 @@ namespace Decent
 
 			std::unique_ptr<sgx_ra_config> m_raConfig;
 			std::unique_ptr<sgx_ec256_public_t> m_peerSignKey;
-			G128BitSecretKeyWrap m_mk;
-			G128BitSecretKeyWrap m_sk;
+			mbedTLScpp::SKey<128> m_mk;
+			mbedTLScpp::SKey<128> m_sk;
 			std::unique_ptr<sgx_ias_report_t> m_iasReport;
 
 			SpSignPubKeyVerifier m_signKeyVerifier;

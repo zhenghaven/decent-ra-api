@@ -71,7 +71,7 @@ size_t MainThreadAsynWorker::UpdateUntilInterrupt()
 			if (m_taskQueue.size() == 0)
 			{
 				//No more task available, wait
-				m_taskQueueSignal.wait(taskQueueLock, 
+				m_taskQueueSignal.wait(taskQueueLock,
 					[this, &isInterrupted]() -> bool {
 					return isInterrupted || m_taskQueue.size() > 0;
 				});

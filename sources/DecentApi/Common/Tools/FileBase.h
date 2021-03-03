@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../RuntimeException.h"
+#include "../Exceptions.h"
 
 //Parameters for fseek. These constant may not be available in enclaves.
 #define DECENT_FS_SEEK_CUR    1

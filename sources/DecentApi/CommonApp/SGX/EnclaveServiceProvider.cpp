@@ -23,14 +23,14 @@ EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>&
 {
 }
 
-EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const std::string & enclavePath, const std::string & tokenPath, 
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const std::string & enclavePath, const std::string & tokenPath,
 	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
 	Sgx::EnclaveBase(enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep),
 	m_ias(ias)
 {
 }
 
-EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const fs::path & enclavePath, const fs::path & tokenPath, 
+EnclaveServiceProvider::EnclaveServiceProvider(const std::shared_ptr<Connector>& ias, const fs::path & enclavePath, const fs::path & tokenPath,
 	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
 	Sgx::EnclaveBase(enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep),
 	m_ias(ias)
@@ -50,7 +50,7 @@ void EnclaveServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & out
 {
 	int retval = 0;
 
-	sgx_status_t enclaveRet = ecall_decent_sgx_sp_get_pub_sign_key(GetEnclaveId(), &retval, GeneralEc256Type2Sgx(&outKey));
+	sgx_status_t enclaveRet = ecall_decent_sgx_sp_get_pub_sign_key(GetEnclaveId(), &retval, reinterpret_cast<sgx_ec256_public_t*>(&outKey));
 	DECENT_CHECK_SGX_STATUS_ERROR(enclaveRet, ecall_decent_sgx_sp_get_pub_sign_key);
 	DECENT_ASSERT_ENCLAVE_APP_RESULT(retval, "get service provider public key");
 }

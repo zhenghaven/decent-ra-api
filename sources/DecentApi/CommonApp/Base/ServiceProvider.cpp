@@ -1,7 +1,7 @@
 #include "ServiceProvider.h"
 
 #include "../../Common/Tools/DataCoding.h"
-#include "../../Common/GeneralKeyTypes.h"
+#include "../../Common/general_key_types.h"
 
 using namespace Decent::Tools;
 using namespace Decent::Base;

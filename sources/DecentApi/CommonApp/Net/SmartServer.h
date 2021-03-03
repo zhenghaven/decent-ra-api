@@ -106,7 +106,7 @@ namespace Decent
 				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> cntPoolWorkerPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/** \brief	Worker that keeps accepting connection. */
-			virtual void AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler, 
+			virtual void AcceptConnectionWorker(ServerHandle handle, std::shared_ptr<Server> server, std::shared_ptr<ConnectionHandler> handler,
 				std::shared_ptr<ConnectionPoolBase> cntPool, std::shared_ptr<Threading::ThreadPool> cntPoolWorkerPool, std::shared_ptr<Threading::ThreadPool> thrPool);
 
 			/** \brief	Server cleaner, who cleans the server that has already been shutdown-ed. */

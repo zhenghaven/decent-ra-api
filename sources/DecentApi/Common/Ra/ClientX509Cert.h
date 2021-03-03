@@ -8,6 +8,10 @@ namespace Decent
 	{
 		class ClientX509CertWriter : public AppX509CertWriter
 		{
+		public: // Static members:
+
+			using _Base = AppX509CertWriter;
+
 		public:
 
 			ClientX509CertWriter() = delete;
@@ -23,31 +27,66 @@ namespace Decent
 			 * \param 		  	userName 	The client's user name.
 			 * \param 		  	identity 	The client's identity.
 			 */
-			ClientX509CertWriter(MbedTlsObj::EcPublicKeyBase& pubKey, const AppX509Cert& appCert, MbedTlsObj::EcKeyPairBase& appPrvKey,
-				const std::string& userName, const std::string& identity);
+			template<typename _CltPKObjTrait,
+				typename _AppCertTrait,
+				typename _AppPKObjTrait
+			>
+			ClientX509CertWriter(
+				const mbedTLScpp::EcPublicKeyBase<_CltPKObjTrait>& pubKey,
+				const AppX509CertBase<_AppCertTrait>& appCert,
+				const mbedTLScpp::EcKeyPairBase<_AppPKObjTrait>& appPrvKey,
+				const std::string& userName,
+				const std::string& identity) :
+				_Base::AppX509CertWriter(pubKey, appCert, appPrvKey, userName, "DecentClient", identity, "{}")
+			{}
 
 			/** \brief	Destructor */
-			virtual ~ClientX509CertWriter();
+			virtual ~ClientX509CertWriter()
+			{}
 		};
 
-		class ClientX509Cert : public AppX509Cert
+		template<typename _X509CertObjTrait = mbedTLScpp::DefaultX509CertObjTrait,
+			mbedTLScpp::enable_if_t<
+				std::is_same<typename _X509CertObjTrait::CObjType, mbedtls_x509_crt>::value, int
+			> = 0>
+		class ClientX509CertBase : public AppX509CertBase<_X509CertObjTrait>
 		{
+		public: // Static members:
+
+			using CertTrait = _X509CertObjTrait;
+			using _Base     = AppX509CertBase<CertTrait>;
+
+			static ClientX509CertBase<mbedTLScpp::DefaultX509CertObjTrait>
+				FromPEM(const std::string& pem)
+			{
+				return ClientX509CertBase<mbedTLScpp::DefaultX509CertObjTrait>(_Base::FromPEM(pem));
+			}
+
+			template<typename _SecCtnType>
+			static ClientX509CertBase<mbedTLScpp::DefaultX509CertObjTrait>
+				FromDER(const mbedTLScpp::ContCtnReadOnlyRef<_SecCtnType, false>& der)
+			{
+				return ClientX509CertBase<mbedTLScpp::DefaultX509CertObjTrait>(_Base::FromDER(der));
+			}
+
 		public:
-			ClientX509Cert() = delete;
 
-			ClientX509Cert(const ClientX509Cert& rhs) = delete;
+			using _Base::AppX509CertBase;
 
-			ClientX509Cert(ClientX509Cert&& rhs);
+			ClientX509CertBase(ClientX509CertBase&& other) :
+				_Base::AppX509CertBase(std::forward<_Base>(other))
+			{}
 
-			ClientX509Cert(const std::vector<uint8_t> & der);
+			virtual ~ClientX509CertBase()
+			{}
 
-			ClientX509Cert(const std::string & pem);
-
-			ClientX509Cert(mbedtls_x509_crt& ref);
-
-			virtual ~ClientX509Cert();
-
-			virtual ClientX509Cert& operator=(ClientX509Cert&& rhs);
+			ClientX509CertBase& operator=(ClientX509CertBase&& rhs)
+			{
+				_Base::operator=(std::forward<_Base>(rhs));
+				return *this;
+			}
 		};
+
+		using ClientX509Cert = ClientX509CertBase<>;
 	}
 }

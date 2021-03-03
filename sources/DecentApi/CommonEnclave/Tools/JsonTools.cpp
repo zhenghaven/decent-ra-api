@@ -7,7 +7,7 @@
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "../../Common/RuntimeException.h"
+#include "../../Common/Exceptions.h"
 
 using namespace Decent;
 using namespace Decent::Tools;
@@ -145,7 +145,7 @@ JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & val)
 
 JsonValue& Tools::JsonSetVal(JsonDoc& doc, const std::string & index, const std::string & val)
 {
-	return ConstructIndex(doc, index, 
+	return ConstructIndex(doc, index,
 		rapidjson::Value().SetString(rapidjson::StringRef(val.c_str(), val.size()), doc.GetAllocator()));
 }
 

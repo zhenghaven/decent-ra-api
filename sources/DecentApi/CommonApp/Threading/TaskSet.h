@@ -32,7 +32,7 @@ namespace Decent
 			 * 								to the main thread to execute AFTER both the main task and final
 			 * 								task are done.
 			 */
-			TaskSet(TaskType mainTask, TaskType mainTaskKiller, 
+			TaskSet(TaskType mainTask, TaskType mainTaskKiller,
 			TaskType finalMainThreadTask = TaskType());
 
 			/** \brief	Destructor */

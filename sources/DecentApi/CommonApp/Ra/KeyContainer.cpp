@@ -1,26 +1,22 @@
 #include "../../Common/Ra/KeyContainer.h"
 
 #include <memory>
-#include <exception>
 
-#include "../../Common/Common.h"
-#include "../../Common/make_unique.h"
-#include "../../Common/MbedTls/EcKey.h"
-#include "../../Common/MbedTls/Drbg.h"
-
-using namespace Decent::Ra;
-using namespace Decent::Tools;
-using namespace Decent::MbedTlsObj;
+#include <mbedTLScpp/EcKey.hpp>
 
 namespace
 {
-	static std::unique_ptr<EcKeyPair<EcKeyType::SECP256R1> > ConstructNewKey()
+	static std::unique_ptr<mbedTLScpp::EcKeyPair<mbedTLScpp::EcType::SECP256R1> > ConstructNewKey()
 	{
-		return make_unique<EcKeyPair<EcKeyType::SECP256R1> >(EcKeyPair<EcKeyType::SECP256R1>(make_unique<Drbg>()));
+		using namespace mbedTLScpp;
+
+		return Internal::make_unique<EcKeyPair<EcType::SECP256R1> >(
+			EcKeyPair<EcType::SECP256R1>::Generate()
+		);
 	}
 }
 
-KeyContainer::KeyContainer() :
+Decent::Ra::KeyContainer::KeyContainer() :
 	KeyContainer(ConstructNewKey())
 {
 }

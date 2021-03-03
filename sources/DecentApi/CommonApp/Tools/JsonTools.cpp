@@ -7,7 +7,7 @@
 
 #include <json/json.h>
 
-#include "../../Common/RuntimeException.h"
+#include "../../Common/Exceptions.h"
 
 using namespace Decent;
 using namespace Decent::Tools;

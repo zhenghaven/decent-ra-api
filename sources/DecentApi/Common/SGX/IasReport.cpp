@@ -3,7 +3,9 @@
 #include <map>
 #include <string>
 
-#include <mbedtls/x509_crt.h>
+#include <mbedTLScpp/Hash.hpp>
+#include <mbedTLScpp/PKey.hpp>
+#include <mbedTLScpp/X509Cert.hpp>
 
 #include <cppcodec/hex_default_upper.hpp>
 #include <cppcodec/base64_rfc4648.hpp>
@@ -20,10 +22,6 @@
 
 #include "../Tools/JsonTools.h"
 #include "../Tools/DataCoding.h"
-
-#include "../MbedTls/Hasher.h"
-#include "../MbedTls/X509Cert.h"
-#include "../MbedTls/AsymKeyBase.h"
 
 #include "IasReportCert.h"
 #include "sgx_structs.h"
@@ -315,10 +313,10 @@ void Ias::ParseIasReport(sgx_ias_report_t & outReport, std::string& outId, std::
 
 bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, const char * nonce)
 {
-	using namespace Decent::MbedTlsObj;
+	using namespace mbedTLScpp;
 
-	X509Cert trustedIasCert(Ias::gsk_IasReportCert);
-	X509Cert reportCertChain(reportCert);
+	X509Cert trustedIasCert = X509Cert::FromPEM(Ias::gsk_IasReportCert);
+	X509Cert reportCertChain = X509Cert::FromPEM(reportCert);
 
 	//Verify the certificate chain came from the report.
 	uint32_t flags = 0;
@@ -326,20 +324,33 @@ bool Ias::ParseIasReportAndCheckSignature(sgx_ias_report_t & outIasReport, const
 
 	std::vector<uint8_t> signBinBuf = cppcodec::base64_rfc4648::decode<std::vector<uint8_t>, std::string>(reportSign);
 
-	General256Hash hash;
-	Hasher<HashType::SHA256>().Calc(hash, iasReportStr);
+	Hash<HashType::SHA256> hash = Hasher<HashType::SHA256>().Calc(CtnFullR(iasReportStr));
 
 	bool signVerRes = false;
+	bool isDoneVrfy = false;
 	do
 	{
 		try
 		{
-			AsymKeyBase(reportCertChain.GetCurrPublicKey()).VerifyDerSign(HashType::SHA256, hash, signBinBuf);
+			reportCertChain.GetPublicKey().VerifyDerSign(hash, CtnFullR(signBinBuf));
 			signVerRes = true;
 		}
 		catch (const std::exception&)
 		{}
-	} while (!signVerRes && reportCertChain.PrevCert());
+
+		if (signVerRes)
+		{
+			isDoneVrfy = true;
+		}
+		else if (!reportCertChain.HasNext())
+		{
+			isDoneVrfy = true;
+		}
+		else
+		{
+			reportCertChain.NextCert();
+		}
+	} while (!isDoneVrfy);
 
 	if (!signVerRes)
 	{

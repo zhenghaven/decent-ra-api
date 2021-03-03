@@ -1,5 +1,10 @@
 #include "RaClientCommLayer.h"
 
+#include <mbedTLScpp/DefaultRbg.hpp>
+#include <mbedTLScpp/Hash.hpp>
+#include <mbedTLScpp/TlsPrf.hpp>
+#include <mbedTLScpp/Hkdf.hpp>
+
 #include "../../Common/make_unique.h"
 #include "../../Common/consttime_memequal.h"
 
@@ -10,11 +15,6 @@
 #include "../../Common/Net/RpcParser.h"
 #include "../../Common/Net/NetworkException.h"
 
-#include "../../Common/MbedTls/Kdf.h"
-#include "../../Common/MbedTls/Drbg.h"
-#include "../../Common/MbedTls/Hasher.h"
-#include "../../Common/MbedTls/TlsPrf.h"
-
 #include "../../Common/SGX/RaTicket.h"
 
 #include "RaProcessorClient.h"
@@ -22,7 +22,6 @@
 
 using namespace Decent::Sgx;
 using namespace Decent::Net;
-using namespace Decent::MbedTlsObj;
 
 namespace
 {
@@ -50,6 +49,8 @@ namespace
 //                                        new_masking_key = HKDF(masking_key, label="new_session_keys", salt=(Nonce || server_nonce))
 static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connection, std::shared_ptr<const RaClientSession> savedSession)
 {
+	using namespace mbedTLScpp;
+
 	// If there is no saved ticket:
 	if (!savedSession || savedSession->m_ticket.size() == 0)
 	{
@@ -67,12 +68,11 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 	uint64_t& selfNonce = nonces[0]; //Client nonce is at first position
 	uint64_t& peerNonce = nonces[1]; //Server nonce is at second position
 	uint8_t ticketRes = false;
-	Decent::General256Hash selfMsgHash;
-	Decent::General256Hash peerMsgHash;
+	Hash<HashType::SHA256> selfMsgHash;
+	Hash<HashType::SHA256> peerMsgHash;
 
 	// 1. Generate a nonce:
-	Decent::MbedTlsObj::Drbg drbg;
-	drbg.RandStruct(selfNonce);
+	selfNonce = mbedTLScpp::DefaultRbg().GetRand<uint64_t>();
 
 	// 2. Construct and send RPC to peer:
 	{
@@ -88,8 +88,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 		connection.SendRpc(rpcResuTicket);
 
 		// Generate hash to verify in later step:
-		using namespace Decent::MbedTlsObj;
-		Hasher<HashType::SHA256>().Calc(selfMsgHash, rpcResuTicket.GetFullBinary());
+		selfMsgHash = Hasher<HashType::SHA256>().Calc(CtnFullR(rpcResuTicket.GetFullBinary()));
 	}
 
 	// 3. Recv RPC from peer:
@@ -97,8 +96,7 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 		RpcParser rpcResuRes(connection.RecvContainer<std::vector<uint8_t> >());
 
 		// Generate hash to give to peer for verification:
-		using namespace Decent::MbedTlsObj;
-		Hasher<HashType::SHA256>().Calc(peerMsgHash, rpcResuRes.GetFullBinary());
+		peerMsgHash = Hasher<HashType::SHA256>().Calc(CtnFullR(rpcResuRes.GetFullBinary()));
 
 		ticketRes = rpcResuRes.GetPrimitiveArg<uint8_t>();
 
@@ -114,16 +112,22 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 	// ==> Otherwise, the ticket is accepted by the peer:
 	// 4. Generate and send verification message:
 	{
-		std::array<uint8_t, gsk_defPrfResSize> peerPrfRes;
-		TlsPrf<HashType::SHA256>(savedSession->m_session.m_secretKey, gsk_finishLabel, peerMsgHash, peerPrfRes);
+		auto peerPrfRes = TlsPrf<TlsPrfType::SHA256, gsk_defPrfResSize>(
+			CtnFullR(savedSession->m_session.m_secretKey),
+			gsk_finishLabel,
+			CtnFullR(peerMsgHash)
+		);
 
-		connection.SendContainer(peerPrfRes);
+		connection.SendContainer(peerPrfRes.Get());
 	}
 
 	// 5. Recv verification message from peer:
 	{
-		std::array<uint8_t, gsk_defPrfResSize> selfPrfRes;
-		TlsPrf<HashType::SHA256>(savedSession->m_session.m_secretKey, gsk_finishLabel, selfMsgHash, selfPrfRes);
+		auto selfPrfRes = TlsPrf<TlsPrfType::SHA256, gsk_defPrfResSize>(
+			CtnFullR(savedSession->m_session.m_secretKey),
+			gsk_finishLabel,
+			CtnFullR(selfMsgHash)
+			);
 
 		std::vector<uint8_t> peerVrfyMsg = connection.RecvContainer<std::vector<uint8_t> >();
 
@@ -138,9 +142,16 @@ static std::unique_ptr<RaSession> ResumeSessionFromTicket(ConnectionBase& connec
 	// 6. Derive new keys to prevent replay attack:
 	std::unique_ptr<RaSession> currSession = Decent::Tools::make_unique<RaSession>();
 	{
-		using namespace Decent::MbedTlsObj;
-		HKDF<HashType::SHA256>(savedSession->m_session.m_secretKey.m_key, gsk_keyDerLabel, nonces, currSession->m_secretKey.m_key);
-		HKDF<HashType::SHA256>(savedSession->m_session.m_maskingKey.m_key, gsk_keyDerLabel, nonces, currSession->m_maskingKey.m_key);
+		currSession->m_secretKey = Hkdf<HashType::SHA256, 128>(
+			CtnFullR(savedSession->m_session.m_secretKey),
+			CtnFullR(gsk_keyDerLabel),
+			CtnFullR(nonces)
+		);
+		currSession->m_maskingKey = Hkdf<HashType::SHA256, 128>(
+			CtnFullR(savedSession->m_session.m_maskingKey),
+			CtnFullR(gsk_keyDerLabel),
+			CtnFullR(nonces)
+		);
 	}
 
 	//Successfully resume the session. Return the resumed session.

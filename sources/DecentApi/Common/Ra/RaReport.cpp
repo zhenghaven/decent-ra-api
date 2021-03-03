@@ -8,7 +8,6 @@
 
 #include "../consttime_memequal.h"
 #include "../Common.h"
-#include "../RuntimeException.h"
 #include "../GeneralKeyTypes.h"
 
 #include "../Net/CommonMessages.h"
@@ -16,40 +15,15 @@
 #include "../Tools/DataCoding.h"
 #include "../Tools/JsonTools.h"
 
-#include "../MbedTls/Hasher.h"
-
 #include "../SGX/IasReport.h"
 #include "../SGX/sgx_structs.h" /*TODO: remove this dependency.*/
 
 using namespace Decent::Ra;
 using namespace Decent::Tools;
 
-bool RaReport::DecentReportDataVerifier(const std::string & pubSignKey, const uint8_t* initData, const uint8_t* expected, const size_t size)
-{
-	using namespace Decent::MbedTlsObj;
-
-	if (size != GENERAL_256BIT_32BYTE_SIZE ||
-		pubSignKey.size() == 0 )
-	{
-		return false;
-	}
-
-	Decent::General256Hash hashRes;
-	Hasher<HashType::SHA256>().Batched(hashRes,
-		std::array<DataListItem, 2>
-		{
-			DataListItem{initData, size},
-			DataListItem{pubSignKey.data(), pubSignKey.size()},
-		});
-
-#ifndef SIMULATING_ENCLAVE
-	return consttime_memequal(expected, hashRes.data(), hashRes.size()) == 1;
-#else
-	return true;
-#endif // SIMULATING_ENCLAVE
-}
-
-bool RaReport::ProcessSelfRaReport(const std::string & platformType, const std::string & pubKeyPem, const std::string & raReport, std::string & outHashStr, report_timestamp_t& outTimestamp)
+bool RaReport::ProcessSelfRaReport(const std::string & platformType,
+	const std::string & pubKeyPem, const std::string & raReport,
+	std::string & outHashStr, report_timestamp_t& outTimestamp)
 {
 	if (platformType == sk_ValueReportTypeSgx)
 	{
@@ -93,8 +67,11 @@ bool RaReport::ProcessSgxSelfRaReport(const std::string& pubKeyPem, const std::s
 
 	auto quoteVerifier = [&pubKeyPem, &oriReportData](const sgx_ias_report_t & iasReport) -> bool
 	{
-		return DecentReportDataVerifier(pubKeyPem, oriReportData.d, iasReport.m_quote.report_body.report_data.d, 
-			sizeof(sgx_report_data_t) / 2);
+		using namespace mbedTLScpp;
+
+		return DecentReportDataVerifier(pubKeyPem,
+			CtnFullR(oriReportData.d),
+			CtnFullR(iasReport.m_quote.report_body.report_data.d));
 	};
 
 	bool reportVerifyRes = Decent::Ias::ParseAndVerifyIasReport(outIasReport, iasReportStr, iasCertChain, iasSign, nullptr, sk_sgxDecentRaConfig, quoteVerifier);

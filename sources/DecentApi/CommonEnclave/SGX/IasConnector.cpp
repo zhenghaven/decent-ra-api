@@ -30,8 +30,8 @@ bool StatConnector::GetRevocationList(const void* const connectorPtr, const sgx_
 	return true;
 }
 
-bool StatConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_msg3_t& msg3, const size_t msg3Size, 
-	const std::string& nonce, const bool pseEnabled, 
+bool StatConnector::GetQuoteReport(const void* const connectorPtr, const sgx_ra_msg3_t& msg3, const size_t msg3Size,
+	const std::string& nonce, const bool pseEnabled,
 	std::string& outReport, std::string& outSign, std::string& outCert)
 {
 	if (!connectorPtr)

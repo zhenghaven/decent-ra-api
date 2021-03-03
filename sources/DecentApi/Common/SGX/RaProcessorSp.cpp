@@ -9,20 +9,19 @@
 #include <sgx_key_exchange.h>
 
 #include <cppcodec/base64_default_rfc4648.hpp>
-#include <mbedtls/md.h>
+
+#include <mbedTLScpp/DefaultRbg.hpp>
+#include <mbedTLScpp/Hash.hpp>
+#include <mbedTLScpp/Cmac.hpp>
+#include <mbedTLScpp/X509Cert.hpp>
 
 #include "../Common.h"
 #include "../make_unique.h"
 #include "../consttime_memequal.h"
 
-#include "../Tools/Crypto.h"
+#include "../Crypto/AesGcmPacker.hpp"
 
-#include "../MbedTls/Kdf.h"
-#include "../MbedTls/Drbg.h"
-#include "../MbedTls/EcKey.h"
-#include "../MbedTls/Hasher.h"
-#include "../MbedTls/X509Cert.h"
-
+#include "../SGX/Ckdf.h"
 #include "../SGX/IasReportCert.h"
 
 #include "sgx_structs.h"
@@ -35,25 +34,21 @@ using namespace Decent;
 using namespace Decent::Sgx;
 using namespace Decent::Ias;
 using namespace Decent::Tools;
-using namespace Decent::MbedTlsObj;
 
 namespace
 {
 	static std::string ConstructNonce(size_t size)
 	{
 		size_t dataSize = (size / 4) * 3;
-		std::vector<uint8_t> randData(dataSize);
+		std::vector<uint8_t> randData(dataSize, 0);
 
 #ifndef SIMULATING_ENCLAVE
-		Drbg drbg;
-		drbg.RandContainer(randData);
-#else
-		std::fill_n(randData.begin(), randData.size(), 0);
+		mbedTLScpp::DefaultRbg rand;
+		rand.Rand(randData.data(), randData.size());
 #endif // SIMULATING_ENCLAVE
 
 		return cppcodec::base64_rfc4648::encode(randData);
 	}
-
 }
 
 const RaProcessorSp::SgxReportDataVerifier RaProcessorSp::sk_defaultRpDataVrfy([](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
@@ -65,8 +60,13 @@ const RaProcessorSp::SgxReportDataVerifier RaProcessorSp::sk_defaultRpDataVrfy([
 #endif // SIMULATING_ENCLAVE
 });
 
-RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::EcKeyPair<EcKeyType::SECP256R1> > mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
-	SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig) :
+RaProcessorSp::RaProcessorSp(
+	const void* const iasConnectorPtr,
+	std::shared_ptr<const PKeyType> mySignKey,
+	std::shared_ptr<const sgx_spid_t> spidPtr,
+	SgxReportDataVerifier rpDataVrfy,
+	SgxQuoteVerifier quoteVrfy,
+	const sgx_ra_config& raConfig) :
 	m_raConfig(raConfig),
 	m_spid(spidPtr),
 	m_iasConnectorPtr(iasConnectorPtr),
@@ -86,12 +86,10 @@ RaProcessorSp::RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<
 	m_iasReportStr(),
 	m_reportCert(),
 	m_reportSign()
-{
-}
+{}
 
 RaProcessorSp::~RaProcessorSp()
-{
-}
+{}
 
 RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
 	m_raConfig(std::move(other.m_raConfig)),
@@ -120,18 +118,26 @@ RaProcessorSp::RaProcessorSp(RaProcessorSp && other) :
 
 void RaProcessorSp::Init()
 {
-	m_encrKeyPair = Tools::make_unique<MbedTlsObj::EcKeyPair<EcKeyType::SECP256R1> >(Tools::make_unique<Drbg>());
+	if (m_mySignKey == nullptr)
+	{
+		throw InvalidArgumentException("RaProcessorSp::Init - Signing key provided are invalid.");
+	}
+
+	m_encrKeyPair = Tools::make_unique<PKeyType>(PKeyType::Generate());
+	if (m_encrKeyPair == nullptr)
+	{
+		throw RuntimeException("RaProcessorSp::Init - Failed to generate encryption key.");
+	}
 
 	m_nonce = ConstructNonce(IAS_REQUEST_NONCE_SIZE);
 
 	m_iasReport = Tools::make_unique<sgx_ias_report_t>();
 
-	if (!m_encrKeyPair || !m_mySignKey)
-	{
-		throw RuntimeException("Failed to init RaProcessorSp, because keys are invalid.");
-	}
-
-	m_encrKeyPair->ToPublicBinary(m_myEncrKey.x, m_myEncrKey.y);
+	std::array<uint8_t, 32> tmpX;
+	std::array<uint8_t, 32> tmpY;
+	std::tie(tmpX, tmpY, std::ignore) = m_encrKeyPair->GetPublicBytes();
+	std::copy(tmpX.begin(), tmpX.end(), m_myEncrKey.x);
+	std::copy(tmpY.begin(), tmpY.end(), m_myEncrKey.y);
 
 	if (!Ias::CheckRaConfigValidaty(m_raConfig))
 	{
@@ -156,7 +162,9 @@ void RaProcessorSp::ProcessMsg0(const sgx_ra_msg0s_t & msg0s, sgx_ra_msg0r_t & m
 
 void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>& msg2)
 {
-	SetPeerEncrPubKey(SgxEc256Type2General(msg1.g_a));
+	using namespace mbedTLScpp;
+
+	SetPeerEncrPubKey(reinterpret_cast<const general_secp256r1_public_t&>(msg1.g_a));
 
 	msg2.resize(sizeof(sgx_ra_msg2_t));
 	sgx_ra_msg2_t& msg2Ref = *reinterpret_cast<sgx_ra_msg2_t*>(msg2.data());
@@ -166,16 +174,27 @@ void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 	msg2Ref.quote_type = m_raConfig.linkable_sign;
 	msg2Ref.kdf_id = m_raConfig.ckdf_id;
 
-	General256Hash hashToBeSigned;
-	Hasher<HashType::SHA256>().Batched(hashToBeSigned,
-		std::array<DataListItem, 1>{{&m_myEncrKey, 2 * sizeof(sgx_ec256_public_t)}});
+	Hash<HashType::SHA256> hashToBeSigned = Hasher<HashType::SHA256>().Calc(
+		CtnFullR(m_myEncrKey.x),
+		CtnFullR(m_myEncrKey.y),
+		CtnFullR(m_peerEncrKey.x),
+		CtnFullR(m_peerEncrKey.y)
+	);
 
-	Drbg drbg;
-	m_mySignKey->Sign<HashType::SHA256>(hashToBeSigned, msg2Ref.sign_gb_ga.x, msg2Ref.sign_gb_ga.y, drbg);
+	PKeyType::KArray r, s;
+	std::tie(r, s) = m_mySignKey->Sign(hashToBeSigned);
+	std::memcpy(msg2Ref.sign_gb_ga.x, r.data(), r.size());
+	std::memcpy(msg2Ref.sign_gb_ga.y, s.data(), s.size());
 
-	uint32_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
+	const size_t cmac_size = offsetof(sgx_ra_msg2_t, mac);
+	std::vector<uint8_t> tmpCmacData(cmac_size);
+	std::memcpy(tmpCmacData.data(), &(msg2Ref.g_b), tmpCmacData.size());
 
-	CMACer<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(m_smk).Batched(msg2Ref.mac, std::array<DataListItem, 1>{ {&(msg2Ref.g_b), cmac_size}});
+	auto cmacRes = Cmacer< CipherType::AES, 128, CipherMode::ECB>(CtnFullR(m_smk)).Calc(
+		CtnFullR(tmpCmacData)
+	);
+	static_assert(std::tuple_size<decltype(cmacRes)>::value == sizeof(msg2Ref.mac), "Size doesn't match");
+	std::memcpy(msg2Ref.mac, cmacRes.data(), cmacRes.size());
 
 	std::string revcList;
 	if (!StatConnector::GetRevocationList(m_iasConnectorPtr, msg1.gid, revcList))
@@ -192,6 +211,13 @@ void RaProcessorSp::ProcessMsg1(const sgx_ra_msg1_t & msg1, std::vector<uint8_t>
 void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std::vector<uint8_t> & msg4Pack,
 	sgx_report_data_t * outOriRD)
 {
+	using namespace mbedTLScpp;
+
+	if (msg3Len < sizeof(sgx_ra_msg3_t))
+	{
+		throw InvalidArgumentException("RaProcessorSp::ProcessMsg3 - Size of message 3 recieved is too small.");
+	}
+
 	if (!consttime_memequal(&(m_peerEncrKey), &msg3.g_a, sizeof(sgx_ec256_public_t)))
 	{
 		throw RuntimeException("RaProcessorSp::ProcessMsg3 failed to verify MSG 3.");
@@ -200,9 +226,11 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	//Make sure that msg3_size is bigger than sgx_mac_t.
 	uint32_t mac_size = static_cast<uint32_t>(msg3Len - sizeof(sgx_mac_t));
 	const uint8_t *p_msg3_cmaced = reinterpret_cast<const uint8_t*>(&msg3) + sizeof(sgx_mac_t);
+	std::vector<uint8_t> tmpCamcData(p_msg3_cmaced, p_msg3_cmaced + mac_size);
 
-	std::array<uint8_t, GENERAL_128BIT_16BYTE_SIZE> calcMac;
-	CMACer<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(m_smk).Batched(calcMac, std::array<DataListItem, 1>{ {p_msg3_cmaced, mac_size}});
+	auto calcMac = Cmacer<CipherType::AES, 128, CipherMode::ECB>(CtnFullR(m_smk)).Calc(
+		CtnFullR(tmpCamcData)
+	);
 	if (!consttime_memequal(calcMac.data(), msg3.mac, sizeof(msg3.mac)))
 	{
 		throw RuntimeException("RaProcessorSp::ProcessMsg3 failed to verify MSG 3.");
@@ -217,16 +245,15 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	// Verify the report_data in the Quote matches the expected value.
 	// The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
 	// The second 32 bytes of report_data are set to zero.
-	General256Hash reportDataHash;
-	Hasher<HashType::SHA256>().Batched(reportDataHash,
-		std::array<DataListItem, 3>
-		{
-			DataListItem{&(m_peerEncrKey), sizeof(sgx_ec256_public_t)},
-			DataListItem{&(m_myEncrKey), sizeof(sgx_ec256_public_t)},
-			DataListItem{&(m_vk), sizeof(sgx_ec_key_128bit_t)},
-		});
+	Hash<HashType::SHA256> reportDataHash = Hasher<HashType::SHA256>().Calc(
+		CtnFullR(m_peerEncrKey.x),
+		CtnFullR(m_peerEncrKey.y),
+		CtnFullR(m_myEncrKey.x),
+		CtnFullR(m_myEncrKey.y),
+		CtnFullR(m_vk)
+	);
 
-	std::copy(reportDataHash.begin(), reportDataHash.end(), report_data.d);
+	std::copy(reportDataHash.m_data.begin(), reportDataHash.m_data.end(), report_data.d);
 
 	if (outOriRD)
 	{
@@ -243,8 +270,8 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 			break;
 		}
 
-		X509Cert trustedIasCert(Ias::gsk_IasReportCert);
-		X509Cert reportCertChain(m_reportCert);
+		X509Cert trustedIasCert = X509Cert::FromPEM(Ias::gsk_IasReportCert);
+		X509Cert reportCertChain = X509Cert::FromPEM(m_reportCert);
 
 		reportCertChain.ShrinkChain(trustedIasCert);
 
@@ -263,8 +290,9 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 
 		if (m_raConfig.enable_pse)
 		{
-			General256Hash pseHash;
-			Hasher<HashType::SHA256>().Calc(pseHash, msg3.ps_sec_prop.sgx_ps_sec_prop_desc);
+			Hash<HashType::SHA256> pseHash = Hasher<HashType::SHA256>().Calc(
+				CtnFullR(msg3.ps_sec_prop.sgx_ps_sec_prop_desc)
+			);
 
 			if (!consttime_memequal(pseHash.data(), &m_iasReport->m_pse_hash, pseHash.size()))
 			{
@@ -282,7 +310,12 @@ void RaProcessorSp::ProcessMsg3(const sgx_ra_msg3_t & msg3, size_t msg3Len, std:
 	std::vector<uint8_t> msg4Bin(sizeof(msg4));
 	std::memcpy(msg4Bin.data(), &msg4, msg4Bin.size());
 
-	msg4Pack = QuickAesGcmPack(GetSK().m_key, std::array<uint8_t, 0>(), std::array<uint8_t, 0>(), msg4Bin, GetMK().m_key, nullptr, 1024);
+	std::tie(msg4Pack, std::ignore) =  Crypto::AesGcmPacker(CtnFullR(GetSK()), 1024).Pack(
+		CtnFullR(gsk_emptyCtn),
+		CtnFullR(gsk_emptyCtn),
+		CtnFullR(msg4Bin),
+		CtnFullR(GetMK())
+	);
 
 	if (!m_isAttested)
 	{
@@ -305,12 +338,12 @@ std::unique_ptr<sgx_ias_report_t> RaProcessorSp::ReleaseIasReport()
 	return std::move(m_iasReport);
 }
 
-const G128BitSecretKeyWrap & RaProcessorSp::GetSK() const
+const mbedTLScpp::SKey<128>& RaProcessorSp::GetSK() const
 {
 	return m_sk;
 }
 
-const G128BitSecretKeyWrap & RaProcessorSp::GetMK() const
+const mbedTLScpp::SKey<128>& RaProcessorSp::GetMK() const
 {
 	return m_mk;
 }
@@ -319,7 +352,11 @@ void RaProcessorSp::GetMsg0r(sgx_ra_msg0r_t & msg0r)
 {
 	msg0r.ra_config = m_raConfig;
 
-	m_mySignKey->ToPublicBinary(msg0r.sp_pub_key.gx, msg0r.sp_pub_key.gy);
+	std::array<uint8_t, 32> tmpX;
+	std::array<uint8_t, 32> tmpY;
+	std::tie(tmpX, tmpY, std::ignore) = m_mySignKey->GetPublicBytes();
+	std::copy(tmpX.begin(), tmpX.end(), msg0r.sp_pub_key.gx);
+	std::copy(tmpY.begin(), tmpY.end(), msg0r.sp_pub_key.gy);
 }
 
 const std::string & RaProcessorSp::GetIasReportStr() const
@@ -349,21 +386,22 @@ bool RaProcessorSp::CheckKeyDerivationFuncId(const uint16_t id) const
 
 void RaProcessorSp::SetPeerEncrPubKey(const general_secp256r1_public_t & inEncrPubKey)
 {
+	using namespace mbedTLScpp;
+
 	m_peerEncrKey = inEncrPubKey;
 
-	MbedTlsObj::EcPublicKey<EcKeyType::SECP256R1> peerEncrKey(inEncrPubKey.x, inEncrPubKey.y);
+	PPubKeyType peerEncrKey = PPubKeyType::FromBytes(inEncrPubKey.x, inEncrPubKey.y);
 
-	G256BitSecretKeyWrap sharedKey;
-	m_encrKeyPair->DeriveSharedKey(sharedKey.m_key, peerEncrKey, Tools::make_unique<MbedTlsObj::Drbg>());
+	auto sharedKey = m_encrKeyPair->DeriveSharedKey(peerEncrKey);
 
-	CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(sharedKey, "SMK", m_smk);
-	CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(sharedKey, "MK", m_mk);
-	CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(sharedKey, "SK", m_sk);
-	CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(sharedKey, "VK", m_vk);
+	m_smk = Ckdf<CipherType::AES, 128, CipherMode::ECB>(CtnFullR(sharedKey), "SMK");
+	m_mk  = Ckdf<CipherType::AES, 128, CipherMode::ECB>(CtnFullR(sharedKey), "MK");
+	m_sk  = Ckdf<CipherType::AES, 128, CipherMode::ECB>(CtnFullR(sharedKey), "SK");
+	m_vk  = Ckdf<CipherType::AES, 128, CipherMode::ECB>(CtnFullR(sharedKey), "VK");
 }
 
 bool RaProcessorSp::CheckIasReport(sgx_ias_report_t & outIasReport,
-	const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign, 
+	const std::string & iasReportStr, const std::string & reportCert, const std::string & reportSign,
 	const sgx_report_data_t & oriRD) const
 {
 	if (!m_rpDataVrfy || !m_quoteVrfy)

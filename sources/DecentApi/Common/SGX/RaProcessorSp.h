@@ -5,8 +5,10 @@
 #include <functional>
 #include <vector>
 
-#include "../GeneralKeyTypes.h"
-#include "../MbedTls/EcKey.h"
+#include <mbedTLScpp/EcKey.hpp>
+#include <mbedTLScpp/SKey.hpp>
+
+#include "../general_key_types.h"
 #include "sgx_structs.h"
 
 typedef struct _sgx_ra_msg0r_t sgx_ra_msg0r_t;
@@ -31,7 +33,10 @@ namespace Decent
 			typedef std::function<bool(const sgx_quote_t&)> SgxQuoteVerifier;
 			static const SgxReportDataVerifier sk_defaultRpDataVrfy;
 
-			static constexpr sgx_ra_config sk_defaultRaConfig = 
+			using PKeyType = mbedTLScpp::EcKeyPair<mbedTLScpp::EcType::SECP256R1>;
+			using PPubKeyType = mbedTLScpp::EcPublicKey<mbedTLScpp::EcType::SECP256R1>;
+
+			static constexpr sgx_ra_config sk_defaultRaConfig =
 			{
 				SGX_QUOTE_LINKABLE_SIGNATURE,
 				SGX_DEFAULT_AES_CMAC_KDF_ID,
@@ -42,8 +47,12 @@ namespace Decent
 			};
 
 		public:
-			RaProcessorSp(const void* const iasConnectorPtr, std::shared_ptr<const MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > mySignKey, std::shared_ptr<const sgx_spid_t> spidPtr,
-				SgxReportDataVerifier rpDataVrfy, SgxQuoteVerifier quoteVrfy, const sgx_ra_config& raConfig = sk_defaultRaConfig);
+			RaProcessorSp(const void* const iasConnectorPtr,
+				std::shared_ptr<const mbedTLScpp::EcKeyPair<mbedTLScpp::EcType::SECP256R1> > mySignKey,
+				std::shared_ptr<const sgx_spid_t> spidPtr,
+				SgxReportDataVerifier rpDataVrfy,
+				SgxQuoteVerifier quoteVrfy,
+				const sgx_ra_config& raConfig = sk_defaultRaConfig);
 
 			virtual ~RaProcessorSp();
 
@@ -58,8 +67,8 @@ namespace Decent
 			const sgx_ra_config& GetRaConfig() const;
 			bool IsAttested() const;
 			std::unique_ptr<sgx_ias_report_t> ReleaseIasReport();
-			const G128BitSecretKeyWrap& GetSK() const;
-			const G128BitSecretKeyWrap& GetMK() const;
+			const mbedTLScpp::SKey<128>& GetSK() const;
+			const mbedTLScpp::SKey<128>& GetMK() const;
 
 			virtual void GetMsg0r(sgx_ra_msg0r_t& msg0r);
 			const std::string& GetIasReportStr() const;
@@ -81,9 +90,9 @@ namespace Decent
 			std::shared_ptr<const sgx_spid_t> m_spid;
 
 			const void* m_iasConnectorPtr;
-			std::shared_ptr<const MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > m_mySignKey;
+			std::shared_ptr<const PKeyType> m_mySignKey;
 
-			std::unique_ptr<MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > m_encrKeyPair;
+			std::unique_ptr<PKeyType> m_encrKeyPair;
 
 			//Do not move the following members:
 			general_secp256r1_public_t m_myEncrKey;
@@ -92,10 +101,10 @@ namespace Decent
 
 			std::string m_nonce;
 
-			G128BitSecretKeyWrap m_smk;
-			G128BitSecretKeyWrap m_mk;
-			G128BitSecretKeyWrap m_sk;
-			G128BitSecretKeyWrap m_vk;
+			mbedTLScpp::SKey<128> m_smk;
+			mbedTLScpp::SKey<128> m_mk;
+			mbedTLScpp::SKey<128> m_sk;
+			mbedTLScpp::SKey<128> m_vk;
 
 			SgxReportDataVerifier m_rpDataVrfy;
 			SgxQuoteVerifier m_quoteVrfy;

@@ -2,7 +2,12 @@
 
 #include "SecureCommLayer.h"
 
-#include "../GeneralKeyTypes.h"
+#include <memory>
+
+#include <mbedTLScpp/SecretVector.hpp>
+#include <mbedTLScpp/SKey.hpp>
+
+#include "../Crypto/AesGcmPacker.hpp"
 
 namespace Decent
 {
@@ -12,7 +17,8 @@ namespace Decent
 		class AesGcmCommLayer : public SecureCommLayer
 		{
 		public: //static members:
-			typedef G128BitSecretKeyWrap KeyType;
+
+			typedef mbedTLScpp::SKey<128> KeyType;
 
 			static constexpr uint64_t sk_maxCounter = std::numeric_limits<uint64_t>::max();
 
@@ -26,7 +32,7 @@ namespace Decent
 			 */
 			AesGcmCommLayer(const KeyType& sKey, const KeyType& mKey, ConnectionBase* connection);
 
-			//Copy is prohibited. 
+			//Copy is prohibited.
 			AesGcmCommLayer(const AesGcmCommLayer& other) = delete;
 
 			/**
@@ -39,7 +45,7 @@ namespace Decent
 			/** \brief	Destructor */
 			virtual ~AesGcmCommLayer();
 
-			//Copy is prohibited. 
+			//Copy is prohibited.
 			AesGcmCommLayer& operator=(const AesGcmCommLayer& other) = delete;
 
 			/**
@@ -77,7 +83,7 @@ namespace Decent
 			 *
 			 * \return	Output message in binary (plain text).
 			 */
-			virtual std::vector<uint8_t> DecryptMsg(const std::vector<uint8_t>& inMsg);
+			virtual mbedTLScpp::SecretVector<uint8_t> DecryptMsg(const std::vector<uint8_t>& inMsg);
 
 			/**
 			 * \brief	Encrypts a message into binary
@@ -109,15 +115,17 @@ namespace Decent
 		private:
 			KeyType m_selfSecKey; //Secret Key
 			KeyType m_selfMakKey; //Masking Key
-			std::array<uint64_t, 3> m_selfAddData; //Additonal Data for MAC (m_selfMakKey || MsgCounter)
+			mbedTLScpp::SecretArray<uint64_t, 3> m_selfAddData; //Additonal Data for MAC (m_selfMakKey || MsgCounter)
+			std::unique_ptr<Crypto::AesGcmPacker> m_selfAesGcm;
 
 			KeyType m_peerSecKey; //Secret Key
 			KeyType m_peerMakKey; //Masking Key
-			std::array<uint64_t, 3> m_peerAddData; //Additonal Data for MAC (m_peerMakKey || MsgCounter)
+			mbedTLScpp::SecretArray<uint64_t, 3> m_peerAddData; //Additonal Data for MAC (m_peerMakKey || MsgCounter)
+			std::unique_ptr<Crypto::AesGcmPacker> m_peerAesGcm;
 
 			ConnectionBase* m_connection;
 
-			std::vector<uint8_t> m_streamBuf;
+			mbedTLScpp::SecretVector<uint8_t> m_streamBuf;
 		};
 	}
 }

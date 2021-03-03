@@ -2,7 +2,7 @@
 
 #include "../../Common/Tools/FileBase.h"
 
-#include "../../Common/GeneralKeyTypes.h"
+#include <mbedTLScpp/SKey.hpp>
 
 namespace Decent
 {
@@ -17,9 +17,9 @@ namespace Decent
 
 			SecureFile(const std::string& path, const Mode mode, DeferOpen);
 
-			SecureFile(const std::string& path, const G128BitSecretKeyWrap& key, const Mode mode);
+			SecureFile(const std::string& path, const mbedTLScpp::SKey<128>& key, const Mode mode);
 
-			SecureFile(const std::string& path, const G128BitSecretKeyWrap& key, const Mode mode, DeferOpen);
+			SecureFile(const std::string& path, const mbedTLScpp::SKey<128>& key, const Mode mode, DeferOpen);
 
 			SecureFile(const SecureFile& rhs) = delete;
 
@@ -38,7 +38,7 @@ namespace Decent
 			virtual operator bool() const { return IsOpen(); }
 
 		protected:
-			SecureFile(const std::string& path, std::unique_ptr<G128BitSecretKeyWrap> key, const char* modeStr);
+			SecureFile(const std::string& path, std::unique_ptr<mbedTLScpp::SKey<128> > key, const char* modeStr);
 
 			virtual size_t ReadBlockRaw(void* buffer, const size_t size) override;
 
@@ -48,7 +48,7 @@ namespace Decent
 
 		private:
 			std::string m_path;
-			std::unique_ptr<G128BitSecretKeyWrap> m_userKey;
+			std::unique_ptr<mbedTLScpp::SKey<128> > m_userKey;
 			const char* m_modeChar;
 			void* m_file;
 		};
@@ -62,9 +62,9 @@ namespace Decent
 
 			WritableSecureFile(const std::string& path, const WritableMode mode, DeferOpen);
 
-			WritableSecureFile(const std::string& path, const G128BitSecretKeyWrap& key, const WritableMode mode);
+			WritableSecureFile(const std::string& path, const mbedTLScpp::SKey<128>& key, const WritableMode mode);
 
-			WritableSecureFile(const std::string& path, const G128BitSecretKeyWrap& key, const WritableMode mode, DeferOpen);
+			WritableSecureFile(const std::string& path, const mbedTLScpp::SKey<128>& key, const WritableMode mode, DeferOpen);
 
 			WritableSecureFile(const WritableSecureFile& rhs) = delete;
 

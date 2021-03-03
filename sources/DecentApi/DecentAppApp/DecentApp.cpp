@@ -28,16 +28,16 @@ DecentApp::DecentApp(const fs::path & enclavePath, const fs::path & tokenPath, c
 	InitEnclave(wListKey, serverConn);
 }
 
-DecentApp::DecentApp(const std::string & enclavePath, const std::string & tokenPath, 
-	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep, 
+DecentApp::DecentApp(const std::string & enclavePath, const std::string & tokenPath,
+	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep,
 	const std::string & wListKey, ConnectionBase & serverConn) :
 	Sgx::EnclaveBase(enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep)
 {
 	InitEnclave(wListKey, serverConn);
 }
 
-DecentApp::DecentApp(const fs::path & enclavePath, const fs::path & tokenPath, 
-	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep, 
+DecentApp::DecentApp(const fs::path & enclavePath, const fs::path & tokenPath,
+	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep,
 	const std::string & wListKey, ConnectionBase & serverConn) :
 	Sgx::EnclaveBase(enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep)
 {

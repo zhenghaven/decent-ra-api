@@ -41,7 +41,7 @@ namespace Decent
 			RaMutualCommLayer(Net::ConnectionBase& cnt,
 				std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
 				RaSpCommLayer::TicketSealer sealFunc = RaSpCommLayer::TicketSealer(),
-				RaSpCommLayer::TicketSealer unsealFunc = RaSpCommLayer::TicketSealer());
+				RaSpCommLayer::TicketUnsealer unsealFunc = RaSpCommLayer::TicketUnsealer());
 
 			RaMutualCommLayer(RaMutualCommLayer&& rhs);
 

@@ -27,14 +27,14 @@ DecentralizedEnclave::DecentralizedEnclave(const sgx_spid_t & spid, const std::s
 	InitDecent(GetEnclaveId(), spid);
 }
 
-DecentralizedEnclave::DecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<Connector>& iasConnector, const std::string & enclavePath, const std::string & tokenPath, 
+DecentralizedEnclave::DecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<Connector>& iasConnector, const std::string & enclavePath, const std::string & tokenPath,
 	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
 	Sgx::EnclaveServiceProvider(iasConnector, enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep)
 {
 	InitDecent(GetEnclaveId(), spid);
 }
 
-DecentralizedEnclave::DecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<Connector>& iasConnector, const fs::path & enclavePath, const fs::path & tokenPath, 
+DecentralizedEnclave::DecentralizedEnclave(const sgx_spid_t & spid, const std::shared_ptr<Connector>& iasConnector, const fs::path & enclavePath, const fs::path & tokenPath,
 	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
 	Sgx::EnclaveServiceProvider(iasConnector, enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep)
 {

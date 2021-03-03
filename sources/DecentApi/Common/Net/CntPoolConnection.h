@@ -17,7 +17,7 @@ namespace Decent
 			CntPoolConnection() = delete;
 
 			CntPoolConnection(const MapKeyType& addr, std::unique_ptr<ConnectionBase>&& cntPtr, std::shared_ptr<ConnectionPool<MapKeyType> > cntPool) :
-				m_addr(addr), 
+				m_addr(addr),
 				m_cntPtr(std::forward<std::unique_ptr<ConnectionBase> >(cntPtr)),
 				m_cntPool(cntPool)
 			{}

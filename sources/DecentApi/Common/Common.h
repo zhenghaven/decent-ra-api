@@ -31,9 +31,9 @@ namespace Decent
 #else
 
 #define PRINT_W(...) Decent::Tools::LogWarning("", 0, __VA_ARGS__);
-#define LOGI(...) 
-#define LOGW(...) 
+#define LOGI(...)
+#define LOGW(...)
 
-#define EXCEPTION_ASSERT(X, Msg) 
+#define EXCEPTION_ASSERT(X, Msg)
 
 #endif // !NDEBUG

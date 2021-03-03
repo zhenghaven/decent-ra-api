@@ -134,7 +134,7 @@ size_t LocalConnection::RecvRaw(void * const bufPtr, const size_t size)
 {
 	LocalSessionStruct& dataRef = m_inSharedObj->GetObject();
 
-	scoped_lock<interprocess_mutex> writelock(dataRef.m_msgLock); 
+	scoped_lock<interprocess_mutex> writelock(dataRef.m_msgLock);
 	if (!dataRef.m_isMsgReady)
 	{
 		TimedWait(dataRef.m_readySignal, writelock, [&dataRef]() -> bool {

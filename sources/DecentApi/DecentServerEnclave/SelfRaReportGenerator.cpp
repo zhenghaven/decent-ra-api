@@ -1,38 +1,31 @@
 #include "SelfRaReportGenerator.h"
 
-#include "../Common/MbedTls/Drbg.h"
-#include "../Common/MbedTls/EcKey.h"
-
 #include "../Common/Ra/ServerX509Cert.h"
 #include "../Common/Ra/KeyContainer.h"
-
-#include "../CommonEnclave/Tools/Crypto.h"
+#include "../Common/Tools/EnclaveId.hpp"
 
 #include "ServerStates.h"
 #include "ServerCertContainer.h"
 
 using namespace Decent::Ra;
-using namespace Decent::MbedTlsObj;
 
-bool SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator & reportGenerator, ServerStates& decentStates)
+void SelfRaReportGenerator::GenerateAndStoreServerX509Cert(SelfRaReportGenerator & reportGenerator, ServerStates& decentStates)
 {
-	using namespace Decent;
+	using namespace mbedTLScpp;
 
 	std::string platformType;
 	std::string selfRaReport;
 
-	if (!reportGenerator.GenerateSelfRaReport(platformType, selfRaReport))
-	{
-		return false;
-	}
+	reportGenerator.GenerateSelfRaReport(platformType, selfRaReport);
 
 	const KeyContainer& keyContainer = decentStates.GetKeyContainer();
-	EcKeyPair<EcKeyType::SECP256R1> signKey = *keyContainer.GetSignKeyPair();
+	std::shared_ptr<const EcKeyPair<EcType::SECP256R1> > signKey = keyContainer.GetSignKeyPair();
 
-	ServerX509CertWriter svrX509CertWrt(signKey, Decent::Tools::GetSelfHashBase64(), platformType, selfRaReport);
+	ServerX509CertWriter svrX509CertWrt(*signKey, Decent::Tools::GetSelfHashHexStr(), platformType, selfRaReport);
 
-	Drbg drbg;
-	std::shared_ptr<const ServerX509Cert> serverCert = std::make_shared<ServerX509Cert>(svrX509CertWrt.GenerateDer(drbg));
+	std::shared_ptr<const ServerX509Cert> serverCert = std::make_shared<ServerX509Cert>(
+		ServerX509Cert::FromDER(CtnFullR(svrX509CertWrt.GetDer()))
+	);
 
-	return decentStates.GetServerCertContainer().SetServerCert(serverCert);
+	decentStates.GetServerCertContainer().SetServerCert(serverCert);
 }

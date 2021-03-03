@@ -14,7 +14,7 @@ using namespace Decent;
 
 namespace
 {
-	static constexpr std::array<int, 8> gsk_colorMap = 
+	static constexpr std::array<int, 8> gsk_colorMap =
 	{
 		0x0008 | 0x0004, //Red     = 0,
 		0x0008 | 0x0002, //Green   = 1,

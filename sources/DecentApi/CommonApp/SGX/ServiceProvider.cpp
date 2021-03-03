@@ -23,7 +23,13 @@ ServiceProvider::~ServiceProvider()
 
 void ServiceProvider::GetSpPublicSignKey(general_secp256r1_public_t & outKey) const
 {
-	outKey = (*gs_states.GetKeyContainer().GetSignPubKey());
+	auto keyPair = gs_states.GetKeyContainer().GetSignKeyPair();
+
+	std::array<uint8_t, 32> x, y;
+	std::tie(x, y, std::ignore) = keyPair->GetPublicBytes();
+
+	std::copy(x.begin(), x.end(), std::begin(outKey.x));
+	std::copy(y.begin(), y.end(), std::begin(outKey.y));
 }
 
 bool ServiceProvider::ProcessSmartMessage(const std::string & category, ConnectionBase& connection, ConnectionBase*& freeHeldCnt)

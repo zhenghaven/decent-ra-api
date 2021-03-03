@@ -41,7 +41,7 @@ std::unique_ptr<bIp::shared_memory_object> Net::ConstructSharedObj(const std::st
 
 std::unique_ptr<bIp::mapped_region> Net::ContructSharedMap(const bIp::shared_memory_object& sharedObj)
 {
-	try 
+	try
 	{
 		return std::make_unique<bIp::mapped_region>(sharedObj, bIp::read_write);
 	}

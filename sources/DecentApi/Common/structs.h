@@ -13,7 +13,7 @@
 #define IAS_REQUEST_NONCE_SIZE         32
 
 #ifdef __cplusplus
-extern "C" 
+extern "C"
 {
 #endif
 

@@ -10,17 +10,17 @@ namespace Decent
 		class States;
 	}
 
-	namespace MbedTlsObj
-	{
-		class EcPublicKeyBase;
-	}
-
 	namespace RaSgx
 	{
 		namespace RaProcessorSp
 		{
 			extern const Sgx::RaProcessorSp::SgxQuoteVerifier defaultServerQuoteVerifier;
-			std::unique_ptr<Sgx::RaProcessorSp> GetSgxDecentRaProcessorSp(const void* const iasConnectorPtr, const MbedTlsObj::EcPublicKeyBase& peerSignkey, std::shared_ptr<const sgx_spid_t> spidPtr, const Decent::Ra::States& decentStates);
+			
+			std::unique_ptr<Sgx::RaProcessorSp> GetSgxDecentRaProcessorSp(
+				const void* const iasConnectorPtr,
+				const std::string& peerSignkeyPem,
+				std::shared_ptr<const sgx_spid_t> spidPtr,
+				const Decent::Ra::States& decentStates);
 		}
 
 		class RaProcessorClient : public Sgx::RaProcessorClient

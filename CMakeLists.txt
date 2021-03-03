@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.14)
 cmake_policy(SET CMP0026 OLD)
 #==========================================================
 #   Options for Decent Project
@@ -61,7 +61,6 @@ if(MSVC)
 	set(APP_RELEASE_LINKER_OPTIONS "/NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:msvcrtd.lib")
 	
 	set(COMMON_APP_DEFINES WIN32_LEAN_AND_MEAN CURL_STATICLIB BOOST_DATE_TIME_NO_LIB)
-	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
 	
 	set(Additional_Sys_Lib )
 else()
@@ -77,7 +76,6 @@ else()
 	set(APP_RELEASE_LINKER_OPTIONS "")
 	
 	set(COMMON_APP_DEFINES CURL_STATICLIB BOOST_DATE_TIME_NO_LIB)
-	set(COMMON_ENCLAVE_DEFINES ENCLAVE_ENVIRONMENT)
 	
 	set(Additional_Sys_Lib rt pthread)
 endif()
@@ -135,6 +133,8 @@ set(Boost_NO_SYSTEM_PATHS ON)
 #   Add submodules
 #==========================================================
 
+include(FetchContent)
+
 ## Boost libraries
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/config)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/predef)
@@ -167,7 +167,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/winapi)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/system)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/boost/filesystem)
 
-##MbedTLS
+## mbedTLS
 set(ENABLE_TESTING OFF CACHE BOOL "Build mbed TLS tests." FORCE)
 set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbed TLS programs." FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls)
@@ -179,6 +179,21 @@ set(MBEDX509_ENCLAVE_LIBRARY mbedx509_enclave)
 set(MBEDTLS_ENCLAVE_LIBRARY mbedtls_enclave)
 set(MBEDTLS_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/libs/mbedtls/include)
 install(TARGETS mbedcrypto mbedx509 mbedtls EXPORT "CURLTargets")
+
+## mbedTLScpp
+FetchContent_Declare(
+  git_mbedtlscpp
+  GIT_REPOSITORY https://github.com/zhenghaven/mbedTLScpp.git
+  GIT_TAG        v0.1.9a
+)
+FetchContent_MakeAvailable(git_mbedtlscpp)
+include($ENV{MBEDTLSCPP_HOME}/cmake/mbedTLScpp_UseMbedtlsHeaders.cmake)
+mbedTLScpp_UseMbedtlsHeaders_Normal(mbedcrypto)
+mbedTLScpp_UseMbedtlsHeaders_Enclave(mbedcrypto_enclave)
+mbedTLScpp_UseMbedtlsHeaders_Normal(mbedx509)
+mbedTLScpp_UseMbedtlsHeaders_Enclave(mbedx509_enclave)
+mbedTLScpp_UseMbedtlsHeaders_Normal(mbedtls)
+mbedTLScpp_UseMbedtlsHeaders_Enclave(mbedtls_enclave)
 
 ##libcurl
 set(BUILD_CURL_EXE OFF CACHE BOOL "Set to ON to build CURL executable." FORCE)
@@ -254,11 +269,19 @@ if(DECENT_API_DECENT_APP)
 									PUBLIC
 										${CPPCODEC_INCLUDE_DIR}
 										${RAPIDJSON_INCLUDE_DIR}
+										${SOURCES_DIR_PATH}/DecentApi/config-headers
 									INTERFACE
-										${DECENT_API_INCLUDE_DIR})
+										${DECENT_API_INCLUDE_DIR}
+	)
 	#defines:
-	target_compile_definitions(DecentRa_App_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES}
-	                                                PUBLIC RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024)
+	target_compile_definitions(DecentRa_App_Enclave
+									PUBLIC
+										ENCLAVE_ENVIRONMENT
+										ENCLAVE_SGX_ENVIRONMENT
+										RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024
+										MBEDTLSCPP_CUSTOMIZED_DEFAULT_RBG="DecentApiMbedtlsRbg.hpp"
+										MBEDTLSCPP_CUSTOMIZED_THREADING_INIT="DecentApiMbedtlsMutex.hpp"
+	)
 	#compiler flags:
 	target_compile_options(DecentRa_App_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
@@ -266,9 +289,8 @@ if(DECENT_API_DECENT_APP)
     set_target_properties(DecentRa_App_Enclave PROPERTIES FOLDER "DecentRaApi")
 	
 	target_link_libraries(DecentRa_App_Enclave 
-		mbedcrypto_enclave 
-		mbedx509_enclave 
 		mbedtls_enclave 
+		mbedTLScpp
 	)
 	
 	add_library(DecentRa_App_App STATIC ${SOURCES_APP_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
@@ -301,6 +323,7 @@ if(DECENT_API_DECENT_APP)
 		jsoncpp_lib_static 
 		libcurl 
 		mbedtls 
+		mbedTLScpp
 		Boost::container
 		Boost::smart_ptr
 		Boost::exception
@@ -318,11 +341,19 @@ if(DECENT_API_DECENT_SERVER)
 									PUBLIC
 										${CPPCODEC_INCLUDE_DIR}
 										${RAPIDJSON_INCLUDE_DIR}
+										${SOURCES_DIR_PATH}/DecentApi/config-headers
 									INTERFACE
-										${DECENT_API_INCLUDE_DIR})
+										${DECENT_API_INCLUDE_DIR}
+	)
 	#defines:
-	target_compile_definitions(DecentRa_Server_Enclave PRIVATE ${COMMON_ENCLAVE_DEFINES}
-	                                                   PUBLIC RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024)
+	target_compile_definitions(DecentRa_Server_Enclave
+									PUBLIC
+										ENCLAVE_ENVIRONMENT
+										ENCLAVE_SGX_ENVIRONMENT
+										RAPIDJSON_ALLOCATOR_DEFAULT_CHUNK_CAPACITY=1024
+										MBEDTLSCPP_CUSTOMIZED_DEFAULT_RBG="DecentApiMbedtlsRbg.hpp"
+										MBEDTLSCPP_CUSTOMIZED_THREADING_INIT="DecentApiMbedtlsMutex.hpp"
+	)
 	#compiler flags:
 	target_compile_options(DecentRa_Server_Enclave PRIVATE ${INTEL_SGX_SDK_C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${INTEL_SGX_SDK_CXX_FLAGS} ${COMMON_ENCLAVE_CXX_OPTIONS}>)
 	#linker flags:
@@ -331,9 +362,8 @@ if(DECENT_API_DECENT_SERVER)
 	set_property(TARGET DecentRa_Server_Enclave APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${DECENT_API_INCLUDE_DIR}")
 	
 	target_link_libraries(DecentRa_Server_Enclave 
-		mbedcrypto_enclave 
-		mbedx509_enclave 
 		mbedtls_enclave 
+		mbedTLScpp
 	)
 	
 	add_library(DecentRa_Server_App STATIC ${SOURCES_SERVER_APP} ${SOURCES_COMMON_APP} ${SOURCES_COMMON})
@@ -366,6 +396,7 @@ if(DECENT_API_DECENT_SERVER)
 		jsoncpp_lib_static 
 		libcurl 
 		mbedtls 
+		mbedTLScpp
 		Boost::container
 		Boost::smart_ptr
 		Boost::exception

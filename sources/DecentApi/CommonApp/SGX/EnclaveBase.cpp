@@ -141,13 +141,13 @@ void EnclaveBase::InternalInitSgxEnclave(const sgx_enclave_id_t & encId)
 	DECENT_CHECK_SGX_STATUS_ERROR(retval, ecall_decent_sgx_client_enclave_init);
 }
 
-EnclaveBase::EnclaveBase(const std::string & enclavePath, const std::string & tokenPath, 
+EnclaveBase::EnclaveBase(const std::string & enclavePath, const std::string & tokenPath,
 	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
 	EnclaveBase(fs::path(enclavePath), fs::path(tokenPath), numTWorker, numUWorker, retryFallback, retrySleep)
 {
 }
 
-EnclaveBase::EnclaveBase(const fs::path & enclavePath, const fs::path & tokenPath, 
+EnclaveBase::EnclaveBase(const fs::path & enclavePath, const fs::path & tokenPath,
 	const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep) :
 	m_eid(LaunchEnclave(enclavePath, tokenPath, numTWorker, numUWorker, retryFallback, retrySleep)),
 	m_enclavePath(enclavePath.generic_string())

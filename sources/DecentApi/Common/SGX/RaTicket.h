@@ -2,8 +2,10 @@
 
 #include <vector>
 
-#include "../GeneralKeyTypes.h"
-#include "../RuntimeException.h"
+#include <mbedTLScpp/SKey.hpp>
+#include <mbedTLScpp/SecretVector.hpp>
+
+#include "../Exceptions.h"
 #include "sgx_structs.h"
 
 namespace Decent
@@ -43,8 +45,8 @@ namespace Decent
 
 		struct RaSession
 		{
-			G128BitSecretKeyWrap m_secretKey;
-			G128BitSecretKeyWrap m_maskingKey;
+			mbedTLScpp::SKey<128> m_secretKey;
+			mbedTLScpp::SKey<128> m_maskingKey;
 			SgxIasReport m_iasReport;
 
 			RaSession() = default;
@@ -58,7 +60,7 @@ namespace Decent
 				m_iasReport(rhs.m_iasReport)
 			{}
 
-			RaSession(std::vector<uint8_t>::const_iterator start, std::vector<uint8_t>::const_iterator end) :
+			RaSession(mbedTLScpp::SecretVector<uint8_t>::const_iterator start, mbedTLScpp::SecretVector<uint8_t>::const_iterator end) :
 				RaSession()
 			{
 				ReadBinary(start, end);
@@ -66,10 +68,13 @@ namespace Decent
 
 			static constexpr size_t GetSize()
 			{
-				return GENERAL_128BIT_16BYTE_SIZE + GENERAL_128BIT_16BYTE_SIZE + sizeof(m_iasReport.m_iasReport);
+				return decltype(m_secretKey)::sk_itemCount +
+					decltype(m_secretKey)::sk_itemCount +
+					sizeof(m_iasReport.m_iasReport);
 			}
 
-			std::vector<uint8_t>::const_iterator ReadBinary(std::vector<uint8_t>::const_iterator start, std::vector<uint8_t>::const_iterator end)
+			template<typename _IteratorType>
+			_IteratorType ReadBinary(_IteratorType start, _IteratorType end)
 			{
 				if (std::distance(start, end) < static_cast<int64_t>(GetSize()))
 				{
@@ -77,12 +82,12 @@ namespace Decent
 				}
 
 				auto prevStart = start;
-				auto prevEnd = start + m_secretKey.m_key.size();
-				std::copy(prevStart, prevEnd, m_secretKey.m_key.begin());
+				auto prevEnd = start + m_secretKey.size();
+				std::copy(prevStart, prevEnd, m_secretKey.begin());
 
 				prevStart = prevEnd;
-				prevEnd = prevStart + m_maskingKey.m_key.size();
-				std::copy(prevStart, prevEnd, m_maskingKey.m_key.begin());
+				prevEnd = prevStart + m_maskingKey.size();
+				std::copy(prevStart, prevEnd, m_maskingKey.begin());
 
 				prevStart = prevEnd;
 				prevEnd = prevStart + sizeof(m_iasReport.m_iasReport);
@@ -91,7 +96,8 @@ namespace Decent
 				return prevEnd;
 			}
 
-			std::vector<uint8_t>::iterator ToBinary(std::vector<uint8_t>::iterator start, std::vector<uint8_t>::iterator end) const
+			template<typename _IteratorType>
+			_IteratorType ToBinary(_IteratorType start, _IteratorType end) const
 			{
 				if (std::distance(start, end) < static_cast<int64_t>(GetSize()))
 				{
@@ -100,8 +106,8 @@ namespace Decent
 
 				auto prevEnd = start;
 
-				prevEnd = std::copy(m_secretKey.m_key.begin(), m_secretKey.m_key.end(), prevEnd);
-				prevEnd = std::copy(m_maskingKey.m_key.begin(), m_maskingKey.m_key.end(), prevEnd);
+				prevEnd = std::copy(m_secretKey.begin(), m_secretKey.end(), prevEnd);
+				prevEnd = std::copy(m_maskingKey.begin(), m_maskingKey.end(), prevEnd);
 				prevEnd = std::copy(std::begin(m_iasReport.m_iasReport), std::end(m_iasReport.m_iasReport), prevEnd);
 
 				return prevEnd;

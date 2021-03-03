@@ -6,7 +6,7 @@
 #include "../../Common/make_unique.h"
 #include "../../Common/Net/ConnectionBase.h"
 #include "../../Common/Net/NetworkException.h"
-#include "../../Common/MbedTls/Kdf.h"
+#include "../../Common/SGX/Ckdf.h"
 
 using namespace Decent;
 using namespace Decent::Sgx;
@@ -29,13 +29,11 @@ namespace
 		return reinterpret_cast<const T*>(ptr);
 	}
 
-	G128BitSecretKeyWrap DeriveSubKeys(const G128BitSecretKeyWrap& aeKey, const std::string& label)
+	mbedTLScpp::SKey<128> DeriveSubKeys(const mbedTLScpp::SKey<128>& aeKey, const std::string& label)
 	{
-		using namespace Decent::MbedTlsObj;
+		using namespace mbedTLScpp;
 
-		G128BitSecretKeyWrap sk;
-		CKDF<CipherType::AES, GENERAL_128BIT_16BYTE_SIZE, CipherMode::ECB>(aeKey, label, sk);
-		return sk;
+		return Sgx::Ckdf<CipherType::AES, 128, CipherMode::ECB>(CtnFullR(aeKey), label);
 	}
 }
 
@@ -94,7 +92,7 @@ std::unique_ptr<LocAttSession> LocAttCommLayer::InitiatorHandshake(ConnectionBas
 		sgx_dh_initiator_proc_msg3(
 			CastPtr<sgx_dh_msg3_t>(inBinBuf.data()),
 			&session,
-			CastPtr<sgx_ec_key_128bit_t>(resSession->m_aek.m_key.data()),
+			CastPtr<sgx_ec_key_128bit_t>(resSession->m_aek.data()),
 			resSession->m_id.get()),
 		"Failed to process local attestation message 3.");
 
@@ -125,7 +123,7 @@ std::unique_ptr<LocAttSession> LocAttCommLayer::ResponderHandshake(ConnectionBas
 			CastPtr<sgx_dh_msg2_t>(inBinBuf.data()),
 			&msg3,
 			&session,
-			CastPtr<sgx_ec_key_128bit_t>(resSession->m_aek.m_key.data()),
+			CastPtr<sgx_ec_key_128bit_t>(resSession->m_aek.data()),
 			resSession->m_id.get()),
 		"Failed to process local attestation message 2.");
 

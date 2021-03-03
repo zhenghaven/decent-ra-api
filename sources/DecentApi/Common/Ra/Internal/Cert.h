@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <ctime>
 
+#include <string>
+
 namespace Decent
 {
 	namespace Ra

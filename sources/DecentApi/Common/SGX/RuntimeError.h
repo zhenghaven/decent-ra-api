@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "../RuntimeException.h"
+#include "../Exceptions.h"
 
 #include "ErrorCode.h"
 

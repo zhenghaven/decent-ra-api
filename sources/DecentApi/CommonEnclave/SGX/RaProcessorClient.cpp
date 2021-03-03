@@ -5,10 +5,10 @@
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
 #include "../../Common/Ra/KeyContainer.h"
-#include "../../Common/Tools/Crypto.h"
 #include "../../Common/SGX/sgx_structs.h"
 #include "../../Common/SGX/IasReport.h"
 #include "../../Common/SGX/RuntimeError.h"
+#include "../../Common/Crypto/AesGcmPacker.hpp"
 
 #include "../Tools/UntrustedBuffer.h"
 
@@ -117,12 +117,17 @@ void RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg
 
 void RaProcessorClient::ProcessMsg4(const std::vector<uint8_t> & msg4Pack)
 {
+	using namespace mbedTLScpp;
+
 	DeriveSharedKeys(m_mk, m_sk);
 
-	std::vector<uint8_t> meta;
-	std::vector<uint8_t> msg4Bin;
+	SecretVector<uint8_t> msg4Bin;
 
-	Tools::QuickAesGcmUnpack(GetSK().m_key, msg4Pack, GetMK().m_key, meta, msg4Bin, nullptr, 1024);
+	std::tie(msg4Bin, std::ignore) = Crypto::AesGcmPacker(CtnFullR(GetSK()), 1024).Unpack(
+		CtnFullR(msg4Pack),
+		CtnFullR(GetMK()),
+		nullptr
+	);
 
 	if (msg4Bin.size() != sizeof(sgx_ra_msg4_t))
 	{
@@ -146,16 +151,6 @@ void RaProcessorClient::ProcessMsg4(const std::vector<uint8_t> & msg4Pack)
 bool RaProcessorClient::IsAttested() const
 {
 	return m_isAttested;
-}
-
-const G128BitSecretKeyWrap & RaProcessorClient::GetMK() const
-{
-	return m_mk;
-}
-
-const G128BitSecretKeyWrap & RaProcessorClient::GetSK() const
-{
-	return m_sk;
 }
 
 std::unique_ptr<sgx_ias_report_t> RaProcessorClient::ReleaseIasReport()
@@ -196,10 +191,10 @@ bool RaProcessorClient::CheckKeyDerivationFuncId(const uint16_t id) const
 	return id == SGX_DEFAULT_AES_CMAC_KDF_ID;
 }
 
-void RaProcessorClient::DeriveSharedKeys(G128BitSecretKeyWrap & mk, G128BitSecretKeyWrap & sk)
+void RaProcessorClient::DeriveSharedKeys(mbedTLScpp::SKey<128>& mk, mbedTLScpp::SKey<128>& sk)
 {
-	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(sk.m_key.data()));
-	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(mk.m_key.data()));
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_SK, reinterpret_cast<sgx_ec_key_128bit_t*>(sk.data()));
+	DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_ra_get_keys, m_raCtxId, SGX_RA_KEY_MK, reinterpret_cast<sgx_ec_key_128bit_t*>(mk.data()));
 }
 
 void RaProcessorClient::GetMsg1(sgx_ra_msg1_t & msg1)

@@ -1,5 +1,5 @@
 enclave {
-	trusted 
+	trusted
 	{
 		public size_t ecall_decent_ra_app_get_x509_pem([out, size = buf_len] char* buf, size_t buf_len);
 		

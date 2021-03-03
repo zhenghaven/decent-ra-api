@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "../RuntimeException.h"
+#include "../Exceptions.h"
 
 using namespace Decent;
 

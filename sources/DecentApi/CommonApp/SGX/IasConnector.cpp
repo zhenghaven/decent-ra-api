@@ -271,6 +271,7 @@ bool Connector::GetQuoteReport(const std::string & jsonReqBody, const std::strin
 }
 
 Connector::Connector(const std::string& subscriptionKey) :
+	m_libInit(mbedTLScpp::LibInitializer::GetInst()),
 	m_subscriptionKey(subscriptionKey)
 {
 }
@@ -284,7 +285,7 @@ bool Connector::GetRevocationList(const sgx_epid_group_id_t & gid, std::string &
 	return Connector::GetRevocationList(gid, m_subscriptionKey, outRevcList);
 }
 
-bool Connector::GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled, 
+bool Connector::GetQuoteReport(const sgx_ra_msg3_t& msg3, const size_t msg3Size, const std::string& nonce, const bool pseEnabled,
 	std::string & outReport, std::string & outSign, std::string & outCert) const
 {
 	const sgx_quote_t& quote = reinterpret_cast<const sgx_quote_t&>(msg3.quote);

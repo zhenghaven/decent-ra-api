@@ -3,7 +3,7 @@
 #include <sgx_dh.h>
 
 #include "../Common.h"
-#include "../RuntimeException.h"
+#include "../Exceptions.h"
 #include "../Tools/DataCoding.h"
 
 #include "RaReport.h"

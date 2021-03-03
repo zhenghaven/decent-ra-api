@@ -17,7 +17,7 @@ namespace boost {
 		template <typename Protocol, typename Executor>
 		class basic_socket_acceptor;
 
-		namespace ip 
+		namespace ip
 		{
 			class tcp;
 		} // namespace ip
@@ -37,7 +37,7 @@ namespace Decent
 			TCPServer() = delete;
 
 			/**
-			 * \brief	Construct a TCP server. 
+			 * \brief	Construct a TCP server.
 			 * 			Known exceptions: Decent::Net::Exception
 			 *
 			 * \param	ipAddr 	The IP address.

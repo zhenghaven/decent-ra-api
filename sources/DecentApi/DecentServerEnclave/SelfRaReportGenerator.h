@@ -11,12 +11,12 @@ namespace Decent
 		class SelfRaReportGenerator
 		{
 		public:
-			static bool GenerateAndStoreServerX509Cert(SelfRaReportGenerator& reportGenerator, ServerStates& decentStates);
+			static void GenerateAndStoreServerX509Cert(SelfRaReportGenerator& reportGenerator, ServerStates& decentStates);
 
 		public:
 			virtual ~SelfRaReportGenerator() {}
 
-			virtual bool GenerateSelfRaReport(std::string& platformType, std::string& selfRaReport) = 0;
+			virtual void GenerateSelfRaReport(std::string& platformType, std::string& selfRaReport) = 0;
 		};
 	}
 }

@@ -47,9 +47,9 @@ LocalAcceptedResult::~LocalAcceptedResult()
 {
 }
 
-LocalAcceptedResult::LocalAcceptedResult(std::unique_ptr<SharedObject<LocalSessionStruct>>& sharedObj_a, 
-	std::unique_ptr<LocalMessageQueue>& msgQ_a, 
-	std::unique_ptr<SharedObject<LocalSessionStruct>>& sharedObj_b, 
+LocalAcceptedResult::LocalAcceptedResult(std::unique_ptr<SharedObject<LocalSessionStruct>>& sharedObj_a,
+	std::unique_ptr<LocalMessageQueue>& msgQ_a,
+	std::unique_ptr<SharedObject<LocalSessionStruct>>& sharedObj_b,
 	std::unique_ptr<LocalMessageQueue>& msgQ_b) noexcept:
 m_sharedObj_a(std::move(sharedObj_a)),
 m_msgQ_a(std::move(msgQ_a)),

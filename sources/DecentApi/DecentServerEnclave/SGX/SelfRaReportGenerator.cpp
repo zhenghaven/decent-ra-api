@@ -5,6 +5,7 @@
 #include <sgx_key_exchange.h>
 
 #include "../../Common/Common.h"
+#include "../../Common/Exceptions.h"
 #include "../../Common/Tools/JsonTools.h"
 #include "../../Common/Tools/DataCoding.h"
 #include "../../Common/Ra/RaReport.h"
@@ -25,13 +26,14 @@ SelfRaReportGenerator::~SelfRaReportGenerator()
 {
 }
 
-bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std::string & selfRaReport)
+void SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std::string & selfRaReport)
 {
 	using namespace Decent::Ra;
 
 	if (!m_raSp || !m_raClient)
 	{
-		return false;
+		throw Decent::RuntimeException("Decent::RaSgx::SelfRaReportGenerator::GenerateSelfRaReport - "
+			"Invalid Argument was given.");
 	}
 	
 	sgx_ra_msg0r_t msg0r;
@@ -65,6 +67,4 @@ bool SelfRaReportGenerator::GenerateSelfRaReport(std::string & platformType, std
 	JsonSetVal(doc, RaReport::sk_LabelRoot, report);
 
 	selfRaReport = Json2String(doc);
-
-	return true;
 }

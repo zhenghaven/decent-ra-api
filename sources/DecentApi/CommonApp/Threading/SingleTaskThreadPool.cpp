@@ -1,7 +1,7 @@
 #include "SingleTaskThreadPool.h"
 
 #include "../../Common/make_unique.h"
-#include "../../Common/RuntimeException.h"
+#include "../../Common/Exceptions.h"
 
 #include "TaskSet.h"
 #include "MainThreadAsynWorker.h"

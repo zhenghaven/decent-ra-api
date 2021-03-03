@@ -4,6 +4,8 @@
 #include <string>
 #include <functional>
 
+#include <mbedTLScpp/SecretVector.hpp>
+
 #include "../Net/AesGcmCommLayer.h"
 
 typedef struct _sgx_ias_report_t sgx_ias_report_t;
@@ -23,7 +25,8 @@ namespace Decent
 		class RaSpCommLayer : public Decent::Net::AesGcmCommLayer
 		{
 		public: //static members:
-			typedef std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)> TicketSealer;
+			typedef std::function<std::vector<uint8_t>(const mbedTLScpp::SecretVector<uint8_t>&)> TicketSealer;
+			typedef std::function<mbedTLScpp::SecretVector<uint8_t>(const std::vector<uint8_t>&)> TicketUnsealer;
 
 		public:
 			RaSpCommLayer() = delete;
@@ -47,7 +50,7 @@ namespace Decent
 			 * 								session will be resumed).
 			 */
 			RaSpCommLayer(Net::ConnectionBase& cnt, std::unique_ptr<RaProcessorSp> raProcessor,
-				bool& isResumed, TicketSealer sealFunc = TicketSealer(), TicketSealer unsealFunc = TicketSealer());
+				bool& isResumed, TicketSealer sealFunc = TicketSealer(), TicketUnsealer unsealFunc = TicketUnsealer());
 
 			/**
 			 * \brief	Move constructor

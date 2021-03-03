@@ -34,7 +34,7 @@ namespace Decent
 		public:
 			EnclaveBase() = delete;
 
-			EnclaveBase(const std::string& enclavePath, const std::string& tokenPath, 
+			EnclaveBase(const std::string& enclavePath, const std::string& tokenPath,
 				const size_t numTWorker, const size_t numUWorker, const size_t retryFallback, const size_t retrySleep);
 
 			EnclaveBase(const fs::path& enclavePath, const fs::path& tokenPath,

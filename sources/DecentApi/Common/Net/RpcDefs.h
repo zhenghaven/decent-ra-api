@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "../RuntimeException.h"
+#include "../Exceptions.h"
 
 namespace Decent
 {

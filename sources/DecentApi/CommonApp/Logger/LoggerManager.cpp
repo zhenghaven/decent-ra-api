@@ -44,7 +44,7 @@ DecentLoggerManager::DecentLoggerManager(bool isCritical) :
 {
 	m_logger->AddMessage('I', "Logger Service Started.");
 
-	m_writerThread = new std::thread([this]() 
+	m_writerThread = new std::thread([this]()
 	{
 		std::queue<std::unique_ptr<DecentLogger> > loggerQueue;
 		
@@ -76,7 +76,7 @@ DecentLoggerManager::DecentLoggerManager(bool isCritical) :
 				}
 			}
 
-			if (!m_isTerminated) 
+			if (!m_isTerminated)
 			{
 				queueLock.lock();
 				m_queueSignal.wait(queueLock);

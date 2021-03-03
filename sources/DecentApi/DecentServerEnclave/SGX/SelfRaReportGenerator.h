@@ -21,7 +21,7 @@ namespace Decent
 			SelfRaReportGenerator(std::unique_ptr<Sgx::RaProcessorSp>& raSp, std::unique_ptr<RaSgx::RaProcessorClient>& raClient);
 			virtual ~SelfRaReportGenerator();
 
-			virtual bool GenerateSelfRaReport(std::string& platformType, std::string& selfRaReport) override;
+			virtual void GenerateSelfRaReport(std::string& platformType, std::string& selfRaReport) override;
 
 		private:
 			std::unique_ptr<Sgx::RaProcessorSp> m_raSp;

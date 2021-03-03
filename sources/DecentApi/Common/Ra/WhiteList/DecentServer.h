@@ -3,25 +3,34 @@
 #include <map>
 #include <mutex>
 
+#include "../../Common.h"
 #include "../../structs.h"
+#include "../../Exceptions.h"
+
+#include "../States.h"
+#include "../RaReport.h"
+#include "../ServerX509Cert.h"
+
+//#define WHITELIST_DECENT_SERVER_NO_CACHING
 
 namespace Decent
 {
 	namespace Ra
 	{
-		class ServerX509Cert;
-		class States;
-		
 		namespace WhiteList
 		{
 			class DecentServer
 			{
 			public:
 				/** \brief	Default constructor */
-				DecentServer();
+				DecentServer() :
+					m_acceptedNodes(),
+					m_acceptedNodesMutex()
+				{}
 
 				/** \brief	Destructor */
-				virtual ~DecentServer();
+				virtual ~DecentServer()
+				{}
 
 				/**
 				 * \brief	Check a certificate from a Decent Server (i.e. a node in decentralized network). The
@@ -38,7 +47,33 @@ namespace Decent
 				 * \return	True if it the given certificate has been accepted before, or is accepted first time
 				 * 			and the node is added to the white list, otherwise, false is returned.
 				 */
-				virtual bool AddTrustedNode(States& decentState, const ServerX509Cert& cert);
+				virtual bool AddTrustedNode(States& decentState,
+					const ServerX509CertBase<mbedTLScpp::BorrowedX509CertTrait>& cert)
+				{
+					std::string pubKeyPem = cert.BorrowPublicKey().GetPublicPem();
+
+#ifdef WHITELIST_DECENT_SERVER_NO_CACHING
+
+					report_timestamp_t timestamp;
+					std::string serverHash;
+					return VerifyCertFirstTime(decentState, cert, pubKeyPem, serverHash, timestamp);
+
+#else
+
+					if (IsNodeTrusted(pubKeyPem))
+					{
+						return VerifyCertAfterward(decentState, cert);
+					}
+					else
+					{
+						report_timestamp_t timestamp;
+						std::string serverHash;
+						return VerifyCertFirstTime(decentState, cert, pubKeyPem, serverHash, timestamp) &&
+							AddToWhiteListMap(decentState, cert, pubKeyPem, serverHash, timestamp);
+					}
+
+#endif // WHITELIST_DECENT_SERVER_NO_CACHING
+				}
 
 				/**
 				 * \brief	Query if a public key held by a Decent Server is existing in the trusted Decent
@@ -50,7 +85,11 @@ namespace Decent
 				 *
 				 * \return	True if it is trusted, false if not.
 				 */
-				virtual bool IsNodeTrusted(const std::string& key) const;
+				virtual bool IsNodeTrusted(const std::string& key) const
+				{
+					std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
+					return m_acceptedNodes.find(key) != m_acceptedNodes.cend();
+				}
 
 				/**
 				 * \brief	Gets timestamp that stated in the self remote attestation report of a Decent Server,
@@ -59,12 +98,22 @@ namespace Decent
 				 * 			detail. This function is thread-safe.
 				 *
 				 * \param 		  	key	   	The public key in PEM string held by a Decent Server.
-				 * \param [in,out]	outTime	The output of the timestamp. Note, if the return value is false, this
-				 * field is invalid/unchanged.
+				 * \exception InvalidArgumentException Thrown when the given key is not
+				 *                                     found in trusted nodes.
 				 *
-				 * \return	Same as IsNodeTrusted.
+				 * \return	The timestamp.
 				 */
-				virtual bool GetAcceptedTimestamp(const std::string& key, report_timestamp_t& outTime) const;
+				virtual report_timestamp_t GetAcceptedTimestamp(const std::string& key) const
+				{
+					std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
+					auto it = m_acceptedNodes.find(key);
+					bool isFound = it != m_acceptedNodes.cend();
+					if (isFound)
+					{
+						return it->second;
+					}
+					throw InvalidArgumentException("WhiteList::DecentServer::GetAcceptedTimestamp - The given key is not found in trusted nodes.");
+				}
 
 			protected:
 
@@ -84,7 +133,21 @@ namespace Decent
 				 *
 				 * \return	True if it succeeds, false if it fails.
 				 */
-				virtual bool VerifyCertFirstTime(States& decentState, const ServerX509Cert& cert, const std::string& pubKeyPem, std::string& serverHash, report_timestamp_t& timestamp);
+				virtual bool VerifyCertFirstTime(States& decentState,
+					const ServerX509CertBase<mbedTLScpp::BorrowedX509CertTrait>& cert,
+					const std::string& pubKeyPem, std::string& serverHash, report_timestamp_t& timestamp)
+				{
+					bool verifyRes = RaReport::ProcessSelfRaReport(cert.GetPlatformType(), pubKeyPem,
+						cert.GetSelfRaReport(), serverHash, timestamp);
+
+#ifndef DEBUG
+					return verifyRes &&
+						decentState.GetLoadedWhiteList().CheckHashAndName(serverHash, sk_nameDecentServer);
+#else
+					LOGW("%s() passed DecentServer with hash, %s,  without checking!", __FUNCTION__, serverHash.c_str());
+					return true;
+#endif // !DEBUG
+				}
 
 				/**
 				 * \brief	Verify the certificate as it has been verified before with the VerifyCertFirstTime.
@@ -97,7 +160,11 @@ namespace Decent
 				 *
 				 * \return	True if it succeeds, false if it fails.
 				 */
-				virtual bool VerifyCertAfterward(States& decentState, const ServerX509Cert& cert);
+				virtual bool VerifyCertAfterward(States& decentState,
+					const ServerX509CertBase<mbedTLScpp::BorrowedX509CertTrait>& cert)
+				{
+					return true;
+				}
 
 				/**
 				 * \brief	Add the node to white list map. Usually this is called after a node has been
@@ -114,7 +181,15 @@ namespace Decent
 				 *
 				 * \return	True if it succeeds, false if it fails.
 				 */
-				virtual bool AddToWhiteListMap(States& decentState, const ServerX509Cert& cert, const std::string& pubKeyPem, const std::string& serverHash, const report_timestamp_t& timestamp);
+				virtual bool AddToWhiteListMap(States& decentState,
+					const ServerX509CertBase<mbedTLScpp::BorrowedX509CertTrait>& cert,
+					const std::string& pubKeyPem, const std::string& serverHash,
+					const report_timestamp_t& timestamp)
+				{
+					std::unique_lock<std::mutex> nodeMapLock(m_acceptedNodesMutex);
+					m_acceptedNodes[pubKeyPem] = timestamp;
+					return true;
+				}
 
 			private:
 				std::map<std::string, report_timestamp_t> m_acceptedNodes;

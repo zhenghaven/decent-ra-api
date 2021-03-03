@@ -9,9 +9,9 @@
 
 //#include <boost/asio/ip/tcp.hpp>
 
-namespace boost 
+namespace boost
 {
-	namespace asio 
+	namespace asio
 	{
 		class executor;
 		class io_context;
@@ -23,7 +23,7 @@ namespace boost
 		template <typename Protocol, typename Executor>
 		class basic_stream_socket;
 
-		namespace ip 
+		namespace ip
 		{
 			class tcp;
 			//typedef basic_socket_acceptor<tcp> acceptor;
@@ -57,7 +57,7 @@ namespace Decent
 			static uint32_t GetIpAddressFromStr(const std::string& ipAddrStr);
 
 			/**
-			 * \brief	Combine IP and port number into a 64-bit number in the format of 
+			 * \brief	Combine IP and port number into a 64-bit number in the format of
 			 * 			IP(32-bits)|0x0000|Port(16-bits).
 			 *
 			 * \param	ip  	The IP.
@@ -121,7 +121,7 @@ namespace Decent
 			 * 					bits)|0x0000|Port(16-bits).
 			 */
 			TCPConnection(uint64_t addr) :
-				TCPConnection(static_cast<uint32_t>((addr >> 32) & 0xFFFFFFFFU), 
+				TCPConnection(static_cast<uint32_t>((addr >> 32) & 0xFFFFFFFFU),
 					static_cast<uint16_t>(addr & 0xFFFF))
 			{}
 
@@ -159,7 +159,7 @@ namespace Decent
 			uint16_t GetPortNum() const;
 
 			/**
-			 * \brief	Connection ID is a combination of IPv4 and Port number in the format of 
+			 * \brief	Connection ID is a combination of IPv4 and Port number in the format of
 			 * 			IP(32-bits)|0x0000|Port(16-bits).
 			 *
 			 * \return	The connection identifier.

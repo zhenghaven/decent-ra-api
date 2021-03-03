@@ -2,50 +2,90 @@
 
 #include <memory>
 #include <string>
+#include <type_traits>
+#ifdef DECENT_THREAD_SAFETY_HIGH
+#include <atomic>
+#endif // DECENT_THREAD_SAFETY_HIGH
 
-#include "../GeneralKeyTypes.h"
-#include "../MbedTls/MbedTlsCppDefs.h"
+#include <mbedTLScpp/EcKey.hpp>
+
+#include "../general_key_types.h"
 
 namespace Decent
 {
-	namespace MbedTlsObj
-	{
-		template<EcKeyType>
-		class EcKeyPair;
-	}
-
 	namespace Ra
 	{
 		class KeyContainer
 		{
+		public: // Static members:
+
+			using KeyTypeInCpp = mbedTLScpp::EcKeyPair<mbedTLScpp::EcType::SECP256R1>;
+
 		public:
 			KeyContainer();
 
-			KeyContainer(std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<PrivateKeyWrap> > keyPair);
+			KeyContainer(const general_secp256r1_public_t& pubKey, const general_secp256r1_private_t& prvKey) :
+				m_signPrvKeyObj(
+					std::make_shared<KeyTypeInCpp>(
+						KeyTypeInCpp::FromBytes(
+							CtnFullR(KeyTypeInCpp::KSecArray(prvKey.r)), mbedTLScpp::CtnFullR(pubKey.x), mbedTLScpp::CtnFullR(pubKey.y)
+						)
+					)
+				)
+			{}
 
-			KeyContainer(std::unique_ptr<MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > keyPair);
+			KeyContainer(const general_secp256r1_private_t& prvKey) :
+				m_signPrvKeyObj(
+					std::make_shared<KeyTypeInCpp>(
+						KeyTypeInCpp::FromBytes(CtnFullR(KeyTypeInCpp::KSecArray(prvKey.r)))
+					)
+				)
+			{}
 
-			virtual ~KeyContainer();
+			KeyContainer(std::unique_ptr<KeyTypeInCpp> keyPair) :
+				m_signPrvKeyObj(std::move(keyPair))
+			{}
 
-			virtual std::shared_ptr<const PrivateKeyWrap> GetSignPrvKey() const;
+			virtual ~KeyContainer()
+			{}
 
-			virtual std::shared_ptr<const general_secp256r1_public_t> GetSignPubKey() const;
+			virtual std::shared_ptr<const KeyTypeInCpp> GetSignKeyPair() const
+			{
+				return DataGetter(m_signPrvKeyObj);
+			}
 
-			virtual std::shared_ptr<const MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > GetSignKeyPair() const;
+		protected: // Static members:
+
+			template<typename _KeyType>
+			static std::shared_ptr<typename std::add_const<_KeyType>::type> DataGetter(
+				const std::shared_ptr<_KeyType>& data)
+			{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+				return std::atomic_load(&data);
+#else
+				return data;
+#endif // DECENT_THREAD_SAFETY_HIGH
+			}
+
+			template<typename _KeyType>
+			static void DataSetter(std::shared_ptr<_KeyType>& data, std::shared_ptr<_KeyType> input)
+			{
+#ifdef DECENT_THREAD_SAFETY_HIGH
+				std::atomic_store(&data, input);
+#else
+				data = input;
+#endif // DECENT_THREAD_SAFETY_HIGH
+			}
 
 		protected:
 
-			virtual void SetSignPrvKey(std::shared_ptr<const PrivateKeyWrap> key);
-
-			virtual void SetSignPubKey(std::shared_ptr<const general_secp256r1_public_t> key);
-
-			virtual void SetSignKeyPair(std::shared_ptr<const MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > key);
+			virtual void SetSignKeyPair(std::shared_ptr<KeyTypeInCpp> key)
+			{
+				DataSetter(m_signPrvKeyObj, key);
+			}
 
 		private:
-			std::shared_ptr<const general_secp256r1_public_t> m_signPubKey;
-			std::shared_ptr<const PrivateKeyWrap> m_signPrvKey;
-			std::shared_ptr<const MbedTlsObj::EcKeyPair<MbedTlsObj::EcKeyType::SECP256R1> > m_signPrvKeyObj;
+			std::shared_ptr<KeyTypeInCpp> m_signPrvKeyObj;
 		};
 	}
 }
-

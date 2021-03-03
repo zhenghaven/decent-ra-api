@@ -87,7 +87,7 @@ bool SecureConnectionPoolBase::HoldInComingConnection(ConnectionBase& cnt, Secur
 		AddConnection2Queue(cnt);
 		SecureConnectionPoolBase::ServerWaitWakeUpMsg(secComm);
 
-		// For simplicity, we assume peer correctly follows the protocol, 
+		// For simplicity, we assume peer correctly follows the protocol,
 		// thus, we don't check the message content, for now.
 		
 		RemoveFromQueue(cnt);

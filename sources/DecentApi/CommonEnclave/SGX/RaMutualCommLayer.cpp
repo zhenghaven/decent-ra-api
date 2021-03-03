@@ -55,7 +55,7 @@ namespace
 	//     3.(or 4.) Return session from RA SP steps
 	static std::unique_ptr<RaSession> DoSpHandshake(ConnectionBase & cnt,
 		std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
-		RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc)
+		RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketUnsealer unsealFunc)
 	{
 		bool isResumed = false;
 		Sgx::RaSpCommLayer spComm(cnt, std::move(spRaProcessor), isResumed, sealFunc, unsealFunc);
@@ -84,7 +84,7 @@ RaMutualCommLayer::RaMutualCommLayer(ConnectionBase & cnt,
 
 RaMutualCommLayer::RaMutualCommLayer(ConnectionBase & cnt,
 	std::unique_ptr<RaProcessorClient> clientRaProcessor, std::unique_ptr<RaProcessorSp> spRaProcessor,
-	RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketSealer unsealFunc) :
+	RaSpCommLayer::TicketSealer sealFunc, RaSpCommLayer::TicketUnsealer unsealFunc) :
 	RaMutualCommLayer(cnt, DoSpHandshake(cnt, std::move(clientRaProcessor), std::move(spRaProcessor), sealFunc, unsealFunc))
 {
 }

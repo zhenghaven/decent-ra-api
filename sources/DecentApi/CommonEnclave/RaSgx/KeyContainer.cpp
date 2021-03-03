@@ -1,40 +1,57 @@
 #include "../../Common/Ra/KeyContainer.h"
 
 #include <memory>
-#include <exception>
 
 #include <sgx_tcrypto.h>
 
-#include "../../Common/Common.h"
-#include "../../Common/make_unique.h"
-#include "../../Common/SGX/SgxCryptoConversions.h"
+#include <mbedTLScpp/EcKey.hpp>
+#include <mbedTLScpp/SecretStruct.hpp>
 
-using namespace Decent;
-using namespace Decent::Ra;
+#include "../../Common/Exceptions.h"
+#include "../../Common/SGX/ErrorCode.h"
 
 namespace
 {
-	static std::pair<std::unique_ptr<general_secp256r1_public_t>, std::unique_ptr<PrivateKeyWrap> > ConstructKeyPair()
+	static std::unique_ptr<mbedTLScpp::EcKeyPair<mbedTLScpp::EcType::SECP256R1> > ConstructNewKey()
 	{
-		std::unique_ptr<general_secp256r1_public_t> pub = Tools::make_unique<general_secp256r1_public_t>();
-		std::unique_ptr<PrivateKeyWrap> prv = Tools::make_unique<PrivateKeyWrap>();
+		using namespace mbedTLScpp;
 
+		sgx_ec256_public_t pub;
+		SecretStruct<sgx_ec256_private_t> prv;
 		sgx_ecc_state_handle_t eccState = nullptr;
-		if (!pub || !prv ||
-			sgx_ecc256_open_context(&eccState) != SGX_SUCCESS ||
-			sgx_ecc256_create_key_pair(GeneralEc256Type2Sgx(&prv->m_prvKey), GeneralEc256Type2Sgx(pub.get()), eccState) != SGX_SUCCESS)
+
+		auto retVal = sgx_ecc256_open_context(&eccState);
+		if (retVal != SGX_SUCCESS)
+		{
+			throw Decent::RuntimeException(Decent::Sgx::ConstructSimpleErrorMsg(retVal, "sgx_ecc256_open_context"));
+		}
+
+		try
+		{
+			retVal = sgx_ecc256_create_key_pair(&prv.m_data, &pub, eccState);
+			if (retVal != SGX_SUCCESS)
+			{
+				throw Decent::RuntimeException(Decent::Sgx::ConstructSimpleErrorMsg(retVal, "sgx_ecc256_create_key_pair"));
+			}
+		}
+		catch (...)
 		{
 			sgx_ecc256_close_context(eccState);
-			LOGW("Failed to create new key pair!");
-			throw std::runtime_error("Failed to create new key pair!"); //If error happened, this should be thrown at the program startup.
+			throw;
 		}
 		sgx_ecc256_close_context(eccState);
 
-		return std::make_pair(std::move(pub), std::move(prv));
+		return Internal::make_unique<EcKeyPair<EcType::SECP256R1> >(
+			EcKeyPair<EcType::SECP256R1>::FromBytes(
+				CtnFullR(SecretArray<uint8_t, 32>(prv.m_data.r)),
+				CtnFullR(pub.gx),
+				CtnFullR(pub.gy)
+			)
+		);
 	}
 }
 
-KeyContainer::KeyContainer() :
-	KeyContainer(std::move(ConstructKeyPair()))
+Decent::Ra::KeyContainer::KeyContainer() :
+	KeyContainer(ConstructNewKey())
 {
 }

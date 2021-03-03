@@ -57,7 +57,7 @@ bool ConnectionPoolBase::HoldInComingConnection(ConnectionBase& cnt)
 		AddConnection2Queue(cnt);
 		ConnectionPoolBase::ServerWaitWakeUpMsg(cnt);
 
-		// For simplicity, we assume peer correctly follows the protocol, 
+		// For simplicity, we assume peer correctly follows the protocol,
 		// thus, we don't check the message content, for now.
 
 		RemoveFromQueue(cnt);

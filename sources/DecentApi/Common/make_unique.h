@@ -8,11 +8,11 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// 
+//
 // Notes for Decent:
 // SGX SDK does not support C++14 standard, thus, we need to include make_unique manually.
 // The definition of make_unique is from LLVM.
-// To avoid the conflict of definition in std namespace when compiling non-enclave code, 
+// To avoid the conflict of definition in std namespace when compiling non-enclave code,
 // we encapsulated these in our own namespace.
 
 #include <memory>

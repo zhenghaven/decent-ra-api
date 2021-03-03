@@ -11,7 +11,7 @@ using namespace Decent;
 
 namespace
 {
-	static const std::map<sgx_device_status_t, std::string> g_sgxDeviceStatus = 
+	static const std::map<sgx_device_status_t, std::string> g_sgxDeviceStatus =
 	{
 		std::pair<sgx_device_status_t, std::string>(SGX_ENABLED, "Enabled"),
 		std::pair<sgx_device_status_t, std::string>(SGX_DISABLED_REBOOT_REQUIRED, "A reboot is required to finish enabling SGX"),

@@ -81,7 +81,7 @@ TCPConnection::~TCPConnection()
 
 size_t TCPConnection::SendRaw(const void * const dataPtr, const size_t size)
 {
-	try 
+	try
 	{
 		return m_socket->send(boost::asio::buffer(dataPtr, size));
 	}

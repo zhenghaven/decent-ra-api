@@ -2,21 +2,34 @@
 
 #include "../Common/Ra/CertContainer.h"
 
+#include "../Common/Ra/ServerX509Cert.h"
+
 namespace Decent
 {
 	namespace Ra
 	{
-		class ServerX509Cert;
-
 		class ServerCertContainer : public CertContainer
 		{
 		public:
-			ServerCertContainer() noexcept;
-			virtual ~ServerCertContainer() noexcept;
+			ServerCertContainer() :
+				CertContainer(),
+				m_cert()
+			{}
 
-			std::shared_ptr<const ServerX509Cert> GetServerCert() const noexcept;
+			virtual ~ServerCertContainer()
+			{}
 
-			bool SetServerCert(std::shared_ptr<const ServerX509Cert> cert) noexcept;
+			std::shared_ptr<const ServerX509Cert> GetServerCert() const
+			{
+				return CertContainer::DataGetter(m_cert);
+			}
+
+			void SetServerCert(std::shared_ptr<const ServerX509Cert> cert)
+			{
+				CertContainer::SetCert(cert);
+
+				CertContainer::DataSetter(m_cert, cert);
+			}
 
 		private:
 			std::shared_ptr<const ServerX509Cert> m_cert;

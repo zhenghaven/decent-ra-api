@@ -3,6 +3,8 @@
 #include <utility>
 #include <memory>
 
+#include <mbedTLScpp/SKey.hpp>
+
 #include "../../Common/Net/AesGcmCommLayer.h"
 
 typedef struct _sgx_dh_session_enclave_identity_t sgx_dh_session_enclave_identity_t;
@@ -13,7 +15,7 @@ namespace Decent
 	{
 		struct LocAttSession
 		{
-			G128BitSecretKeyWrap m_aek;
+			mbedTLScpp::SKey<128> m_aek;
 
 			std::unique_ptr<sgx_dh_session_enclave_identity_t> m_id;
 		};

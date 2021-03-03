@@ -1,17 +1,17 @@
 #include "RaProcessor.h"
 
+#include <mbedTLScpp/Hash.hpp>
+
 #include "../../Common/Common.h"
 #include "../../Common/make_unique.h"
-#include "../../Common/MbedTls/Hasher.h"
-#include "../../Common/MbedTls/EcKey.h"
 #include "../../Common/Ra/States.h"
 #include "../../Common/Ra/RaReport.h"
 #include "../../Common/Ra/KeyContainer.h"
 #include "../../Common/SGX/IasReport.h"
 #include "../../Common/SGX/RuntimeError.h"
 #include "../../Common/SGX/SgxCryptoConversions.h"
+#include "../../Common/Tools/EnclaveId.hpp"
 
-#include "../../CommonEnclave/Tools/Crypto.h"
 #include "../../CommonEnclave/Tools/UntrustedBuffer.h"
 #include "../../CommonEnclave/SGX/edl_decent_tools.h"
 
@@ -21,7 +21,6 @@
 using namespace Decent;
 using namespace Decent::Ra;
 using namespace Decent::RaSgx;
-using namespace Decent::MbedTlsObj;
 
 const Decent::Sgx::RaProcessorClient::RaConfigChecker RaProcessorClient::sk_acceptDefaultConfig(
 	[](const sgx_ra_config& raConfig) -> bool
@@ -65,7 +64,7 @@ void RaProcessorClient::ProcessMsg2(const sgx_ra_msg2_t & msg2, const size_t msg
 
 void RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_ec256_public_t & pubKey)
 {
-	using namespace Decent::MbedTlsObj;
+	using namespace mbedTLScpp;
 
 	if (raConfig.enable_pse)
 	{
@@ -73,20 +72,17 @@ void RaProcessorClient::InitRaContext(const sgx_ra_config & raConfig, const sgx_
 		DECENT_CHECK_SGX_FUNC_CALL_ERROR(sgx_create_pse_session);
 	}
 
-	sgx_status_t ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr, 
+	sgx_status_t ret = decent_ra_init_ex(&pubKey, raConfig.enable_pse, nullptr,
 		[this](const sgx_report_data_t& initData, sgx_report_data_t& outData) -> bool
 		{
 			auto signPub = m_decentStates.GetKeyContainer().GetSignKeyPair();
 
 			std::string pubKeyPem = signPub->GetPublicPem();
 
-			General256Hash reportDataHash;
-			Hasher<HashType::SHA256>().Batched(reportDataHash,
-				std::array<DataListItem, 2>
-				{
-					DataListItem{&initData, SGX_SHA256_HASH_SIZE},
-					DataListItem{pubKeyPem.data(), pubKeyPem.size()},
-				});
+			Hash<HashType::SHA256> reportDataHash = Hasher<HashType::SHA256>().Calc(
+				CtnByteRgR<0, SGX_SHA256_HASH_SIZE>(initData.d),
+				CtnFullR(pubKeyPem)
+			);
 
 			std::memcpy(&outData, reportDataHash.data(), SGX_SHA256_HASH_SIZE);
 			return true;
@@ -132,22 +128,28 @@ const Decent::Sgx::RaProcessorSp::SgxQuoteVerifier RaProcessorSp::defaultServerQ
 }
 );
 
-std::unique_ptr<Decent::Sgx::RaProcessorSp> RaProcessorSp::GetSgxDecentRaProcessorSp(const void * const iasConnectorPtr,
-	const MbedTlsObj::EcPublicKeyBase & peerSignkey, std::shared_ptr<const sgx_spid_t> spidPtr, const States& decentStates)
+std::unique_ptr<Sgx::RaProcessorSp> RaSgx::RaProcessorSp::GetSgxDecentRaProcessorSp(
+	const void* const iasConnectorPtr,
+	const std::string& peerSignkeyPem,
+	std::shared_ptr<const sgx_spid_t> spidPtr,
+	const Decent::Ra::States& decentStates)
 {
-	std::string pubKeyPem = peerSignkey.GetPublicPem();
+	using namespace mbedTLScpp;
+
+	std::string pubKeyPem = peerSignkeyPem;
 
 	return Tools::make_unique<Sgx::RaProcessorSp>(iasConnectorPtr, decentStates.GetKeyContainer().GetSignKeyPair(),
 		spidPtr,
 		[pubKeyPem](const sgx_report_data_t& initData, const sgx_report_data_t& expected) -> bool
-	{
-		if (pubKeyPem.size() == 0)
 		{
-			return false;
-		}
-		return RaReport::DecentReportDataVerifier(pubKeyPem, initData.d, expected.d, sizeof(expected) / 2) &&
-			consttime_memequal(initData.d + (sizeof(initData) / 2), expected.d + (sizeof(expected) / 2), sizeof(expected) / 2) == 1;
-	},
+			if (pubKeyPem.size() == 0)
+			{
+				return false;
+			}
+			return RaReport::DecentReportDataVerifier(pubKeyPem, CtnFullR(initData.d), CtnFullR(expected.d)) &&
+				consttime_memequal(initData.d + (sizeof(initData) / 2), expected.d + (sizeof(expected) / 2), sizeof(expected) / 2) == 1;
+		},
 		defaultServerQuoteVerifier,
-		RaReport::sk_sgxDecentRaConfig);
+		RaReport::sk_sgxDecentRaConfig
+	);
 }

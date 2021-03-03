@@ -2,7 +2,7 @@
 
 #include <string>
 #include "../Tools/JsonForwardDeclare.h"
-#include "../RuntimeException.h"
+#include "../Exceptions.h"
 
 namespace Decent
 {
